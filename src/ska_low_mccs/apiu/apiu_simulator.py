@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -16,7 +15,8 @@ assumed impossible for a real APIU to work with a simulated antenna, or
 a simulated APIU with real antennas. Therefore this module simulates an
 APIU and its antennas together.
 """
-from __future__ import annotations
+
+from __future__ import annotations  # allow forward references in type hints
 
 import functools
 from typing import Any, Callable, Optional, TypeVar, cast
@@ -68,6 +68,7 @@ def check_antenna_id(func: Wrapped) -> Wrapped:
         :param kwargs: keyword arguments to the wrapped function
 
         :raises ValueError: if the component is not powered on on.
+
         :return: whatever the wrapped function returns
         """
         if antenna_id < 1 or antenna_id > apiu_simulator.antenna_count:
@@ -92,10 +93,10 @@ class ApiuSimulator(ObjectComponent):
     DEFAULT_ANTENNA_TEMPERATURE: Final[float] = 23.8
 
     def __init__(
-        self,
-        antenna_count,
+        self: ApiuSimulator,
+        antenna_count: int,
         initial_fault: bool = False,
-    ):
+    ) -> None:
         """
         Initialise a new instance.
 
@@ -173,79 +174,71 @@ class ApiuSimulator(ObjectComponent):
         self._update_fault(is_faulty)
 
     @property
-    def voltage(self):
+    def voltage(self: APIUSimulator) -> float:
         """
         Return my voltage.
 
         :return: my voltage
-        :rtype: float
         """
         return self._voltage
 
-    def simulate_voltage(self, voltage):
+    def simulate_voltage(self: APIUSimulator, voltage: float) -> None:
         """
         Simulate a change in APIU voltage.
 
         :param voltage: the new APIU voltage value to be simulated
-        :type voltage: float
         """
         self._voltage = voltage
 
     @property
-    def current(self):
+    def current(self: APIUSimulator) -> float:
         """
         Return my current.
 
         :return: my current
-        :rtype: float
         """
         return self._current
 
-    def simulate_current(self, current):
+    def simulate_current(self: APIUSimulator, current: float) -> None:
         """
         Simulate a change in APIU current.
 
         :param current: the new APIU current value to be simulated
-        :type current: float
         """
         self._current = current
 
     @property
-    def temperature(self):
+    def temperature(self: APIUSimulator) -> float:
         """
         Return my temperature.
 
         :return: my temperature
-        :rtype: float
         """
         return self._temperature
 
-    def simulate_temperature(self, temperature):
+    def simulate_temperature(self: APIUSimulator, temperature: float) -> None:
         """
         Simulate a change in APIU temperature.
 
         :param temperature: the new APIU temperature value to be
             simulated
-        :type temperature: float
         """
         self._temperature = temperature
 
     @property
-    def humidity(self):
+    def humidity(self: APIUSimulator) -> float:
         """
         Return my humidity.
 
         :return: my humidity
-        :rtype: float
         """
         return self._humidity
 
-    def simulate_humidity(self, humidity):
+    def simulate_humidity(self: ApiuSimulator, humidity: float) -> None:
         """
         Simulate a change in APIU humidity.
 
         :param humidity: the new APIU humidity value to be simulated
-        :type humidity: float
         """
         self._humidity = humidity
 
@@ -253,8 +246,10 @@ class ApiuSimulator(ObjectComponent):
         self: ApiuSimulator,
         antenna_power_changed_callback: Callable[[list[bool], None]],
     ) -> None:
-        """
-        Set the callback to be called when there is a change to the power mode of one or
+       """
+        Set the power changed callback.
+        
+        To be called when there is a change to the power mode of one or
         more antennas.
 
         If a callback is provided (i.e. not None), then this method
@@ -278,7 +273,7 @@ class ApiuSimulator(ObjectComponent):
             self._antenna_power_changed_callback(self.are_antennas_on())
 
     @property
-    def antenna_count(self):
+    def antenna_count(self: APIUSimulator):
         """
         Return the number of antennas attached to this APIU.
 
@@ -286,36 +281,33 @@ class ApiuSimulator(ObjectComponent):
         """
         return len(self._antenna_data)
 
-    def are_antennas_on(self):
+    def are_antennas_on(self: APIUSimulator) -> Optional[list[bool]]:
         """
         Return whether each antenna is powered or not.
 
         :return: whether each antenna is powered or not.
-        :rtype: list(bool)
         """
         return [antenna["power_mode"] == PowerMode.ON for antenna in self._antenna_data]
 
     @check_antenna_id
-    def is_antenna_on(self, antenna_id) -> bool:
+    def is_antenna_on(self: APIUSimulator, antenna_id: int) -> bool:
         """
         Return whether a specified antenna is turned on.
 
         :param antenna_id: this APIU's internal id for the antenna to be
             turned off
-        :type antenna_id: int
 
         :return: whether the antenna is on
         """
         return self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.ON
 
     @check_antenna_id
-    def turn_off_antenna(self, antenna_id) -> ResultCode | None:
+    def turn_off_antenna(self: APIUSimulator, antenna_id: int) -> ResultCode | None:
         """
         Turn off a specified antenna.
 
         :param antenna_id: this APIU's internal id for the antenna to be
             turned off
-        :type antenna_id: int
 
         :return: a result code, or None if there was nothing to do
         """
@@ -327,13 +319,12 @@ class ApiuSimulator(ObjectComponent):
         return ResultCode.OK
 
     @check_antenna_id
-    def turn_on_antenna(self, antenna_id) -> ResultCode | None:
+    def turn_on_antenna(self: APIUSimulator, antenna_id: int) -> ResultCode | None:
         """
         Turn on a specified antenna.
 
         :param antenna_id: this APIU's internal id for the antenna to be
             turned on
-        :type antenna_id: int
 
         :return: a result code, or None if there was nothing to do
         """
@@ -344,7 +335,7 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_power_changed()
         return ResultCode.OK
 
-    def turn_off_antennas(self) -> ResultCode | None:
+    def turn_off_antennas(self: APIUSimulator) -> ResultCode | None:
         """
         Turn off all antennas.
 
@@ -360,7 +351,7 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_power_changed()
         return ResultCode.OK
 
-    def turn_on_antennas(self) -> ResultCode | None:
+    def turn_on_antennas(self: APIUSimulator) -> ResultCode | None:
         """
         Turn on all antennas.
 
@@ -375,16 +366,14 @@ class ApiuSimulator(ObjectComponent):
         return ResultCode.OK
 
     @check_antenna_id
-    def get_antenna_current(self, antenna_id):
+    def get_antenna_current(self: APIUSimulator, antenna_id: int) -> float:
         """
         Get the current of a specified antenna.
 
         :param antenna_id: this APIU's internal id for the
             antenna for which the current is requested
-        :type antenna_id: int
 
         :return: the antenna current
-        :rtype: float
 
         :raises ValueError: if the antenna is not powered on.
         """
@@ -394,15 +383,13 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["current"]
 
     @check_antenna_id
-    def simulate_antenna_current(self, antenna_id, current):
+    def simulate_antenna_current(self: APIUSimulator, antenna_id: int, current: float) -> None:
         """
         Simulate a change in antenna current.
 
         :param antenna_id: this APIU's internal id for the
             antenna for which the current is to be simulated
-        :type antenna_id: int
         :param current: the new antenna current value to be simulated
-        :type current: float
 
         :raises ValueError: if the antenna is not powered on.
         """
@@ -412,16 +399,14 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_data[antenna_id - 1]["current"] = current
 
     @check_antenna_id
-    def get_antenna_voltage(self, antenna_id):
+    def get_antenna_voltage(self: APIUSimulator, antenna_id: int) -> float:
         """
         Get the voltage of a specified antenna.
 
         :param antenna_id: this APIU's internal id for the
             antenna for which the voltage is requested
-        :type antenna_id: int
 
         :return: the antenna voltage
-        :rtype: float
 
         :raises ValueError: if the antenna is not powered on.
         """
@@ -431,15 +416,13 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["voltage"]
 
     @check_antenna_id
-    def simulate_antenna_voltage(self, antenna_id, voltage):
+    def simulate_antenna_voltage(self: APIUSimulator, antenna_id: int, voltage: float) -> None:
         """
         Simulate a change in antenna voltage.
 
         :param antenna_id: this APIU's internal id for the
             antenna for which the voltage is to be simulated
-        :type antenna_id: int
         :param voltage: the new antenna voltage value to be simulated
-        :type voltage: float
 
         :raises ValueError: if the antenna is not powered on.
         """
@@ -449,16 +432,16 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_data[antenna_id - 1]["voltage"] = voltage
 
     @check_antenna_id
-    def get_antenna_temperature(self, antenna_id):
+    def get_antenna_temperature(
+        self: APIUSimulator, logical_antenna_id: int
+    ) -> float:
         """
         Get the temperature of a specified antenna.
 
         :param antenna_id: this APIU's internal id for the
             antenna for which the temperature is requested
-        :type antenna_id: int
 
         :return: the antenna temperature
-        :rtype: float
 
         :raises ValueError: if the antenna is not powered on.
         """
@@ -467,17 +450,16 @@ class ApiuSimulator(ObjectComponent):
 
         return self._antenna_data[antenna_id - 1]["temperature"]
 
+
     @check_antenna_id
-    def simulate_antenna_temperature(self, antenna_id, temperature):
+    def simulate_antenna_temperature(self: APIUSimulator, antenna_id: int, temperature: float) -> None:
         """
         Simulate a change in antenna temperature.
 
         :param antenna_id: this APIU's internal id for the
             antenna for which the temperature is to be simulated
-        :type antenna_id: int
         :param temperature: the new antenna temperature value to be
             simulated
-        :type temperature: float
 
         :raises ValueError: if the antenna is not powered on.
         """

@@ -114,7 +114,7 @@ class Resource:
         :param device_id: ID of supervised device
         """
         self._resource_availability_policy = availability_policy
-        self._fqdn = fqdn
+        self.fqdn = fqdn
         self._resource_state = ResourceState.AVAILABLE
         self._assigned_to = 0
         self._health_state = HealthState.UNKNOWN
@@ -183,7 +183,7 @@ class Resource:
 
         :raises Exception: if requested healthstate change is not an integer
         """
-        assert fqdn == self._fqdn
+        assert fqdn == self.fqdn
         if not isinstance(event_value, int):
             raise Exception(
                 f"{fqdn}: invalid healthstate change: {self._health_state} -> {event_value}"
@@ -204,15 +204,13 @@ class Resource:
         if self.is_assigned():
             if self._assigned_to != owner:
                 # Trying to assign to new owner not allowed
-                raise ValueError(
-                    f"{self._fqdn} already assigned to {self._assigned_to}"
-                )
+                raise ValueError(f"{self.fqdn} already assigned to {self._assigned_to}")
             # No action if repeating the existing assignment
             return
         # Don't allow assign if resource is not healthy
         if not self.is_healthy():
             raise ValueError(
-                f"{self._fqdn} does not pass health check for"
+                f"{self.fqdn} does not pass health check for"
                 f" assignment (health={self._health_state})"
             )
 
@@ -220,7 +218,7 @@ class Resource:
             self._assigned_to = owner
             self._resource_state = ResourceState.ASSIGNED
         else:
-            raise ValueError(f"{self._fqdn} is unavailable")
+            raise ValueError(f"{self.fqdn} is unavailable")
 
     def release(self: Resource) -> None:
         """
@@ -229,7 +227,7 @@ class Resource:
         :raises ValueError: if the resource was unassigned
         """
         if self._assigned_to == 0:
-            raise ValueError(f"Attempt to release unassigned resource, {self._fqdn}")
+            raise ValueError(f"Attempt to release unassigned resource, {self.fqdn}")
         self._assigned_to = 0
 
         if self._resource_state == ResourceState.ASSIGNED:
@@ -449,6 +447,14 @@ class ResourceManager:
 
         # Return True (ok to proceed), with the lists
         return (True, needed, to_release)
+
+    def __len__(self: ResourceManager) -> int:
+        """
+        Return the number of stations assigned to this resource manager.
+
+        :return: the number of stations assigned to thisresource manager
+        """
+        return len(self.get_all_fqdns())
 
     def assign(self: ResourceManager, devices: dict[int, str], new_owner: int) -> None:
         """

@@ -15,7 +15,7 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import threading
-from typing import Any, List, Optional, Tuple, Dict
+from typing import Any, cast, List, Optional, Tuple, Dict
 
 # PyTango imports
 from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
@@ -30,11 +30,17 @@ from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
 from ska_low_mccs.utils import call_with_json, tango_raise
-from ska_low_mccs.health import HealthModel, HealthMonitor
+from ska_low_mccs.health import MutableHealthModel, MutableHealthMonitor
 from ska_low_mccs.resource import ResourceManager
 from ska_low_mccs.message_queue import MessageQueue
 
-__all__ = ["MccsController", "StationsResourceManager", "main"]
+__all__ = [
+    "MccsController",
+    "MccsControllerQueue",
+    "StationsResourceManager",
+    "SubarrayBeamsResourceManager",
+    "main",
+]
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
@@ -48,7 +54,7 @@ class StationsResourceManager(ResourceManager):
 
     def __init__(
         self: StationsResourceManager,
-        health_monitor: HealthMonitor,
+        health_monitor: MutableHealthMonitor,
         station_fqdns: List[str],
         logger: logging.Logger,
     ) -> None:
@@ -60,27 +66,25 @@ class StationsResourceManager(ResourceManager):
             subarray manages
         :param logger: the logger to be used by the object under test
         """
-        self._devices = dict()
-        stations = {}
+        stations: dict[int, str] = {}
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
         super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
 
-    def items(self: StationsResourceManager) -> dict[str, str]:
+    def items(self: StationsResourceManager) -> dict[int, str]:
         """
         Return the stations managed by this device.
 
         :return: A dictionary of Station IDs, FQDNs managed by this
             StationsResourceManager
         """
-        devices = dict()
-        for key, resource in self._resources.items():
-            devices[key] = resource._fqdn
-        return devices
+        return {
+            cast(int, key): resource.fqdn for key, resource in self._resources.items()
+        }
 
-    def assign(
-        self: StationsResourceManager, station_fqdns: List[str], subarray_id: int
+    def assign(  # type: ignore[override]
+        self: StationsResourceManager, station_fqdns: list[str], subarray_id: int
     ) -> None:
         """
         Assign stations to a subarray device.
@@ -108,14 +112,16 @@ class StationsResourceManager(ResourceManager):
         """
         return sorted(self.get_all_fqdns())
 
-    @property
-    def station_ids(self: StationsResourceManager) -> List(str):
-        """
-        Returns the device IDs of currently assigned stations.
 
-        :return: IDs of currently assigned stations
-        """
-        return sorted(self._resources.keys())
+#     @property
+#     def station_ids(self: StationsResourceManager) -> List[int]:
+#         """
+#         Get the device IDs of currently assigned stations.
+#
+#         :return: IDs of currently assigned stations
+#         """
+#         # This is not correct. The keys are fqdns not id
+#         # return sorted(list(self._resources.keys()))
 
 
 class MccsControllerQueue(MessageQueue):
@@ -140,6 +146,127 @@ class MccsControllerQueue(MessageQueue):
         device._command_result["status"] = status
         json_results = json.dumps(device._command_result)
         device.push_change_event("commandResult", json_results)
+
+
+class SubarrayBeamsResourceManager(ResourceManager):
+    """
+    A simple manager for the subarray beams that are assigned to a subarray.
+
+    Inherits from ResourceManager.
+    """
+
+    def __init__(
+        self: SubarrayBeamsResourceManager,
+        health_monitor: MutableHealthMonitor,
+        subarray_beam_fqdns: List[str],
+        stations_manager: StationsResourceManager,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        Initialise a new SubarrayBeamsResourceManager.
+
+        :param health_monitor: Provides for monitoring of health states
+        :param subarray_beam_fqdns: the FQDNs of the subarray_beams that this
+            subarray manages
+        :param stations_manager: the StationResourceManager holding the station
+            devices belonging to the parent Subarray
+        :param logger: the logger to be used by the object under test
+        """
+        self._stations_manager = stations_manager
+        self._logger = logger
+        subarray_beams = {}
+        for subarray_beam_fqdn in subarray_beam_fqdns:
+            subarray_beam_id = int(subarray_beam_fqdn.split("/")[-1:][0])
+            subarray_beams[subarray_beam_id] = subarray_beam_fqdn
+        super().__init__(
+            health_monitor,
+            "Subarray Beams Resource Manager",
+            subarray_beams,
+            logger,
+            [HealthState.OK],
+        )
+
+    def assign(  # type: ignore[override]
+        self: SubarrayBeamsResourceManager,
+        subarray_id: int,
+        subarray_beams: dict[int, str],
+        stations: List[dict[int, str]],
+    ) -> None:
+        """
+        Assign devices to this subarray beams resource manager.
+
+        :param subarray_id: subarray device id
+        :param subarray_beams: dictionary of ids and FQDNs of station beams to be assigned
+        :param stations: list of dictionaries of ids & FQDNs of stations to be assigned
+        """
+        all_stations = {}
+        for stations_dict in stations:
+            for station_id, station_fqdn in stations_dict.items():
+                all_stations[station_id] = station_fqdn
+                if station_fqdn not in self._stations_manager.get_all_fqdns():
+                    self._stations_manager._add_to_managed({station_id: station_fqdn})
+
+        self._add_to_managed(subarray_beams)
+        for index, (subarray_beam_id, subarray_beam_fqdn) in enumerate(
+            subarray_beams.items()
+        ):
+            # TODO: Establishment of connections should happen at initialization
+            subarraybeam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
+            subarraybeam.stationIds = sorted(stations[index].keys())
+            subarraybeam.isBeamLocked = True
+
+            # self.update_resource_health(subarray_beam_fqdn, subarraybeam.healthState)
+            self.update_resource_health(subarray_beam_fqdn, HealthState.OK)
+        super().assign(subarray_beams, subarray_id)
+
+    def release(  # type: ignore[override]
+        self: SubarrayBeamsResourceManager,
+        subarray_beam_fqdns: List[str],
+        station_fqdns: List[str],
+    ) -> None:
+        """
+        Release devices from this subarray beams resource manager.
+
+        :param subarray_beam_fqdns: list of  FQDNs of subarray_beams to be released
+        :param station_fqdns: list of  FQDNs of the stations which if assigned to,
+            subarray_beams should be released
+        """
+        station_ids_to_release = []
+        # release subarray_beams assigned to station_fqdns
+        for station_id, station_fqdn in self._stations_manager.items().items():
+            if station_fqdn in station_fqdns:
+                station_ids_to_release.append(station_id)
+        for subarray_beam in self._resources.values():
+            if subarray_beam._assigned_to in station_ids_to_release:
+                if subarray_beam.fqdn not in subarray_beam_fqdns:
+                    subarray_beam_fqdns.append(subarray_beam.fqdn)
+
+        # release subarray_beams by given fqdns
+        for subarray_beam_fqdn in subarray_beam_fqdns:
+            # TODO: Establishment of connections should happen at initialization
+            subarraybeam_proxy = MccsDeviceProxy(
+                subarray_beam_fqdn, logger=self._logger
+            )
+
+            subarraybeam_proxy.stationIds = []
+            subarraybeam_proxy.stationFqdn = None
+        super().release(subarray_beam_fqdns)
+
+    def release_all(self: SubarrayBeamsResourceManager) -> None:
+        """Release all devices from this subarray beams resource manager."""
+        subarray_beam_fqdns = self.get_all_fqdns()
+        super().release(subarray_beam_fqdns)
+        # self.release(devices, list())
+        self._stations_manager.release_all()
+
+    @property
+    def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> List[str]:
+        """
+        Returns the FQDNs of currently assigned subarray_beams.
+
+        :return: FQDNs of currently assigned subarray_beams
+        """
+        return sorted(self.get_all_fqdns())
 
 
 class MccsController(SKAMaster):
@@ -179,6 +306,7 @@ class MccsController(SKAMaster):
     MccsSubracks = device_property(dtype="DevVarStringArray", default_value=[])
     MccsStations = device_property(dtype="DevVarStringArray", default_value=[])
     MccsSubarrayBeams = device_property(dtype="DevVarStringArray", default_value=[])
+    MccsStationBeams = device_property(dtype="DevVarStringArray", default_value=[])
 
     # ---------------
     # General methods
@@ -217,7 +345,6 @@ class MccsController(SKAMaster):
             ("Callback", self.CallbackCommand),
             ("Off", self.OffCommand),
             ("AllocateCallback", self.AllocateCallbackCommand),
-            ("AssignResourcesCallback", self.AssignResourcesCallbackCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self, self.state_model, self.logger)
@@ -236,7 +363,7 @@ class MccsController(SKAMaster):
             self: MccsController.InitCommand,
             target: object,
             state_model: DeviceStateModel,
-            logger: logging.Logger = None,
+            logger: Optional[logging.Logger] = None,
         ) -> None:
             """
             Create a new InitCommand.
@@ -295,6 +422,7 @@ class MccsController(SKAMaster):
 
             device._subrack_fqdns = list(device.MccsSubracks)
             device._station_fqdns = list(device.MccsStations)
+            device._subarray_beam_fqdns = list(device.MccsSubarrayBeams)
 
             subrack_pool = DevicePool(device._subrack_fqdns, self.logger, connect=False)
             station_pool = DevicePool(device._station_fqdns, self.logger, connect=False)
@@ -334,13 +462,16 @@ class MccsController(SKAMaster):
                     self._interrupt = False
                     return
                 self._initialise_health_monitoring(
-                    device, device._subrack_fqdns + device._station_fqdns
+                    device,
+                    device._subrack_fqdns
+                    + device._station_fqdns
+                    + device._subarray_beam_fqdns,
                 )
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_resource_management(device, device._station_fqdns)
+                self._initialise_resource_management(device)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -372,26 +503,30 @@ class MccsController(SKAMaster):
             """
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
-            device.health_model = HealthModel(
+            device.health_model = MutableHealthModel(
                 None, fqdns, self.logger, device.health_changed
             )
 
         def _initialise_resource_management(
-            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: List[str]
+            self: MccsController.InitCommand, device: SKABaseDevice
         ) -> None:
             """
             Initialise resource management for this device.
 
             :param device: the device for which resource management is
                 being initialised
-            :param fqdns: the fqdns of subservient devices allocation of which
-                is managed by this device
             """
             health_monitor = device.health_model._health_monitor
 
             # Instantiate a resource manager for the Stations
             device._stations_manager = StationsResourceManager(
-                health_monitor, fqdns, self.logger
+                health_monitor, device._station_fqdns, self.logger
+            )
+            device._subarray_beams_manager = SubarrayBeamsResourceManager(
+                health_monitor,
+                device._subarray_beam_fqdns,
+                device._stations_manager,
+                self.logger,
             )
             resource_args = (device, device.state_model, device.logger)
             device.register_command_object(
@@ -536,7 +671,7 @@ class MccsController(SKAMaster):
         return self._assigned_resources
 
     def notify_listener(
-        self: MccsControllerQueue,
+        self: MccsController,
         result_code: ResultCode,
         message_uid: str,
         status: str,
@@ -1145,25 +1280,25 @@ class MccsController(SKAMaster):
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
 
             # Generate station FQDNs from IDs
-            all_stations = {}
-            stations_per_beam = []
+            all_stations: dict[int, str] = {}
+            stations_per_beam_list: List[str] = []
             for station_sub_ids in station_ids:
-                station_sublist = []
+                station_sublist: List[str] = []
+                station_sublist_dict: dict[int, str] = {}
                 for station_id in station_sub_ids:
                     all_stations[station_id] = f"low-mccs/station/{station_id:03}"
+                    station_sublist_dict[
+                        station_id
+                    ] = f"low-mccs/station/{station_id:03}"
                     station_sublist.append(f"low-mccs/station/{station_id:03}")
-                stations_per_beam.append(station_sublist)
+                stations_per_beam_list.append(station_sublist_dict)
             station_fqdns = all_stations.values()
-            subarray_beams = {}
 
+            subarray_beams: dict[int, str] = {}
             for subarray_beam_id in subarray_beam_ids:
                 subarray_beams[
                     subarray_beam_id
                 ] = f"low-mccs/subarraybeam/{subarray_beam_id:02}"
-            subarray_beam_fqdns = sorted(subarray_beams.values())
-
-            # Generate subarray FQDN from ID
-            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
 
             # Query stations resource manager
             # Are we allowed to make this allocation?
@@ -1185,12 +1320,11 @@ class MccsController(SKAMaster):
                     f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}"
                 )
                 controllerdevice.notify_listener(
-                    ResultCode.FAILED,
-                    message_uid,
-                    failure_message,
+                    ResultCode.FAILED, message_uid, failure_message
                 )
                 return (ResultCode.FAILED, failure_message)
 
+            subarray_fqdn = f"low-mccs/subarray/{subarray_id:02}"
             subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
 
             # Manager gave this list of stations to release (no longer required)
@@ -1201,9 +1335,7 @@ class MccsController(SKAMaster):
                 if result_code == ResultCode.FAILED:
                     failure_message = f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:{message}"
                     controllerdevice.notify_listener(
-                        ResultCode.FAILED,
-                        message_uid,
-                        failure_message,
+                        ResultCode.FAILED, message_uid, failure_message
                     )
                     return (ResultCode.FAILED, failure_message)
                 for station_fqdn in stations_to_release:
@@ -1221,9 +1353,8 @@ class MccsController(SKAMaster):
                 "message_uid": message_uid,
                 "subarray_fqdn": subarray_fqdn,
                 "stations_to_assign": stations_to_assign,
-                "stations_per_beam": stations_per_beam,
-                "subarray_beam_fqdns": subarray_beam_fqdns,
-                "subarray_beam_ids": subarray_beam_ids,
+                "stations_per_beam_list": stations_per_beam_list,
+                "subarray_beams": subarray_beams,
                 "station_ids": station_ids,
             }
 
@@ -1236,9 +1367,7 @@ class MccsController(SKAMaster):
                     self.FAILED_SUBARRAY_ENABLE_REQUEST_MESSAGE + "," + status
                 )
                 controllerdevice.notify_listener(
-                    ResultCode.FAILED,
-                    message_uid,
-                    failure_message,
+                    ResultCode.FAILED, message_uid, failure_message
                 )
                 controllerdevice._allocate_cmd_cache.clear()
                 return (ResultCode.FAILED, failure_message)
@@ -1323,6 +1452,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_REQ_TO_ASSIGN_RESOURCES_MESSAGE = (
             "Request sent to assign subarray resources"
         )
+        SUCCEEDED_MESSAGE = "Success"
 
         def do(
             self: MccsController.AllocateCallbackCommand, argin: str
@@ -1363,58 +1493,72 @@ class MccsController(SKAMaster):
                     f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}"
                 )
                 controllerdevice.notify_listener(
-                    ResultCode.FAILED,
-                    message_uid,
-                    failure_message,
+                    ResultCode.FAILED, message_uid, failure_message
                 )
                 controllerdevice._allocate_cmd_cache.clear()
-                return (
-                    ResultCode.FAILED,
-                    failure_message,
-                )
+                return (ResultCode.FAILED, failure_message)
             controllerdevice._subarray_enabled[subarray_id - 1] = True
 
             # Retrieve cached values for the allocate command
             stations_to_assign = controllerdevice._allocate_cmd_cache.get(
                 "stations_to_assign"
             )
-            stations_per_beam = controllerdevice._allocate_cmd_cache.get(
-                "stations_per_beam"
+            stations_per_beam_list = controllerdevice._allocate_cmd_cache.get(
+                "stations_per_beam_list"
             )
-            subarray_beam_fqdns = controllerdevice._allocate_cmd_cache.get(
-                "subarray_beam_fqdns"
-            )
+            subarray_beams = controllerdevice._allocate_cmd_cache.get("subarray_beams")
+            channel_blocks = controllerdevice._allocate_cmd_cache.get("channel_blocks")
+            station_ids = controllerdevice._allocate_cmd_cache.get("station_ids")
             channel_blocks = controllerdevice._allocate_cmd_cache.get("channel_blocks")
 
             # Manager gave this list of stations to assign
             if stations_to_assign is not None:
-                # call subarray AssignResources
-                args = {
-                    "respond_to_fqdn": controllerdevice.get_name(),
-                    "callback": "AssignResourcesCallback",
-                    "stations": stations_per_beam,
-                    "subarray_beams": subarray_beam_fqdns,
+                subarray_beam_fqdns = list(subarray_beams.values())
+                (result_code, message) = call_with_json(
+                    subarray_device.AssignResources,
+                    stations=stations_to_assign,
+                    subarray_beams=subarray_beam_fqdns,
+                    channel_blocks=channel_blocks,
+                )
+                if result_code == ResultCode.FAILED:
+                    failure_message = f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:{message}"
+                    controllerdevice.notify_listener(
+                        ResultCode.FAILED, message_uid, failure_message
+                    )
+                    controllerdevice._allocate_cmd_cache.clear()
+                    return (ResultCode.FAILED, failure_message)
+                for fqdn in stations_to_assign:
+                    device = MccsDeviceProxy(fqdn, self.logger)
+                    device.subarrayId = subarray_id
+
+                # Inform subarray_beam manager that we made the assignments
+                controllerdevice._subarray_beams_manager.assign(
+                    subarray_id, subarray_beams, stations_per_beam_list
+                )
+                # Inform station manager that we made the assignments
+                controllerdevice._stations_manager.assign(
+                    stations_to_assign, subarray_id
+                )
+                subarray_device.stationFQDNs = (
+                    controllerdevice._stations_manager.get_assigned_fqdns(subarray_id)
+                )
+            # assume all is OK for now ie send back what we received.
+            controllerdevice._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": list(subarray_beams.keys()),
+                    "station_ids": station_ids,
                     "channel_blocks": channel_blocks,
                 }
-                json_args = json.dumps(args)
-                (result_code, _) = subarray_device.AssignResources(json_args)
-                if result_code != ResultCode.QUEUED:
-                    return (
-                        result_code,
-                        f"Failed to request subarray to assign resources {subarray_fqdn}",
-                    )
-            else:
-                # No stations to assign, send ourselves a message to continue
-                results = {"result_code": ResultCode.OK}
-                json_results = json.dumps(results)
-                controllerdevice._message_queue.send_message(
-                    command="AssignResourcesCallback", json_args=json_results
-                )
-
-            return (
-                ResultCode.QUEUED,
-                self.SUCCEEDED_REQ_TO_ASSIGN_RESOURCES_MESSAGE,
             )
+            controllerdevice.push_change_event(
+                "assignedResources", controllerdevice._assigned_resources
+            )
+            controllerdevice.notify_listener(
+                ResultCode.OK, message_uid, self.SUCCEEDED_MESSAGE
+            )
+            controllerdevice._allocate_cmd_cache.clear()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCallbackCommand) -> bool:
             """
@@ -1427,140 +1571,7 @@ class MccsController(SKAMaster):
             allowed = any(controllerdevice._allocate_cmd_cache)
             return allowed
 
-    def is_AllocateCallback_allowed(self: MccsController) -> bool:
-        """
-        Whether this command is allowed to be run in current device state.
-
-        :return: True if this command is allowed to be run in
-            current device state
-        """
-        handler = self.get_command_object("AllocateCallback")
-        if not handler.check_allowed():
-            tango_raise("AllocateCallback() is not allowed in current state")
-        return True
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def AssignResourcesCallback(
-        self: MccsController, json_args: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Send a message to continue the allocate command.
-
-        Method returns as soon as the message has been enqueued.
-
-        :param json_args: Argument containing JSON encoded command message and result
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        """
-        return self._check_and_send_message(
-            "AssignResourcesCallback", json_args=json_args
-        )
-
-    class AssignResourcesCallbackCommand(ResponseCommand):
-        """Continue with allocate of MCCS resources to a subarray."""
-
-        FAILED_TO_ALLOCATE_MESSAGE_PREFIX = "Failed to allocate resources to subarray"
-        SUCCEEDED_MESSAGE = "Allocate command completed OK"
-
-        def do(
-            self: MccsController.AssignResourcesCallbackCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Stateless hook implementing the functionality of the
-            :py:meth:`.MccsController.Allocate` command
-
-            Continue to allocate a set of unallocated MCCS resources to a subarray.
-
-            :param argin: JSON-formatted response string
-                {
-                "message_object": message,
-                "result_code": result_code,
-                "status": status,
-                }
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            controllerdevice = self.target
-            subarray_beam_ids = controllerdevice._allocate_cmd_cache.get(
-                "subarray_beam_ids"
-            )
-            station_ids = controllerdevice._allocate_cmd_cache.get("station_ids")
-            channel_blocks = controllerdevice._allocate_cmd_cache.get("channel_blocks")
-
-            kwargs = json.loads(argin)
-            result_code = kwargs.get("result_code")
-
-            message_uid = controllerdevice._allocate_cmd_cache.get("message_uid")
-            if result_code == ResultCode.FAILED:
-                subarray_fqdn = controllerdevice._allocate_cmd_cache.get(
-                    "subarray_fqdn"
-                )
-                failure_message = (
-                    f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} "
-                    f"{subarray_fqdn}:AssignResources failed"
-                )
-                controllerdevice.notify_listener(
-                    ResultCode.FAILED,
-                    message_uid,
-                    failure_message,
-                )
-                controllerdevice._allocate_cmd_cache.clear()
-                return (
-                    ResultCode.FAILED,
-                    failure_message,
-                )
-            stations_to_assign = controllerdevice._allocate_cmd_cache.get(
-                "stations_to_assign"
-            )
-            subarray_id = controllerdevice._allocate_cmd_cache.get("subarray_id")
-            if stations_to_assign:
-                for station_fqdn in stations_to_assign:
-                    station = MccsDeviceProxy(station_fqdn, self.logger)
-                    station.subarrayId = subarray_id
-
-                # Inform manager that we made the assignments
-                controllerdevice._stations_manager.assign(
-                    stations_to_assign, subarray_id
-                )
-
-            # assume all is OK for now ie send back what we received.
-            controllerdevice._assigned_resources = json.dumps(
-                {
-                    "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
-                    "subarray_beam_ids": subarray_beam_ids,
-                    "station_ids": station_ids,
-                    "channel_blocks": channel_blocks,
-                }
-            )
-            controllerdevice.push_change_event(
-                "assignedResources", controllerdevice._assigned_resources
-            )
-            controllerdevice.notify_listener(
-                ResultCode.OK,
-                message_uid,
-                self.SUCCEEDED_MESSAGE,
-            )
-            controllerdevice._allocate_cmd_cache.clear()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-        def check_allowed(self: MccsController.AssignResourcesCallbackCommand) -> bool:
-            """
-            Whether this command is allowed to be run in current device state.
-
-            :return: True if this command is allowed to be run in
-                current device state
-            """
-            controllerdevice = self.target
-            allowed = any(controllerdevice._allocate_cmd_cache)
-            return allowed
-
-    def is_AssignResourcesCallback_allowed(self: MccsController) -> bool:
+    def is_AllocateCallbackCommand_allowed(self: MccsController) -> bool:
         """
         Whether this command is allowed to be run in current device state.
 
@@ -1593,16 +1604,16 @@ class MccsController(SKAMaster):
             (result_code, message) = subarray_device.Restart()
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, f"Subarray restart failed: {message}")
-        else:
-            # try:
-            (result_code, message) = subarray_device.ReleaseAllResources()
-            # except DevFailed:
-            # pass  # it probably has no resources to release
-            if result_code == ResultCode.FAILED:
-                return (
-                    ResultCode.FAILED,
-                    f"Subarray release all resources failed: {message}",
-                )
+        #         else:
+        #             # try:
+        #             (result_code, message) = self._subarray_beams_manager.release_all()
+        #             # except DevFailed:
+        #             # pass  # it probably has no resources to release
+        #             if result_code == ResultCode.FAILED:
+        #                 return (
+        #                     ResultCode.FAILED,
+        #                     f"Subarray release all resources failed: {message}",
+        #                 )
         (result_code, message) = subarray_device.Off()
         if result_code == ResultCode.FAILED:
             return (ResultCode.FAILED, f"Subarray failed to turn off: {message}")
@@ -1615,7 +1626,7 @@ class MccsController(SKAMaster):
         """
         Method that releases subarray resources.
 
-        :param argin: JON encoded subarray ID
+        :param argin: JSON encoded subarray ID
         :param restart: release resources due to a restart command
 
         :return: A tuple containing a return code and a string
@@ -1623,6 +1634,7 @@ class MccsController(SKAMaster):
             information purpose only.
         """
         kwargs = json.loads(argin)
+        # release_all = kwargs.get("release_all")
         subarray_id = kwargs.get("subarray_id")
         if subarray_id is None or not (1 <= subarray_id <= len(self._subarray_fqdns)):
             return (
@@ -1636,15 +1648,24 @@ class MccsController(SKAMaster):
                 ResultCode.FAILED,
                 f"Cannot release resources from disabled subarray {subarray_fqdn}",
             )
+        subarraybeam_fqdns = self._subarray_beams_manager.get_assigned_fqdns(
+            subarray_id
+        )
 
-        # Query stations resouce manager for stations assigned to subarray
+        # Query stations resource manager for stations assigned to subarray
         fqdns = self._stations_manager.get_assigned_fqdns(subarray_id)
+        self._subarray_beams_manager.release(subarraybeam_fqdns, fqdns)
         # and clear the subarrayId in each
         for fqdn in fqdns:
             station = MccsDeviceProxy(fqdn, self.logger)
             station.subarrayId = 0
         # Finally release them from assignment in the manager
         self._stations_manager.release(fqdns)
+        subarray = MccsDeviceProxy(subarray_fqdn, self.logger)
+        (result_code, message) = call_with_json(
+            subarray.ReleaseResources,
+            station_fqdns=fqdns,
+        )
 
         result = self._disable_subarray(subarray_id, restart)
         if result[0] is not ResultCode.OK:
@@ -1755,7 +1776,7 @@ class MccsController(SKAMaster):
             Stateless do hook for the :py:meth:`.MccsController.Release` command.
 
             :param argin: JSON-formatted string containing an integer
-                subarray_id, a release all flag and array resources (TBD).
+                subarray_id, a release all flag.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

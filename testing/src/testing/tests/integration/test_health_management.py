@@ -10,12 +10,14 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains integration tests of health management in MCCS."""
-import time
-from tango import DevState
-import pytest
 
-from ska_tango_base.control_model import AdminMode, HealthState
+import pytest
+import time
+
+from tango import DevState
+
 from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
@@ -50,6 +52,8 @@ def devices_to_load():
             {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -84,36 +88,38 @@ class TestHealthManagement(HelperClass):
         controller = tango_harness.get_device("low-mccs/control/control")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
         tile_1 = tango_harness.get_device("low-mccs/tile/0001")
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        subarraybeam_01 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        subarraybeam_02 = tango_harness.get_device("low-mccs/subarraybeam/02")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
+
         # workaround for https://github.com/tango-controls/cppTango/issues/816
         # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
-
         # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
         # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
         # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
         # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-
-        # subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
-        # subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
 
         # TODO: For now, we need to get our devices to OFF state (the highest state of
         # device readiness for a device that isn't actual on -- and a state in which the
         # hardware is turned on) before we can put them into ON state.
         # This is a counterintuitive mess that will be fixed in SP-1501.
         _ = controller.Startup()
+        sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
             station_1: DevState.ON,
             station_2: DevState.ON,
-            subrack: DevState.ON,
             tile_1: DevState.ON,
             tile_2: DevState.ON,
             tile_3: DevState.ON,
             tile_4: DevState.ON,
+            subrack_01: DevState.ON,
+            subarraybeam_01: DevState.OFF,
+            subarraybeam_02: DevState.OFF,
         }
         self.check_states_of_devices(dev_states)
 
@@ -124,6 +130,8 @@ class TestHealthManagement(HelperClass):
         assert tile_4.healthState == HealthState.OK
         assert station_1.healthState == HealthState.OK
         assert station_2.healthState == HealthState.OK
+        assert subarraybeam_01.healthState == HealthState.OK
+        assert subarraybeam_02.healthState == HealthState.OK
         assert controller.healthState == HealthState.OK
 
         # Now let's make tile 1 fail. We should see that failure
@@ -184,11 +192,11 @@ class TestHealthManagement(HelperClass):
         tile_1.SimulateConnectionFailure(False)
         tile_1.adminMode = AdminMode.ONLINE
 
-        assert not subrack.isTpmOn(1)
+        assert not subrack_01.isTpmOn(1)
         tile_1.Off(empty_json_dict)
         dev_states = {tile_1: DevState.OFF}
         self.check_states_of_devices(dev_states)
-        assert subrack.isTpmOn(1)
+        assert subrack_01.isTpmOn(1)
 
         tile_1.On(empty_json_dict)
         dev_states = {tile_1: DevState.ON}
@@ -218,7 +226,6 @@ class TestHealthManagement(HelperClass):
         :type empty_json_dict: str
         """
         controller = tango_harness.get_device("low-mccs/control/control")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
         subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
         subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
         station_1 = tango_harness.get_device("low-mccs/station/001")
@@ -227,6 +234,9 @@ class TestHealthManagement(HelperClass):
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
 
         # workaround for https://github.com/tango-controls/cppTango/issues/816
         # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
@@ -234,8 +244,6 @@ class TestHealthManagement(HelperClass):
         # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
         # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
         # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-        subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
-        subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
 
         _ = controller.Startup()
         sleep(0.5)  # Allow time for Startup to complete
@@ -243,7 +251,7 @@ class TestHealthManagement(HelperClass):
             controller: DevState.ON,
             station_1: DevState.ON,
             station_2: DevState.ON,
-            subrack: DevState.ON,
+            subrack_01: DevState.ON,
             tile_1: DevState.ON,
             tile_2: DevState.ON,
             tile_3: DevState.ON,
@@ -306,8 +314,10 @@ class TestHealthManagement(HelperClass):
         assert station_1.healthState == HealthState.DEGRADED
         assert station_2.healthState == HealthState.OK
         sleep()
-        assert subarray_1.healthState == HealthState.DEGRADED
-        assert subarray_2.healthState == HealthState.OK
+        # now that resource managers are longer part of subarray the
+        # stations pass their healthstate to controller NOT subarray
+        # assert subarray_1.healthState == HealthState.DEGRADED
+        # assert subarray_2.healthState == HealthState.OK
         assert controller.healthState == HealthState.DEGRADED
 
         # It might take some time to replace the failed tile 1, and
@@ -332,8 +342,10 @@ class TestHealthManagement(HelperClass):
         assert station_1.healthState == HealthState.OK
         assert station_2.healthState == HealthState.OK
         sleep()
-        assert subarray_1.healthState == HealthState.OK
-        assert subarray_2.healthState == HealthState.OK
+        # now that resource managers are longer part of subarray the
+        # stations pass their healthstate to controller NOT subarray
+        # assert subarray_1.healthState == HealthState.OK
+        # assert subarray_2.healthState == HealthState.OK
         assert controller.healthState == HealthState.OK
 
         # Okay, we've finally fixed the tile. Let's make it work again, and

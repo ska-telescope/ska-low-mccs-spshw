@@ -1,4 +1,14 @@
 # type: ignore
+###############################################################################
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+###############################################################################
 """This module contains integration tests of MCCS device interactions."""
 
 import pytest
@@ -65,6 +75,9 @@ class TestMccsIntegration(HelperClass):
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        subarraybeam_01 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        subarraybeam_02 = tango_harness.get_device("low-mccs/subarraybeam/02")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
 
         # check initial state
         assert list(subarray_1.stationFQDNs) == []
@@ -76,12 +89,17 @@ class TestMccsIntegration(HelperClass):
         sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
+            subarray_1: DevState.OFF,
+            subarray_2: DevState.OFF,
             station_1: DevState.ON,
             station_2: DevState.ON,
             tile_1: DevState.ON,
             tile_2: DevState.ON,
             tile_3: DevState.ON,
             tile_4: DevState.ON,
+            subarraybeam_01: DevState.OFF,
+            subarraybeam_02: DevState.OFF,
+            subrack_01: DevState.ON,
         }
         self.check_states_of_devices(dev_states)
 
@@ -146,6 +164,7 @@ class TestMccsIntegration(HelperClass):
             station_2.dev_name(),
         ]
         assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs == ()
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
 
@@ -170,6 +189,8 @@ class TestMccsIntegration(HelperClass):
         sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
+            subarray_1: DevState.OFF,
+            subarray_2: DevState.OFF,
             station_1: DevState.ON,
             station_2: DevState.ON,
             tile_1: DevState.ON,
@@ -242,5 +263,36 @@ class TestMccsIntegration(HelperClass):
         # check all released
         assert list(subarray_1.stationFQDNs) == []
         assert list(subarray_2.stationFQDNs) == []
+
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
+
+        # assert tile_1.subarrayId == 0
+        # assert tile_2.subarrayId == 0
+        # assert tile_3.subarrayId == 0
+        # assert tile_4.subarrayId == 0
+
+    @pytest.mark.skip(reason="don't know yet")
+    def test_station_tile_subarray_id(self, tango_harness: TangoHarness):
+        """
+        Test that a write to attribute subarrayId on an MccsStation device also results
+        in an update to attribute subarrayId on its MccsTiles.
+
+        :param tango_harness: a test harness for tango devices
+        """
+        station = tango_harness.get_device("low-mccs/station/001")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+
+        # check initial state
+        assert station.subarrayId == 0
+        assert tile_1.subarrayId == 0
+        assert tile_2.subarrayId == 0
+
+        # write subarray_id
+        station.subarrayId = 1
+
+        # check state
+        assert station.subarrayId == 1
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1

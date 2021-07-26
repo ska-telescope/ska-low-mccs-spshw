@@ -347,10 +347,7 @@ def check_mccs_device_state(device, device_state):
         "on"
     :type device_state: str
     """
-    state_map = {
-        "off": [DevState.OFF],
-        "on": [DevState.ON, DevState.ALARM],
-    }
+    state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
     count = 0.0
     while not device.State() in state_map[device_state] and count < 3.0:
         count += 0.1

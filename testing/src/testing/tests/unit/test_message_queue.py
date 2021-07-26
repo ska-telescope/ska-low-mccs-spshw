@@ -343,9 +343,7 @@ class TestMessageQueue:
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
 
         (_, message_uid, _) = message_queue.send_message_with_response(
-            command=test_command,
-            respond_to_fqdn=valid_fqdn,
-            callback=callback,
+            command=test_command, respond_to_fqdn=valid_fqdn, callback=callback
         )
         time.sleep(0.1)  # Required to allow DUT thread to run
         target_mock.get_command_object.assert_called_once_with(test_command)

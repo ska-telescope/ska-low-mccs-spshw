@@ -111,15 +111,14 @@ class TestMccsSubarray:
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.TEST
-        assert device_under_test.assignedResources is None
 
         # The following reads might not be allowed in this state once
         # properly implemented
         assert device_under_test.scanId == -1
         assert list(device_under_test.configuredCapabilities) == ["BAND1:0", "BAND2:0"]
-        assert list(device_under_test.stationFQDNs) == []
-        #         assert device_under_test.tileFQDNs is None
-        #         assert device_under_test.stationBeamFQDNs is None
+        assert device_under_test.stationFQDNs == ()
+        assert device_under_test.tileFQDNs is None
+        assert device_under_test.stationBeamFQDNs is None
         assert device_under_test.activationTime == 0
 
     def test_healthState(self, device_under_test, mock_callback):
@@ -514,22 +513,25 @@ class TestMccsSubarrayCommandClasses:
         json_str = json.dumps(scan_args)
         (result_code, message) = scan_command(json_str)
         assert result_code == ResultCode.STARTED
-        assert message == f"Scan command STARTED - config {scan_args}"
+        assert message == "Scan command STARTED"
 
-        mock.reset_mock()
-        failure_code = ResultCode.FAILED
-        failure_message = "failure path unit test"
-        mock._subarray_beam_resource_manager.scan.return_value = (
-            failure_code,
-            failure_message,
-        )
-        subarray_state_model._straight_to_state(
-            op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
-        )
-        scan_command = MccsSubarray.ScanCommand(mock, subarray_state_model)
-        (result_code, message) = scan_command(json_str)
-        assert result_code == failure_code
-        assert message == failure_message
+        # TODO scan is not in the resource manager
+        # therefore we do not needto mock this
+
+    #         mock.reset_mock()
+    #         failure_code = ResultCode.FAILED
+    #         failure_message = "failure path unit test"
+    #         mock._subarray_beam_resource_manager.scan.return_value = (
+    #             failure_code,
+    #             failure_message,
+    #         )
+    #         subarray_state_model._straight_to_state(
+    #             op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
+    #         )
+    #         scan_command = MccsSubarray.ScanCommand(mock, subarray_state_model)
+    #         (result_code, message) = scan_command(json_str)
+    #         assert result_code == failure_code
+    #         assert message == failure_message
 
     def test_AbortCommand(self, subarray_state_model):
         """

@@ -182,7 +182,7 @@ class SubarrayBeamHardwareManager(HardwareManager):
 
     def __init__(
         self: SubarrayBeamHardwareManager,
-        is_locked: bool = False,
+        is_locked: bool = True,
         _factory: SubarrayBeamHardwareFactory = None,
     ) -> None:
         """
@@ -359,10 +359,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager,
-                None,
-                self.logger,
-                device.health_changed,
+                device.hardware_manager, None, self.logger, device.health_changed
             )
 
         def interrupt(self: MccsSubarrayBeam.InitCommand) -> bool:

@@ -14,6 +14,7 @@ It includes a controller Tango device and a CLI.
 __all__ = [
     "MccsController",
     "StationsResourceManager",
+    "SubarrayBeamsResourceManager",
     "controller_device",
     "demo_controller_device",
 ]
@@ -21,4 +22,5 @@ __all__ = [
 from .controller_device import (  # type: ignore[attr-defined]
     MccsController,
     StationsResourceManager,
+    SubarrayBeamsResourceManager,
 )

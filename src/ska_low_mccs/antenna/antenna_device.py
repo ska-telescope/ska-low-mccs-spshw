@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -10,12 +9,14 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
+from typing import Optional
+
 import tango
 from tango.server import attribute, device_property, AttrWriteType
 
 from ska_tango_base import SKABaseDevice
 from ska_tango_base.commands import ResultCode, ResponseCommand
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
 from ska_low_mccs.component import CommunicationStatus
@@ -24,7 +25,7 @@ from ska_low_mccs.component import CommunicationStatus
 __all__ = ["MccsAntenna", "main"]
 
 
-def create_return(success, action):
+def create_return(success: Optional[bool], action: str) -> tuple[ResultCode, str]:
     """
     Helper function to package up a boolean result into a
     (:py:class:`~ska_tango_base.commands.ResultCode`, message) tuple.
@@ -32,15 +33,12 @@ def create_return(success, action):
     :param success: whether execution of the action was successful. This
         may be None, in which case the action was not performed due to
         redundancy (i.e. it was already done).
-    :type success: bool or None
     :param action: Informal description of the action that the command
         performs, for use in constructing a message
-    :type action: str
 
     :return: A tuple containing a return code and a string
         message indicating status. The message is for
         information purpose only.
-    :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
     """
     if success is None:
         return (ResultCode.OK, f"Antenna {action} is redundant")
@@ -64,7 +62,7 @@ class MccsAntenna(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def _init_state_model(self: MccsAntenna):
+    def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
         self._health_state = None  # SKABaseDevice.InitCommand.do() does this too late.
         self._health_model = AntennaHealthModel(self.health_changed)
@@ -92,7 +90,9 @@ class MccsAntenna(SKABaseDevice):
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for the MCCS antenna device."""
 
-        def do(self):
+        def do(
+            self: MccsAntenna.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for device initialisation: initialises the attributes and
             properties of the :py:class:`.MccsAntenna`.
@@ -100,8 +100,6 @@ class MccsAntenna(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -219,7 +217,7 @@ class MccsAntenna(SKABaseDevice):
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
 
-    def health_changed(self, health):
+    def health_changed(self: MccsAntenna, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -229,8 +227,8 @@ class MccsAntenna(SKABaseDevice):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
+        self._health_state: HealthState  # typehint only
         if self._health_state == health:
             return
         self._health_state = health
@@ -250,17 +248,15 @@ class MccsAntenna(SKABaseDevice):
         Return the simulation mode of this device.
 
         :return: the simulation mode of this device
-        :rtype: :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         return SimulationMode.FALSE
 
-    @simulationMode.write
-    def simulationMode(self, value):
+    @simulationMode.write  # type: ignore [no-redef]
+    def simulationMode(self: MccsAntenna, value: SimulationMode) -> None:
         """
         Set the simulation mode of this device.
 
         :param value: the new simulation mode
-        :type value: :py:class:`~ska_tango_base.control_model.SimulationMode`
 
         :raises ValueError: because this device cannot be put into simulation mode.
         """
@@ -268,32 +264,29 @@ class MccsAntenna(SKABaseDevice):
             raise ValueError("MccsAntenna cannot be put into simulation mode.")
 
     @attribute(dtype="int", label="AntennaID")
-    def antennaId(self):
+    def antennaId(self: MccsAntenna) -> int:
         """
         Return the antenna ID attribute.
 
         :return: antenna ID
-        :rtype: int
         """
         return self._antennaId
 
     @attribute(dtype="float", label="gain")
-    def gain(self):
+    def gain(self: MccsAntenna) -> float:
         """
         Return the gain attribute.
 
         :return: the gain
-        :rtype: float
         """
         return self._gain
 
     @attribute(dtype="float", label="rms")
-    def rms(self):
+    def rms(self: MccsAntenna) -> float:
         """
         Return the measured RMS of the antenna.
 
         :return: the measured rms
-        :rtype: float
         """
         return self._rms
 
@@ -307,270 +300,210 @@ class MccsAntenna(SKABaseDevice):
         min_alarm=2.75,
         max_alarm=5.45,
     )
-    def voltage(self):
+    def voltage(self: MccsAntenna) -> float:
         """
         Return the voltage attribute.
 
         :return: the voltage
-        :rtype: float
         """
         return self.component_manager.voltage
 
     @attribute(dtype="float", label="current", unit="amperes")
-    def current(self):
+    def current(self: MccsAntenna) -> float:
         """
         Return the current attribute.
 
         :return: the current
-        :rtype: float
         """
         return self.component_manager.current
 
     @attribute(dtype="float", label="temperature", unit="DegC")
-    def temperature(self):
+    def temperature(self: MccsAntenna) -> float:
         """
         Return the temperature attribute.
 
         :return: the temperature
-        :rtype: float
         """
         return self.component_manager.temperature
 
     @attribute(dtype="bool", label="xPolarisationFaulty")
-    def xPolarisationFaulty(self):
+    def xPolarisationFaulty(self: MccsAntenna) -> bool:
         """
         Return the xPolarisationFaulty attribute.
 
         :return: the x-polarisation faulty flag
-        :rtype: bool
         """
         return self._xPolarisationFaulty
 
     @attribute(dtype="bool", label="yPolarisationFaulty")
-    def yPolarisationFaulty(self):
+    def yPolarisationFaulty(self: MccsAntenna) -> bool:
         """
         Return the yPolarisationFaulty attribute.
 
         :return: the y-polarisation faulty flag
-        :rtype: bool
         """
         return self._yPolarisationFaulty
 
-    @attribute(
-        dtype="float",
-        label="fieldNodeLongitude",
-    )
-    def fieldNodeLongitude(self):
+    @attribute(dtype="float", label="fieldNodeLongitude")
+    def fieldNodeLongitude(self: MccsAntenna) -> float:
         """
         Return the fieldNodeLongitude attribute.
 
         :return: the Longitude of field node centre
-        :rtype: float
         """
         return self._fieldNodeLongitude
 
-    @attribute(
-        dtype="float",
-        label="fieldNodeLatitude",
-    )
-    def fieldNodeLatitude(self):
+    @attribute(dtype="float", label="fieldNodeLatitude")
+    def fieldNodeLatitude(self: MccsAntenna) -> float:
         """
         Return the fieldNodeLatitude attribute.
 
         :return: the Latitude of field node centre
-        :rtype: float
         """
         return self._fieldNodeLongitude
 
     @attribute(dtype="float", label="altitude", unit="meters")
-    def altitude(self):
+    def altitude(self: MccsAntenna) -> float:
         """
         Return the altitude attribute.
 
         :return: the altitude of the antenna
-        :rtype: float
         """
         return self._altitude
 
-    @attribute(
-        dtype="float",
-        label="xDisplacement",
-        unit="meters",
-    )
-    def xDisplacement(self):
+    @attribute(dtype="float", label="xDisplacement", unit="meters")
+    def xDisplacement(self: MccsAntenna) -> float:
         """
         Return the horizontal displacement east attribute.
 
         :return: the horizontal displacement eastwards from station reference position
-        :rtype: float
         """
         return self._xDisplacement
 
-    @attribute(
-        dtype="float",
-        label="yDisplacement",
-        unit="meters",
-    )
-    def yDisplacement(self):
+    @attribute(dtype="float", label="yDisplacement", unit="meters")
+    def yDisplacement(self: MccsAntenna) -> float:
         """
         Return the horizontal displacement north attribute.
 
         :return: the horizontal displacement northwards from station reference position
-        :rtype: float
         """
         return self._yDisplacement
 
-    @attribute(
-        dtype="float",
-        label="zDisplacement",
-        unit="meters",
-    )
-    def zDisplacement(self):
+    @attribute(dtype="float", label="zDisplacement", unit="meters")
+    def zDisplacement(self: MccsAntenna) -> float:
         """
         Return the vertical displacement attribute.
 
         :return: the vertical displacement upwards from station reference position
-        :rtype: float
         """
         return self._zDisplacement
 
     @attribute(dtype="str", label="timestampOfLastSpectrum")
-    def timestampOfLastSpectrum(self):
+    def timestampOfLastSpectrum(self: MccsAntenna) -> str:
         """
         Return the timestampOfLastSpectrum attribute.
 
         :return: the timestamp of the last spectrum
-        :rtype: str
         """
         return self._timestampOfLastSpectrum
 
-    @attribute(
-        dtype="int",
-        label="logicalAntennaId",
-    )
-    def logicalAntennaId(self):
+    @attribute(dtype="int", label="logicalAntennaId")
+    def logicalAntennaId(self: MccsAntenna) -> int:
         """
         Return the logical antenna ID attribute.
 
         :return: the logical antenna ID
-        :rtype: int
         """
         return self._logicalAntennaId
 
     @attribute(dtype=("int",), max_dim_x=100, label="xPolarisationScalingFactor")
-    def xPolarisationScalingFactor(self):
+    def xPolarisationScalingFactor(self: MccsAntenna) -> list[int]:
         """
         Return the logical antenna ID attribute.
 
         :return: the x polarisation scaling factor
-        :rtype: list(int)
         """
         return self._xPolarisationScalingFactor
 
     @attribute(dtype=("int",), max_dim_x=100, label="yPolarisationScalingFactor")
-    def yPolarisationScalingFactor(self):
+    def yPolarisationScalingFactor(self: MccsAntenna) -> list[int]:
         """
         Return the yPolarisationScalingFactor attribute.
 
         :return: the y polarisation scaling factor
-        :rtype: list(int)
         """
         return self._yPolarisationScalingFactor
 
-    @attribute(
-        dtype=("float",),
-        max_dim_x=100,
-        label="calibrationCoefficient",
-    )
-    def calibrationCoefficient(self):
+    @attribute(dtype=("float",), max_dim_x=100, label="calibrationCoefficient")
+    def calibrationCoefficient(self: MccsAntenna) -> list[float]:
         """
         Return theCalibration coefficient to be applied for the next frequency channel
         in the calibration cycle.
 
         :return: the calibration coefficients
-        :rtype: list(float)
         """
         return self._calibrationCoefficient
 
     @attribute(dtype=("float",), max_dim_x=100)
-    def pointingCoefficient(self):
+    def pointingCoefficient(self: MccsAntenna) -> list[float]:
         """
         Return the pointingCoefficient attribute.
 
         :return: the pointing coefficients
-        :rtype: list(float)
         """
         return self._pointingCoefficient
 
     @attribute(dtype=("float",), max_dim_x=100, label="spectrumX")
-    def spectrumX(self):
+    def spectrumX(self: MccsAntenna) -> list[float]:
         """
         Return the spectrumX attribute.
 
         :return: x spectrum
-        :rtype: list(float)
         """
         return self._spectrumX
 
     @attribute(dtype=("float",), max_dim_x=100, label="spectrumY")
-    def spectrumY(self):
+    def spectrumY(self: MccsAntenna) -> list[float]:
         """
         Return the spectrumY attribute.
 
         :return: y spectrum
-        :rtype: list(float)
         """
         return self._spectrumY
 
     @attribute(dtype=("float",), max_dim_x=100, label="position")
-    def position(self):
+    def position(self: MccsAntenna) -> list[float]:
         """
         Return the position attribute.
 
         :return: positions
-        :rtype: list(float)
         """
         return self._position
 
-    @attribute(
-        dtype=("float",),
-        max_dim_x=100,
-        label="delays",
-    )
-    def delays(self):
+    @attribute(dtype=("float",), max_dim_x=100, label="delays")
+    def delays(self: MccsAntenna) -> list[float]:
         """
         Return the delays attribute.
 
         :return: delay for each beam
-        :rtype: list(float)
         """
         return self._delays
 
-    @attribute(
-        dtype=("float",),
-        max_dim_x=100,
-        label="delayRates",
-    )
-    def delayRates(self):
+    @attribute(dtype=("float",), max_dim_x=100, label="delayRates")
+    def delayRates(self: MccsAntenna) -> list[float]:
         """
         Return the delayRates attribute.
 
         :return: delay rate for each beam
-        :rtype: list(float)
         """
         return self._delayRates
 
-    @attribute(
-        dtype=("float",),
-        max_dim_x=100,
-        label="bandpassCoefficient",
-    )
-    def bandpassCoefficient(self):
+    @attribute(dtype=("float",), max_dim_x=100, label="bandpassCoefficient")
+    def bandpassCoefficient(self: MccsAntenna) -> list[float]:
         """
         Return the bandpassCoefficient attribute.
 
         :return: bandpass coefficients
-        :rtype: list(float)
         """
         return self._bandpassCoefficient
 
@@ -623,17 +556,14 @@ class MccsAntenna(SKABaseDevice):
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(*args: str, **kwargs: str) -> int:
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
     return MccsAntenna.run_server(args=args, **kwargs)
 

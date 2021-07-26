@@ -22,6 +22,7 @@ from ska_low_mccs.utils import call_with_json, json_input, tango_raise
 class TestUtils:
     """Test cases for ska_low_mccs.utils module."""
 
+    @pytest.mark.forked
     def test_tango_raise_device(self):
         """Test that `tango_raise` runs correctly when used in a tango device."""
 

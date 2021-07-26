@@ -13,175 +13,31 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-import logging
-import threading
-from typing import cast, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 # PyTango imports
-from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska_tango_base import SKABaseDevice, SKAController
-from ska_tango_base.base import OpStateModel
-from ska_tango_base.control_model import HealthState
+from ska_tango_base import SKABaseDevice
+from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.pool import DevicePool, DevicePoolSequence
+from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 import ska_low_mccs.release as release
-from ska_low_mccs.utils import call_with_json, tango_raise
-from ska_low_mccs.health import MutableHealthModel, MutableHealthMonitor
-from ska_low_mccs.resource import ResourceManager
-from ska_low_mccs.message_queue import MessageQueue
 
-__all__ = [
-    "MccsController",
-    "MccsControllerQueue",
-    "StationsResourceManager",
-    "SubarrayBeamsResourceManager",
-    "main",
-]
+__all__ = ["MccsController", "main"]
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
-class StationsResourceManager(ResourceManager):
-    """
-    A simple manager for the pool of stations that are assigned to this controller.
-
-    Inherits from ResourceManager.
-    """
-
-    def __init__(
-        self: StationsResourceManager,
-        health_monitor: MutableHealthMonitor,
-        station_fqdns: List[str],
-        logger: logging.Logger,
-    ) -> None:
-        """
-        Initialise a new StationsResourceManager.
-
-        :param health_monitor: Provides for monitoring of health states
-        :param station_fqdns: the FQDNs of the stations that this
-            subarray manages
-        :param logger: the logger to be used by the object under test
-        """
-        stations: dict[int, str] = {}
-        for station_fqdn in station_fqdns:
-            station_id = int(station_fqdn.split("/")[-1:][0])
-            stations[station_id] = station_fqdn
-        super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
-
-    def items(self: StationsResourceManager) -> dict[int, str]:
-        """
-        Return the stations managed by this device.
-
-        :return: A dictionary of Station IDs, FQDNs managed by this
-            StationsResourceManager
-        """
-        return {
-            cast(int, key): resource.fqdn for key, resource in self._resources.items()
-        }
-
-    def assign(  # type: ignore[override]
-        self: StationsResourceManager, station_fqdns: list[str], subarray_id: int
-    ) -> None:
-        """
-        Assign stations to a subarray device.
-
-        :param station_fqdns: list of station device FQDNs to assign
-        :param subarray_id: ID of the subarray to which the stations
-            should be assigned
-        """
-        stations = {}
-        for station_fqdn in station_fqdns:
-            station_id = int(station_fqdn.split("/")[-1:][0])
-            stations[station_id] = station_fqdn
-        super().assign(stations, subarray_id)
-
-    def release_all(self: StationsResourceManager) -> None:
-        """Remove all stations from this resource manager."""
-        self._remove_from_managed(self.get_all_fqdns())
-
-    @property
-    def station_fqdns(self: StationsResourceManager) -> List[str]:
-        """
-        Returns the FQDNs of currently assigned stations.
-
-        :return: FQDNs of currently assigned stations
-        """
-        return sorted(self.get_all_fqdns())
-
-
-#     @property
-#     def station_ids(self: StationsResourceManager) -> List[int]:
-#         """
-#         Get the device IDs of currently assigned stations.
-#
-#         :return: IDs of currently assigned stations
-#         """
-#         # This is not correct. The keys are fqdns not id
-#         # return sorted(list(self._resources.keys()))
-
-
-class MccsControllerQueue(MessageQueue):
-    """A concrete implementation of a message queue specific to MccsController."""
-
-    def _notify_listener(
-        self: MccsControllerQueue,
-        result_code: ResultCode,
-        message_uid: str,
-        status: str,
-    ) -> None:
-        """
-        Concrete implementation that can notify specific listeners.
-
-        :param result_code: Result code of the command being executed
-        :param message_uid: The message uid that needs a push notification
-        :param status: Status message
-        """
-        device = self._target
-        device._command_result["result_code"] = result_code
-        device._command_result["message_uid"] = message_uid
-        device._command_result["status"] = status
-        json_results = json.dumps(device._command_result)
-        device.push_change_event("commandResult", json_results)
-
-
-class MccsController(SKAController):
-    """
-    MccsController TANGO device class for the MCCS prototype.
-
-    This is a subclass of :py:class:`ska_tango_base.SKAController`.
-
-    **Properties:**
-
-    - Device Property
-        MccsSubarrays
-            - The FQDNs of the Mccs sub-arrays
-            - Type: list(str)
-        MccsStations
-            - List of MCCS station  TANGO Device names
-            - Type: list(str)
-        MccsStationBeams
-            - List of MCCS station beam TANGO Device names
-            - Type: list(str)
-        MccsSubarrayBeams
-            - List of MCCS subarray beam TANGO Device names
-            - Type: list(str)
-        MccsTiles
-            - List of MCCS Tile TANGO Device names.
-            - Type: list(str)
-        MccsAntenna
-            - List of MCCS Antenna TANGO Device names
-            - Type: list(str)
-    """
+class MccsController(SKABaseDevice):
+    """An implementation of a controller Tango device for MCCS."""
 
     # -----------------
     # Device Properties
     # -----------------
-
     MccsSubarrays = device_property(dtype="DevVarStringArray", default_value=[])
     MccsSubracks = device_property(dtype="DevVarStringArray", default_value=[])
     MccsStations = device_property(dtype="DevVarStringArray", default_value=[])
@@ -189,48 +45,64 @@ class MccsController(SKAController):
     MccsStationBeams = device_property(dtype="DevVarStringArray", default_value=[])
 
     # ---------------
-    # General methods
+    # Initialisation
     # ---------------
-    def init_device(self: MccsController) -> None:
-        """
-        Initialise the device.
+    def _init_state_model(self: MccsController) -> None:
+        super()._init_state_model()
+        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
+        self._health_model = ControllerHealthModel(
+            self.MccsStations,
+            self.MccsSubracks,
+            self.MccsSubarrayBeams,
+            self.health_changed,
+        )
+        self.set_change_event("healthState", True, False)
 
-        This is overridden here to change the Tango serialisation model.
+    def create_component_manager(
+        self: MccsController,
+    ) -> ControllerComponentManager:
         """
-        util = Util.instance()
-        util.set_serial_model(SerialModel.BY_DEVICE)
-        super().init_device()
+        Create and return a component manager for this device.
 
-    def init_command_objects(self: MccsController) -> None:
-        """Initialises the command handlers for commands supported by this device."""
+        :return: a component manager for this device.
+        """
+        return ControllerComponentManager(
+            self.MccsSubarrays,
+            self.MccsSubracks,
+            self.MccsStations,
+            self.MccsSubarrayBeams,
+            self.logger,
+            self._communication_status_changed,
+            self._component_power_mode_changed,
+            self._health_model.subrack_health_changed,
+            self._health_model.station_health_changed,
+            self._health_model.subarray_beam_health_changed,
+        )
+
+    def init_command_objects(self):
+        """Set up the handler objects for Commands."""
         super().init_command_objects()
 
-        args = (self, self.state_model, self.logger)
-        self.register_command_object("Operate", self.OperateCommand(*args))
-        self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
+        self.register_command_object(
+            "Allocate",
+            self.AllocateCommand(
+                self.component_manager, self.op_state_model, self.logger
+            ),
+        )
+        self.register_command_object(
+            "Release",
+            self.ReleaseCommand(
+                self.component_manager, self.op_state_model, self.logger
+            ),
+        )
+        self.register_command_object(
+            "RestartSubarray",
+            self.RestartSubarrayCommand(
+                self.component_manager, self.op_state_model, self.logger
+            ),
+        )
 
-        for (command_name, command_object) in [
-            ("StandbyLow", self.StandbyLowCommand),
-            ("StandbyFull", self.StandbyFullCommand),
-        ]:
-            self.register_command_object(
-                command_name,
-                command_object(self.device_pool, self.state_model, self.logger),
-            )
-
-        for (command_name, command_object) in [
-            ("Startup", self.StartupCommand),
-            ("On", self.OnCommand),
-            ("Callback", self.CallbackCommand),
-            ("Off", self.OffCommand),
-            ("AllocateCallback", self.AllocateCallbackCommand),
-            ("AssignResourcesCallback", self.AssignResourcesCallbackCommand),
-        ]:
-            self.register_command_object(
-                command_name, command_object(self, self.state_model, self.logger)
-            )
-
-    class InitCommand(SKAController.InitCommand):
+    class InitCommand(SKABaseDevice.InitCommand):
         """
         A class for :py:class:`~.MccsController`'s Init command.
 
@@ -239,222 +111,80 @@ class MccsController(SKAController):
         called during :py:class:`~.MccsController`'s initialisation.
         """
 
-        def __init__(
-            self: MccsController.InitCommand,
-            target: object,
-            state_model: OpStateModel,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Create a new InitCommand.
-
-            :param target: the object that this command acts upon; for
-                example, the device for which this class implements the
-                command
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            super().__init__(target, state_model, logger)
-
-            self._thread: Optional[threading.Thread] = None
-            self._lock = threading.Lock()
-            self._interrupt = False
-            self._message_queue = None
-            self._qdebuglock = threading.Lock()
-
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the `MccsController`. State is
-            managed under the hood; the basic sequence is:
-
-            1. Device state is set to INIT
-            2. The do() method is run
-            3. Device state is set to OFF
+            Initialises the attributes and properties of the `MccsController`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            super().do()
+            (result_code, message) = super().do()
 
             device = self.target
-            device._heart_beat = 0
-            device._allocate_cmd_cache = {}
-            device._command_result = {
-                "result_code": ResultCode.UNKNOWN,
-                "message_uid": "",
-                "status": "",
-            }
-            device._progress = 0
-            device.queue_debug = ""
-            device._assigned_resources = ""
             device._build_state = release.get_release_info()
             device._version_id = release.version
-            device.set_change_event("commandResult", True, False)
-            device.set_change_event("commandProgress", True, False)
-            device.set_change_event("assignedResources", True, False)
 
-            device._subarray_fqdns = list(device.MccsSubarrays)
-            device._subarray_enabled = [False] * len(device.MccsSubarrays)
+            # The health model updates our health, but then the base class super().do()
+            # overwrites it with OK, so we need to update this again.
+            # TODO: This needs to be fixed in the base classes.
+            device._health_state = device._health_model.health_state
 
-            device._subrack_fqdns = list(device.MccsSubracks)
-            device._station_fqdns = list(device.MccsStations)
-            device._subarray_beam_fqdns = list(device.MccsSubarrayBeams)
-
-            subrack_pool = DevicePool(device._subrack_fqdns, self.logger, connect=False)
-            station_pool = DevicePool(device._station_fqdns, self.logger, connect=False)
-
-            device.device_pool = DevicePoolSequence(
-                [subrack_pool, station_pool], self.logger, connect=False
-            )
-
-            # Start the Message queue for this device
-            device._message_queue = MccsControllerQueue(
-                target=device, lock=self._qdebuglock, logger=self.logger
-            )
-            device._message_queue.start()
-
-            self._thread = threading.Thread(
-                target=self._initialise_connections, args=(device,)
-            )
-            with self._lock:
-                self._thread.start()
-                return (ResultCode.STARTED, "Init command started")
-
-        def _initialise_connections(
-            self: MccsController.InitCommand, device: SKABaseDevice
-        ) -> None:
-            """
-            Thread target for asynchronous initialisation of connections to external
-            entities such as hardware and other devices.
-
-            :param device: the device being initialised
-            """
-            # https://pytango.readthedocs.io/en/stable/howto.html
-            # #using-clients-with-multithreading
-            with EnsureOmniThread():
-                self._initialise_device_pool(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
-                self._initialise_health_monitoring(
-                    device,
-                    device._subrack_fqdns
-                    + device._station_fqdns
-                    + device._subarray_beam_fqdns,
-                )
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
-                self._initialise_resource_management(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
-                with self._lock:
-                    self.succeeded()
-
-        def _initialise_device_pool(
-            self: MccsController.InitCommand, device: SKABaseDevice
-        ) -> None:
-            """
-            Initialise the device pool for this device.
-
-            :param device: the device for which power management is
-                being initialised
-            """
-            device.device_pool.connect()
-
-        def _initialise_health_monitoring(
-            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: List[str]
-        ) -> None:
-            """
-            Initialise the health model for this device.
-
-            :param device: the device for which the health model is
-                being initialised
-            :param fqdns: the fqdns of subservient devices for which
-                this device monitors health
-            """
-            device._health_state = HealthState.UNKNOWN
-            device.set_change_event("healthState", True, False)
-            device.health_model = MutableHealthModel(
-                None, fqdns, self.logger, device.health_changed
-            )
-
-        def _initialise_resource_management(
-            self: MccsController.InitCommand, device: SKABaseDevice
-        ) -> None:
-            """
-            Initialise resource management for this device.
-
-            :param device: the device for which resource management is
-                being initialised
-            """
-            health_monitor = device.health_model._health_monitor
-
-            # Instantiate a resource manager for the Stations
-            device._stations_manager = StationsResourceManager(
-                health_monitor, device._station_fqdns, self.logger
-            )
-            device._subarray_beams_manager = SubarrayBeamsResourceManager(
-                health_monitor,
-                device._subarray_beam_fqdns,
-                device._stations_manager,
-                self.logger,
-            )
-            resource_args = (device, device.state_model, device.logger)
-            device.register_command_object(
-                "Allocate", device.AllocateCommand(*resource_args)
-            )
-            device.register_command_object(
-                "Release", device.ReleaseCommand(*resource_args)
-            )
-            device.register_command_object(
-                "Restart", device.RestartCommand(*resource_args)
-            )
-
-        def interrupt(self: MccsController.InitCommand) -> bool:
-            """
-            Interrupt the initialisation thread (if one is running)
-
-            :return: whether the initialisation thread was interrupted
-            """
-            if self._thread is None:
-                return False
-            self._interrupt = True
-            return True
-
-        def succeeded(self: MccsController.InitCommand) -> None:
-            """Hook called when the initialisation thread finishes successfully."""
-            self.state_model.perform_action("init_succeeded_disable")
-
-    def always_executed_hook(self: MccsController) -> None:
-        """Method always executed before any TANGO command is executed."""
-
-    def delete_device(self: MccsController) -> None:
-        """
-        Hook to delete resources allocated in the
-        :py:meth:`~.MccsController.InitCommand.do` method of the nested
-        :py:class:`~.MccsController.InitCommand` class.
-
-        This method allows for any memory or other resources allocated
-        in the :py:meth:`~.MccsController.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by
-        the Init command when the Tango device server is re-initialised.
-        """
-        if self._message_queue.is_alive():
-            self._message_queue.terminate_thread()
-            self._message_queue.join()
+            return (result_code, message)
 
     # ----------
-    # Attributes
+    # Callbacks
     # ----------
+    def _communication_status_changed(
+        self: MccsController,
+        communication_status: CommunicationStatus,
+    ) -> None:
+        """
+        Handle change in communications status between component manager and component.
+
+        This is a callback hook, called by the component manager when
+        the communications status changes. It is implemented here to
+        drive the op_state.
+
+        :param communication_status: the status of communications
+            between the component manager and its component.
+        """
+        action_map = {
+            CommunicationStatus.DISABLED: "component_disconnected",
+            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
+            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
+        }
+
+        action = action_map[communication_status]
+        if action is not None:
+            self.op_state_model.perform_action(action)
+
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
+
+    def _component_power_mode_changed(
+        self: MccsController,
+        power_mode: PowerMode,
+    ) -> None:
+        """
+        Handle change in the power mode of the component.
+
+        This is a callback hook, called by the component manager when
+        the power mode of the component changes. It is implemented here
+        to drive the op_state.
+
+        :param power_mode: the power mode of the component.
+        """
+        action_map = {
+            PowerMode.OFF: "component_off",
+            PowerMode.STANDBY: "component_standby",
+            PowerMode.ON: "component_on",
+            PowerMode.UNKNOWN: "component_unknown",
+        }
+
+        self.op_state_model.perform_action(action_map[power_mode])
+
     def health_changed(self: MccsController, health: HealthState) -> None:
         """
         Callback to be called whenever the HealthModel's health state changes;
@@ -470,77 +200,9 @@ class MccsController(SKAController):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevString")
-    def commandResult(self: MccsController) -> ResultCode:
-        """
-        Return the _command_result attributes.
-
-        :return: JSON encoded _command_results attributes map
-        """
-        json_results = json.dumps(self._command_result)
-        return json_results
-
-    @attribute(dtype="DevString")
-    def aPoolStats(self: MccsController) -> str:
-        """
-        Return the aPoolStats attribute.
-
-        :return: aPoolStats attribute
-        """
-        return self.device_pool.pool_stats()
-
-    @attribute(dtype="DevString")
-    def aQueueDebug(self: MccsController) -> str:
-        """
-        Return the queueDebug attribute.
-
-        :return: queueDebug attribute
-        """
-        return self.queue_debug
-
-    @aQueueDebug.write  # type: ignore[no-redef]
-    def aQueueDebug(self: MccsController, debug_string: str) -> None:
-        """
-        Update the queue debug attribute.
-
-        :param debug_string: the new debug string for this attribute
-        """
-        self.queue_debug = debug_string
-
-    @attribute(
-        dtype="DevUShort",
-        label="Command progress percentage",
-        rel_change=2,
-        abs_change=5,
-        max_value=100,
-        min_value=0,
-    )
-    def commandProgress(self: MccsController) -> int:
-        """
-        Return the commandProgress attribute value.
-
-        :return: command progress as a percentage
-        """
-        return self._progress
-
-    @attribute(dtype="DevULong")
-    def aHeartBeat(self: MccsController) -> int:
-        """
-        Return the Heartbeat attribute value.
-
-        :return: heart beat as a percentage
-        """
-        return self._heart_beat
-
-    @attribute(dtype="DevUShort", unit="s")
-    def commandDelayExpected(self: MccsController) -> int:
-        """
-        Return the commandDelayExpected attribute.
-
-        :return: number of seconds it is expected to take to complete the command
-        """
-        return 0
-
+    # ----------
+    # Attributes
+    # ----------
     @attribute(dtype="DevString")
     def assignedResources(self: MccsController) -> str:
         """
@@ -548,355 +210,11 @@ class MccsController(SKAController):
 
         :return: assignedResources attribute
         """
-        return self._assigned_resources
-
-    def notify_listener(
-        self: MccsController,
-        result_code: ResultCode,
-        message_uid: str,
-        status: str,
-    ) -> None:
-        """
-        Thin wrapper around the message queue's notify listener method.
-
-        :param result_code: Result code of the command being executed
-        :param message_uid: The message uid that needs a push notification
-        :param status: Status message
-        """
-        self._message_queue._notify_listener(result_code, message_uid, status)
+        return self.component_manager.assigned_resources
 
     # --------
     # Commands
     # --------
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def Startup(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Start up the MCCS subsystem.
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        """
-        return self._check_and_send_message(
-            "Startup", check_is_allowed=True, notifications=True
-        )
-
-    class StartupCommand(ResponseCommand):
-        """Class for handling the Startup command."""
-
-        SUCCEEDED_MESSAGE = "Startup command completed OK"
-        FAILED_OFF_MESSAGE = "Startup command failed: Off"
-        FAILED_ON_MESSAGE = "Startup command failed: On"
-
-        def do(
-            self: MccsController.StartupCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.Startup` command.
-
-            :param argin: Messaging system and command arguments
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            # TODO: For now, we need to get our devices to OFF state
-            # (the highest state of device readiness for a device that
-            # isn't actually on) before we can put them into ON state.
-            # This is a counterintuitive mess that will be fixed in
-            # SP-1501. Meanwhile, Startup() is implemented to turn all
-            # devices OFF (which will actually cause all the hardware to
-            # come on), and then turn them ON.
-            device = self.target
-            device_pool = device.device_pool
-
-            message_uid = device._command_result.get("message_uid")
-            if device_pool.off():
-                self.state_model.perform_action("off_succeeded")
-            else:
-                self.state_model.perform_action("off_failed")
-                device.notify_listener(
-                    ResultCode.FAILED, message_uid, self.FAILED_OFF_MESSAGE
-                )
-                return (ResultCode.FAILED, message_uid + "," + self.FAILED_OFF_MESSAGE)
-
-            if device_pool.on():
-                self.state_model.perform_action("on_succeeded")
-                device.notify_listener(
-                    ResultCode.OK, message_uid, self.SUCCEEDED_MESSAGE
-                )
-                return (ResultCode.OK, message_uid + "," + self.SUCCEEDED_MESSAGE)
-            else:
-                self.state_model.perform_action("on_failed")
-                device.notify_listener(
-                    ResultCode.FAILED, message_uid, self.FAILED_ON_MESSAGE
-                )
-                return (ResultCode.FAILED, message_uid + "," + self.FAILED_ON_MESSAGE)
-
-    def _check_and_send_message(
-        self: MccsController,
-        command: str,
-        json_args: str = "",
-        check_is_allowed: bool = False,
-        notifications: bool = False,
-    ) -> DevVarLongStringArrayType:
-        """
-        Helper method to check initial status and send a message to execute the
-        specified command.
-
-        :param command: the command to send a message for
-        :param json_args: arguments to pass with the command
-        :param check_is_allowed: check for any previous ongoing command
-        :param notifications: requestor notification required
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
-        """
-        self.logger.debug(f"_check_and_send_message({command})")
-        if check_is_allowed:
-            command_progress = self._command_result.get("result_code")
-            if command_progress in [ResultCode.STARTED, ResultCode.QUEUED]:
-                self.logger.error(
-                    f"_check_and_send_message() FAILED: {command_progress.name}"
-                )
-                return (
-                    [ResultCode.FAILED],
-                    ["A controller command is already in progress", None],
-                )
-
-        if notifications:
-            self.notify_listener(ResultCode.UNKNOWN, "", "")
-
-        self.logger.debug(f"send_message({command})")
-        (result_code, message_uid, status) = self._message_queue.send_message(
-            command=command, notifications=notifications, json_args=json_args
-        )
-        return ([result_code], [status, message_uid])
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def On(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Send a message to turn the controller on.
-
-        Method returns as soon as the message has been enqueued.
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        """
-        return self._check_and_send_message(
-            "On", check_is_allowed=True, notifications=True
-        )
-
-    class OnCommand(SKABaseDevice.OnCommand):
-        """Class for handling the On command."""
-
-        QUEUED_MESSAGE = "Controller On command queued"
-        FAILED_MESSAGE = "Controller On command failed"
-
-        def do(self: MccsController.OnCommand, argin: str) -> Tuple[ResultCode, str]:
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.On` command.
-
-            :param argin: JSON encoded messaging system and command arguments
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            device = self.target
-            device_pool = device.device_pool
-
-            message_uid = device._command_result.get("message_uid")
-            if device_pool.invoke_command_with_callback(
-                command_name="On", fqdn=device.get_name(), callback="Callback"
-            ):
-                return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
-            else:
-                self.logger.error(message_uid + "," + self.FAILED_MESSAGE)
-                device.notify_listener(
-                    ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
-                )
-                # TODO: Determine if this next statement is correct:
-                # This needs to be successful or it drives the state machine into FAULT
-                return (ResultCode.OK, message_uid + "," + self.FAILED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def Callback(self: MccsController, json_args: str) -> DevVarLongStringArrayType:
-        """
-        Callback method for pool device command completion.
-
-        :param json_args: Argument containing JSON encoded command message and result
-        :return: A tuple containing a return code, a string message indicating status and
-            message UID. The string message is for information purposes only, but the
-            message UID is for message management use.
-        """
-        return self._check_and_send_message("Callback", json_args=json_args)
-
-    class CallbackCommand(ResponseCommand):
-        """Class for handling the Callback command."""
-
-        SUCCESSFUL_MESSAGE = "Callback completed successfully"
-
-        def do(
-            self: MccsController.CallbackCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.Callback` command.
-
-            :param argin: Argument containing JSON encoded command message and result
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            self.logger.debug(f"Class CallbackCommand argin = {argin}")
-            device = self.target
-            device_pool = device.device_pool
-            device.logger.debug("Controller Callback called")
-
-            message_uid = device._command_result.get("message_uid")
-            # Defer callback to our pool device
-            (command_complete, result_code, status) = device_pool.callback(argin)
-            self.logger.debug(
-                f"{command_complete}, {result_code}, {status} = device_pool.callback({argin})"
-            )
-            if command_complete:
-                device.logger.debug(
-                    f"Callback({result_code.name}:{message_uid}:{self.SUCCESSFUL_MESSAGE})"
-                )
-                device.notify_listener(
-                    result_code, message_uid, self.SUCCESSFUL_MESSAGE
-                )
-                return (result_code, message_uid + "," + self.SUCCESSFUL_MESSAGE)
-            else:
-                return (ResultCode.STARTED, message_uid + "," + status)
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def Disable(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Disable the controller.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        self.notify_listener(ResultCode.UNKNOWN, "", "")
-        command = self.get_command_object("Disable")
-        (result_code, status) = command()
-        self.notify_listener(result_code, "", status)
-        return ([result_code], [status])
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def Off(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Send a message to turn the controller off.
-
-        Method returns as soon as the message has been enqueued.
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        """
-        return self._check_and_send_message(
-            "Off", check_is_allowed=True, notifications=True
-        )
-
-    class OffCommand(SKABaseDevice.OffCommand):
-        """Class for handling the Off command."""
-
-        QUEUED_MESSAGE = "Controller Off command queued"
-        FAILED_MESSAGE = "Controller Off command failed"
-
-        def do(self: MccsController.OffCommand, argin: str) -> Tuple[ResultCode, str]:
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.Off` command.
-
-            :param argin: JSON encoded messaging system and command arguments
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            device = self.target
-            device_pool = device.device_pool
-
-            message_uid = device._command_result.get("message_uid")
-            if device_pool.invoke_command_with_callback(
-                command_name="Off", fqdn=device.get_name(), callback="Callback"
-            ):
-                return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
-            else:
-                self.logger.error(message_uid + "," + self.FAILED_MESSAGE)
-                device.notify_listener(
-                    ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
-                )
-                # TODO: Determine if this next statement is correct:
-                # This needs to be successful or it drives the state machine into FAULT
-                return (ResultCode.OK, message_uid + "," + self.FAILED_MESSAGE)
-
-    class StandbyLowCommand(ResponseCommand):
-        """
-        Class for handling the StandbyLow command.
-
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
-        """
-
-        SUCCEEDED_MESSAGE = "StandbyLow command completed OK"
-        FAILED_MESSAGE = "StandbyLow command failed"
-
-        def do(self: MccsController.StandbyLowCommand) -> Tuple[ResultCode, str]:
-            """
-            Stateless do-hook for implementing the functionality of the
-            :py:meth:`.MccsController.StandbyLow` command.
-
-            :todo: For now, StandbyLow and StandbyHigh simply implement
-                a general "standby".
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            device_pool = self.target
-
-            if device_pool.standby():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def StandbyLow(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Put MCCS into low standby mode.
-
-        :todo: Some elements of SKA Mid have both low and full standby
-            modes, but SKA Low has no such elements. We just need a
-            Standby command, not separate StandbyLow and StandbyFull.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("StandbyLow")
-        (result_code, status) = handler()
-        return ([result_code], [status])
-
     class StandbyFullCommand(ResponseCommand):
         """
         Class for handling the StandbyFull command.
@@ -928,7 +246,6 @@ class MccsController(SKAController):
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
     def StandbyFull(self: MccsController) -> DevVarLongStringArrayType:
         """
         Put MCCS into full standby mode.
@@ -944,97 +261,6 @@ class MccsController(SKAController):
         handler = self.get_command_object("StandbyFull")
         (result_code, status) = handler()
         return ([result_code], [status])
-
-    class OperateCommand(ResponseCommand):
-        """
-        Class for handling the Operate command.
-
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
-        """
-
-        SUCCEEDED_MESSAGE = "Operate command completed OK"
-
-        def do(self: MccsController.OperateCommand) -> Tuple[ResultCode, str]:
-            """
-            Stateless hook for implementation of
-            :py:meth:`.MccsController.Operate` command
-            functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-        def check_allowed(self: MccsController.OperateCommand) -> bool:
-            """
-            Whether this command is allowed to be run in current device state.
-
-            :return: True if this command is allowed to be run in
-                current device state
-            """
-            return self.state_model.op_state == DevState.OFF
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def Operate(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Transit to the OPERATE operating state, ready for signal processing.
-
-        :todo: What does this command do?
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("Operate")
-        (result_code, status) = handler()
-        return ([result_code], [status])
-
-    def is_Operate_allowed(self: MccsController) -> bool:
-        """
-        Whether this command is allowed to be run in current device state.
-
-        :return: True if this command is allowed to be run in
-            current device state
-        """
-        handler = self.get_command_object("Operate")
-        if not handler.check_allowed():
-            tango_raise("Operate() is not allowed in current state")
-        return True
-
-    class ResetCommand(SKABaseDevice.ResetCommand):
-        """Command class for the Reset() command."""
-
-        def do(self: MccsController.ResetCommand) -> Tuple[ResultCode, str]:
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Reset` command for this
-            :py:class:`.MccsController` device.
-
-            This implementation resets the MCCS system as a whole as an
-            attempt to clear a FAULT state.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            (result_code, message) = super().do()
-            # MCCS-specific Reset functionality goes here
-            return (result_code, message)
-
-    def is_Allocate_allowed(self: MccsController) -> bool:
-        """
-        Whether this command is allowed to be run in current device state.
-
-        :return: True if this command is allowed to be run in
-            current device state
-        """
-        handler = self.get_command_object("Allocate")
-        if not handler.check_allowed():
-            tango_raise("Allocate() is not allowed in current state")
-        return True
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Allocate(self: MccsController, argin: str) -> DevVarLongStringArrayType:
@@ -1068,21 +294,9 @@ class MccsController(SKAController):
                 )
             )
         """
-        if self._command_result.get("result_code") in [
-            ResultCode.STARTED,
-            ResultCode.QUEUED,
-        ]:
-            return (
-                [ResultCode.FAILED],
-                ["A controller command is already in progress", None],
-            )
-        else:
-            self.notify_listener(ResultCode.UNKNOWN, "", "")
-            self.logger.debug("send_message(Allocate)")
-            (result_code, message_uid, status) = self._message_queue.send_message(
-                command="Allocate", json_args=argin, notifications=True
-            )
-            return ([result_code], [status, message_uid])
+        handler = self.get_command_object("Allocate")
+        (result_code, message) = handler(argin)
+        return ([result_code], [message])
 
     class AllocateCommand(ResponseCommand):
         """
@@ -1093,15 +307,9 @@ class MccsController(SKAController):
         subarray_beam.
         """
 
-        FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX = (
-            "Cannot allocate stations already allocated"
-        )
-        FAILED_TO_RELEASE_MESSAGE_PREFIX = "Failed to release resources from subarray"
-        FAILED_SUBARRAY_ENABLE_REQUEST_MESSAGE = (
-            "Allocate command failed to enable subarray"
-        )
-        SUCCEEDED_REQUEST_TO_ENABLE_SUBARRAY_MESSAGE = "Request sent to enable subarray"
-        SUCCEEDED_MESSAGE = "Allocate command started OK"
+        SUCCEEDED_MESSAGE = "Allocate command completed OK"
+        QUEUED_MESSAGE = "Allocate command queued"
+        FAILED_MESSAGE = "Allocate command failed"
 
         def do(
             self: MccsController.AllocateCommand, argin: str
@@ -1127,526 +335,38 @@ class MccsController(SKAController):
                 message indicating status. The message is for
                 information purpose only.
             """
+            component_manager = self.target
+
             kwargs = json.loads(argin)
             subarray_id = kwargs.get("subarray_id")
-            subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
+
             station_ids = kwargs.get("station_ids", list())
+            station_fqdns = [
+                f"low-mccs/station/{station_id:03d}"
+                for station_id_list in station_ids
+                for station_id in station_id_list
+            ]
+            subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
+            subarray_beam_fqdns = [
+                f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
+                for subarray_beam_id in subarray_beam_ids
+            ]
             channel_blocks = kwargs.get("channel_blocks", list())
-
-            controllerdevice = self.target
-            assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
-
-            # Generate station FQDNs from IDs
-            all_stations: dict[int, str] = {}
-            stations_per_beam_list: List[str] = []
-            for station_sub_ids in station_ids:
-                station_sublist: List[str] = []
-                station_sublist_dict: dict[int, str] = {}
-                for station_id in station_sub_ids:
-                    all_stations[station_id] = f"low-mccs/station/{station_id:03}"
-                    station_sublist_dict[
-                        station_id
-                    ] = f"low-mccs/station/{station_id:03}"
-                    station_sublist.append(f"low-mccs/station/{station_id:03}")
-                stations_per_beam_list.append(station_sublist_dict)
-            station_fqdns = all_stations.values()
-
-            subarray_beams: dict[int, str] = {}
-            for subarray_beam_id in subarray_beam_ids:
-                subarray_beams[
-                    subarray_beam_id
-                ] = f"low-mccs/subarraybeam/{subarray_beam_id:02}"
-
-            # Query stations resource manager
-            # Are we allowed to make this allocation?
-            # Which FQDNs need to be assigned and released?
-            (
-                alloc_allowed,
-                stations_to_assign,
-                stations_to_release,
-            ) = controllerdevice._stations_manager.query_allocation(
-                station_fqdns, subarray_id
+            result_code = component_manager.allocate(
+                subarray_id, station_fqdns, subarray_beam_fqdns, channel_blocks
             )
-            message_uid = controllerdevice._command_result.get("message_uid")
 
-            if not alloc_allowed:
-                # If manager returns False (not allowed) stations_to_release
-                # gives the list of FQDNs blocking the allocation.
-                aalist = ", ".join(stations_to_release)
-                failure_message = (
-                    f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}"
-                )
-                controllerdevice.notify_listener(
-                    ResultCode.FAILED, message_uid, failure_message
-                )
-                return (ResultCode.FAILED, failure_message)
-
-            subarray_fqdn = f"low-mccs/subarray/{subarray_id:02}"
-            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-
-            # Manager gave this list of stations to release (no longer required)
-            if stations_to_release is not None:
-                (result_code, message) = call_with_json(
-                    subarray_device.ReleaseResources, stations=stations_to_release
-                )
-                if result_code == ResultCode.FAILED:
-                    failure_message = f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:{message}"
-                    controllerdevice.notify_listener(
-                        ResultCode.FAILED, message_uid, failure_message
-                    )
-                    return (ResultCode.FAILED, failure_message)
-                for station_fqdn in stations_to_release:
-                    station = MccsDeviceProxy(station_fqdn, self.logger)
-                    station.subarrayId = 0
-
-                # Inform manager that we made the releases
-                controllerdevice._stations_manager.release(stations_to_release)
-
-            # Store values in a cache as we are about to ask subarray to enable
-            # and a callback will allow us to carry on with the allocation command
-            controllerdevice._allocate_cmd_cache = {
-                "subarray_id": subarray_id,
-                "channel_blocks": channel_blocks,
-                "message_uid": message_uid,
-                "subarray_fqdn": subarray_fqdn,
-                "stations_to_assign": stations_to_assign,
-                "stations_per_beam_list": stations_per_beam_list,
-                "subarray_beams": subarray_beams,
-                "station_ids": station_ids,
-            }
-
-            # Ask the subarray to enable. The reply will return to the
-            # controller via a callback message.
-            result_code, status = self._enable_subarray(subarray_id)
-
-            if result_code != ResultCode.QUEUED:
-                failure_message = (
-                    self.FAILED_SUBARRAY_ENABLE_REQUEST_MESSAGE + "," + status
-                )
-                controllerdevice.notify_listener(
-                    ResultCode.FAILED, message_uid, failure_message
-                )
-                controllerdevice._allocate_cmd_cache.clear()
-                return (ResultCode.FAILED, failure_message)
-
-            return (result_code, self.SUCCEEDED_MESSAGE)
-
-        def check_allowed(self: MccsController.AllocateCommand) -> bool:
-            """
-            Whether this command is allowed to be run in current device state.
-
-            :return: True if this command is allowed to be run in
-                current device state
-            """
-            return self.state_model.op_state == DevState.ON
-
-        def _enable_subarray(
-            self: MccsController.AllocateCommand, subarray_id: int
-        ) -> Tuple[ResultCode, str]:
-            """
-            Method to enable the specified subarray.
-
-            :param subarray_id: the subarray id
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            device = self.target
-            assert 1 <= subarray_id <= len(device._subarray_fqdns)
-
-            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
-
-            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-            args = {
-                "respond_to_fqdn": device.get_name(),
-                "callback": "AllocateCallback",
-            }
-            json_args = json.dumps(args)
-            if not subarray_device.State() == DevState.ON:
-                [result_code], _ = subarray_device.command_inout("On", json_args)
-                if result_code != ResultCode.QUEUED:
-                    return (
-                        result_code,
-                        f"Failed to request subarray to enable {subarray_fqdn}",
-                    )
+            if result_code == ResultCode.OK:
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            elif result_code == ResultCode.QUEUED:
+                return (ResultCode.QUEUED, self.QUEUED_MESSAGE)
             else:
-                # The subarray was already on, send ourselves a message to continue
-                results = {"result_code": ResultCode.OK}
-                json_results = json.dumps(results)
-                device._message_queue.send_message(
-                    command="AllocateCallback", json_args=json_results
-                )
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
-            return (
-                ResultCode.QUEUED,
-                self.SUCCEEDED_REQUEST_TO_ENABLE_SUBARRAY_MESSAGE,
-            )
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def AllocateCallback(
-        self: MccsController, json_args: str
-    ) -> DevVarLongStringArrayType:
+    @command(dtype_in=int, dtype_out="DevVarLongStringArray")
+    def RestartSubarray(self: MccsController, argin: int) -> DevVarLongStringArrayType:
         """
-        Send a message to continue the allocate command.
-
-        Method returns as soon as the message has been enqueued.
-
-        :param json_args: Argument containing JSON encoded command message and result
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        """
-        return self._check_and_send_message("AllocateCallback", json_args=json_args)
-
-    class AllocateCallbackCommand(ResponseCommand):
-        """Continue with the allocation of MCCS resources to a subarray."""
-
-        FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX = "Cannot enable subarray"
-        SUCCEEDED_REQ_TO_ASSIGN_RESOURCES_MESSAGE = (
-            "Request sent to assign subarray resources"
-        )
-
-        def do(
-            self: MccsController.AllocateCallbackCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Stateless hook implementing the functionality of the
-            :py:meth:`.MccsController.Allocate` command
-
-            Continue to allocate a set of unallocated MCCS resources to a subarray.
-
-            :param argin: JSON-formatted response string
-                {
-                "message_object": message,
-                "result_code": result_code,
-                "status": status,
-                }
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            controllerdevice = self.target
-            # Retrieve cached values for the allocate command
-            subarray_id = controllerdevice._allocate_cmd_cache.get("subarray_id")
-            message_uid = controllerdevice._allocate_cmd_cache.get("message_uid")
-            subarray_fqdn = controllerdevice._allocate_cmd_cache.get("subarray_fqdn")
-
-            # Check the result code from the subarray
-            kwargs = json.loads(argin)
-            result_code = kwargs.get("result_code")
-
-            subarray_on_failure = result_code != ResultCode.OK
-            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-            subarray_is_not_on = subarray_device.State() != DevState.ON
-
-            if subarray_on_failure or subarray_is_not_on:
-                failure_message = (
-                    f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}"
-                )
-                controllerdevice.notify_listener(
-                    ResultCode.FAILED, message_uid, failure_message
-                )
-                controllerdevice._allocate_cmd_cache.clear()
-                return (ResultCode.FAILED, failure_message)
-            controllerdevice._subarray_enabled[subarray_id - 1] = True
-
-            # Retrieve cached values for the allocate command
-            stations_to_assign = controllerdevice._allocate_cmd_cache.get(
-                "stations_to_assign"
-            )
-            subarray_beams = controllerdevice._allocate_cmd_cache.get("subarray_beams")
-            channel_blocks = controllerdevice._allocate_cmd_cache.get("channel_blocks")
-
-            # Manager gave this list of stations to assign
-            if stations_to_assign is not None:
-                # call subarray AssignResources
-                subarray_beam_fqdns = list(subarray_beams.values())
-                args = {
-                    "respond_to_fqdn": controllerdevice.get_name(),
-                    "callback": "AssignResourcesCallback",
-                    "stations": stations_to_assign,
-                    "subarray_beams": subarray_beam_fqdns,
-                    "channel_blocks": channel_blocks,
-                }
-                json_args = json.dumps(args)
-                (result_code, _) = subarray_device.AssignResources(json_args)
-                if result_code != ResultCode.QUEUED:
-                    return (
-                        result_code,
-                        f"Failed to request subarray to assign resources {subarray_fqdn}",
-                    )
-            else:
-                # No stations to assign, send ourselves a message to continue
-                results = {"result_code": ResultCode.OK}
-                json_results = json.dumps(results)
-                controllerdevice._message_queue.send_message(
-                    command="AssignResourcesCallback", json_args=json_results
-                )
-
-            return (
-                ResultCode.QUEUED,
-                self.SUCCEEDED_REQ_TO_ASSIGN_RESOURCES_MESSAGE,
-            )
-
-        def check_allowed(self: MccsController.AllocateCallbackCommand) -> bool:
-            """
-            Whether this command is allowed to be run in current device state.
-
-            :return: True if this command is allowed to be run in
-                current device state
-            """
-            controllerdevice = self.target
-            allowed = any(controllerdevice._allocate_cmd_cache)
-            return allowed
-
-    def is_AllocateCallback_allowed(self: MccsController) -> bool:
-        """
-        Whether this command is allowed to be run in current device state.
-
-        :return: True if this command is allowed to be run in
-            current device state
-        """
-        handler = self.get_command_object("AllocateCallback")
-        if not handler.check_allowed():
-            tango_raise("AllocateCallback() is not allowed in current state")
-        return True
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def AssignResourcesCallback(
-        self: MccsController, json_args: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Send a message to continue the allocate command.
-
-        Method returns as soon as the message has been enqueued.
-
-        :param json_args: Argument containing JSON encoded command message and result
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        """
-        return self._check_and_send_message(
-            "AssignResourcesCallback", json_args=json_args
-        )
-
-    class AssignResourcesCallbackCommand(ResponseCommand):
-        """Continue with allocate of MCCS resources to a subarray."""
-
-        FAILED_TO_ALLOCATE_MESSAGE_PREFIX = "Failed to allocate resources to subarray"
-        SUCCEEDED_MESSAGE = "Allocate command completed OK"
-
-        def do(
-            self: MccsController.AssignResourcesCallbackCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Stateless hook implementing the functionality of the
-            :py:meth:`.MccsController.Allocate` command
-
-            Continue to allocate a set of unallocated MCCS resources to a subarray.
-
-            :param argin: JSON-formatted response string
-                {
-                "message_object": message,
-                "result_code": result_code,
-                "status": status,
-                }
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            controllerdevice = self.target
-            message_uid = controllerdevice._allocate_cmd_cache.get("message_uid")
-
-            kwargs = json.loads(argin)
-            result_code = kwargs.get("result_code")
-
-            subarray_fqdn = controllerdevice._allocate_cmd_cache.get("subarray_fqdn")
-            if result_code == ResultCode.FAILED:
-                failure_message = (
-                    f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}"
-                )
-                controllerdevice.notify_listener(
-                    ResultCode.FAILED, message_uid, failure_message
-                )
-                controllerdevice._allocate_cmd_cache.clear()
-                return (ResultCode.FAILED, failure_message)
-
-            subarray_beams = controllerdevice._allocate_cmd_cache.get("subarray_beams")
-            stations_to_assign = controllerdevice._allocate_cmd_cache.get(
-                "stations_to_assign"
-            )
-            if stations_to_assign is not None:
-                subarray_id = controllerdevice._allocate_cmd_cache.get("subarray_id")
-                for fqdn in stations_to_assign:
-                    device = MccsDeviceProxy(fqdn, self.logger)
-                    device.subarrayId = subarray_id
-
-                stations_per_beam_list = controllerdevice._allocate_cmd_cache.get(
-                    "stations_per_beam_list"
-                )
-                # Inform subarray_beam manager that we made the assignments
-                controllerdevice._subarray_beams_manager.assign(
-                    subarray_id, subarray_beams, stations_per_beam_list
-                )
-                # Inform station manager that we made the assignments
-                controllerdevice._stations_manager.assign(
-                    stations_to_assign, subarray_id
-                )
-                subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-                subarray_device.stationFQDNs = (
-                    controllerdevice._stations_manager.get_assigned_fqdns(subarray_id)
-                )
-
-                # assume all is OK for now, i.e. send back what we received.
-                station_ids = controllerdevice._allocate_cmd_cache.get("station_ids")
-                channel_blocks = controllerdevice._allocate_cmd_cache.get(
-                    "channel_blocks"
-                )
-                controllerdevice._assigned_resources = json.dumps(
-                    {
-                        "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
-                        "subarray_beam_ids": list(subarray_beams.keys()),
-                        "station_ids": station_ids,
-                        "channel_blocks": channel_blocks,
-                    }
-                )
-                controllerdevice.push_change_event(
-                    "assignedResources", controllerdevice._assigned_resources
-                )
-            controllerdevice.notify_listener(
-                ResultCode.OK, message_uid, self.SUCCEEDED_MESSAGE
-            )
-            controllerdevice._allocate_cmd_cache.clear()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-        def check_allowed(self: MccsController.AssignResourcesCallbackCommand) -> bool:
-            """
-            Whether this command is allowed to be run in current device state.
-
-            :return: True if this command is allowed to be run in
-                current device state
-            """
-            controllerdevice = self.target
-            allowed = any(controllerdevice._allocate_cmd_cache)
-            return allowed
-
-    def is_AssignResourcesCallbackCommand_allowed(self: MccsController) -> bool:
-        """
-        Whether this command is allowed to be run in current device state.
-
-        :return: True if this command is allowed to be run in
-            current device state
-        """
-        handler = self.get_command_object("AssignResourcesCallback")
-        if not handler.check_allowed():
-            tango_raise("AssignResourcesCallback() is not allowed in current state")
-        return True
-
-    def _disable_subarray(
-        self: MccsController, subarray_id: int, restart: bool
-    ) -> Tuple[ResultCode, str]:
-        """
-        Method to disable the specified subarray.
-
-        :param subarray_id: the subarray id
-        :param restart: was this calls due to a restart command?
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        assert 1 <= subarray_id <= len(self._subarray_fqdns)
-
-        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
-        subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-        if restart:
-            (result_code, message) = subarray_device.Restart()
-            if result_code == ResultCode.FAILED:
-                return (ResultCode.FAILED, f"Subarray restart failed: {message}")
-        #         else:
-        #             # try:
-        #             (result_code, message) = self._subarray_beams_manager.release_all()
-        #             # except DevFailed:
-        #             # pass  # it probably has no resources to release
-        #             if result_code == ResultCode.FAILED:
-        #                 return (
-        #                     ResultCode.FAILED,
-        #                     f"Subarray release all resources failed: {message}",
-        #                 )
-        (result_code, message) = subarray_device.Off()
-        if result_code == ResultCode.FAILED:
-            return (ResultCode.FAILED, f"Subarray failed to turn off: {message}")
-        self._subarray_enabled[subarray_id - 1] = False
-        return (ResultCode.OK, "_disable_subarray was successful")
-
-    def _release_resources(
-        self: MccsController, argin: str, restart: bool = False
-    ) -> Tuple[ResultCode, str]:
-        """
-        Method that releases subarray resources.
-
-        :param argin: JSON encoded subarray ID
-        :param restart: release resources due to a restart command
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        kwargs = json.loads(argin)
-        # release_all = kwargs.get("release_all")
-        subarray_id = kwargs.get("subarray_id")
-        if subarray_id is None or not (1 <= subarray_id <= len(self._subarray_fqdns)):
-            return (
-                ResultCode.FAILED,
-                f"Subarray index '{subarray_id}' is out of range",
-            )
-
-        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
-        if not self._subarray_enabled[subarray_id - 1]:
-            return (
-                ResultCode.FAILED,
-                f"Cannot release resources from disabled subarray {subarray_fqdn}",
-            )
-        subarraybeam_fqdns = self._subarray_beams_manager.get_assigned_fqdns(
-            subarray_id
-        )
-
-        # Query stations resource manager for stations assigned to subarray
-        fqdns = self._stations_manager.get_assigned_fqdns(subarray_id)
-        self._subarray_beams_manager.release(subarraybeam_fqdns, fqdns)
-        # and clear the subarrayId in each
-        for fqdn in fqdns:
-            station = MccsDeviceProxy(fqdn, self.logger)
-            station.subarrayId = 0
-        # Finally release them from assignment in the manager
-        self._stations_manager.release(fqdns)
-        subarray = MccsDeviceProxy(subarray_fqdn, self.logger)
-        (result_code, message) = call_with_json(
-            subarray.ReleaseResources,
-            station_fqdns=fqdns,
-        )
-
-        result = self._disable_subarray(subarray_id, restart)
-        if result[0] is not ResultCode.OK:
-            return (
-                result[0],
-                "_disable_subarray() release all or disable subarray failed",
-            )
-        return (ResultCode.OK, "Release resources completed OK")
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Restart(self: MccsController, argin: str) -> DevVarLongStringArrayType:
-        """
-        Restart an MCCS Sub-Array.
+        Restart an MCCS subarray.
 
         :param argin: JSON-formatted string containing an integer subarray_id.
 
@@ -1654,62 +374,40 @@ class MccsController(SKAController):
             message indicating status. The message is for
             information purpose only.
         """
-        self.notify_listener(ResultCode.UNKNOWN, "", "")
-        handler = self.get_command_object("Restart")
+        handler = self.get_command_object("RestartSubarray")
         (result_code, status) = handler(argin)
-        self.notify_listener(result_code, "", status)
         return ([result_code], [status])
 
-    class RestartCommand(ResponseCommand):
+    class RestartSubarrayCommand(ResponseCommand):
         """Restart a subarray."""
 
+        SUCCEEDED_MESSAGE = "Allocate command completed OK"
+        QUEUED_MESSAGE = "Allocate command queued"
+        FAILED_MESSAGE = "Allocate command failed"
+
         def do(
-            self: MccsController.RestartCommand, argin: str
+            self: MccsController.RestartCommand, subarray_id: int
         ) -> Tuple[ResultCode, str]:
             """
-            Stateless do hook for the :py:meth:`.MccsController.Restart` command.
+            Do hook for the :py:meth:`.MccsController.RestartSubarray` command.
 
-            :param argin: JSON-formatted string containing an integer subarray_id
+            :param subarray_id: id of the subarray to be restarted
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            controller = self.target
-            (result_code, status) = controller._release_resources(argin, restart=True)
-            controller._assigned_resources = json.dumps(
-                {
-                    "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
-                    "subarray_beam_ids": [],
-                    "station_ids": [],
-                    "channel_blocks": [],
-                }
+            component_manager = self.target
+            result_code = component_manager.restart_subarray(
+                f"low-mcss/subarray/{subarray_id:02d}"
             )
-            controller.push_change_event(
-                "assignedResources", controller._assigned_resources
-            )
-            return (result_code, status)
 
-        def check_allowed(self: MccsController.RestartCommand) -> bool:
-            """
-            Whether this command is allowed to be run in current device state.
-
-            :return: True if this command is allowed to be run in
-                current device state
-            """
-            return self.state_model.op_state == DevState.ON
-
-    def is_Restart_allowed(self: MccsController) -> bool:
-        """
-        Whether this command is allowed to be run in current device state.
-
-        :return: True if this command is allowed to be run in
-            current device state
-        """
-        handler = self.get_command_object("Restart")
-        if not handler.check_allowed():
-            tango_raise("Restart() is not allowed in current state")
-        return True
+            if result_code == ResultCode.OK:
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            elif result_code == ResultCode.QUEUED:
+                return (ResultCode.QUEUED, self.QUEUED_MESSAGE)
+            else:
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Release(self: MccsController, argin: str) -> DevVarLongStringArrayType:
@@ -1728,14 +426,17 @@ class MccsController(SKAController):
             message indicating status. The message is for
             information purpose only.
         """
-        self.notify_listener(ResultCode.UNKNOWN, "", "")
         handler = self.get_command_object("Release")
         (result_code, status) = handler(argin)
-        self.notify_listener(result_code, "", status)
         return ([result_code], [status])
 
     class ReleaseCommand(ResponseCommand):
         """Release a subarray's resources."""
+
+        REDUNDANT_MESSAGE = "Nothing to release"
+        SUCCEEDED_MESSAGE = "Release command completed OK"
+        QUEUED_MESSAGE = "Release command queued"
+        FAILED_MESSAGE = "Release command failed"
 
         def do(
             self: MccsController.ReleaseCommand, argin: str
@@ -1750,79 +451,24 @@ class MccsController(SKAController):
                 message indicating status. The message is for
                 information purpose only.
             """
-            controller = self.target
-            (result_code, status) = controller._release_resources(argin)
-            controller._assigned_resources = json.dumps(
-                {
-                    "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
-                    "subarray_beam_ids": [],
-                    "station_ids": [],
-                    "channel_blocks": [],
-                }
-            )
-            controller.push_change_event(
-                "assignedResources", controller._assigned_resources
-            )
-            return (result_code, status)
+            component_manager = self.target
+            kwargs = json.loads(argin)
+            if kwargs["release_all"]:
+                subarray_id = kwargs["subarray_id"]
+                result_code = component_manager.deallocate_all(subarray_id)
+            else:
+                return (
+                    ResultCode.FAILED,
+                    "Currently Release can only be used to release all resources from a subarray.",
+                )
 
-        def check_allowed(self: MccsController.ReleaseCommand) -> bool:
-            """
-            Whether this command is allowed to be run in current device state.
-
-            :return: True if this command is allowed to be run in
-                current device state
-            """
-            return self.state_model.op_state == DevState.ON
-
-    def is_Release_allowed(self: MccsController) -> bool:
-        """
-        Whether this command is allowed to be run in current device state.
-
-        :return: True if this command is allowed to be run in
-            current device state
-        """
-        handler = self.get_command_object("Release")
-        if not handler.check_allowed():
-            tango_raise("Release() is not allowed in current state")
-        return True
-
-    class MaintenanceCommand(ResponseCommand):
-        """
-        Class for handling the
-        :py:meth:`.MccsController.Maintenance` command.
-
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
-        """
-
-        SUCCEEDED_MESSAGE = "Maintenance command completed OK"
-
-        def do(self: MccsController.MaintenanceCommand) -> Tuple[ResultCode, str]:
-            """
-            Stateless do-hook for handling the
-            :py:meth:`.MccsController.Maintenance` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def Maintenance(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Transition the MCCS to a MAINTENANCE state.
-
-        :todo: What does this command do?
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("Maintenance")
-        (result_code, status) = handler()
-        return ([result_code], [status])
+            if result_code is None:
+                return (ResultCode.OK, self.REDUNDANT_MESSAGE)
+            if result_code == ResultCode.OK:
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            if result_code == ResultCode.QUEUED:
+                return (ResultCode.QUEUED, self.QUEUED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
 
 # ----------

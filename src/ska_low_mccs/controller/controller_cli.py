@@ -128,10 +128,7 @@ def format_wrapper(method):
 
 
 class MccsControllerCli(metaclass=CliMeta):
-    """
-    Command-line interface to the
-    :py:class:`ska_low_mccs.MccsController` tango device.
-    """
+    """Command-line interface to the MccsController tango device."""
 
     def __init__(self, fqdn="low-mccs/control/control"):
         """

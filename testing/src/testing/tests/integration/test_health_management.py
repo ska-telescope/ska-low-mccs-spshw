@@ -10,12 +10,14 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains integration tests of health management in MCCS."""
-import time
-from tango import DevState
-import pytest
 
-from ska_tango_base.control_model import AdminMode, HealthState
+import pytest
+import time
+
+from tango import DevState
+
 from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
@@ -50,6 +52,8 @@ def devices_to_load():
             {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -88,9 +92,10 @@ class TestHealthManagement(HelperClass):
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
-        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
         subarraybeam_01 = tango_harness.get_device("low-mccs/subarraybeam/01")
         subarraybeam_02 = tango_harness.get_device("low-mccs/subarraybeam/02")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
+
         # workaround for https://github.com/tango-controls/cppTango/issues/816
         # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
         # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
@@ -103,6 +108,7 @@ class TestHealthManagement(HelperClass):
         # hardware is turned on) before we can put them into ON state.
         # This is a counterintuitive mess that will be fixed in SP-1501.
         _ = controller.Startup()
+        sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
             station_1: DevState.ON,
@@ -220,7 +226,6 @@ class TestHealthManagement(HelperClass):
         :type empty_json_dict: str
         """
         controller = tango_harness.get_device("low-mccs/control/control")
-        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
         subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
         subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
         station_1 = tango_harness.get_device("low-mccs/station/001")
@@ -229,6 +234,9 @@ class TestHealthManagement(HelperClass):
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
 
         # workaround for https://github.com/tango-controls/cppTango/issues/816
         # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
@@ -236,8 +244,6 @@ class TestHealthManagement(HelperClass):
         # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
         # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
         # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-        subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
-        subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
 
         _ = controller.Startup()
         sleep(0.5)  # Allow time for Startup to complete

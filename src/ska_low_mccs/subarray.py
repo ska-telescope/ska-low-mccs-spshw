@@ -160,9 +160,9 @@ class MccsSubarray(SKASubarray):
             device._scan_id = -1
             device._transient_buffer_manager = TransientBufferManager()
 
-            device._station_beam_fqdns = list()
-            device._station_fqdns = list()
-            device._subarray_beam_fqdns = list()
+            device._station_beam_fqdns: List[str] = list()
+            device._station_fqdns: List[str] = list()
+            device._subarray_beam_fqdns: List[str] = list()
             device.subarray_id = 0
 
             device._build_state = release.get_release_info()
@@ -522,24 +522,29 @@ class MccsSubarray(SKASubarray):
             else:
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def AssignResources(
-        self: MccsSubarray, json_args: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Send a message to assign resources to this subarray.
-
-        Method returns as soon as the message has been enqueued.
-
-        :param json_args: Argument containing JSON encoded command message and result
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        """
-        return self._send_message("AssignResources", json_args=json_args)
+    #     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    #     @DebugIt()
+    #     def AssignResources(
+    #         self: MccsSubarray, json_args: str
+    #     ) -> DevVarLongStringArrayType:
+    #         """
+    #         Send a message to assign resources to this subarray.
+    #
+    #         Method returns as soon as the message has been enqueued.
+    #
+    #         :param json_args: Argument containing JSON encoded command message and result
+    #
+    #         :return: A tuple containing a return code, a string
+    #             message indicating status and message UID.
+    #             The string message is for information purposes only, but
+    #             the message UID is for message management use.
+    #         """
+    #             (result_code, _) = super().do()
+    #             if result_code == ResultCode.OK:
+    #                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+    #             else:
+    #                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
+    #         # return self._send_message("AssignResources", json_args=json_args)
 
     class AssignResourcesCommand(SKASubarray.AssignResourcesCommand):
         """Class for handling the AssignResources(argin) command."""
@@ -570,7 +575,7 @@ class MccsSubarray(SKASubarray):
             kwargs = json.loads(argin)
             device = self.target
             device._station_fqdns = kwargs.get("stations", [])
-            device._subarray_beam_fqdns = kwargs.get("subarray_beam_fqdns", [])
+            device._subarray_beam_fqdns = kwargs.get("subarray_beams", [])
             # TODO: Are channels required in subarray during allocation or are they
             # only required in MCCSController? Remove noqa upon decision
             device._channel_blocks = kwargs.get("channel_blocks", [])  # noqa: F841
@@ -605,13 +610,15 @@ class MccsSubarray(SKASubarray):
             """
             # deliberately not calling super() -- we're passing a different
             # target object
+            device = self.target
             kwargs = json.loads(argin)
             stations = kwargs.get("station_fqdns", [])
             # subarray_beams = kwargs.get("subarray_beam_fqdns", [])
 
             for fqdn in stations:
-                device = MccsDeviceProxy(fqdn, self.logger)
-                device.subarrayId = 0
+                station_proxy = MccsDeviceProxy(fqdn, self.logger)
+                station_proxy.subarrayId = 0
+            device._station_fqdns.clear()
 
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -648,7 +655,8 @@ class MccsSubarray(SKASubarray):
                 return (ResultCode.FAILED, f"{self.FAILED_MESSAGE_PREFIX}: {val}")
 
             device._health_monitor.remove_all_devices()
-            device.assigned_station_fqdns = []
+            # device.assigned_station_fqdns = []
+            device._station_fqdns.clear()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):

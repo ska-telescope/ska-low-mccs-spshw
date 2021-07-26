@@ -560,7 +560,7 @@ class TestMccsController(HelperClass):
             sleep(0.2)
 
             mock_subarray_1.State.return_value = DevState.ON
-            mock_subarray_1.AssignResources.return_value = [[ResultCode.QUEUED], []]
+            mock_subarray_1.AssignResources.return_value = [[ResultCode.OK], []]
 
             # Make the call to the allocate callback
             ((result_code,), (message, message_uid)) = call_with_json(
@@ -569,17 +569,6 @@ class TestMccsController(HelperClass):
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":AllocateCallback" in message_uid
-            sleep(0.2)
-            mock_subarray_1.AssignResources.assert_called()
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
-
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
@@ -638,7 +627,7 @@ class TestMccsController(HelperClass):
             sleep(0.2)
 
             mock_subarray_1.State.return_value = DevState.ON
-            mock_subarray_1.AssignResources.return_value = [[ResultCode.QUEUED], []]
+            mock_subarray_1.AssignResources.return_value = [[ResultCode.OK], []]
 
             # Make the call to the allocate callback
             ((result_code,), (message, message_uid)) = call_with_json(
@@ -647,17 +636,6 @@ class TestMccsController(HelperClass):
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":AllocateCallback" in message_uid
-            sleep(0.2)
-            mock_subarray_1.AssignResources.assert_called()
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
-
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
@@ -701,28 +679,19 @@ class TestMccsController(HelperClass):
 
             # When asked, pretend the subarray is already on
             mock_subarray_1.State.return_value = DevState.ON
-            mock_subarray_1.AssignResources.return_value = [[ResultCode.QUEUED], []]
 
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
-                station_ids=[[1]],
                 subarray_beam_ids=[1],
+                station_ids=[[1]],
                 channel_blocks=[2],
             )
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            sleep(0.2)
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
 
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
@@ -755,8 +724,8 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
-                station_ids=[[1]],
                 subarray_beam_ids=[1],
+                station_ids=[[1]],
                 channel_blocks=[2],
             )
             assert result_code == ResultCode.QUEUED
@@ -786,10 +755,7 @@ class TestMccsController(HelperClass):
             # because the already allocated station is allocated to the same
             # subarray
             mock_subarray_1.AssignResources.side_effect = (
-                (
-                    ResultCode.QUEUED,
-                    MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE,
-                ),
+                (ResultCode.OK, MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE),
             )
 
             # When asked, pretend the subarray is already on
@@ -799,23 +765,13 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
-                station_ids=[[1, 2]],
                 subarray_beam_ids=[1],
+                station_ids=[[1, 2]],
                 channel_blocks=[2],
             )
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            sleep(0.2)
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
-
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
@@ -920,16 +876,6 @@ class TestMccsController(HelperClass):
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            sleep(0.2)
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
-
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
@@ -1004,16 +950,6 @@ class TestMccsController(HelperClass):
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            sleep(0.2)
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
-
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
@@ -1037,16 +973,6 @@ class TestMccsController(HelperClass):
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            sleep(0.2)
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
-
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
@@ -1168,16 +1094,6 @@ class TestMccsController(HelperClass):
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            sleep(0.2)
-
-            # Make the call to the assign resources callback
-            ((result_code,), (message, message_uid)) = call_with_json(
-                controller.AssignResourcesCallback, result_code=ResultCode.OK
-            )
-            assert result_code == ResultCode.QUEUED
-            assert message
-            assert ":AssignResourcesCallback" in message_uid
-
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK

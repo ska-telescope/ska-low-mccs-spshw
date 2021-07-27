@@ -21,4 +21,4 @@ __all__ = [
 from .controller_health_model import ControllerHealthModel
 from .controller_resource_manager import ControllerResourceManager
 from .controller_component_manager import ControllerComponentManager
-from .controller_device import MccsController  # type: ignore[attr-defined]
+from .controller_device import MccsController

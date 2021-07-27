@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -79,7 +78,7 @@ class MccsController(SKABaseDevice):
             self._health_model.subarray_beam_health_changed,
         )
 
-    def init_command_objects(self):
+    def init_command_objects(self: MccsController) -> None:
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
@@ -111,7 +110,7 @@ class MccsController(SKABaseDevice):
         called during :py:class:`~.MccsController`'s initialisation.
         """
 
-        def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.InitCommand) -> tuple[ResultCode, str]:
             """
             Initialises the attributes and properties of the `MccsController`.
 
@@ -226,7 +225,7 @@ class MccsController(SKABaseDevice):
         SUCCEEDED_MESSAGE = "StandbyFull command completed OK"
         FAILED_MESSAGE = "StandbyFull command failed"
 
-        def do(self: MccsController.StandbyFullCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.StandbyFullCommand) -> tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyFull` command.
@@ -313,7 +312,7 @@ class MccsController(SKABaseDevice):
 
         def do(
             self: MccsController.AllocateCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
             :py:meth:`.MccsController.Allocate` command
@@ -387,7 +386,7 @@ class MccsController(SKABaseDevice):
 
         def do(
             self: MccsController.RestartCommand, subarray_id: int
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Do hook for the :py:meth:`.MccsController.RestartSubarray` command.
 
@@ -440,7 +439,7 @@ class MccsController(SKABaseDevice):
 
         def do(
             self: MccsController.ReleaseCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless do hook for the :py:meth:`.MccsController.Release` command.
 

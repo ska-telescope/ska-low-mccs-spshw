@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -628,19 +627,16 @@ class MccsStation(SKAObsDevice):
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(*args: str, **kwargs: str) -> int:
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return MccsStation.run_server(args=args, **kwargs)
+    return MccsStation.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

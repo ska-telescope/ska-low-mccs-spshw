@@ -58,8 +58,8 @@ from .controller import MccsController
 from .tile import MccsTile  # type: ignore[attr-defined]
 
 from .antenna import MccsAntenna
-from .station import MccsStation  # type: ignore[attr-defined]
-from .station_beam import MccsStationBeam  # type: ignore[attr-defined]
+from .station import MccsStation
+from .station_beam import MccsStationBeam
 from .subarray import MccsSubarray
 from .subarray_beam import MccsSubarrayBeam
 from .subrack import MccsSubrack  # type: ignore[attr-defined]

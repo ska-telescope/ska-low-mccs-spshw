@@ -75,4 +75,4 @@ class TestPointStation:
         # Delays should be ns-scale
         assert np.mean(np.absolute(pointing._delays)) > 1e-9
         # Delay rates will be sub ps-scale
-        assert np.mean(np.absolute(pointing._delay_rate)) > 1e-13
+        assert np.mean(np.absolute(pointing._delay_rates)) > 1e-13

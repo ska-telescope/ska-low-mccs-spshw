@@ -237,6 +237,7 @@ class Tile12(object):
         # Initialise firmware plugin
         for firmware in self.tpm.tpm_test_firmware:
             firmware.initialise_firmware()
+            firmware.check_ddr_initialisation()
 
         # Set LMC IP
         self.tpm.set_lmc_ip(self._lmc_ip, self._lmc_port)
@@ -319,9 +320,6 @@ class Tile12(object):
                     src_port=0xF0D0,
                     dst_port=4660,
                 )
-
-        for firmware in self.tpm.tpm_test_firmware:
-            firmware.check_ddr_initialisation()
 
         # Initialise beamformer using a standard configuration,
         # only not to leave it in an unprogrammed state

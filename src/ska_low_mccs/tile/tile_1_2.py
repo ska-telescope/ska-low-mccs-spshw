@@ -2198,8 +2198,10 @@ class Tile12(object):
 
         self.tpm.smap_deselect_fpga([0, 1])
         self[self._global_register] = 0x3
+        self.tpm_communication_check()
 
-        # Brute force check to make sure we can communicate with programmed TPM
+    def tpm_communication_check(self):
+        """Brute force check to make sure we can communicate with programmed TPM."""
         for n in range(4):
             try:
                 self.tpm.calibrate_fpga_to_cpld()

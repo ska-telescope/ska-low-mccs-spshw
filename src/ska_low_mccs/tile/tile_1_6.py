@@ -195,7 +195,6 @@ class Tile16(Tile12):
         # Initialise firmware plugin
         for firmware in self.tpm.tpm_test_firmware:
             firmware.initialise_firmware()
-            firmware.check_ddr_initialisation()
 
         # Set LMC IP
         self.tpm.set_lmc_ip(self._lmc_ip, self._lmc_port)
@@ -255,6 +254,9 @@ class Tile16(Tile12):
                     src_port=0xF0D0,
                     dst_port=4660,
                 )
+
+        for firmware in self.tpm.tpm_test_firmware:
+            firmware.check_ddr_initialisation()
 
         # Set channeliser truncation
         self.logger.info("Configuring channeliser and beamformer")

@@ -10,18 +10,23 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains integration tests of MCCS device interactions."""
+from __future__ import annotations
+
+import time
+from typing import Callable
+import unittest.mock
 
 import pytest
-from time import sleep
-from tango import DevState
+import tango
 
 from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.utils import call_with_json
 
+from testing.harness.mock import MockDeviceBuilder
 from testing.harness.tango_harness import TangoHarness
-from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -32,10 +37,8 @@ def devices_to_load():
     :return: specification of the devices to be loaded
     :rtype: dict
     """
-    # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
-    # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
+        "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
@@ -43,20 +46,139 @@ def devices_to_load():
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
             {"name": "station_001", "proxy": MccsDeviceProxy},
             {"name": "station_002", "proxy": MccsDeviceProxy},
-            {"name": "subrack_01", "proxy": MccsDeviceProxy},
-            {"name": "tile_0001", "proxy": MccsDeviceProxy},
-            {"name": "tile_0002", "proxy": MccsDeviceProxy},
-            {"name": "tile_0003", "proxy": MccsDeviceProxy},
-            {"name": "tile_0004", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
 
-class TestMccsIntegration(HelperClass):
+@pytest.fixture()
+def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock APIU devices for use in testing.
+
+    Each mock device will mock a powered-on APIU.
+
+    :return: a factory that returns a mock APIU device for use in
+        testing.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock antenna device for use in testing.
+
+    Each mock device will mock a powered-on antenna.
+
+    :return: a mock APIU device for use in testing.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock subarray beam devices for use in testing.
+
+    :return: a mock tile device for use in testing.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_subrack_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock subrack devices for use in testing.
+
+    Each mock device will mock a powered-on APIU.
+
+    :return: a factory that returns a mock APIU device for use in
+        testing.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock tile devices for use in testing.
+
+    Each mock device will mock a powered-on tile.
+
+    :return: a mock tile device for use in testing.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_result_command("SetPointingDelay", ResultCode.OK)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def initial_mocks(
+    mock_apiu_factory: Callable[[], unittest.mock.Mock],
+    mock_antenna_factory: Callable[[], unittest.mock.Mock],
+    mock_subarray_beam_factory: Callable[[], unittest.mock.Mock],
+    mock_subrack_factory: Callable[[], unittest.mock.Mock],
+    mock_tile_factory: Callable[[], unittest.mock.Mock],
+) -> dict[str, unittest.mock.Mock]:
+    """
+    Return a specification of the mock devices to be set up in the Tango test harness.
+
+    This is a pytest fixture that can be used to inject pre-build mock
+    devices into the Tango test harness at specified FQDNs.
+
+    :param mock_apiu_factory: a factory that returns a mock apiu device
+    :param mock_antenna_factory: a factory that returns a mock antenna
+        device
+    :param mock_subarray_beam_factory: a factory that returns a mock
+        subarray beam device
+    :param mock_subrack_factory: a factory that returns a mock subrack
+        device
+    :param mock_tile_factory: a factory that returns a mock tile device
+
+    :return: specification of the mock devices to be set up in the Tango
+        test harness.
+    """
+    return {
+        "low-mccs/antenna/000001": mock_antenna_factory(),
+        "low-mccs/antenna/000002": mock_antenna_factory(),
+        "low-mccs/antenna/000003": mock_antenna_factory(),
+        "low-mccs/antenna/000004": mock_antenna_factory(),
+        "low-mccs/antenna/000005": mock_antenna_factory(),
+        "low-mccs/antenna/000006": mock_antenna_factory(),
+        "low-mccs/antenna/000007": mock_antenna_factory(),
+        "low-mccs/antenna/000008": mock_antenna_factory(),
+        "low-mccs/apiu/001": mock_apiu_factory(),
+        "low-mccs/apiu/002": mock_apiu_factory(),
+        "low-mccs/subarraybeam/01": mock_subarray_beam_factory(),
+        "low-mccs/subarraybeam/02": mock_subarray_beam_factory(),
+        "low-mccs/subrack/01": mock_subrack_factory(),
+        "low-mccs/tile/0001": mock_tile_factory(),
+        "low-mccs/tile/0002": mock_tile_factory(),
+        "low-mccs/tile/0003": mock_tile_factory(),
+        "low-mccs/tile/0004": mock_tile_factory(),
+    }
+
+
+class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
     def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
@@ -71,40 +193,33 @@ class TestMccsIntegration(HelperClass):
         subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
-        subarraybeam_01 = tango_harness.get_device("low-mccs/subarraybeam/01")
-        subarraybeam_02 = tango_harness.get_device("low-mccs/subarraybeam/02")
-        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
+
+        controller.adminMode = AdminMode.ONLINE
+        subarray_1.adminMode = AdminMode.ONLINE
+        subarray_2.adminMode = AdminMode.ONLINE
+        station_1.adminMode = AdminMode.ONLINE
+        station_2.adminMode = AdminMode.ONLINE
+
+        time.sleep(0.6)
+
+        print(f"Station 1: {station_1.state()}")
+        print(f"Station 2: {station_2.state()}")
+        print(f"Subarray 1: {subarray_1.state()}")
+        print(f"Subarray 2: {subarray_2.state()}")
+        print(f"Controller: {controller.state()}")
+
+        # Subracks are mocked ON. APIUs, Antennas and Tiles are mocked ON, so stations
+        # will be ON too. Therefore controller will already be ON.
+        assert controller.state() == tango.DevState.ON
 
         # check initial state
-        assert list(subarray_1.stationFQDNs) == []
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
 
-        controller.Startup()
-        sleep(0.5)  # Allow time for Startup to complete
-        dev_states = {
-            controller: DevState.ON,
-            subarray_1: DevState.OFF,
-            subarray_2: DevState.OFF,
-            station_1: DevState.ON,
-            station_2: DevState.ON,
-            tile_1: DevState.ON,
-            tile_2: DevState.ON,
-            tile_3: DevState.ON,
-            tile_4: DevState.ON,
-            subarraybeam_01: DevState.OFF,
-            subarraybeam_02: DevState.OFF,
-            subrack_01: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
-
         # allocate station_1 to subarray_1
-        ((result_code,), (message, message_uid)) = call_with_json(
+        ([result_code], [message]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
@@ -112,33 +227,29 @@ class TestMccsIntegration(HelperClass):
             channel_blocks=[2],
         )
         assert result_code == ResultCode.QUEUED
-        assert message
-        assert ":Allocate" in message_uid
-        self.wait_for_command_to_complete(controller)
+
+        time.sleep(0.1)
 
         # check that station_1 and only station_1 is allocated
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
-        ((result_code,), (message, message_uid)) = call_with_json(
-            controller.Allocate,
-            subarray_id=2,
-            station_ids=[[1]],
-            subarray_beam_ids=[1],
-            channel_blocks=[2],
-        )
-        assert result_code == ResultCode.QUEUED
-        assert message
-        assert ":Allocate" in message_uid
-        self.wait_for_command_to_complete(controller, expected_result=ResultCode.FAILED)
+        with pytest.raises(tango.DevFailed, match="Cannot allocate resources"):
+            _ = call_with_json(
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[[1]],
+                subarray_beam_ids=[1],
+                channel_blocks=[2],
+            )
 
         # check no side-effects
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -146,8 +257,8 @@ class TestMccsIntegration(HelperClass):
         # because the already allocated station is allocated to the same
         # subarray, BUT we must remember that the subarray cannot reallocate
         # the same subarray_beam.
-        # ToDo This will change when subarray_beam is not a list.
-        ((result_code,), (message, message_uid)) = call_with_json(
+        # TODO This will change when subarray_beam is not a list.
+        ([result_code], [message]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1, 2]],
@@ -155,16 +266,13 @@ class TestMccsIntegration(HelperClass):
             channel_blocks=[2],
         )
         assert result_code == ResultCode.QUEUED
-        assert ":Allocate" in message_uid
-        self.wait_for_command_to_complete(controller)
 
-        # check
+        time.sleep(0.1)
         assert list(subarray_1.stationFQDNs) == [
             station_1.dev_name(),
             station_2.dev_name(),
         ]
-        assert list(subarray_2.stationFQDNs) == []
-        assert subarray_2.stationFQDNs == ()
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
 
@@ -180,40 +288,37 @@ class TestMccsIntegration(HelperClass):
         subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
-        controller.Startup()
-        sleep(0.5)  # Allow time for Startup to complete
-        dev_states = {
-            controller: DevState.ON,
-            subarray_1: DevState.OFF,
-            subarray_2: DevState.OFF,
-            station_1: DevState.ON,
-            station_2: DevState.ON,
-            tile_1: DevState.ON,
-            tile_2: DevState.ON,
-            tile_3: DevState.ON,
-            tile_4: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
+        controller.adminMode = AdminMode.ONLINE
+        subarray_1.adminMode = AdminMode.ONLINE
+        subarray_2.adminMode = AdminMode.ONLINE
+        station_1.adminMode = AdminMode.ONLINE
+        station_2.adminMode = AdminMode.ONLINE
 
-        # allocate stations 1 to subarray 1
-        ((result_code,), (message, message_uid)) = call_with_json(
+        time.sleep(0.6)
+
+        print(f"Controller: {controller.state()}")
+        print(f"Subarray 1: {subarray_1.state()}")
+        print(f"Subarray 2: {subarray_2.state()}")
+        print(f"Station 1: {station_1.state()}")
+        print(f"Station 2: {station_2.state()}")
+
+        # Subracks are mocked ON. APIUs, Antennas and Tiles are mocked ON, so stations
+        # will be ON too. Therefore controller will already be ON.
+        assert controller.state() == tango.DevState.ON
+
+        # allocate station_1 to subarray_1
+        ([result_code], [message]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
             subarray_beam_ids=[1],
-            channel_blocks=[2],
+            channel_blocks=[1],
         )
         assert result_code == ResultCode.QUEUED
-        assert ":Allocate" in message_uid
-        self.wait_for_command_to_complete(controller)
 
         # allocate station 2 to subarray 2
-        ((result_code,), (message, message_uid)) = call_with_json(
+        ([result_code], [message]) = call_with_json(
             controller.Allocate,
             subarray_id=2,
             station_ids=[[2]],
@@ -221,8 +326,8 @@ class TestMccsIntegration(HelperClass):
             channel_blocks=[2],
         )
         assert result_code == ResultCode.QUEUED
-        assert ":Allocate" in message_uid
-        self.wait_for_command_to_complete(controller)
+
+        time.sleep(0.1)
 
         # check initial state
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
@@ -231,68 +336,41 @@ class TestMccsIntegration(HelperClass):
         assert station_2.subarrayId == 2
 
         # release resources of subarray_2
-        ((result_code,), (_,)) = call_with_json(
+        ([result_code], [_]) = call_with_json(
+            controller.Release, subarray_id=2, release_all=True
+        )
+        assert result_code == ResultCode.QUEUED
+
+        time.sleep(0.1)
+
+        # check
+        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
+        assert subarray_2.stationFQDNs is None
+        assert station_1.subarrayId == 1
+        assert station_2.subarrayId == 0
+
+        # releasing resources of unresourced subarray_2 should succeed (as redundant)
+        # i.e. OK not QUEUED because it's quick
+        ([result_code], [_]) = call_with_json(
             controller.Release, subarray_id=2, release_all=True
         )
         assert result_code == ResultCode.OK
 
-        # check
-        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert list(subarray_2.stationFQDNs) == []
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 0
-
-        # releasing resources of unresourced subarray_2 should fail
-        ((result_code,), (_,)) = call_with_json(
-            controller.Release, subarray_id=2, release_all=True
-        )
-        assert result_code == ResultCode.FAILED
-
         # check no side-effect to failed release
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
         # release resources of subarray_1
-        ((result_code,), (_,)) = call_with_json(
+        ([result_code], [_]) = call_with_json(
             controller.Release, subarray_id=1, release_all=True
         )
-        assert result_code == ResultCode.OK
+        assert result_code == ResultCode.QUEUED
 
-        # check all released
-        assert list(subarray_1.stationFQDNs) == []
-        assert list(subarray_2.stationFQDNs) == []
+        time.sleep(0.1)
 
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
-
-        # assert tile_1.subarrayId == 0
-        # assert tile_2.subarrayId == 0
-        # assert tile_3.subarrayId == 0
-        # assert tile_4.subarrayId == 0
-
-    @pytest.mark.skip(reason="don't know yet")
-    def test_station_tile_subarray_id(self, tango_harness: TangoHarness):
-        """
-        Test that a write to attribute subarrayId on an MccsStation device also results
-        in an update to attribute subarrayId on its MccsTiles.
-
-        :param tango_harness: a test harness for tango devices
-        """
-        station = tango_harness.get_device("low-mccs/station/001")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-
-        # check initial state
-        assert station.subarrayId == 0
-        assert tile_1.subarrayId == 0
-        assert tile_2.subarrayId == 0
-
-        # write subarray_id
-        station.subarrayId = 1
-
-        # check state
-        assert station.subarrayId == 1
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1

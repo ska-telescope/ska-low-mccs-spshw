@@ -12,83 +12,12 @@ import json
 
 import jsonschema
 import pytest
-from tango import DevFailed, ErrSeverity
-from tango.server import Device, command
-from tango.test_context import DeviceTestContext
 
-from ska_low_mccs.utils import call_with_json, json_input, tango_raise
+from ska_low_mccs.utils import call_with_json, json_input
 
 
 class TestUtils:
     """Test cases for ska_low_mccs.utils module."""
-
-    @pytest.mark.forked
-    def test_tango_raise_device(self):
-        """Test that `tango_raise` runs correctly when used in a tango device."""
-
-        class DummyDevice(Device):
-            """A dummy device with a dummy method that calls `tango_raise`."""
-
-            def __init__(self, device_class, device_name):
-                """
-                Initialises a new dummy device.
-
-                :param device_class: the class of the device
-                :type device_class: type
-                :param device_name: the name of the device
-                :type device_name: FQDN string
-                """
-                super().__init__(device_class, device_name)
-
-            @command
-            def method_to_raise(self):
-                """A dummy command that calls the `tango_raise` helper function."""
-                tango_raise("raise me")
-
-        with DeviceTestContext(DummyDevice) as tango_device:
-            with pytest.raises(DevFailed) as ex:
-                tango_device.method_to_raise()
-            assert ex.value.args[0].desc == "raise me"
-            assert ex.value.args[0].reason == "API_CommandFailed"
-            assert ex.value.args[0].origin == "DummyDevice.method_to_raise()"
-            assert ex.value.args[0].severity == ErrSeverity.ERR
-
-    def test_tango_raise_not_device(self):
-        """Test that `tango_raise` fails in a non-device class."""
-
-        class NonDevice:
-            """Dummy class, not a tango Device."""
-
-            def illegal_use(self):
-                """Dummy method that calls the `tango_raise` helper function."""
-                tango_raise("Never happens")
-
-        nondevice = NonDevice()
-        with pytest.raises(
-            TypeError, match="Can only be used in a tango device instance"
-        ):
-            nondevice.illegal_use()
-
-    @pytest.mark.parametrize(
-        ("origin", "severity"),
-        [("here()", ErrSeverity.ERR), ("there()", ErrSeverity.WARN)],
-    )
-    def test_tango_raise_with_args(self, origin, severity):
-        """
-        Test for correct execution of `tango_raise` helper function when used with
-        optional parameters.
-
-        :param origin: the source of this exception
-        :type origin: str
-        :param severity: The severity of this error
-        :type severity: :py:class:`tango.ErrSeverity`
-        """
-        with pytest.raises(DevFailed) as ex:
-            tango_raise("Raise Me", severity=severity, _origin=origin)
-        assert ex.value.args[0].desc == "Raise Me"
-        assert ex.value.args[0].reason == "API_CommandFailed"
-        assert ex.value.args[0].origin == origin
-        assert ex.value.args[0].severity == severity
 
     # helper methods not tests
     @json_input()

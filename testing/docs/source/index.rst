@@ -17,7 +17,7 @@ MCCS documentation, see the `MCCS Prototype documentation`_.
    :maxdepth: 1
    :caption: Tests:
 
-   unit
+   unit<unit/index>
    integration
    functional
    

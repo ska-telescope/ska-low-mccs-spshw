@@ -2,8 +2,16 @@
 
 ## unreleased
 
-* MCCS-678 - update tango-base, tango-util repositories
+## 0.8.4
+
+* MCCS-682 - Port AssignResources mods from MCCS-560
+* MCCS-592 - Refactor message queue complex routine
+* MCCS-404 - Move subarraybeam resource manager from subarray to controller
+* MCCS-560 - Add MCCS Subarray "AssignResources" command to use message queue
+* MCCS-677 - Test stability improvements
+* MCCS-678 - Changed ska-tango-base-itango-console
 * MCCS-402 - Move StationsResourceManager from Subarray to Controller
+* MCCS-665 - Add subarray ID to parameters passed to the beamformer channels
 
 ## 0.8.3
 

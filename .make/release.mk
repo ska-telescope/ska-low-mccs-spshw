@@ -21,8 +21,8 @@ endif
 
 RELEASE_SUPPORT := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))/.make-release-support
 
-ifeq ($(strip $(CAR_OCI_REGISTRY_HOST)),)
-  CAR_OCI_REGISTRY_HOST = artefact.skao.int
+ifeq ($(strip $(DOCKER_REGISTRY_HOST)),)
+  DOCKER_REGISTRY_HOST = artefact.skao.int
 endif
 
 ifeq ($(strip $(DOCKER_REGISTRY_USER)),)

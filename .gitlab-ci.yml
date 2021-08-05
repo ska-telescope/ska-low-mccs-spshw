@@ -218,9 +218,9 @@ publish package to nexus:
 
 release docker image to nexus:
   stage: publish
-  image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
+  image: $SKA_K8S_TOOLS_DEPLOY_IMAGE
   before_script:
-    - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
+    - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $CAR_OCI_REGISTRY_HOST
   tags:
     - k8srunner
   # don't inherit artefacts to prevent dirty image

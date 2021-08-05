@@ -23,4 +23,4 @@ dependencies:
 - name: ska-dashboard-repo
   version: 0.1.6
   repository: https://artefact.skao.int/repository/helm-internal
-  condition: ska-dashboard-repo.enabled
+  condition: webjive-dashboard.enabled

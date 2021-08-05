@@ -34,15 +34,15 @@ dsconfig:
   # if addition instances are required the need to be defined there
   configuration_file: data/configuration.json
   image:
-      registry: nexus.engageska-portugal.pt/ska-tango-images
-      image: tango-dsconfig
+      registry: artefact.skao.int
+      image: ska-tango-images-tango-dsconfig
       tag: 1.5.0.4
       pullPolicy: IfNotPresent
 
 # Default docker image - used by all of MCCS
 mccs:
   image:
-    registry: nexus.engageska-portugal.pt/ska-docker
+    registry: artefact.skao.int
     image: ska-low-mccs
     tag: 0.8.4 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     pullPolicy: IfNotPresent

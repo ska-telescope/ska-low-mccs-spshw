@@ -29,7 +29,7 @@ ifeq ($(strip $(DOCKER_REGISTRY_USER)),)
   DOCKER_REGISTRY_USER = ska-docker
 endif
 
-IMAGE=$(CAR_OCI_REGISTRY_HOST)/$(DOCKER_REGISTRY_USER)/$(NAME)
+IMAGE=$(CAR_OCI_REGISTRY_HOST)-$(NAME)
 
 VERSION=$(shell . $(RELEASE_SUPPORT) ; getVersion)
 TAG=$(shell . $(RELEASE_SUPPORT); getTag)
@@ -45,7 +45,7 @@ DOCKER_FILE_PATH=Dockerfile
 build: docker-build   ## build the application image
 
 docker-build: .release
-	docker build $(DOCKER_BUILD_ARGS) -t $(IMAGE):$(VERSION) $(DOCKER_BUILD_CONTEXT) -f $(DOCKER_FILE_PATH) --build-arg DOCKER_REGISTRY_HOST=$(CAR_OCI_REGISTRY_HOST) --build-arg DOCKER_REGISTRY_USER=$(DOCKER_REGISTRY_USER)
+	docker build $(DOCKER_BUILD_ARGS) -t $(IMAGE):$(VERSION) $(DOCKER_BUILD_CONTEXT) -f $(DOCKER_FILE_PATH) --build-arg CAR_OCI_REGISTRY_HOST=$(CAR_OCI_REGISTRY_HOST) --build-arg CAR_OCI_REGISTRY_USER=$(CAR_OCI_REGISTRY_USER)
 	@echo docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ; docker tag $(IMAGE):$(VERSION) $(IMAGE):latest 
 
 .release:

@@ -242,6 +242,10 @@ include:
   - project: "ska-telescope/templates-repository"
     file: "gitlab-ci/includes/helm_publish.yml"
 
+  # Ensure your .gitlab-ci.yml has "build" stage defined!
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/build_push.yml'
+
 publish-chart:
   only:
     refs:

@@ -29,7 +29,7 @@ ifeq ($(strip $(DOCKER_REGISTRY_USER)),)
   DOCKER_REGISTRY_USER = ska-docker
 endif
 
-IMAGE=$(CAR_OCI_REGISTRY_HOST)-$(NAME)
+IMAGE=$(CAR_OCI_REGISTRY_HOST)/$(NAME)
 
 VERSION=$(shell . $(RELEASE_SUPPORT) ; getVersion)
 TAG=$(shell . $(RELEASE_SUPPORT); getTag)

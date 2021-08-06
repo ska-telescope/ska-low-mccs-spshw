@@ -84,7 +84,27 @@ class Tpm16TestFirmware(TpmTestFirmware):
             self.xg_eth = False
             self.xg_40g_eth = False
 
-        # Load required plugins
+        self._jesd1 = None
+        self._jesd2 = None
+        self._fpga = None
+        self._teng = None
+        self._fortyg = None
+        self._f2f = None
+        self._sysmon = None
+        self._beamf = None
+        self._testgen = None
+        self._spead_gen = None
+        self._patterngen = None
+        self._power_meter = None
+        self._integrator = None
+        self._station_beamf = None
+
+        self.load_plugin()
+
+        self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
+
+    def load_plugin(self):
+        """Load required plugin."""
         self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0)
         self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1)
         self._fpga = self.board.load_plugin("TpmFpga", device=self._device)
@@ -133,8 +153,6 @@ class Tpm16TestFirmware(TpmTestFirmware):
                 self.board.load_plugin("SpeadTxGen", device=self._device, core=2),
                 self.board.load_plugin("SpeadTxGen", device=self._device, core=3),
             ]
-
-        self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
 
     def start_ddr_initialisation(self):
         """Start DDR initialisation."""

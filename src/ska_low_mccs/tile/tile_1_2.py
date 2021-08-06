@@ -283,8 +283,35 @@ class Tile12(object):
                 generator.enable_prdg(0.4)
                 generator.channel_select(0xFFFF)
 
-        # Set destination and source IP/MAC/ports for 40G cores
-        # This will create a loopback between the two FPGAs
+        self.fortyg_cores_destination()
+
+        for firmware in self.tpm.tpm_test_firmware:
+            firmware.check_ddr_initialisation()
+
+        # Initialise beamformer using a standard configuration,
+        # only not to leave it in an unprogrammed state
+        # single beam, 300 MHz bandwidth, 50-350 MHz
+        # All IDs in spead header are set to 0, 16 antennas, no time info
+        self.logger.info("Initialising beamformer")
+        self.initialise_beamformer(
+            start_channel=64,  # 50 MHz
+            nof_channels=384,  # 300 MHz bandwidth
+            is_first=False,  # usually a tile is not the first
+            is_last=False,  # or the last in the station chain
+        )
+        self.define_spead_header(
+            station_id=0, subarray_id=0, nof_antennas=16, ref_epoch=-1, start_time=0
+        )
+
+        # Perform synchronisation
+        self.post_synchronisation()
+
+    def fortyg_cores_destination(self):
+        """
+        Set destination and source IP/MAC/ports for 40G cores.
+
+        This will create a loopback between the two FPGAs
+        """
         ip_octets = self._ip.split(".")
         for n in range(len(self.tpm.tpm_10g_core)):
             if self["fpga1.regfile.feature.xg_eth_implemented"] == 1:
@@ -319,27 +346,6 @@ class Tile12(object):
                     src_port=0xF0D0,
                     dst_port=4660,
                 )
-
-        for firmware in self.tpm.tpm_test_firmware:
-            firmware.check_ddr_initialisation()
-
-        # Initialise beamformer using a standard configuration,
-        # only not to leave it in an unprogrammed state
-        # single beam, 300 MHz bandwidth, 50-350 MHz
-        # All IDs in spead header are set to 0, 16 antennas, no time info
-        self.logger.info("Initialising beamformer")
-        self.initialise_beamformer(
-            start_channel=64,  # 50 MHz
-            nof_channels=384,  # 300 MHz bandwidth
-            is_first=False,  # usually a tile is not the first
-            is_last=False,  # or the last in the station chain
-        )
-        self.define_spead_header(
-            station_id=0, subarray_id=0, nof_antennas=16, ref_epoch=-1, start_time=0
-        )
-
-        # Perform synchronisation
-        self.post_synchronisation()
 
     def program_fpgas(self, bitfile):
         """
@@ -2200,8 +2206,10 @@ class Tile12(object):
 
         self.tpm.smap_deselect_fpga([0, 1])
         self[self._global_register] = 0x3
+        self.tpm_communication_check()
 
-        # Brute force check to make sure we can communicate with programmed TPM
+    def tpm_communication_check(self):
+        """Brute force check to make sure we can communicate with programmed TPM."""
         for n in range(4):
             try:
                 self.tpm.calibrate_fpga_to_cpld()

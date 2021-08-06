@@ -168,7 +168,7 @@ class Tile16(Tile12):
                 dsp_core=dsp_core,
             )
         elif not self.tpm.is_programmed():
-            logging.warn("TPM is not programmed! No plugins loaded")
+            logging.warning("TPM is not programmed! No plugins loaded")
 
     def initialise(self, enable_ada=False, enable_test=False, enable_adc=True):
         """
@@ -228,8 +228,24 @@ class Tile16(Tile12):
                 generator.enable_prdg(0.4)
                 generator.channel_select(0xFFFF)
 
-        # Set destination and source IP/MAC/ports for 10G cores
-        # This will create a loopback between the two FPGAs
+        self.fortyg_cores_destination()
+
+        for firmware in self.tpm.tpm_test_firmware:
+            firmware.check_ddr_initialisation()
+
+        # Set channeliser truncation
+        self.logger.info("Configuring channeliser and beamformer")
+        self.set_channeliser_truncation(self._channeliser_truncation)
+
+        self.logger.info("Setting data acquisition")
+        self.start_acquisition()
+
+    def fortyg_core_destination(self):
+        """
+        Set destination and source IP/MAC/ports for 10G cores.
+
+        This will create a loopback between the two FPGAs
+        """
         ip_octets = self._ip.split(".")
         for n in range(len(self.tpm.tpm_10g_core)):
             src_ip = "10.10." + str(n + 1) + "." + str(ip_octets[3])
@@ -255,16 +271,6 @@ class Tile16(Tile12):
                     src_port=0xF0D0,
                     dst_port=4660,
                 )
-
-        for firmware in self.tpm.tpm_test_firmware:
-            firmware.check_ddr_initialisation()
-
-        # Set channeliser truncation
-        self.logger.info("Configuring channeliser and beamformer")
-        self.set_channeliser_truncation(self._channeliser_truncation)
-
-        self.logger.info("Setting data acquisition")
-        self.start_acquisition()
 
     def f2f_aurora_test_start(self):
         """Start test on Aurora f2f link."""

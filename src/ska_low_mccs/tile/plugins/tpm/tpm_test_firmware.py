@@ -77,7 +77,12 @@ class TpmTestFirmware(FirmwareBlock):
             self.xg_eth = False
             self.xg_40g_eth = False
 
-        # Load required plugins
+        self.load_plugin()
+
+        self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
+
+    def load_plugin(self):
+        """Load required plugin."""
         self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0)
         self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1)
         self._fpga = self.board.load_plugin("TpmFpga", device=self._device)
@@ -124,8 +129,6 @@ class TpmTestFirmware(FirmwareBlock):
             self.board.load_plugin("SpeadTxGen", device=self._device, core=2),
             self.board.load_plugin("SpeadTxGen", device=self._device, core=3),
         ]
-
-        self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
 
     def fpga_clk_sync(self):
         """FPGA synchronise clock."""

@@ -1,49 +1,86 @@
 # type: ignore
 """This module contains integration tests of interactions between TMC and MCCS."""
-import json
+from __future__ import annotations
+
+import time
+from typing import Callable
+import unittest
 
 import pytest
-from tango import (
-    DevState,
-    AsynCall,
-    AsynReplyNotArrived,
-    CommunicationFailed,
-    DevFailed,
-)
+import tango
+from tango.server import command
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import ObsState
+from ska_tango_base.control_model import AdminMode, ObsState, PowerMode
 
-from ska_low_mccs import MccsDeviceProxy
+from ska_low_mccs import MccsDeviceProxy, MccsStation
+from ska_low_mccs.utils import call_with_json
 
-from testing.harness.tango_harness import TangoHarness
-from testing.harness import HelperClass
+from testing.harness.mock import MockDeviceBuilder
 
 
 @pytest.fixture()
-def devices_to_load():
+def patched_station_device_class() -> MccsStation:
+    """
+    Return a station device class, patched with extra commands for testing.
+
+    :return: a station device class, patched with extra commands for
+        testing
+    """
+
+    class PatchedStationDevice(MccsStation):
+        """
+        MccsStation patched with extra commands for testing purposes.
+
+        The extra commands allow us to mock the receipt of state change
+        event from subservient devices.
+        """
+
+        @command(dtype_in=int)
+        def FakeSubservientDevicesPowerMode(
+            self: PatchedStationDevice, power_mode
+        ) -> None:
+            power_mode = PowerMode(power_mode)
+            self.component_manager._apiu_power_mode = power_mode
+            for fqdn in self.component_manager._tile_power_modes:
+                self.component_manager._tile_power_modes[fqdn] = power_mode
+            for fqdn in self.component_manager._antenna_power_modes:
+                self.component_manager._antenna_power_modes[fqdn] = power_mode
+            self.component_manager._evaluate_power_mode()
+
+    return PatchedStationDevice
+
+
+@pytest.fixture()
+def devices_to_load(patched_station_device_class):
     """
     Fixture that specifies the devices to be loaded for testing.
 
+    :param patched_station_device_class: a station device class that has
+        been patched with extra commands to support testing
     :return: specification of the devices to be loaded
     :rtype: dict
     """
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
+        "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
             {"name": "subarray_01", "proxy": MccsDeviceProxy},
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
-            {"name": "station_001", "proxy": MccsDeviceProxy},
-            {"name": "station_002", "proxy": MccsDeviceProxy},
+            {
+                "name": "station_001",
+                "proxy": MccsDeviceProxy,
+                "patch": patched_station_device_class,
+            },
+            {
+                "name": "station_002",
+                "proxy": MccsDeviceProxy,
+                "patch": patched_station_device_class,
+            },
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
-            {"name": "tile_0001", "proxy": MccsDeviceProxy},
-            {"name": "tile_0002", "proxy": MccsDeviceProxy},
-            {"name": "tile_0003", "proxy": MccsDeviceProxy},
-            {"name": "tile_0004", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
@@ -52,301 +89,367 @@ def devices_to_load():
     }
 
 
-class TestMccsIntegrationTmc(HelperClass):
+@pytest.fixture()
+def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock APIU devices for use in testing.
+
+    :return: a factory that returns mock APIU devices for use in testing
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.OFF)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_result_command("On", ResultCode.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock antenna devices for use in testing.
+
+    :return: a factory that returns mock antenna devices for use in
+        testing
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.OFF)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_result_command("On", ResultCode.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock tile devices for use in testing.
+
+    :return: a factory that returns mock tile devices for use in
+        testing
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.OFF)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_result_command("On", ResultCode.OK)
+    return builder
+
+
+@pytest.fixture()
+def initial_mocks(
+    mock_apiu_factory: Callable[[], unittest.mock.Mock],
+    mock_antenna_factory: Callable[[], unittest.mock.Mock],
+    mock_tile_factory: Callable[[], unittest.mock.Mock],
+) -> dict[str, unittest.mock.Mock]:
+    """
+    Return a specification of the mock devices to be set up in the Tango test harness.
+
+    This is a pytest fixture that can be used to inject pre-build mock
+    devices into the Tango test harness at specified FQDNs.
+
+    :param mock_apiu_factory: a factory that returns a mock APIU device
+        each time it is called
+    :param mock_antenna_factory: a factory that returns a mock antenna
+        device each time it is called
+    :param mock_tile_factory: a factory that returns a mock tile device
+        each time it is called
+
+    :return: specification of the mock devices to be set up in the Tango
+        test harness.
+    """
+    return {
+        "low-mccs/apiu/001": mock_apiu_factory(),
+        "low-mccs/apiu/002": mock_apiu_factory(),
+        "low-mccs/tile/0001": mock_tile_factory(),
+        "low-mccs/tile/0002": mock_tile_factory(),
+        "low-mccs/tile/0003": mock_tile_factory(),
+        "low-mccs/tile/0004": mock_tile_factory(),
+        "low-mccs/antenna/000001": mock_antenna_factory(),
+        "low-mccs/antenna/000002": mock_antenna_factory(),
+        "low-mccs/antenna/000003": mock_antenna_factory(),
+        "low-mccs/antenna/000004": mock_antenna_factory(),
+        "low-mccs/antenna/000005": mock_antenna_factory(),
+        "low-mccs/antenna/000006": mock_antenna_factory(),
+        "low-mccs/antenna/000007": mock_antenna_factory(),
+        "low-mccs/antenna/000008": mock_antenna_factory(),
+    }
+
+
+@pytest.fixture()
+def controller(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to the controller.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to the controller.
+    """
+    return tango_harness.get_device("low-mccs/control/control")
+
+
+@pytest.fixture()
+def subarray_1(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to subarray 1.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to subarray 1.
+    """
+    return tango_harness.get_device("low-mccs/subarray/01")
+
+
+@pytest.fixture()
+def subarray_2(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to subarray 2.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to subarray 2.
+    """
+    return tango_harness.get_device("low-mccs/subarray/02")
+
+
+@pytest.fixture()
+def subrack(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to the subrack.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to the subrack.
+    """
+    return tango_harness.get_device("low-mccs/subrack/01")
+
+
+@pytest.fixture()
+def station_1(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to station 1.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to station 1.
+    """
+    return tango_harness.get_device("low-mccs/station/001")
+
+
+@pytest.fixture()
+def station_2(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to station 2.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to station 2.
+    """
+    return tango_harness.get_device("low-mccs/station/002")
+
+
+@pytest.fixture()
+def subarray_beam_1(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to subarray beam 1.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to subarray beam 1.
+    """
+    return tango_harness.get_device("low-mccs/subarraybeam/01")
+
+
+@pytest.fixture()
+def subarray_beam_2(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to subarray beam 2.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to subarray beam 2.
+    """
+    return tango_harness.get_device("low-mccs/subarraybeam/02")
+
+
+@pytest.fixture()
+def subarray_beam_3(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to subarray beam 3.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to subarray beam 3
+    """
+    return tango_harness.get_device("low-mccs/subarraybeam/03")
+
+
+@pytest.fixture()
+def subarray_beam_4(tango_harness) -> MccsDeviceProxy:
+    """
+    Return a proxy to subarray beam 4.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: a proxy to subarray beam 4.
+    """
+    return tango_harness.get_device("low-mccs/subarraybeam/04")
+
+
+class TestMccsIntegrationTmc:
     """Integration test cases for interactions between TMC and MCCS device classes."""
 
-    @pytest.fixture()
-    def devices(self, tango_harness: TangoHarness):
+    def test_controller_on_off(
+        self,
+        controller,
+        subarray_1,
+        subarray_2,
+        subrack,
+        station_1,
+        station_2,
+        subarray_beam_1,
+        subarray_beam_2,
+        subarray_beam_3,
+        subarray_beam_4,
+        controller_device_state_changed_callback,
+        subarray_device_obs_state_changed_callback,
+    ) -> None:
         """
-        Fixture that provides access to devices via their names.
+        Test that we can turn the controller on.
 
-        :todo: For now the purpose of this fixture is to isolate FQDNs
-            in a single place in this module. In future this will be
-            changed to extract the device FQDNs straight from the
-            configuration file.
-
-        :param tango_harness: a test harness for tango devices
-
-        :return: a dictionary of devices keyed by their name
-        :rtype: dict<string, :py:class:`tango.DeviceProxy`>
+        :param controller: a proxy to the MCCS controller device
+        :param subrack: a proxy to the subrack device
+        :param subarray_1: a proxy to subarray 1
+        :param subarray_2: a proxy to subarray 2
+        :param station_1: a proxy to station 1
+        :param station_2: a proxy to station 2
+        :param subarray_beam_1: a proxy to subarray beam 1
+        :param subarray_beam_2: a proxy to subarray beam 2
+        :param subarray_beam_3: a proxy to subarray beam 3
+        :param subarray_beam_4: a proxy to subarray beam 4
+        :param controller_device_state_changed_callback: a callback to
+            be used to subscribe to controller state change
+        :param subarray_device_obs_state_changed_callback: a callback to
+            be used to subscribe to subarray obs state change
         """
-        device_dict = {
-            "controller": tango_harness.get_device("low-mccs/control/control"),
-            "subarray_01": tango_harness.get_device("low-mccs/subarray/01"),
-            "subarray_02": tango_harness.get_device("low-mccs/subarray/02"),
-            "station_001": tango_harness.get_device("low-mccs/station/001"),
-            "station_002": tango_harness.get_device("low-mccs/station/002"),
-            "tile_0001": tango_harness.get_device("low-mccs/tile/0001"),
-            "tile_0002": tango_harness.get_device("low-mccs/tile/0002"),
-            "tile_0003": tango_harness.get_device("low-mccs/tile/0003"),
-            "tile_0004": tango_harness.get_device("low-mccs/tile/0004"),
-            # workaround for https://github.com/tango-controls/cppTango/issues/816
-            # "antenna_000001": tango_harness.get_device("low-mccs/antenna/000001"),
-            # "antenna_000002": tango_harness.get_device("low-mccs/antenna/000002"),
-            # "antenna_000003": tango_harness.get_device("low-mccs/antenna/000003"),
-            # "antenna_000004": tango_harness.get_device("low-mccs/antenna/000004"),
-            "subarraybeam_01": tango_harness.get_device("low-mccs/subarraybeam/01"),
-            "subarraybeam_02": tango_harness.get_device("low-mccs/subarraybeam/02"),
-            "subarraybeam_03": tango_harness.get_device("low-mccs/subarraybeam/03"),
-            "subarraybeam_04": tango_harness.get_device("low-mccs/subarraybeam/04"),
-        }
-        return device_dict
+        assert controller.state() == tango.DevState.DISABLE
+        assert subrack.state() == tango.DevState.DISABLE
+        assert subarray_1.state() == tango.DevState.DISABLE
+        assert subarray_2.state() == tango.DevState.DISABLE
+        assert station_1.state() == tango.DevState.DISABLE
+        assert station_2.state() == tango.DevState.DISABLE
+        assert subarray_beam_1.state() == tango.DevState.DISABLE
+        assert subarray_beam_2.state() == tango.DevState.DISABLE
+        assert subarray_beam_3.state() == tango.DevState.DISABLE
+        assert subarray_beam_4.state() == tango.DevState.DISABLE
 
-    def assert_command(
-        self, device, command, argin=None, expected_result=ResultCode.OK
-    ):
-        """
-        Method to simplify assertions on the result of TMC calls.
-
-        :param device: The MCCS device to send command to
-        :type device: :py:class:`tango.DeviceProxy`
-        :param command: The command to send to the device
-        :type command: str
-        :param argin: Optional argument to send to the command
-        :type argin: str
-        :param expected_result: The expected return code from the command
-        :type expected_result: :py:class:`~ska_tango_base.commands.ResultCode`
-        """
-        # Call the specified command asynchronously
-        async_id = device.command_inout_asynch(command, argin)
-        try:
-            # HACK: increasing the timeout until we can make some commands synchronous
-            result = device.command_inout_reply(async_id, timeout=0)
-            if expected_result is None:
-                assert result is None
-            else:
-                ((result_code,), _) = result
-                assert result_code == expected_result
-        except AsynReplyNotArrived as err:
-            assert False, f"AsyncReplyNotArrived: {err}"
-        except (AsynCall, CommunicationFailed, DevFailed) as err:
-            assert False, f"Exception raised: {err}"
-
-    def test_controller_on(self, devices):
-        """
-        Test that an asynchronous call to controller:On() works correctly.
-
-        :param devices: fixture that provides access to devices by their name
-        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-        """
-        dev_states = {
-            devices["controller"]: DevState.DISABLE,
-            devices["subarray_01"]: DevState.OFF,
-            devices["subarray_02"]: DevState.OFF,
-            devices["station_001"]: DevState.OFF,
-            devices["station_002"]: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
-
-        # Call MccsController->Startup() command
-        self.assert_command(
-            device=devices["controller"],
-            command="Startup",
-            expected_result=ResultCode.QUEUED,
+        # register a callback so we can block on state changes
+        # instead of sleeping
+        controller.add_change_event_callback(
+            "state", controller_device_state_changed_callback
         )
-        dev_states[devices["controller"]] = DevState.ON
-        dev_states[devices["station_001"]] = DevState.ON
-        dev_states[devices["station_002"]] = DevState.ON
-        self.check_states_of_devices(dev_states)
-
-        # Startup turns everything on, so a call to On should have no side-effects
-        self.assert_command(
-            device=devices["controller"],
-            command="On",
-            expected_result=ResultCode.QUEUED,
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
         )
-        self.check_states_of_devices(dev_states)
 
-    def test_controller_off(self, devices, mocker):
-        """
-        Test that an asynchronous call to controller:Off() works correctly.
-
-        :param devices: fixture that provides access to devices by their name
-        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: :py:class:`pytest_mock.mocker`
-        """
-        dev_states = {
-            devices["controller"]: DevState.DISABLE,
-            devices["station_001"]: DevState.OFF,
-            devices["station_002"]: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
-        self.assert_command(
-            device=devices["controller"],
-            command="Startup",
-            expected_result=ResultCode.QUEUED,
+        # register a callback so we can block on obsState changes
+        # instead of sleeping
+        subarray_1.add_change_event_callback(
+            "obsState", subarray_device_obs_state_changed_callback
         )
-        dev_states = {
-            devices["controller"]: DevState.ON,
-            devices["station_001"]: DevState.ON,
-            devices["station_002"]: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
-
-        self.assert_command(
-            device=devices["controller"],
-            command="Off",
-            expected_result=ResultCode.QUEUED,
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.EMPTY
         )
-        dev_states = {
-            devices["controller"]: DevState.OFF,
-            devices["station_001"]: DevState.OFF,
-            devices["station_002"]: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
 
-    def test_setup_only(self, devices, mocker):
-        """
-        Test that runs through the basic TMC<->MCCS interactions to setup and then tear
-        down.
+        controller.adminMode = AdminMode.ONLINE
+        subarray_1.adminMode = AdminMode.ONLINE
+        subarray_2.adminMode = AdminMode.ONLINE
+        subrack.adminMode = AdminMode.ONLINE
+        station_1.adminMode = AdminMode.ONLINE
+        station_2.adminMode = AdminMode.ONLINE
+        subarray_beam_1.adminMode = AdminMode.ONLINE
+        subarray_beam_2.adminMode = AdminMode.ONLINE
+        subarray_beam_3.adminMode = AdminMode.ONLINE
+        subarray_beam_4.adminMode = AdminMode.ONLINE
 
-        :param devices: fixture that provides access to devices by their name
-        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: :py:class:`pytest_mock.mocker`
-        """
-        # Turn on controller and stations
-        self.assert_command(
-            device=devices["controller"],
-            command="Startup",
-            expected_result=ResultCode.QUEUED,
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
         )
-        dev_states = {
-            devices["controller"]: DevState.ON,
-            devices["subarray_01"]: DevState.OFF,
-            devices["station_001"]: DevState.ON,
-            devices["station_002"]: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
-        assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["station_001"].subarrayId == 0
-        assert devices["station_002"].subarrayId == 0
-        assert list(devices["subarray_01"].stationFQDNs) == []
 
-        devices["subarraybeam_01"].isBeamLocked = True
+        # Make the station think it has received events from its APIU,
+        # tiles and antennas, telling it they are all OFF. This makes
+        # the station transition to OFF, and this flows up to the
+        # controller.
+        station_1.FakeSubservientDevicesPowerMode(PowerMode.OFF)
+        station_2.FakeSubservientDevicesPowerMode(PowerMode.OFF)
 
-        # When asked, pretend the subarray is already on
-        devices["subarray_01"].State.return_value = DevState.ON
-
-        # Allocate stations to a subarray
-        parameters = {
-            "subarray_id": 1,
-            "station_ids": [[1, 2]],
-            "channel_blocks": [2],
-            "subarray_beam_ids": [1],
-        }
-        json_string = json.dumps(parameters)
-        self.assert_command(
-            device=devices["controller"],
-            command="Allocate",
-            argin=json_string,
-            expected_result=ResultCode.QUEUED,
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
         )
-        self.wait_for_command_to_complete(devices["controller"])
 
-        dev_states = {
-            devices["subarray_01"]: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
-        assert devices["station_001"].subarrayId == 1
-        assert devices["station_002"].subarrayId == 1
-        assert devices["subarray_01"].obsState == ObsState.IDLE
-        assert sorted(devices["subarray_01"].stationFQDNs) == [
-            "low-mccs/station/001",
-            "low-mccs/station/002",
-        ]
+        assert controller.state() == tango.DevState.OFF
+        assert subarray_1.state() == tango.DevState.ON
+        assert subarray_2.state() == tango.DevState.ON
+        assert subrack.state() == tango.DevState.OFF
+        assert station_1.state() == tango.DevState.OFF
+        assert station_2.state() == tango.DevState.OFF
+        assert subarray_beam_1.state() == tango.DevState.ON
+        assert subarray_beam_2.state() == tango.DevState.ON
+        assert subarray_beam_3.state() == tango.DevState.ON
+        assert subarray_beam_4.state() == tango.DevState.ON
 
-        # Release Resources
-        release_config = {"subarray_id": 1, "release_all": True}
-        json_string = json.dumps(release_config)
-        self.assert_command(
-            device=devices["controller"], command="Release", argin=json_string
+        ([result_code], _) = controller.On()
+        assert result_code == ResultCode.OK  # should be QUEUED but base classes
+
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
         )
-        dev_states = {
-            devices["subarray_01"]: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
-        assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["subarray_01"].State() == DevState.OFF
-        assert list(devices["subarray_01"].stationFQDNs) == []
-        assert devices["station_001"].subarrayId == 0
-        assert devices["station_002"].subarrayId == 0
 
-        # Turn off controller and stations
-        self.assert_command(
-            device=devices["controller"],
-            command="Off",
-            expected_result=ResultCode.QUEUED,
+        # Make the station think it has received events from its APIU,
+        # tiles and antennas, telling it they are all OFF. This makes
+        # the station transition to OFF, and this flows up to the
+        # controller.
+        station_1.FakeSubservientDevicesPowerMode(PowerMode.ON)
+        station_2.FakeSubservientDevicesPowerMode(PowerMode.ON)
+
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
         )
-        dev_states = {
-            devices["controller"]: DevState.OFF,
-            devices["station_001"]: DevState.OFF,
-            devices["station_002"]: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
-        assert devices["controller"].State() == DevState.OFF
-        assert devices["station_001"].State() == DevState.OFF
-        assert devices["station_002"].State() == DevState.OFF
 
-    def test_setup_and_observation(self, devices, mocker):
-        """
-        Test that runs through the basic TMC<->MCCS interactions to setup and perform an
-        observation (without pointing updates)
+        assert controller.state() == tango.DevState.ON
+        assert subarray_1.state() == tango.DevState.ON
+        assert subarray_2.state() == tango.DevState.ON
+        assert station_1.state() == tango.DevState.ON
+        assert station_2.state() == tango.DevState.ON
 
-        :param devices: fixture that provides access to devices by their name
-        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: :py:class:`pytest_mock.mocker`
-        """
-        # Turn on controller and stations
-        self.assert_command(
-            device=devices["controller"],
-            command="Startup",
-            expected_result=ResultCode.QUEUED,
+        # allocate station_1 to subarray_1
+        ([result_code], [message]) = call_with_json(
+            controller.Allocate,
+            subarray_id=1,
+            station_ids=[[1, 2]],
+            subarray_beam_ids=[1, 2],
+            channel_blocks=[2],
         )
-        dev_states = {
-            devices["controller"]: DevState.ON,
-            devices["subarray_01"]: DevState.OFF,
-            devices["station_001"]: DevState.ON,
-            devices["station_002"]: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
-        assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["station_001"].subarrayId == 0
-        assert devices["station_002"].subarrayId == 0
+        assert result_code == ResultCode.QUEUED
 
-        # When asked, pretend the subarray is already on
-        devices["subarray_01"].State.return_value = DevState.ON
-
-        # Allocate stations to a subarray
-        parameters = {
-            "subarray_id": 1,
-            "station_ids": [[1, 2]],
-            "channel_blocks": [2],
-            "subarray_beam_ids": [1],
-        }
-        json_string = json.dumps(parameters)
-        self.assert_command(
-            device=devices["controller"],
-            command="Allocate",
-            argin=json_string,
-            expected_result=ResultCode.QUEUED,
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.RESOURCING
         )
-        self.wait_for_command_to_complete(devices["controller"])
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.IDLE
+        )
+        assert station_1.subarrayId == 1
+        assert station_2.subarrayId == 1
 
-        dev_states = {
-            devices["subarray_01"]: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
-        assert devices["station_001"].subarrayId == 1
-        assert devices["station_002"].subarrayId == 1
-        assert devices["subarray_01"].obsState == ObsState.IDLE
+        assert subarray_beam_1.state() == tango.DevState.ON
+        assert subarray_beam_2.state() == tango.DevState.ON
+        assert subarray_beam_3.state() == tango.DevState.ON
+        assert subarray_beam_4.state() == tango.DevState.ON
 
-        # Configure the subarray
-        configuration = {
-            "stations": [{"station_id": 1}, {"station_id": 2}],
-            "subarray_beams": [
+        time.sleep(0.1)  # TODO: to give subarray beams time to turn on
+
+        # configure subarray
+        ([result_code], [message]) = call_with_json(
+            subarray_1.Configure,
+            stations=[{"station_id": 1}, {"station_id": 2}],
+            subarray_beams=[
                 {
                     "subarray_beam_id": 1,
                     "station_ids": [1, 2],
@@ -357,55 +460,52 @@ class TestMccsIntegrationTmc(HelperClass):
                     "phase_centre": [0.0, 0.0],
                 }
             ],
-        }
-        json_string = json.dumps(configuration)
-        self.assert_command(
-            device=devices["subarray_01"], command="Configure", argin=json_string
         )
-        assert devices["subarray_01"].obsState == ObsState.READY
+        assert result_code == ResultCode.QUEUED
 
-        # Perform a scan on the subarray
-        scan_config = {"scan_id": 1, "scan_time": 4}
-        json_string = json.dumps(scan_config)
-        self.assert_command(
-            device=devices["subarray_01"],
-            command="Scan",
-            argin=json_string,
-            expected_result=ResultCode.STARTED,
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.CONFIGURING
         )
-        assert devices["subarray_01"].obsState == ObsState.SCANNING
-
-        # End a scan
-        self.assert_command(device=devices["subarray_01"], command="EndScan")
-        assert devices["subarray_01"].obsState == ObsState.READY
-
-        # Prepare for and release Resources
-        self.assert_command(device=devices["subarray_01"], command="End")
-        assert devices["subarray_01"].obsState == ObsState.IDLE
-        release_config = {"subarray_id": 1, "release_all": True}
-        json_string = json.dumps(release_config)
-        self.assert_command(
-            device=devices["controller"], command="Release", argin=json_string
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.READY
         )
-        dev_states = {
-            devices["subarray_01"]: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
-        assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["subarray_01"].State() == DevState.OFF
-        assert list(devices["subarray_01"].stationFQDNs) == []
-        assert devices["station_001"].subarrayId == 0
-        assert devices["station_002"].subarrayId == 0
 
-        # Turn off controller and stations
-        self.assert_command(
-            device=devices["controller"],
-            command="Off",
-            expected_result=ResultCode.QUEUED,
+        ([result_code], [_]) = call_with_json(subarray_1.Scan, scan_id=1, start_time=4)
+        assert result_code == ResultCode.OK  # should be STARTED but base classes
+
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.SCANNING
         )
-        dev_states = {
-            devices["controller"]: DevState.OFF,
-            devices["station_001"]: DevState.OFF,
-            devices["station_002"]: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
+
+        ([result_code], [_]) = subarray_1.EndScan()
+        assert result_code == ResultCode.OK
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.READY
+        )
+
+        ([result_code], [_]) = subarray_1.End()
+        assert result_code == ResultCode.OK
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.IDLE
+        )
+
+        ([result_code], [_]) = call_with_json(
+            controller.Release,
+            subarray_id=1,
+            release_all=True,
+        )
+        assert result_code == ResultCode.QUEUED
+
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.RESOURCING
+        )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.EMPTY
+        )
+
+        ([result_code], _) = controller.Off()
+        assert result_code == ResultCode.OK  # should be QUEUED but base classes
+
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )

@@ -12,15 +12,15 @@ dependencies:
 - name: ska-low-mccs
   version: 0.8.4 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
   repository: file://../ska-low-mccs
-- name: webjive
-  version: 1.0.21
-  repository: https://nexus.engageska-portugal.pt/repository/helm-chart
+- name: ska-webjive
+  version: 1.0.24
+  repository: https://artefact.skao.int/repository/helm-internal
   condition: webjive.enabled
-- name: webjive-auth
-  version: 0.1.1
-  repository: https://nexus.engageska-portugal.pt/repository/helm-chart
+- name: ska-webjive-auth
+  version: 0.1.3
+  repository: https://artefact.skao.int/repository/helm-internal
   condition: webjive-auth.enabled
-- name: webjive-dashboard
-  version: 0.1.1
-  repository: https://nexus.engageska-portugal.pt/repository/helm-chart
+- name: ska-dashboard-repo
+  version: 0.1.7
+  repository: https://artefact.skao.int/repository/helm-internal
   condition: webjive-dashboard.enabled

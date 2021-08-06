@@ -1,4 +1,4 @@
-HELM_HOST ?= https://nexus.engageska-portugal.pt## helm host url https
+HELM_HOST ?= $(CAR_HELM_REPOSITORY_URL)## helm host url https
 # use values-<deployment>.yaml files instead as --set overrides
 #MINIKUBE ?= true## Minikube or not 
 MARK ?= all

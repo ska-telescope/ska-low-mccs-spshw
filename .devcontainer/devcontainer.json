@@ -31,7 +31,7 @@
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],
     // Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple -rrequirements.txt && python3 -m pip install -rtesting/requirements.txt -rrequirements-lint.txt && python3 -m pip install -r testing/requirements.txt && python3 -m pip install -e /workspaces/ska-low-mccs",
+    "postCreateCommand": "python3 -m pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple -rrequirements.txt && python3 -m pip install -rtesting/requirements.txt -rrequirements-lint.txt && python3 -m pip install -r testing/requirements.txt && python3 -m pip install -e /workspaces/ska-low-mccs",
     // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
     "remoteUser": "tango",
     "remoteEnv": {

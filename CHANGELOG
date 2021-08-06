@@ -2,6 +2,12 @@
 
 ## unreleased
 
+## 0.8.5
+
+* MCCS-643 - Update from Nexus to new SKAO central artefact repository
+* MCCS-635 - Refactor complex TPM methods to reduce complexity
+* MCCS-693 - Update publish stage to point to CAR
+
 ## 0.8.4
 
 * MCCS-682 - Port AssignResources mods from MCCS-560

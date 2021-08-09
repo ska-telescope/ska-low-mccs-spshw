@@ -14,7 +14,7 @@ webjive-auth:
 # demo config
 ska-low-mccs:
   dsconfig:
-    configuration_file: data/configuration_without_antennas.json
+    configuration_file: data/configuration.json
   deviceServers:
     antennas:
       instances: []

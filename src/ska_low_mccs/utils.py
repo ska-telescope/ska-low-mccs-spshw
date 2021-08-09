@@ -9,7 +9,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from functools import wraps
+import functools
 import json
 import pkg_resources
 from typing import Callable, Optional
@@ -100,7 +100,7 @@ class json_input:  # noqa: N801
         :return: function handle of the wrapped method
         """
 
-        @wraps(func)
+        @functools.wraps(func)
         def wrapped(obj: object, json_string: str) -> object:
             """
             The wrapped function.

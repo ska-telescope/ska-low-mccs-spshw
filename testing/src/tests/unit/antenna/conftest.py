@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
+from typing import Callable, cast
 import unittest.mock
 
 import pytest
@@ -379,4 +379,4 @@ def patched_antenna_device_class(initial_are_antennas_on: list[bool]) -> MccsAnt
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
 
-    return PatchedAntennaDevice
+    return cast(MccsAntenna, PatchedAntennaDevice)

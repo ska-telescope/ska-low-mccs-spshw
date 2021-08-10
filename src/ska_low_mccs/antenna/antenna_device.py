@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 import tango
-from tango.server import attribute, device_property, AttrWriteType
+from tango.server import attribute, device_property
 
 from ska_tango_base import SKABaseDevice
 from ska_tango_base.commands import ResultCode, ResponseCommand
@@ -21,31 +21,7 @@ from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
 from ska_low_mccs.component import CommunicationStatus
 
-
 __all__ = ["MccsAntenna", "main"]
-
-
-def create_return(success: Optional[bool], action: str) -> tuple[ResultCode, str]:
-    """
-    Helper function to package up a boolean result into a
-    (:py:class:`~ska_tango_base.commands.ResultCode`, message) tuple.
-
-    :param success: whether execution of the action was successful. This
-        may be None, in which case the action was not performed due to
-        redundancy (i.e. it was already done).
-    :param action: Informal description of the action that the command
-        performs, for use in constructing a message
-
-    :return: A tuple containing a return code and a string
-        message indicating status. The message is for
-        information purpose only.
-    """
-    if success is None:
-        return (ResultCode.OK, f"Antenna {action} is redundant")
-    elif success:
-        return (ResultCode.OK, f"Antenna {action} successful")
-    else:
-        return (ResultCode.FAILED, f"Antenna {action} failed")
 
 
 class MccsAntenna(SKABaseDevice):
@@ -64,7 +40,9 @@ class MccsAntenna(SKABaseDevice):
     # ---------------
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
-        self._health_state = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_state: Optional[
+            HealthState
+        ] = None  # SKABaseDevice.InitCommand.do() does this too late.
         self._health_model = AntennaHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
@@ -228,7 +206,6 @@ class MccsAntenna(SKABaseDevice):
 
         :param health: the new health value
         """
-        self._health_state: HealthState  # typehint only
         if self._health_state == health:
             return
         self._health_state = health
@@ -239,7 +216,6 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     @attribute(
         dtype=SimulationMode,
-        access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
     )
@@ -524,7 +500,7 @@ class MccsAntenna(SKABaseDevice):
         state.
         """
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(self: MccsAntenna.OnCommand) -> tuple[ResultCode, str]:
             """
             Stateless hook for Off() command functionality.
 
@@ -537,12 +513,11 @@ class MccsAntenna(SKABaseDevice):
             message = "On command completed OK"
             return (ResultCode.OK, message)
 
-    def is_On_allowed(self):
+    def is_On_allowed(self: MccsAntenna) -> bool:
         """
         Check if command `Off` is allowed in the current device state.
 
         :return: ``True`` if the command is allowed
-        :rtype: bool
         """
         return self.get_state() in [
             tango.DevState.OFF,

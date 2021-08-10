@@ -60,7 +60,7 @@ class DemoAntenna(MccsAntenna):
 # ----------
 # Run server
 # ----------
-def main(*args: tuple, **kwargs: dict) -> int:
+def main(*args: str, **kwargs: str) -> int:
     """
     Entry point for module.
 

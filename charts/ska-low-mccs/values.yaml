@@ -44,7 +44,7 @@ mccs:
   image:
     registry: artefact.skao.int
     image: ska-low-mccs
-    tag: 0.8.5 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    tag: 0.8.6 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     pullPolicy: IfNotPresent
 
 

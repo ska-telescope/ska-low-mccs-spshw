@@ -216,22 +216,6 @@ publish package to CAR:
       # Confirm semantic versioning of tag
       - $CI_COMMIT_TAG =~ /^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$/
 
-release docker image to CAR:
-  stage: publish
-  image: $SKA_K8S_TOOLS_DEPLOY_IMAGE
-  before_script:
-    - docker login -u $CAR_OCI_REGISTRY_USERNAME -p $CAR_OCI_REGISTRY_PASSWORD $CAR_OCI_REGISTRY_HOST
-  tags:
-    - k8srunner
-  # don't inherit artefacts to prevent dirty image
-  dependencies: []
-  script:
-    - make build
-    - make push
-  only:
-    refs:
-      - tags
-
 include:
   # Create Gitlab CI badges from CI metrics
   # https://developer.skatelescope.org/en/latest/tools/continuousintegration.html#automated-collection-of-ci-health-metrics-as-part-of-the-ci-pipeline

@@ -5,7 +5,7 @@
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="SKABaseDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
       <!-- TODO rename to SKAController? -->
-      <inheritances classname="SKAMaster" sourcePath="C:\Users\mar637\PycharmProjects\lmc-base-classes\pogo"/>
+      <inheritances classname="SKAController" sourcePath="C:\Users\mar637\PycharmProjects\lmc-base-classes\pogo"/>
       <identification contact="at csiro.au - malte.marquarding" author="malte.marquarding" emailDomain="csiro.au" classFamily="SkaMccs" siteSpecific="" platform="Unix Like" bus="Not Applicable" manufacturer="none" reference=""/>
     </description>
     <deviceProperties name="SkaLevel" description="Indication of importance of the device in the SKA hierarchy &#xA;to support drill-down navigation: 1..6, with 1 highest.&#xA;Default is 4, making provision for &#xA;EltController, EltAlarms, EltTelState = 1&#xA;SubEltController = 2&#xA;Subarray, Capability = 2/3&#xA;Others = 4 (or 5 or 6)">

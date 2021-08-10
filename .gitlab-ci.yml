@@ -151,9 +151,7 @@ docs:
     - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
     - python3 -m pip install anybadge
   script:
-    # TODO: Restore -n ("nitpicky") flag once we catch up to ska_tango_base 0.11.0
-    # - python3 -m sphinx -T -E -b html -n -W --keep-going docs/source docs/build/html
-    - python3 -m sphinx -T -E -b html -W --keep-going docs/source docs/build/html
+    - python3 -m sphinx -T -E -b html -n -W --keep-going docs/source docs/build/html
     - echo "pass" > .docs_status
   after_script:
     - mkdir -p build/badges

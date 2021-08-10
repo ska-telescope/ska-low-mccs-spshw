@@ -1,15 +1,29 @@
 # type: ignore
 # -*- coding: utf-8 -*-
 """An implementation of a TPM simulator."""
-import copy
+from __future__ import annotations
 
-from ska_low_mccs.hardware import HardwareSimulator
+import copy
+import logging
+
+from ska_low_mccs.component import ObjectComponent
 
 __all__ = ["BaseTpmSimulator"]
 
 
-class BaseTpmSimulator(HardwareSimulator):
-    """A simulator for a TPM."""
+class BaseTpmSimulator(ObjectComponent):
+    """
+    A simulator for a TPM.
+
+    :todo: The current TPM driver has a wrapper to make it consistent
+        with the interface of this simulator. It would be more better if
+        we updated this simulator's interface to better reflect the
+        natural interface of the driver that it is simulating.
+    :todo: The initialiser for this class accepts a component fault
+        callback, but at present there is nothing implemented to allow
+        this simulator to simulate a fault state that would warrant the
+        callback being called.
+    """
 
     ADC_RMS = tuple(float(i) for i in range(32))
     FPGAS_TIME = [1, 2]
@@ -57,18 +71,19 @@ class BaseTpmSimulator(HardwareSimulator):
         else:
             return "ff:ff:ff:ff:ff:ff"
 
-    def __init__(self, logger, fail_connect=False):
+    def __init__(
+        self: BaseTpmSimulator,
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
         :type logger: an instance of :py:class:`logging.Logger`, or
             an object that implements the same interface
-        :param fail_connect: whether this simulator should initially
-            simulate failure to connect to the hardware
-        :type fail_connect: bool
         """
         self.logger = logger
+
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
@@ -87,7 +102,6 @@ class BaseTpmSimulator(HardwareSimulator):
         self._forty_gb_core_list = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._test_generator_active = False
-        super().__init__(is_connectible=False, fail_connect=fail_connect)
 
     @property
     def firmware_available(self):
@@ -119,7 +133,7 @@ class BaseTpmSimulator(HardwareSimulator):
         :param value: assigned default firmware name. Can be overriden by parameter of download_firmware
         :type value: str
         """
-        self._tile_id = value
+        self._firmware_name = value
 
     @property
     def firmware_version(self):

@@ -11,6 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 __all__ = ["MccsDeviceProxy"]
 
 import logging
+import threading
 from typing import Any, Callable, Optional, Type
 from typing_extensions import TypedDict
 import warnings
@@ -75,7 +76,7 @@ class MccsDeviceProxy:
             device we are proxying. By default this is
             :py:class:`tango.DeviceProxy`, but occasionally this needs
             to be changed. For example, when testing against a
-            :py:class:`test_context.MultiDeviceTestContext`, we
+            :py:class:`tango.test_context.MultiDeviceTestContext`, we
             obtain connections to the devices under test via
             ``test_context.get_device(fqdn)``.
         :param connect: whether to connect immediately to the device. If
@@ -96,6 +97,7 @@ class MccsDeviceProxy:
         self.__dict__["_pass_through"] = pass_through
         self.__dict__["_device"] = None
 
+        self.__dict__["_change_event_lock"] = threading.Lock()
         self.__dict__["_change_event_subscription_ids"] = {}
         self.__dict__["_change_event_callbacks"] = {}
 
@@ -258,6 +260,7 @@ class MccsDeviceProxy:
         self: MccsDeviceProxy,
         attribute_name: str,
         callback: Callable[[str, Any, AttrQuality], None],
+        stateless: bool = True,
     ) -> None:
         """
         Register a callback for change events being pushed by the device.
@@ -266,19 +269,23 @@ class MccsDeviceProxy:
             change events are subscribed.
         :param callback: the function to be called when a change event
             arrives.
+        :param stateless: whether to use Tango's stateless subscription
+            feature
         """
         attribute_key = attribute_name.lower()
         if attribute_key not in self._change_event_subscription_ids:
             self._change_event_callbacks[attribute_key] = [callback]
             self._change_event_subscription_ids[
                 attribute_key
-            ] = self._subscribe_change_event(attribute_name)
+            ] = self._subscribe_change_event(attribute_name, stateless=stateless)
         else:
             self._change_event_callbacks[attribute_key].append(callback)
-        self._call_callback(callback, self._read(attribute_name))
+            self._call_callback(callback, self._read(attribute_name))
 
     @backoff.on_exception(backoff.expo, tango.DevFailed, factor=1, max_time=120)
-    def _subscribe_change_event(self: MccsDeviceProxy, attribute_name: str) -> int:
+    def _subscribe_change_event(
+        self: MccsDeviceProxy, attribute_name: str, stateless: bool = False
+    ) -> int:
         """
         Subscribe to a change event.
 
@@ -292,11 +299,16 @@ class MccsDeviceProxy:
 
         :param attribute_name: the name of the attribute for which
             change events are subscribed
+        :param stateless: whether to use Tango's stateless subscription
+            feature
 
         :return: the subscription id
         """
         return self._device.subscribe_event(
-            attribute_name, tango.EventType.CHANGE_EVENT, self._change_event_received
+            attribute_name,
+            tango.EventType.CHANGE_EVENT,
+            self._change_event_received,
+            stateless=stateless,
         )
 
     def _change_event_received(self: MccsDeviceProxy, event: tango.EventData) -> None:
@@ -307,9 +319,12 @@ class MccsDeviceProxy:
 
         :param event: an object encapsulating the event data.
         """
-        attribute_data = self._process_event(event)
-        for callback in self._change_event_callbacks[attribute_data.name.lower()]:
-            self._call_callback(callback, attribute_data)
+        # TODO: not sure if it is overkill to serialise change event
+        # handling, but it seems like the safer way to go
+        with self._change_event_lock:
+            attribute_data = self._process_event(event)
+            for callback in self._change_event_callbacks[attribute_data.name.lower()]:
+                self._call_callback(callback, attribute_data)
 
     def _call_callback(
         self: MccsDeviceProxy,

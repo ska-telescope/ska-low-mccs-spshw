@@ -14,682 +14,186 @@ LFAA Cluster Manager Device Server.
 An implementation of the Cluster Manager Device Server for the MCCS
 based upon architecture in SKA-TEL-LFAA-06000052-02.
 """
+from __future__ import annotations
+
 import json
-import threading
 
-from tango import DebugIt, EnsureOmniThread
-from tango.server import attribute, command, AttrWriteType
+from tango.server import attribute, command
 
+from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, SimulationMode
-from ska_low_mccs import MccsGroupDevice
-from ska_low_mccs.cluster_manager.cluster_simulator import (
-    ClusterSimulator,
-    JobStatus,
-    JobConfig,
-)
-from ska_low_mccs.hardware import (
-    ConnectionStatus,
-    HardwareHealthEvaluator,
-    SimulableHardwareManager,
-    SimulableHardwareFactory,
-)
-from ska_low_mccs.health import HealthModel
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
-__all__ = [
-    "ClusterFactory",
-    "ClusterHealthEvaluator",
-    "ClusterManager",
-    "MccsClusterManagerDevice",
-    "main",
-]
+from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
+from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus, JobConfig
+from ska_low_mccs.component import CommunicationStatus
+import ska_low_mccs.release as release
 
 
-class ClusterHealthEvaluator(HardwareHealthEvaluator):
-    """
-    A simple
-    :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEvaluator`
-    for a cluster.
+__all__ = ["MccsClusterManagerDevice", "main"]
 
-    Implements a policy to decide on the health state of the cluster
 
-    At present, the policy returns:
-
-    * FAILED if the connection to the cluster has been lost, or if all
-      of the master shadow nodes have failed
-
-    * DEGRADED if any (but not all) of the master shadow nodes have
-      failed.
-
-    * OK if all of the master shadow nodes are okay.
-    """
-
-    def evaluate_health(self, cluster):
-        """
-        Evaluate the health of the hardware.
-
-        :param cluster: the cluster driver or simulator for which
-            health is being evaluated
-        :type cluster: :py:class:`.ClusterSimulator` (or eventually a
-            `ClusterDriver`)
-
-        :return: the evaluated health of the cluster
-        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
-        """
-        connection_status = cluster.connection_status
-        if connection_status == ConnectionStatus.NOT_CONNECTIBLE:
-            return HealthState.UNKNOWN
-        if connection_status == ConnectionStatus.NOT_CONNECTED:
-            return HealthState.FAILED
-
-        master_shadow_pool_node_health_ok = tuple(
-            status == HealthState.OK for status in cluster.shadow_master_pool_status
-        )
-        if all(master_shadow_pool_node_health_ok):
-            return HealthState.OK
-        elif any(master_shadow_pool_node_health_ok):
-            return HealthState.DEGRADED
-        else:
-            return HealthState.FAILED
-
-
-class ClusterFactory(SimulableHardwareFactory):
-    """
-    A hardware factory for cluster hardware.
-
-    At present, this returns a
-    :py:class:`~ska_low_mccs.cluster_manager.cluster_simulator.ClusterSimulator`
-    object when in simulation mode, and raises
-    :py:exc:`NotImplementedError` if the hardware is sought whilst not
-    in simulation mode
-    """
-
-    def __init__(self, simulation_mode):
-        """
-        Create a new factory instance.
-
-        :param simulation_mode: the initial simulation mode for this
-            cluster manager
-        :type simulation_mode:
-            :py:class:`~ska_tango_base.control_model.SimulationMode`
-        """
-        super().__init__(simulation_mode)
-
-    def _create_static_simulator(self):
-        """
-        Returns a hardware simulator.
-
-        :return: a hardware simulator for the tile
-        :rtype: :py:class:`TpmSimulator`
-        """
-        return ClusterSimulator()
-
-
-class ClusterManager(SimulableHardwareManager):
-    """This class manages a cluster on behalf of the MccsClusterManagerDevice device."""
-
-    def __init__(self, simulation_mode, _factory=None):
-        """
-        Initialise a new ClusterManager instance.
-
-        :param simulation_mode: the initial simulation mode for this
-            cluster manager
-        :type simulation_mode:
-            :py:class:`~ska_tango_base.control_model.SimulationMode`
-        :param _factory: allows for substitution of a hardware factory.
-            This is useful for testing, but generally should not be used
-            in operations.
-        :type _factory: :py:class:`.ClusterFactory`
-        """
-        cluster_factory = _factory or ClusterFactory(
-            simulation_mode == SimulationMode.TRUE
-        )
-        super().__init__(cluster_factory, ClusterHealthEvaluator())
-
-    @property
-    def jobs_errored(self):
-        """
-        Return the number of jobs that have errored.
-
-        :return: the number of jobs that have errored
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_errored
-
-    @property
-    def jobs_failed(self):
-        """
-        Return the number of jobs that have failed.
-
-        :return: the number of jobs that have failed
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_failed
-
-    @property
-    def jobs_finished(self):
-        """
-        Return the number of jobs that have finished.
-
-        :return: the number of jobs that have finished
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_finished
-
-    @property
-    def jobs_killed(self):
-        """
-        Return the number of jobs that have been killed.
-
-        :return: the number of jobs that have been killed
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_killed
-
-    @property
-    def jobs_lost(self):
-        """
-        Return the number of jobs that have been lost.
-
-        :return: the number of jobs that have been lost
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_lost
-
-    @property
-    def jobs_staging(self):
-        """
-        Return the number of jobs that are currently staging.
-
-        :return: the number of jobs that are currently staging
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_staging
-
-    @property
-    def jobs_starting(self):
-        """
-        Return the number of jobs that are currently starting.
-
-        :return: the number of jobs that are currently starting
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_starting
-
-    @property
-    def jobs_running(self):
-        """
-        Return the number of jobs that are currently running.
-
-        :return: the number of jobs that are currently running
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_running
-
-    @property
-    def jobs_killing(self):
-        """
-        Return the number of jobs that are currently being killed.
-
-        :return: the number of jobs that are currently being killed
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_killing
-
-    @property
-    def jobs_unreachable(self):
-        """
-        Return the number of jobs that are currently unreachable.
-
-        :return: the number of jobs that are currently unreachable
-        :rtype: int
-        """
-        return self._factory.hardware.jobs_unreachable
-
-    @property
-    def memory_total(self):
-        """
-        Return the total memory of the cluster.
-
-        :return: the total memory of the cluster
-        :rtype: float
-        """
-        return self._factory.hardware.memory_total
-
-    @property
-    def memory_used(self):
-        """
-        Return the used memory of the cluster.
-
-        :return: the used memory of the cluster
-        :rtype: float
-        """
-        return self._factory.hardware.memory_used
-
-    @property
-    def memory_avail(self):
-        """
-        Return the available memory of the cluster.
-
-        :return: the available memory of the cluster
-        :rtype: float
-        """
-        return self._factory.hardware.memory_avail
-
-    @property
-    def nodes_total(self):
-        """
-        Return the total number of nodes in the cluster.
-
-        :return: the total number of nodes in the cluster
-        :rtype: int
-        """
-        return self._factory.hardware.nodes_total
-
-    @property
-    def nodes_in_use(self):
-        """
-        Return the number of nodes in use in the cluster.
-
-        :return: the number of nodes in use in the cluster
-        :rtype: int
-        """
-        return self._factory.hardware.nodes_in_use
-
-    @property
-    def nodes_avail(self):
-        """
-        Return the number of available nodes in the cluster.
-
-        :return: the number of available nodes in the cluster
-        :rtype: int
-        """
-        return self._factory.hardware.nodes_avail
-
-    @property
-    def master_cpus_total(self):
-        """
-        Return the total number of CPUs on the master node.
-
-        :return: the total number of CPUs on the master node
-        :rtype: int
-        """
-        return self._factory.hardware.master_cpus_total
-
-    @property
-    def master_cpus_used(self):
-        """
-        Return the total number of CPUs in use on the master node.
-
-        :return: the total number of CPUs in use on the master node
-        :rtype: int
-        """
-        return self._factory.hardware.master_cpus_used
-
-    @property
-    def master_cpus_allocated_percent(self):
-        """
-        Return the percent of CPUs allocated on master.
-
-        :return: the percent of CPUs allocated on master
-        :rtype: float
-        """
-        return self._factory.hardware.master_cpus_allocated_percent
-
-    @property
-    def master_disk_total(self):
-        """
-        Return the total disk size on the master node.
-
-        :return: the total disk size on the master node
-        :rtype: float
-        """
-        return self._factory.hardware.master_disk_total
-
-    @property
-    def master_disk_used(self):
-        """
-        Return the total disk usage on the master node.
-
-        :return: the total disk usage on the master node
-        :rtype: float
-        """
-        return self._factory.hardware.master_disk_used
-
-    @property
-    def master_disk_percent(self):
-        """
-        Return the percent of disk used on master.
-
-        :return: the percent of disk used on master
-        :rtype: float
-        """
-        return self._factory.hardware.master_disk_percent
-
-    @property
-    def master_mem_total(self):
-        """
-        Return the total memory size on the master node.
-
-        :return: the total memory size on the master node
-        :rtype: float
-        """
-        return self._factory.hardware.master_mem_total
-
-    @property
-    def master_mem_used(self):
-        """
-        Return the total memory usage on the master node.
-
-        :return: the total memory usage on the master node
-        :rtype: float
-        """
-        return self._factory.hardware.master_mem_used
-
-    @property
-    def master_mem_percent(self):
-        """
-        Return the percent of memory used on master.
-
-        :return: the percent of memory used on master
-        :rtype: float
-        """
-        return self._factory.hardware.master_mem_percent
-
-    @property
-    def master_node_id(self):
-        """
-        Return the id of the master node.
-
-        :return: the id of the master node
-        :rtype: int
-        """
-        return self._factory.hardware.master_node_id
-
-    @property
-    def shadow_master_pool_node_ids(self):
-        """
-        Return the ids of nodes in the shadow master pool.
-
-        :return: the ids of nodes in the shadow master pool
-        :rtype: tuple(int)
-        """
-        return self._factory.hardware.shadow_master_pool_node_ids
-
-    @property
-    def shadow_master_pool_status(self):
-        """
-        Return the statuses of nodes in the shadow master pool.
-
-        :return: the statuses of nodes in the shadow master pool
-        :rtype: tuple(py:class:`~ska_tango_base.control_model.HealthState`)
-        """
-        return self._factory.hardware.shadow_master_pool_status
-
-    def ping_master_pool(self):
-        """
-        Ping the master pool nodes to make sure they are ok.
-
-        This has not been implemented.
-        """
-        self._factory.hardware.ping_master_pool()
-
-    def clear_job_stats(self):
-        """Clear stats for closed jobs."""
-        self._factory.hardware.clear_job_stats()
-
-    def get_job_status(self, job_id):
-        """
-        Return the status of an open job.
-
-        :param job_id: the id of the job
-        :type job_id: str
-
-        :return: the status of the job
-        :rtype: str
-        """
-        return self._factory.hardware.get_job_status(job_id)
-
-    def submit_job(self, job_config):
-        """
-        Submit a job to the cluster. Since the
-        :py:class:`ska_low_mccs.cluster_manager.cluster_simulator.JobConfig`
-        class is not yet implemented, this simply creates a unique job
-        id for the job, registers it as a STAGING job, and returns the
-        job id.
-
-        :param job_config: specification of the submitted job
-        :type job_config:
-            :py:class:`ska_low_mccs.cluster_manager.cluster_simulator.JobConfig`
-
-        :return: the job_id
-        :rtype: int
-        """
-        return self._factory.hardware.submit_job(job_config)
-
-    def start_job(self, job_id):
-        """
-        Start a specified job.
-
-        :param job_id: The id of the job to be started
-        :type job_id: str
-        """
-        self._factory.hardware.start_job(job_id)
-
-    def stop_job(self, job_id):
-        """
-        Stop a specified job.
-
-        :param job_id: The id of the job to be stopped
-        :type job_id: str
-        """
-        self._factory.hardware.stop_job(job_id)
-
-
-class MccsClusterManagerDevice(MccsGroupDevice):
-    """
-    An implementation of the Cluster Manager tango device server for SKA-Low-MCCS based
-    upon architecture in SKA-TEL-LFAA-06000052-02.
-
-    **Properties:**
-
-    - Device Property
-    """
-
-    # -----------------
-    # Device Properties
-    # -----------------
+class MccsClusterManagerDevice(SKABaseDevice):
+    """An implementation of a cluster manager Tango device server for MCCS."""
 
     # ---------------
     # General methods
     # ---------------
 
-    class InitCommand(MccsGroupDevice.InitCommand):
-        """Command class for device initialisation."""
+    def _init_state_model(self: MccsClusterManagerDevice):
+        super()._init_state_model()
+        self._health_state = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_model = ClusterHealthModel(self.health_changed)
+        self.set_change_event("healthState", True, False)
 
-        def __init__(self, target, state_model, logger=None):
-            """
-            Create a new InitCommand.
+    def create_component_manager(
+        self: MccsClusterManagerDevice,
+    ) -> ClusterComponentManager:
+        """
+        Create and return a component manager for this device.
 
-            :param target: the object that this command acts upon; for
-                example, the device for which this class implements the
-                command
-            :type target: object
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.DeviceStateModel`
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
-            """
-            super().__init__(target, state_model, logger)
+        :return: a component manager for this device.
+        """
+        # TODO: the default value for simulationMode should be
+        # FALSE, but we don't have real hardware to test yet, so we
+        # can't take our devices out of simulation mode. Once we
+        # have a driver for real hardware, we should change this
+        # default to FALSE.
+        return ClusterComponentManager(
+            self.logger,
+            SimulationMode.TRUE,
+            self._component_communication_status_changed,
+            self._component_power_mode_changed,
+            self._component_fault,
+            self._health_model.shadow_master_pool_node_health_changed,
+        )
 
-            self._init_thread = None
-            self._init_lock = threading.Lock()
-            self._init_interrupt = False
+    def init_command_objects(self: MccsClusterManagerDevice) -> None:
+        """Set up the command handler object for this device's commands."""
+        super().init_command_objects()
+
+        for (command_name, command_object) in [
+            ("StartJob", self.StartJobCommand),
+            ("StopJob", self.StopJobCommand),
+            ("SubmitJob", self.SubmitJobCommand),
+            ("GetJobStatus", self.GetJobStatusCommand),
+            ("ClearJobStats", self.ClearJobStatsCommand),
+            ("PingMasterPool", self.PingMasterPoolCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.component_manager, self.logger),
+            )
+
+    class InitCommand(SKABaseDevice.InitCommand):
+        """Class that implements device initialisation for this device."""
 
         def do(self):
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsClusterManagerDevice`.
+            Stateless hook for device initialisation: initialises the attributes and
+            properties of the :py:class:`.MccsClusterManagerDevice`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
+            device._build_state = release.get_release_info()
+            device._version_id = release.version
 
-            # TODO: the default value for simulationMode should be
-            # FALSE, but we don't have real hardware to test yet, so we
-            # can't take our devices out of simulation mode. Once we
-            # have a driver for real hardware, we should change this
-            # default to FALSE.
-            device._simulation_mode = SimulationMode.TRUE
-            device.cluster_manager = None
+            # The health model updates our health, but then the base class super().do()
+            # overwrites it with OK, so we need to update this again.
+            # TODO: This needs to be fixed in the base classes.
+            device._health_state = device._health_model.health_state
 
-            self._init_thread = threading.Thread(
-                target=self._initialise_connections, args=(device,)
-            )
-            with self._init_lock:
-                self._init_thread.start()
-                return (ResultCode.STARTED, "Init command started")
+            return (ResultCode.OK, "Init command completed OK")
 
-        def _initialise_connections(self, device):
-            """
-            Thread target for asynchronous initialisation of connections to external
-            entities such as hardware and other devices.
-
-            :param device: the device being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            # https://pytango.readthedocs.io/en/stable/howto.html
-            # #using-clients-with-multithreading
-            with EnsureOmniThread():
-                self._initialise_hardware_management(device)
-                if self._init_interrupt:
-                    self._init_thread = None
-                    self._init_interrupt = False
-                    return
-                self._initialise_health_monitoring(device)
-                if self._init_interrupt:
-                    self._init_thread = None
-                    self._init_interrupt = False
-                    return
-                with self._init_lock:
-                    self.succeeded()
-
-        def _initialise_hardware_management(self, device):
-            """
-            Initialise the connection to the hardware being managed by this device. May
-            also register commands that depend upon a connection to that hardware.
-
-            :param device: the device for which a connection to the
-                hardware is being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            device.cluster_manager = ClusterManager(device._simulation_mode)
-
-            for (command_name, command_object) in [
-                ("StartJob", device.StartJobCommand),
-                ("StopJob", device.StopJobCommand),
-                ("SubmitJob", device.SubmitJobCommand),
-                ("GetJobStatus", device.GetJobStatusCommand),
-                ("ClearJobStats", device.ClearJobStatsCommand),
-                ("PingMasterPool", device.PingMasterPoolCommand),
-            ]:
-                device.register_command_object(
-                    command_name,
-                    command_object(
-                        device.cluster_manager, device.state_model, self.logger
-                    ),
-                )
-
-        def _initialise_health_monitoring(self, device):
-            """
-            Initialise the health model for this device.
-
-            :param device: the device for which the health model is
-                being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            device._health_state = HealthState.UNKNOWN
-            device.set_change_event("healthState", True, False)
-            device.health_model = HealthModel(
-                device.cluster_manager,
-                None,
-                self.logger,
-                device.health_changed,
-            )
-
-        def interrupt(self):
-            """
-            Interrupt the initialisation thread (if one is running)
-
-            :return: whether the initialisation thread was interrupted
-            :rtype: bool
-            """
-            if self._thread is None:
-                return False
-            self._interrupt = True
-            return True
-
-    def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
-        if self.cluster_manager is not None:
-            self.cluster_manager.poll()
-
-    def delete_device(self):
+    # --------------
+    # Callback hooks
+    # --------------
+    def _component_communication_status_changed(
+        self: MccsClusterManagerDevice,
+        communication_status: CommunicationStatus,
+    ) -> None:
         """
-        Hook to delete resources allocated in the
-        :py:meth:`~.MccsClusterManagerDevice.InitCommand.do` method of
-        the nested
-        :py:class:`~.MccsClusterManagerDevice.InitCommand` class.
+        Handle change in communications status between component manager and component.
 
-        This method allows for any memory or other resources allocated
-        in the :py:meth:`~.MccsClusterManagerDevice.InitCommand.do`
-        method to be released. This method is called by the device
-        destructor, and by the Init command when the Tango device server
-        is re-initialised.
-        """
-        pass
+        This is a callback hook, called by the component manager when
+        the communications status changes. It is implemented here to
+        drive the op_state.
 
-    # ------------------
-    # Attributes methods
-    # ------------------
-    @attribute(
-        dtype="DevLong",
-        memorized=True,
-        hw_memorized=True,
-    )
-    def simulationMode(self):
+        :param communication_status: the status of communications
+            between the component manager and its component.
         """
-        Reports the simulation mode of the device.
+        action_map = {
+            CommunicationStatus.DISABLED: "component_disconnected",
+            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
+            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
+        }
 
-        :return: Return the current simulation mode
-        :rtype: int
-        """
-        return super().read_simulationMode()
+        action = action_map[communication_status]
+        if action is not None:
+            self.op_state_model.perform_action(action)
 
-    @simulationMode.write
-    def simulationMode(self, value):
-        """
-        Set the simulation mode.
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
-        :param value: The simulation mode, as a SimulationMode value
+    def _component_power_mode_changed(
+        self: MccsClusterManagerDevice,
+        power_mode: PowerMode,
+    ) -> None:
         """
-        super().write_simulationMode(value)
-        self.logger.info("Switching simulation mode to " + str(value))
-        self.cluster_manager.simulation_mode = value
+        Handle change in the power mode of the component.
+
+        This is a callback hook, called by the component manager when
+        the power mode of the component changes. It is implemented here
+        to drive the op_state.
+
+        :param power_mode: the power mode of the component.
+        """
+        action_map = {
+            PowerMode.OFF: "component_off",
+            PowerMode.STANDBY: "component_standby",
+            PowerMode.ON: "component_on",
+            PowerMode.UNKNOWN: "component_unknown",
+        }
+
+        self.op_state_model.perform_action(action_map[power_mode])
+
+    def _component_fault(
+        self: MccsClusterManagerDevice,
+        is_fault: bool,
+    ) -> None:
+        """
+        Handle change in the fault status of the component.
+
+        This is a callback hook, called by the component manager when
+        the component fault status changes. It is implemented here to
+        drive the op_state.
+
+        :param is_fault: whether the component is faulting or not.
+        """
+        if is_fault:
+            self.op_state_model.perform_action("component_fault")
+            self._health_model.component_fault(True)
+        else:
+            power_mode = self.component_manager.power_mode
+            if power_mode is not None:
+                self._component_power_mode_changed(self.component_manager.power_mode)
+            self._health_model.component_fault(False)
 
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state changes;
-        responsible for updating the tango side of things i.e. making sure the attribute
-        is up to date, and events are pushed.
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -699,6 +203,32 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
+    # ----------
+    # Attributes
+    # ----------
+    @attribute(
+        dtype=SimulationMode,
+        memorized=True,
+        hw_memorized=True,
+    )
+    def simulationMode(self: MccsClusterManagerDevice):
+        """
+        Report the simulation mode of the device.
+
+        :return: Return the current simulation mode
+        :rtype: int
+        """
+        return self.component_manager.simulation_mode
+
+    @simulationMode.write
+    def simulationMode(self: MccsClusterManagerDevice, value):
+        """
+        Set the simulation mode.
+
+        :param value: The simulation mode, as a SimulationMode value
+        """
+        self.component_manager.simulation_mode = value
+
     @attribute(dtype="DevShort", label="jobsErrored")
     def jobsErrored(self):
         """
@@ -707,7 +237,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of errored jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_errored
+        return self.component_manager.jobs_errored
 
     @attribute(dtype="DevShort", label="jobsFailed", max_alarm=1)
     def jobsFailed(self):
@@ -717,17 +247,17 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of failed jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_failed
+        return self.component_manager.jobs_failed
 
     @attribute(dtype="DevShort", label="jobsFinished")
     def jobsFinished(self):
         """
-        Returns the number of finished jobs.
+        Return the number of finished jobs.
 
         :return: the number of finished jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_finished
+        return self.component_manager.jobs_finished
 
     @attribute(dtype="DevShort", label="jobsKilled")
     def jobsKilled(self):
@@ -737,7 +267,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of killed jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_killed
+        return self.component_manager.jobs_killed
 
     @attribute(dtype="DevShort", label="jobsKilling")
     def jobsKilling(self):
@@ -747,7 +277,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of jobs currently being killed
         :rtype: int
         """
-        return self.cluster_manager.jobs_killing
+        return self.component_manager.jobs_killing
 
     @attribute(dtype="DevShort", label="jobsLost")
     def jobsLost(self):
@@ -757,7 +287,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of lost jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_lost
+        return self.component_manager.jobs_lost
 
     @attribute(dtype="DevShort", label="jobsRunning")
     def jobsRunning(self):
@@ -767,7 +297,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of running jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_running
+        return self.component_manager.jobs_running
 
     @attribute(dtype="DevShort", label="jobsStaging")
     def jobsStaging(self):
@@ -777,7 +307,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of staging jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_staging
+        return self.component_manager.jobs_staging
 
     @attribute(dtype="DevShort", label="jobsStarting")
     def jobsStarting(self):
@@ -787,7 +317,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of starting jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_starting
+        return self.component_manager.jobs_starting
 
     @attribute(dtype="DevShort", max_alarm=1)
     def jobsUnreachable(self):
@@ -797,7 +327,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of unreachable jobs
         :rtype: int
         """
-        return self.cluster_manager.jobs_unreachable
+        return self.component_manager.jobs_unreachable
 
     @attribute(dtype="DevFloat", label="memoryTotal")
     def memoryTotal(self):
@@ -807,7 +337,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the total memory size
         :rtype: float
         """
-        return self.cluster_manager.memory_total
+        return self.component_manager.memory_total
 
     @attribute(dtype="DevFloat", label="memoryAvail")
     def memoryAvail(self):
@@ -817,7 +347,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the available memory
         :rtype: float
         """
-        return self.cluster_manager.memory_avail
+        return self.component_manager.memory_avail
 
     @attribute(dtype="DevFloat", label="memoryUsed")
     def memoryUsed(self):
@@ -827,7 +357,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the amount of memory in use
         :rtype: float
         """
-        return self.cluster_manager.memory_used
+        return self.component_manager.memory_used
 
     @attribute(dtype="DevShort", label="nodesInUse")
     def nodesInUse(self):
@@ -837,7 +367,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of nodes in use
         :rtype: int
         """
-        return self.cluster_manager.nodes_in_use
+        return self.component_manager.nodes_in_use
 
     @attribute(dtype="DevShort", label="nodesAvail")
     def nodesAvail(self):
@@ -847,7 +377,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of available nodes
         :rtype: int
         """
-        return self.cluster_manager.nodes_avail
+        return self.component_manager.nodes_avail
 
     @attribute(dtype="DevShort", label="nodesTotal")
     def nodesTotal(self):
@@ -857,7 +387,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the total number of notes
         :rtype: int
         """
-        return self.cluster_manager.nodes_total
+        return self.component_manager.nodes_total
 
     @attribute(dtype="DevShort", label="masterNodeId")
     def masterNodeId(self):
@@ -867,7 +397,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the id of the master node
         :rtype: int
         """
-        return self.cluster_manager.master_node_id
+        return self.component_manager.master_node_id
 
     @attribute(dtype="DevFloat", label="masterCpusAllocatedPercent")
     def masterCpusAllocatedPercent(self):
@@ -877,7 +407,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the percent allocation of the CPUs
         :rtype: float
         """
-        return self.cluster_manager.master_cpus_allocated_percent
+        return self.component_manager.master_cpus_allocated_percent
 
     @attribute(dtype="DevShort", label="masterCpusUsed")
     def masterCpusUsed(self):
@@ -887,7 +417,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of CPUs in use on the master node
         :rtype: int
         """
-        return self.cluster_manager.master_cpus_used
+        return self.component_manager.master_cpus_used
 
     @attribute(dtype="DevShort", label="masterCpusTotal")
     def masterCpusTotal(self):
@@ -897,7 +427,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of CPUs that the master node has
         :rtype: int
         """
-        return self.cluster_manager.master_cpus_total
+        return self.component_manager.master_cpus_total
 
     @attribute(dtype="DevFloat", label="masterDiskPercent")
     def masterDiskPercent(self):
@@ -908,7 +438,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             used, as a percentage
         :rtype: float
         """
-        return self.cluster_manager.master_disk_percent
+        return self.component_manager.master_disk_percent
 
     @attribute(dtype="DevDouble", label="masterDiskUsed")
     def masterDiskUsed(self):
@@ -919,17 +449,17 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             used
         :rtype: float
         """
-        return self.cluster_manager.master_disk_used
+        return self.component_manager.master_disk_used
 
     @attribute(dtype="DevFloat", label="masterDiskTotal")
     def masterDiskTotal(self):
         """
-        The total disk size on the master node.
+        Return the total disk size on the master node.
 
         :return: the total disk size on the master node
         :rtype: float
         """
-        return self.cluster_manager.master_disk_total
+        return self.component_manager.master_disk_total
 
     @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemPercent(self):
@@ -940,7 +470,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             master node
         :rtype: float
         """
-        return self.cluster_manager.master_mem_percent
+        return self.component_manager.master_mem_percent
 
     @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemUsed(self):
@@ -951,7 +481,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             node
         :rtype: float
         """
-        return self.cluster_manager.master_mem_used
+        return self.component_manager.master_mem_used
 
     @attribute(dtype="DevFloat", label="masterMemTotal")
     def masterMemTotal(self):
@@ -961,7 +491,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return:  the total amount of memory on the master node
         :rtype: float
         """
-        return self.cluster_manager.master_mem_total
+        return self.component_manager.master_mem_total
 
     @attribute(
         dtype=("DevShort",),
@@ -975,7 +505,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the ids of nodes in the shadow master pool
         :rtype: list(int)
         """
-        return self.cluster_manager.shadow_master_pool_node_ids
+        return self.component_manager.shadow_master_pool_node_ids
 
     @attribute(
         dtype=("DevState",),
@@ -989,28 +519,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the states of nodes in the shadow master pool
         :rtype: list(:py:class:`tango.DevState`)
         """
-        return self.cluster_manager.shadow_master_pool_status
-
-    # override from base classes so that it can be stored in the hardware manager
-    @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)
-    def simulationMode(self):
-        """
-        Return the simulation mode of this device.
-
-        :return: the simulation mode of this device
-        :rtype: :py:class:`~ska_tango_base.control_model.SimulationMode`
-        """
-        return self.cluster_manager.simulation_mode
-
-    @simulationMode.write
-    def simulationMode(self, value):
-        """
-        Set the simulation mode of this device.
-
-        :param value: the new simulation mode
-        :type value: :py:class:`~ska_tango_base.control_model.SimulationMode`
-        """
-        self.cluster_manager.simulation_mode = value
+        return self.component_manager.shadow_master_pool_status
 
     # --------
     # Commands
@@ -1023,9 +532,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the
-            :py:meth:`.MccsClusterManagerDevice.StartJob`
-            command
+            Run the user-specified functionality of this command.
 
             :param argin: the job id
             :type argin: int
@@ -1035,9 +542,9 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            cluster_manager = self.target
+            component_manager = self.target
             try:
-                cluster_manager.start_job(argin)
+                component_manager.start_job(argin)
             except ValueError as value_error:
                 return (ResultCode.FAILED, str(value_error))
             except ConnectionError as connection_error:
@@ -1046,7 +553,6 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
     def StartJob(self, argin):
         """
         Command to start a particular job.
@@ -1070,9 +576,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the
-            :py:meth:`.MccsClusterManagerDevice.StopJob`
-            command
+            Run the user-specified functionality of this command.
 
             :param argin: the job id
             :type argin: int
@@ -1082,9 +586,9 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            cluster_manager = self.target
+            component_manager = self.target
             try:
-                cluster_manager.stop_job(argin)
+                component_manager.stop_job(argin)
             except ValueError as value_error:
                 return (ResultCode.FAILED, str(value_error))
             except ConnectionError as connection_error:
@@ -1093,7 +597,6 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
     def StopJob(self, argin):
         """
         Command to stop a particular job.
@@ -1115,9 +618,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the
-            :py:meth:`.MccsClusterManagerDevice.SubmitJob`
-            command
+            Run the user-specified functionality of this command.
 
             :param argin: a JSON string specifying the job configuration
             :type argin: str
@@ -1130,11 +631,10 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             kwargs = json.loads(argin)
             job_config = JobConfig(**kwargs)
 
-            cluster_manager = self.target
-            return cluster_manager.submit_job(job_config)
+            component_manager = self.target
+            return component_manager.submit_job(job_config)
 
     @command(dtype_in="DevString", dtype_out="DevString")
-    @DebugIt()
     def SubmitJob(self, argin):
         """
         Command to submit a job to the queue.
@@ -1153,9 +653,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the
-            :py:meth:`.MccsClusterManagerDevice.GetJobStatus`
-            command
+            Run the user-specified functionality of this command.
 
             :param argin: the job id
             :type argin: str
@@ -1163,14 +661,13 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :rtype:
                 :py:class:`ska_low_mccs.cluster_manager.cluster_simulator.JobStatus`
             """
-            cluster_manager = self.target
+            component_manager = self.target
             try:
-                return cluster_manager.get_job_status(argin)
+                return component_manager.get_job_status(argin)
             except ValueError:
                 return JobStatus.UNKNOWN
 
     @command(dtype_in="DevString", dtype_out="DevShort")
-    @DebugIt()
     def GetJobStatus(self, argin):
         """
         Poll the current status for a job.
@@ -1193,9 +690,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def do(self):
             """
-            Stateless do hook for the
-            :py:meth:`.MccsClusterManagerDevice.ClearJobStats`
-            command
+            Run the user-specified functionality of this command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1203,19 +698,18 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            cluster_manager = self.target
+            component_manager = self.target
             try:
-                cluster_manager.clear_job_stats()
+                component_manager.clear_job_stats()
             except ConnectionError as connection_error:
-                return ResultCode.str(connection_error)
+                return ResultCode.FAILED, str(connection_error)
             else:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
     def ClearJobStats(self):
         """
-        Used to reset all job counters - useful at the start of a new observation
+        Reset all job counters.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1233,9 +727,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def do(self):
             """
-            Stateless do hook for the
-            :py:meth:`.MccsClusterManagerDevice.PingMasterPool`
-            command
+            Run the user-specified functionality of this command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1243,16 +735,15 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            cluster_manager = self.target
+            component_manager = self.target
             try:
-                cluster_manager.ping_master_pool()
+                component_manager.ping_master_pool()
             except ConnectionError as connection_error:
                 return (ResultCode.FAILED, str(connection_error))
             else:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
     def PingMasterPool(self):
         """
         Pings all nodes in shadow master pool, to maintain status of each.
@@ -1265,17 +756,6 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         handler = self.get_command_object("PingMasterPool")
         (return_code, message) = handler()
         return [[return_code], [message]]
-
-    def _update_health_state(self, health_state):
-        """
-        Update and push a change event for the healthState attribute.
-
-        :param health_state: The new health state
-        :type health_state: :py:class:`~ska_tango_base.control_model.HealthState`
-        """
-        self.push_change_event("healthState", health_state)
-        self._health_state = health_state
-        self.logger.info("health state = " + str(health_state))
 
 
 # ----------

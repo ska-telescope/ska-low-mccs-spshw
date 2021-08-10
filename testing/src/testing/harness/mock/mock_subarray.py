@@ -37,15 +37,20 @@ class MockSubarrayBuilder(MockDeviceBuilder):
         """
         super().__init__(from_factory=from_factory)
 
-        for (command_name, command_class) in [
-            ("On", MccsSubarray.OnCommand),
-            ("Off", MccsSubarray.OffCommand),
-            ("AssignResources", MccsSubarray.AssignResourcesCommand),
-            ("ReleaseResources", MccsSubarray.ReleaseResourcesCommand),
-            ("ReleaseAllResources", MccsSubarray.ReleaseAllResourcesCommand),
-            ("Configure", MccsSubarray.ConfigureCommand),
+        for (command_name, succeeded_message) in [
+            ("On", "On command completed OK"),
+            ("Off", "Off command completed OK"),
+            ("AssignResources", "AssignResources command completed OK"),
+            ("ReleaseResources", "ReleaseResources command completed OK"),
+            ("ReleaseAllResources", "ReleaseAllResources command completed OK"),
+            ("Configure", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
+            ("Restart", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
+            (
+                "SendTransientBuffer",
+                MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],
+            ),
         ]:
             self._configuration[f"{command_name}.return_value"] = [
                 [ResultCode.OK],
-                [command_class.SUCCEEDED_MESSAGE],
+                [succeeded_message],
             ]

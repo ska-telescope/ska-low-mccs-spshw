@@ -42,7 +42,9 @@ sys.path.insert(0, os.path.abspath("../../src"))
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
 autodoc_mock_imports = [
+    "astropy",
     "backoff",
+    "fire",
     "jsonschema",
     "numpy",
     "pyfabil",
@@ -89,8 +91,11 @@ copyright = "2020, SKA MCCS Team"
 nitpick_ignore = [
     ("py:class", "callable"),
     ("py:class", "optional"),
-    ("py:exc", "LibraryError"),
+    ("py:class", "Wrapped"),
     ("py:exc", "BoardError"),
+    ("py:exc", "LibraryError"),
+    ("py:exc", "PluginError"),
+    ("py:exc", "fire.core.FireError")
 ]
 
 extensions = [

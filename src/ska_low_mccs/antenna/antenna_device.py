@@ -8,32 +8,20 @@
 # See LICENSE.txt for more info.
 
 """This module implements an antenna Tango device for MCCS."""
-__all__ = [
-    "AntennaApiuProxy",
-    "AntennaTileProxy",
-    "AntennaHardwareHealthEvaluator",
-    "MccsAntenna",
-    "main",
-]
+from __future__ import annotations
 
-import threading
-import json
-
-from tango import DebugIt, DevFailed, DevState, EnsureOmniThread, SerialModel, Util
-from tango.server import attribute, device_property, AttrWriteType, command
+import tango
+from tango.server import attribute, device_property, AttrWriteType
 
 from ska_tango_base import SKABaseDevice
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, SimulationMode
+from ska_tango_base.commands import ResultCode, ResponseCommand
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.hardware import (
-    HardwareHealthEvaluator,
-    PowerMode,
-)
-from ska_low_mccs.health import HealthModel
-from ska_low_mccs.utils import tango_raise
-from ska_low_mccs.message_queue import MessageQueue
+from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
+from ska_low_mccs.component import CommunicationStatus
+
+
+__all__ = ["MccsAntenna", "main"]
 
 
 def create_return(success, action):
@@ -62,301 +50,8 @@ def create_return(success, action):
         return (ResultCode.FAILED, f"Antenna {action} failed")
 
 
-class AntennaHardwareHealthEvaluator(HardwareHealthEvaluator):
-    """
-    A placeholder for a class that implements a policy by which the antenna hardware
-    manager evaluates the health of its hardware.
-
-    At present this just inherits from the base class unchanged.
-    """
-
-    def evaluate_health(self, hardware):
-        """
-        Evaluate the health of the "hardware".
-
-        :param hardware: the "hardware" for which health is being
-            evaluated
-        :type hardware:
-            :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareDriver`
-
-        :return: the evaluated health of the hardware
-        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
-        """
-        return HealthState.OK
-
-
-class AntennaApiuProxy:
-    """
-    A proxy to the APIU.
-
-    The MccsAntenna device server manages antenna hardware, but
-    indirectly, via the MccsAPIU and MccsTile devices. This class is a
-    proxy to the APIU device that the MccsAntenna can use to drive the
-    antenna hardware
-    """
-
-    def __init__(self, apiu_fqdn, logical_antenna_id, logger, power_callback):
-        """
-        Initialise a new APIU proxy instance.
-
-        :param apiu_fqdn: the FQDN of the APIU
-        :type apiu_fqdn: str
-        :param logical_antenna_id: this antenna's id within the APIU
-        :type logical_antenna_id: int
-        :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
-        :param power_callback: to be called when the power mode of the
-            antenna changes
-        :type power_callback: callable
-
-        :raises AssertionError: if parameters are out of bounds
-        """
-        self._fqdn = apiu_fqdn
-        self._apiu = None
-
-        assert (
-            logical_antenna_id > 0
-        ), "An APIU's logical antenna id must be positive integer."
-        self._logical_antenna_id = logical_antenna_id
-
-        self._logger = logger
-
-        self._power_mode = PowerMode.UNKNOWN
-        self._power_callback = power_callback
-
-    def connect(self):
-        """
-        Connect to this antenna's APIU.
-
-        Specifically, establish a connection to the APIU device that
-        manages the APIU that powers this device's antenna.
-        """
-        self._apiu = MccsDeviceProxy(self._fqdn, self._logger)
-        self._apiu.check_initialised()
-        self._apiu.add_change_event_callback("areAntennasOn", self._apiu_power_changed)
-
-        self._power_mode = self._read_power_mode()
-        self._power_callback(self._power_mode)
-
-    def on(self):
-        """
-        Turn the antenna on.
-
-        It does so by telling the APIU to turn the right antenna on.
-
-        :raises NotImplementedError: if a device returns a ResultCode
-            other than STARTED or FAILED
-
-        :return: whether the command was successful, or None if there
-            was nothing to do
-        :rtype: bool
-        """
-        if self._power_mode == PowerMode.ON:
-            return None  # already off
-
-        [[result_code], [_]] = self._apiu.PowerUpAntenna(self._logical_antenna_id)
-        if result_code == ResultCode.OK:
-            self._update_power_mode(PowerMode.ON)
-            return True
-        elif result_code == ResultCode.FAILED:
-            return False
-        else:
-            raise NotImplementedError(
-                f"APIU.PowerUpAntenna returned unexpected ResultCode {result_code.name}."
-            )
-
-    def off(self):
-        """
-        Turn the antenna off.
-
-        It does so by telling the APIU to turn the right antenna off.
-
-        :raises NotImplementedError: if a device returns a ResultCode
-            other than STARTED or FAILED
-
-        :return: whether the command was successful, or None if there
-            was nothing to do
-        :rtype: bool
-        """
-        if self._power_mode == PowerMode.OFF:
-            return None  # already off
-
-        [[result_code], [_]] = self._apiu.PowerDownAntenna(self._logical_antenna_id)
-        if result_code == ResultCode.OK:
-            self._update_power_mode(PowerMode.OFF)
-            return True
-        elif result_code == ResultCode.FAILED:
-            return False
-        else:
-            raise NotImplementedError(
-                f"APIU.PowerDownAntenna returned unexpected ResultCode {result_code.name}."
-            )
-
-    @property
-    def power_mode(self):
-        """
-        Return the power mode of this antenna.
-
-        :return: the power mode of this antenna
-        :rtype:
-            :py:class:`~ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        """
-        return self._power_mode
-
-    @property
-    def current(self):
-        """
-        This antenna's current.
-
-        :return: the current of this antenna
-        :rtype: float
-        """
-        return self._apiu.get_antenna_current(self._logical_antenna_id)
-
-    @property
-    def voltage(self):
-        """
-        This antenna's voltage.
-
-        :return: the voltage of this antenna
-        :rtype: float
-        """
-        return self._apiu.get_antenna_voltage(self._logical_antenna_id)
-
-    @property
-    def temperature(self):
-        """
-        This antenna's temperature.
-
-        :return: the temperature of this antenna
-        :rtype: float
-        """
-        return self._apiu.get_antenna_temperature(self._logical_antenna_id)
-
-    def _apiu_power_changed(self, event_name, event_value, event_quality):
-        """
-        Callback that this device registers with the event manager, so that it is
-        informed when the APIU power changes.
-
-        Because events may be delayed, a rapid off-on command sequence
-        can result in an "off" event arriving after the on() command has
-        been executed. We therefore don't put our full trust in these
-        events.
-
-        :param event_name: name of the event; will always be
-            "areAntennasOn" for this callback
-        :type event_name: str
-        :param event_value: the new attribute value
-        :type event_value: list(bool)
-        :param event_quality: the quality of the change event
-        :type event_quality: :py:class:`tango.AttrQuality`
-        """
-        assert event_name.lower() == "areAntennasOn".lower(), (
-            "APIU 'areAntennasOn' attribute changed callback called but "
-            f"event_name is {event_name}."
-        )
-
-        according_to_event = (
-            PowerMode.ON if event_value[self._logical_antenna_id - 1] else PowerMode.OFF
-        )
-        according_to_command = self._read_power_mode()
-        if according_to_event != according_to_command:
-            self._logger.warning(
-                f"Received a Antenna power change event for {according_to_event.name} "
-                f"but a manual read says {according_to_command.name}; discarding."
-            )
-        self._update_power_mode(according_to_command)
-
-    def _read_power_mode(self):
-        """
-        Helper method to read and interpret the power mode of the hardware.
-
-        :return: the power mode of the hardware
-        :rtype: :py:class:`ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        """
-        try:
-            apiu_state = self._apiu.state()
-        except DevFailed:
-            return PowerMode.UNKNOWN
-
-        if apiu_state == DevState.DISABLE:
-            return PowerMode.OFF
-        elif apiu_state not in [DevState.OFF, DevState.ON]:
-            return PowerMode.UNKNOWN
-
-        try:
-            is_antenna_on = self._apiu.IsAntennaOn(self._logical_antenna_id)
-        except DevFailed:
-            return PowerMode.UNKNOWN
-
-        return PowerMode.ON if is_antenna_on else PowerMode.OFF
-
-    def _update_power_mode(self, power_mode):
-        """
-        Update the power mode, ensuring that callbacks are called.
-
-        :param power_mode: the power mode of the hardware
-        :type power_mode: :py:class:`ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        """
-        if self._power_mode != power_mode:
-            self._power_mode = power_mode
-            self._power_callback(power_mode)
-
-
-class AntennaTileProxy:
-    """
-    A proxy to the Tile.
-
-    The MccsAntenna device server manages antenna hardware, but
-    indirectly, via the MccsAPIU and MccsTile devices. This class is a
-    proxy to the MccsTile device that the MccsAntenna can use to drive
-    the antenna hardware. At present it is an unused, unimplemented
-    placeholder.
-    """
-
-    def __init__(self, tile_fqdn, logical_antenna_id, logger):
-        """
-        Create a new Tile proxy instance.
-
-        :param tile_fqdn: the FQDN of the tile that manages the antenna
-            hardware for this antenna device
-        :type tile_fqdn: str
-        :param logical_antenna_id: this antenna's id in tile
-        :type logical_antenna_id: int
-        :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
-
-        :raises AssertionError: if parameters are out of bounds
-        """
-        self._fqdn = tile_fqdn
-        self._tile = None
-
-        assert (
-            logical_antenna_id > 0
-        ), "An APIU's logical antenna id must be positive integer."
-        self._logical_antenna_id = logical_antenna_id
-
-        self._logger = logger
-
-    def connect(self):
-        """
-        Connect to this antenna's tile device.
-
-        Specifically, establish a connection to the tile device that
-        manages the TPM that consumes the data stream from this device's
-        antenna.
-        """
-        self._tile = MccsDeviceProxy(self._fqdn, self._logger)
-
-
 class MccsAntenna(SKABaseDevice):
-    """
-    An implementation of the Antenna Device Server for the MCCS based upon architecture
-    in SKA-TEL-LFAA-06000052-02.
-
-    This class is a subclass of
-    :py:class:`ska_tango_base.SKABaseDevice`.
-    """
+    """An implementation of an antenna Tango device for MCCS."""
 
     # -----------------
     # Device Properties
@@ -366,64 +61,36 @@ class MccsAntenna(SKABaseDevice):
     TileId = device_property(dtype=int)
     LogicalTileAntennaId = device_property(dtype=int)
 
-    def init_command_objects(self):
-        """Initialises the command handlers for commands supported by this device."""
-        super().init_command_objects()
+    # ---------------
+    # Initialisation
+    # ---------------
+    def _init_state_model(self: MccsAntenna):
+        super()._init_state_model()
+        self._health_state = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_model = AntennaHealthModel(self.health_changed)
+        self.set_change_event("healthState", True, False)
 
-        for (command_name, command_object) in [
-            ("Reset", self.ResetCommand),
-            ("Disable", self.DisableCommand),
-            ("Standby", self.StandbyCommand),
-            ("Off", self.OffCommand),
-        ]:
-            self.register_command_object(
-                command_name,
-                command_object(self._apiu_proxy, self.state_model, self.logger),
-            )
-        self.register_command_object(
-            "On", self.OnCommand(self, self.state_model, self.logger)
+    def create_component_manager(
+        self: MccsAntenna,
+    ) -> AntennaComponentManager:
+        """
+        Create and return a component manager for this device.
+
+        :return: a component manager for this device.
+        """
+        return AntennaComponentManager(
+            f"low-mccs/apiu/{self.ApiuId:03}",
+            self.LogicalApiuAntennaId,
+            f"low-mccs/tile/{self.TileId:04}",
+            self.LogicalTileAntennaId,
+            self.logger,
+            self._component_communication_status_changed,
+            self._component_power_mode_changed,
+            self._component_fault,
         )
 
-    # ---------------
-    # General methods
-    # ---------------
-    def init_device(self):
-        """
-        Initialise the device.
-
-        This is overridden here to change the Tango serialisation model.
-        """
-        util = Util.instance()
-        util.set_serial_model(SerialModel.BY_DEVICE)
-        super().init_device()
-
     class InitCommand(SKABaseDevice.InitCommand):
-        """Initialises the command handlers for commands supported by this device."""
-
-        def __init__(self, target, state_model, logger=None):
-            """
-            Create a new InitCommand.
-
-            :param target: the object that this command acts upon; for
-                example, the device for which this class implements the
-                command
-            :type target: object
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.DeviceStateModel`
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
-            """
-            super().__init__(target, state_model, logger)
-
-            self._thread = None
-            self._lock = threading.Lock()
-            self._interrupt = False
-            self._message_queue = None
-            self._qdebuglock = threading.Lock()
+        """Class that implements device initialisation for the MCCS antenna device."""
 
         def do(self):
             """
@@ -439,22 +106,6 @@ class MccsAntenna(SKABaseDevice):
             super().do()
 
             device = self.target
-            device._heart_beat = 0
-            device.queue_debug = ""
-            device._apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
-            device._tile_fqdn = f"low-mccs/tile/{device.TileId:04}"
-
-            device._apiu_proxy = AntennaApiuProxy(
-                device._apiu_fqdn,
-                device.LogicalApiuAntennaId,
-                self.logger,
-                device.power_changed,
-            )
-            device._tile_proxy = AntennaTileProxy(
-                device._tile_fqdn,
-                device.LogicalTileAntennaId,
-                self.logger,
-            )
 
             device._antennaId = 0
             device._gain = 0.0
@@ -488,133 +139,94 @@ class MccsAntenna(SKABaseDevice):
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
 
-            # Start the Message queue for this device
-            device._message_queue = MessageQueue(
-                target=device, lock=self._qdebuglock, logger=self.logger
-            )
-            device._message_queue.start()
+            # The health model updates our health, but then the base class super().do()
+            # overwrites it with OK, so we need to update this again.
+            # TODO: This needs to be fixed in the base classes.
+            device._health_state = device._health_model.health_state
 
-            self._thread = threading.Thread(
-                target=self._initialise_connections, args=(device,)
-            )
-            with self._lock:
-                self._thread.start()
-                return (ResultCode.STARTED, "Init command started")
+            return (ResultCode.OK, "Init command completed OK")
 
-        def _initialise_connections(self, device):
-            """
-            Thread target for asynchronous initialisation of connections to external
-            entities such as hardware and other devices.
-
-            :param device: the device being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            # https://pytango.readthedocs.io/en/stable/howto.html
-            # #using-clients-with-multithreading
-            with EnsureOmniThread():
-                self._initialise_hardware_management(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
-                self._initialise_health_monitoring(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
-                with self._lock:
-                    self.succeeded()
-                    self._thread = None
-                    self._interrupt = False
-
-        def _initialise_hardware_management(self, device):
-            """
-            Initialise the connection to the hardware being managed by this device. May
-            also register commands that depend upon a connection to that hardware.
-
-            :param device: the device for which a connection to the
-                hardware is being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            device._apiu_proxy.connect()
-            device._tile_proxy.connect()
-
-        def _initialise_health_monitoring(self, device):
-            """
-            Initialise the health model for this device.
-
-            :param device: the device for which the health model is
-                being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            device._health_state = HealthState.UNKNOWN
-            device.set_change_event("healthState", True, False)
-            device.health_model = HealthModel(
-                None,
-                [device._apiu_fqdn, device._tile_fqdn],
-                self.logger,
-                device.health_changed,
-            )
-
-        def interrupt(self):
-            """
-            Interrupt the initialisation thread (if one is running)
-
-            :return: whether the initialisation thread was interrupted
-            :rtype: bool
-            """
-            if self._thread is None:
-                return False
-            self._interrupt = True
-            return True
-
-        def succeeded(self):
-            """
-            Called when initialisation completes.
-
-            Here we override the base class default implementation to
-            ensure that MccsTile transitions to a state that reflects
-            the state of its hardware
-            """
-            device = self.target
-
-            if device._apiu_proxy.power_mode == PowerMode.OFF:
-                action = "init_succeeded_disable"
-            else:
-                action = "init_succeeded_off"
-            self.state_model.perform_action(action)
-
-    # def always_executed_hook(self):
-    #     """
-    #     Method always executed before any TANGO command is executed.
-    #     """
-    #     if self.hardware_manager is not None:
-    #         self.hardware_manager.poll()
-
-    def delete_device(self):
+    # --------------
+    # Callback hooks
+    # --------------
+    def _component_communication_status_changed(
+        self: MccsAntenna,
+        communication_status: CommunicationStatus,
+    ) -> None:
         """
-        Hook to delete resources allocated in the
-        :py:meth:`~.MccsAntenna.InitCommand.do` method of the nested
-        :py:class:`~.MccsAntenna.InitCommand` class.
+        Handle change in communications status between component manager and component.
 
-        This method allows for any memory or other resources allocated
-        in the :py:meth:`~.MccsAntenna.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by
-        the Init command when the Tango device server is re-initialised.
+        This is a callback hook, called by the component manager when
+        the communications status changes. It is implemented here to
+        drive the op_state.
+
+        :param communication_status: the status of communications
+            between the component manager and its component.
         """
-        if self._message_queue.is_alive():
-            self._message_queue.terminate_thread()
-            self._message_queue.join()
+        action_map = {
+            CommunicationStatus.DISABLED: "component_disconnected",
+            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
+            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
+        }
 
-    # ----------
-    # Callbacks
-    # ----------
+        action = action_map[communication_status]
+        if action is not None:
+            self.op_state_model.perform_action(action)
+
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
+
+    def _component_power_mode_changed(
+        self: MccsAntenna,
+        power_mode: PowerMode,
+    ) -> None:
+        """
+        Handle change in the power mode of the component.
+
+        This is a callback hook, called by the component manager when
+        the power mode of the component changes. It is implemented here
+        to drive the op_state.
+
+        :param power_mode: the power mode of the component.
+        """
+        action_map = {
+            PowerMode.OFF: "component_off",
+            PowerMode.STANDBY: "component_standby",
+            PowerMode.ON: "component_on",
+            PowerMode.UNKNOWN: "component_unknown",
+        }
+
+        self.op_state_model.perform_action(action_map[power_mode])
+
+    def _component_fault(
+        self: MccsAntenna,
+        is_fault: bool,
+    ) -> None:
+        """
+        Handle change in the fault status of the component.
+
+        This is a callback hook, called by the component manager when
+        the component fault status changes. It is implemented here to
+        drive the op_state.
+
+        :param is_fault: whether the component is faulting or not.
+        """
+        if is_fault:
+            self.op_state_model.perform_action("component_fault")
+            self._health_model.component_fault(True)
+        else:
+            self._component_power_mode_changed(self.component_manager.power_mode)
+            self._health_model.component_fault(False)
 
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state changes;
-        responsible for updating the tango side of things i.e. making sure the attribute
-        is up to date, and events are pushed.
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -624,72 +236,9 @@ class MccsAntenna(SKABaseDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    def power_changed(self, power_mode):
-        """
-        Callback to be called whenever the power mode of the antenna hardware changes
-        (as reported by the AntennaApiuProxy); responsible for updating the tango side
-        of things i.e. making sure the attribute is up to date, and events are pushed.
-
-        :todo: There's way too much explicit management of state in this
-            callback. We need to get this into the state machine so we
-            can simply
-            ``self.state_model.perform_action("antenna_was_turned_off")``.
-
-        :param power_mode: the new power_mode
-        :type power_mode:
-            :py:class:`~ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        """
-        if self.get_state() == DevState.INIT:
-            # Don't respond to power mode changes while initialising.
-            # We'll worry about it when it comes time to transition out
-            # of INIT.
-            return
-
-        # TODO: For now, we need to get our devices to OFF state
-        # (the highest state of device readiness for a device that
-        # isn't actually on) before we can put them into ON state.
-        # This is a counterintuitive mess that will be fixed in
-        # SP-1501.
-        if power_mode == PowerMode.UNKNOWN:
-            self.state_model.perform_action("fatal_error")
-        elif power_mode == PowerMode.OFF:
-            if self.get_state() == DevState.ON:
-                self.state_model.perform_action("off_succeeded")
-            self.state_model.perform_action("disable_succeeded")
-        elif power_mode == PowerMode.ON:
-            self.state_model.perform_action("off_succeeded")
-
     # ----------
     # Attributes
     # ----------
-    @attribute(dtype="DevULong")
-    def aHeartBeat(self):
-        """
-        Return the Heartbeat attribute value.
-
-        :return: heart beat as a percentage
-        """
-        return self._heart_beat
-
-    @attribute(dtype="DevString")
-    def aQueueDebug(self):
-        """
-        Return the queueDebug attribute.
-
-        :return: queueDebug attribute
-        """
-        return self.queue_debug
-
-    @aQueueDebug.write
-    def aQueueDebug(self, debug_string):
-        """
-        Update the queue debug attribute.
-
-        :param debug_string: the new debug string for this attribute
-        :type debug_string: str
-        """
-        self.queue_debug = debug_string
-
     @attribute(
         dtype=SimulationMode,
         access=AttrWriteType.READ_WRITE,
@@ -712,11 +261,11 @@ class MccsAntenna(SKABaseDevice):
 
         :param value: the new simulation mode
         :type value: :py:class:`~ska_tango_base.control_model.SimulationMode`
+
+        :raises ValueError: because this device cannot be put into simulation mode.
         """
         if value == SimulationMode.TRUE:
-            tango_raise(
-                "Antennas cannot be put into simulation mode, but entire APIUs can."
-            )
+            raise ValueError("MccsAntenna cannot be put into simulation mode.")
 
     @attribute(dtype="int", label="AntennaID")
     def antennaId(self):
@@ -765,7 +314,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the voltage
         :rtype: float
         """
-        return self._apiu_proxy.voltage
+        return self.component_manager.voltage
 
     @attribute(dtype="float", label="current", unit="amperes")
     def current(self):
@@ -775,7 +324,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the current
         :rtype: float
         """
-        return self._apiu_proxy.current
+        return self.component_manager.current
 
     @attribute(dtype="float", label="temperature", unit="DegC")
     def temperature(self):
@@ -785,7 +334,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the temperature
         :rtype: float
         """
-        return self._apiu_proxy.temperature
+        return self.component_manager.temperature
 
     @attribute(dtype="bool", label="xPolarisationFaulty")
     def xPolarisationFaulty(self):
@@ -1028,187 +577,52 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
-    class DisableCommand(SKABaseDevice.DisableCommand):
-        """Class for handling the Disable() command."""
 
-        def do(self):
+    class OnCommand(ResponseCommand):
+        """
+        A class for the MccsAntenna's On() command.
+
+        This class overrides the SKABaseDevice OnCommand to allow for an
+        eventual consistency semantics. For example it is okay to call
+        On() before the APIU is on; this device will happily wait for
+        the APIU to come on, then tell it to turn on its Antenna. This
+        change of semantics requires an override because the
+        SKABaseDevice OnCommand only allows On() to be run when in OFF
+        state.
+        """
+
+        def do(self) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Disable` command for this
-            :py:class:`.MccsAntenna` device.
+            Stateless hook for Off() command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            apiu_proxy = self.target
-            success = apiu_proxy.off()
-            return create_return(success, "disable")
+            # TODO: return OK for now to be consistent with base classes
+            _ = self.target.on()
+            message = "On command completed OK"
+            return (ResultCode.OK, message)
 
-    class StandbyCommand(SKABaseDevice.StandbyCommand):
+    def is_On_allowed(self):
         """
-        Class for handling the Standby() command.
+        Check if command `Off` is allowed in the current device state.
 
-        Actually the Antenna hardware has no standby mode, so when this
-        device is told to go to standby mode, it switches on / remains
-        on.
+        :return: ``True`` if the command is allowed
+        :rtype: bool
         """
-
-        def do(self):
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Standby` command for this
-            :py:class:`.MccsAntenna` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            apiu_proxy = self.target
-            success = apiu_proxy.on()
-            return create_return(success, "standby")
-
-    def _send_message(self, command, json_args):
-        """
-        Helper method to send a message to execute the specified command.
-
-        :param command: the command to send a message for
-        :type command: str
-        :param json_args: arguments to pass with the command
-        :type json_args: str
-
-        :return: A tuple containing a return code, a string
-            message indicating status and message UID.
-            The string message is for information purposes only, but
-            the message UID is for message management use.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
-        """
-        self.logger.info(f"Antenna {command}")
-
-        kwargs = json.loads(json_args)
-        respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        callback = kwargs.get("callback")
-        if respond_to_fqdn and callback:
-            self.logger.debug(f"Antenna {command} message call")
-            (
-                result_code,
-                message_uid,
-                status,
-            ) = self._message_queue.send_message_with_response(
-                command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
-            )
-            return [[result_code], [status, message_uid]]
-        else:
-            # Call command sequentially
-            self.logger.debug("Antenna {command} direct call")
-            command = self.get_command_object(command)
-            (result_code, message) = command(json_args)
-            return [[result_code], [message]]
-
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def On(self, json_args):
-        """
-        Send a message to turn Antenna on.
-
-        :param json_args: JSON encoded messaging system and command arguments
-        :type json_args: str
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        return self._send_message("On", json_args)
-
-    class OnCommand(SKABaseDevice.OnCommand):
-        """Class for handling the On() command."""
-
-        def do(self, argin):
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Off` command for this
-            :py:class:`.MccsAntenna` device.
-
-            :param argin: Argument containing JSON encoded command message and result
-            :type argin: str
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            (result_code, message) = super().do()
-            # MCCS-specific Reset functionality goes here
-            return (result_code, message)
-
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def Off(self, json_args):
-        """
-        Send a message to turn Antenna off.
-
-        :param json_args: JSON encoded messaging system and command arguments
-        :type json_args: str
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        return self._send_message("Off", json_args)
-
-    class OffCommand(SKABaseDevice.OffCommand):
-        """Class for handling the Off() command."""
-
-        def do(self, argin):
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Off` command for this
-            :py:class:`.MccsAntenna` device.
-
-            :param argin: JSON encoded messaging system and command arguments
-            :type argin: str
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            apiu_proxy = self.target
-            success = apiu_proxy.on()
-            return create_return(success, "off")
-
-    class ResetCommand(SKABaseDevice.ResetCommand):
-        """Command class for the Reset() command."""
-
-        def do(self):
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Reset` command for this
-            :py:class:`.MccsAntenna` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            (result_code, message) = super().do()
-            # MCCS-specific Reset functionality goes here
-            return (result_code, message)
+        return self.get_state() in [
+            tango.DevState.OFF,
+            tango.DevState.STANDBY,
+            tango.DevState.ON,
+            tango.DevState.UNKNOWN,
+            tango.DevState.FAULT,
+        ]
 
 
 # ----------
 # Run server
 # ----------
-
-
 def main(args=None, **kwargs):
     """
     Entry point for module.

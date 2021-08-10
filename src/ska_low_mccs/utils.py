@@ -9,68 +9,14 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from functools import wraps
-import inspect
+import functools
 import json
 import pkg_resources
 from typing import Callable, Optional
 
 import jsonschema
-from tango import Except, ErrSeverity
-from tango.server import Device
 
 from ska_tango_base.commands import ResultCode
-
-
-def tango_raise(
-    msg: str,
-    reason: str = "API_CommandFailed",
-    severity: ErrSeverity = ErrSeverity.ERR,
-    _origin: Optional[str] = None,
-) -> None:
-    """
-    Helper function to provide a concise way to throw
-    :py:class:`tango.Except.throw_exception <pytango:tango.Except>`.
-
-    Example::
-
-        class MyDevice(Device):
-            @command
-            def some_command(self):
-                if condition:
-                    pass
-                else:
-                    tango_throw("Condition not true")
-
-
-    :param msg: message
-    :param reason: the tango api :py:class:`tango.DevError`
-        description string, defaults to "API_CommandFailed"
-    :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
-    :param _origin: the calling object name, defaults to None (autodetected)
-        Note that autodetection only works for class methods not e.g.
-        decorators
-
-    :raises TypeError: if used from an object that is not a tango device
-        instance
-    """
-    if _origin is None:
-        current_frame = inspect.currentframe()
-        if current_frame is not None:
-            frame = current_frame.f_back
-            if frame is not None:
-                fcode = frame.f_code
-                flocals = frame.f_locals["self"]
-                if fcode is not None and flocals is not None:
-                    calling_method = fcode.co_name
-                    calling_class = frame.f_locals["self"].__class__
-                    if Device not in inspect.getmro(calling_class):
-                        raise TypeError("Can only be used in a tango device instance")
-                    class_name = calling_class.__name__
-                    _origin = f"{class_name}.{calling_method}()"
-                    Except.throw_exception(reason, msg, _origin, severity)
-        raise TypeError("Can't access frame, f_code or f_locals")
-    Except.throw_exception(reason, msg, _origin, severity)
 
 
 def call_with_json(func: Callable, **kwargs: dict[str, str]) -> tuple[ResultCode, str]:
@@ -154,7 +100,7 @@ class json_input:  # noqa: N801
         :return: function handle of the wrapped method
         """
 
-        @wraps(func)
+        @functools.wraps(func)
         def wrapped(obj: object, json_string: str) -> object:
             """
             The wrapped function.

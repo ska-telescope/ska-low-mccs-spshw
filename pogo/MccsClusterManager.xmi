@@ -3,9 +3,7 @@
   <classes name="MccsClusterManagerDevice" pogoRevision="9.6">
     <description description="An implementation of the Cluster Manager Device Server for the MCCS based upon&#xA;architecture in SKA-TEL-LFAA-06000052-02." title="LFAA Cluster Manager Device Server" sourcePath="/home/ben" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
-      <inheritances classname="MccsGroupDevice" sourcePath="./ska-low-mccs/pogo"/>
-      <inheritances classname="MccsDevice" sourcePath="/home/ben/ska-low-mccs/pogo/."/>
-      <inheritances classname="MccsGroupDevice" sourcePath="/home/ben/ska-low-mccs/pogo"/>
+      <inheritances classname="SKABaseDevice" sourcePath="./ska-low-mccs/pogo"/>
       <identification contact="at observatorysciences.co.uk - bww" author="bww" emailDomain="observatorysciences.co.uk" classFamily="System" siteSpecific="" platform="All Platforms" bus="Not Applicable" manufacturer="none" reference=""/>
     </description>
     <deviceProperties name="SkaLevel" description="Indication of importance of the device in the SKA hierarchy &#xA;to support drill-down navigation: 1..6, with 1 highest.&#xA;Default is 4, making provision for &#xA;EltController, EltAlarms, EltTelState = 1&#xA;SubEltController = 2&#xA;Subarray, Capability = 2/3&#xA;Others = 4 (or 5 or 6)">

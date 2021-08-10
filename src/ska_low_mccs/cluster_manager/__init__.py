@@ -11,6 +11,18 @@ It includes a cluster manager Tango device and a simulator.
 """
 
 
-__all__ = ["MccsClusterManagerDevice", "cluster_manager_device"]
+__all__ = [
+    "ClusterComponentManager",
+    "ClusterHealthModel",
+    "ClusterSimulator",
+    "ClusterSimulatorComponentManager",
+    "MccsClusterManagerDevice",
+]
 
+from .cluster_health_model import ClusterHealthModel
+from .cluster_simulator import ClusterSimulator  # type: ignore[attr-defined]
+from .cluster_component_manager import (
+    ClusterSimulatorComponentManager,
+    ClusterComponentManager,
+)
 from .cluster_manager_device import MccsClusterManagerDevice  # type: ignore[attr-defined]

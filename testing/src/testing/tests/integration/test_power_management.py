@@ -10,156 +10,404 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains integration tests of MCCS power management functionality."""
-from time import sleep
+from __future__ import annotations
+
+import time
+from typing import Any, Callable
+import unittest.mock
 
 import pytest
-import pytest_mock
-from tango import DevState
+import tango
+
+from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
 
+from testing.harness.mock import (
+    MockChangeEventCallback,
+    MockDeviceBuilder,
+    MockSubarrayBuilder,
+)
 from testing.harness.tango_harness import TangoHarness
-from testing.harness import HelperClass
 
 
-class TestPowerManagement(HelperClass):
+@pytest.fixture()
+def devices_to_load() -> dict[str, Any]:
+    """
+    Fixture that specifies the devices to be loaded for testing.
+
+    :return: specification of the devices to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska_low_mccs",
+        "devices": [
+            {"name": "controller", "proxy": MccsDeviceProxy},
+            {"name": "station_001", "proxy": MccsDeviceProxy},
+            {"name": "station_002", "proxy": MccsDeviceProxy},
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "tile_0001", "proxy": MccsDeviceProxy},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy},
+            {"name": "tile_0003", "proxy": MccsDeviceProxy},
+            {"name": "tile_0004", "proxy": MccsDeviceProxy},
+            {"name": "apiu_001", "proxy": MccsDeviceProxy},
+            {"name": "apiu_002", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000001", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000002", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000003", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000004", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000005", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000006", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000007", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000008", "proxy": MccsDeviceProxy},
+        ],
+    }
+
+
+@pytest.fixture()
+def mock_subarray_factory() -> MockSubarrayBuilder:
+    """
+    Fixture that provides a factory for mock subarrays.
+
+    :return: a factory for mock subarray
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock subarray beam devices for use in testing.
+
+    :return: a factory that returns mock subarray beam devices for use
+        in testing
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def initial_mocks(
+    mock_subarray_factory: Callable[[], unittest.mock.Mock],
+    mock_subarray_beam_factory: Callable[[], unittest.mock.Mock],
+) -> dict[str, unittest.mock.Mock]:
+    """
+    Return a specification of the mock devices to be set up in the Tango test harness.
+
+    This is a pytest fixture that can be used to inject pre-build mock
+    devices into the Tango test harness at specified FQDNs.
+
+    :param mock_subarray_factory: a factory that returns a mock subarray
+        device each time it is called
+    :param mock_subarray_beam_factory: a factory that returns a mock
+        subarray beam device each time it is called
+
+    :return: specification of the mock devices to be set up in the Tango
+        test harness.
+    """
+    return {
+        "low-mccs/subarray/01": mock_subarray_factory(),
+        "low-mccs/subarray/02": mock_subarray_factory(),
+        "low-mccs/subarraybeam/01": mock_subarray_beam_factory(),
+        "low-mccs/subarraybeam/02": mock_subarray_beam_factory(),
+        "low-mccs/subarraybeam/03": mock_subarray_beam_factory(),
+        "low-mccs/subarraybeam/04": mock_subarray_beam_factory(),
+    }
+
+
+class TestPowerManagement:
     """
     Integration test cases for MCCS subsystem's power management.
 
     These tests focus on the path from the controller down to the tiles
     and antennas.
+
+    :todo: Due to https://github.com/tango-controls/cppTango/issues/816,
+        a device test context cannot contain more than six device
+        classes. The subarray beam devices are therefore mocked out in
+        these tests. Once the above bug is fixed, we should update these
+        tests to use real subarray beam devices.
     """
 
-    @pytest.fixture()
-    def devices_to_load(self):
+    def test_controller_state_rollup(self, tango_harness):
         """
-        Fixture that specifies the devices to be loaded for testing.
+        Test that changes to admin mode in subservient devices result in state changes
+        which roll up to the controller.
 
-        :return: specification of the devices to be loaded
-        :rtype: dict
+        :param tango_harness: A tango context of some sort; possibly a
+            :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
+            the real thing. The only requirement is that it provide a
+            ``get_device(fqdn)`` method that returns a
+            :py:class:`tango.DeviceProxy`.
+        :type tango_harness: :py:class:`contextmanager`
         """
-        return {
-            "path": "charts/ska-low-mccs/data/configuration_without_beams.json",
-            "package": "ska_low_mccs",
-            "devices": [
-                {"name": "controller", "proxy": MccsDeviceProxy},
-                {"name": "station_001", "proxy": MccsDeviceProxy},
-                {"name": "subrack_01", "proxy": MccsDeviceProxy},
-                {"name": "tile_0001", "proxy": MccsDeviceProxy},
-                {"name": "tile_0002", "proxy": MccsDeviceProxy},
-                {"name": "tile_0003", "proxy": MccsDeviceProxy},
-                {"name": "tile_0004", "proxy": MccsDeviceProxy},
-                {"name": "apiu_001", "proxy": MccsDeviceProxy},
-                {"name": "antenna_000001", "proxy": MccsDeviceProxy},
-                {"name": "antenna_000002", "proxy": MccsDeviceProxy},
-                {"name": "antenna_000003", "proxy": MccsDeviceProxy},
-                {"name": "antenna_000004", "proxy": MccsDeviceProxy},
-            ],
-        }
+        controller = tango_harness.get_device("low-mccs/control/control")
+        station_1 = tango_harness.get_device("low-mccs/station/001")
+        station_2 = tango_harness.get_device("low-mccs/station/002")
+        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
+        apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
+        antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
+        antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
+        antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
+        antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
+        antenna_5 = tango_harness.get_device("low-mccs/antenna/000005")
+        antenna_6 = tango_harness.get_device("low-mccs/antenna/000006")
+        antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
+        antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
+
+        # putting controller online makes it transition to UNKNOWN because it doesn't
+        # yet know the state of its stations and subracks
+        assert controller.adminMode == AdminMode.OFFLINE
+        assert controller.state() == tango.DevState.DISABLE
+        controller.adminMode = AdminMode.ONLINE
+        time.sleep(0.1)
+        assert controller.state() == tango.DevState.UNKNOWN
+
+        # putting a station online makes it transition to UNKNOWN because it doesn't yet
+        # know the state of its apiu, antennas and tiles.
+        for station in [station_1, station_2]:
+            assert station.adminMode == AdminMode.OFFLINE
+            assert station.state() == tango.DevState.DISABLE
+            station.adminMode = AdminMode.ONLINE
+            time.sleep(0.1)
+            assert station.state() == tango.DevState.UNKNOWN
+
+        assert controller.state() == tango.DevState.UNKNOWN
+
+        # putting an antenna online makes it transition to UNKNOWN because it needs its
+        # APIU and tile to be online in order to determine its state
+        for antenna in [
+            antenna_1,
+            antenna_2,
+            antenna_3,
+            antenna_4,
+            antenna_5,
+            antenna_6,
+            antenna_7,
+            antenna_8,
+        ]:
+            assert antenna.adminMode == AdminMode.OFFLINE
+            assert antenna.state() == tango.DevState.DISABLE
+            antenna.adminMode = AdminMode.ONLINE
+            time.sleep(0.1)
+            assert antenna.state() == tango.DevState.UNKNOWN
+
+        time.sleep(0.1)
+        for station in [station_1, station_2]:
+            assert station.state() == tango.DevState.UNKNOWN
+
+        time.sleep(0.1)
+        assert controller.state() == tango.DevState.UNKNOWN
+
+        # putting the APIU online makes it transition to OFF because it knows it is off.
+        # And the antennas transition to OFF too, because they infer from the APIU being
+        # off that they must be off too.
+        for apiu in [apiu_1, apiu_2]:
+            assert apiu.adminMode == AdminMode.OFFLINE
+            assert apiu.state() == tango.DevState.DISABLE
+            apiu.adminMode = AdminMode.ONLINE
+            time.sleep(0.1)
+            assert apiu.state() == tango.DevState.OFF
+
+        for antenna in [
+            antenna_1,
+            antenna_2,
+            antenna_3,
+            antenna_4,
+            antenna_5,
+            antenna_6,
+            antenna_7,
+            antenna_8,
+        ]:
+            assert antenna.state() == tango.DevState.OFF
+
+        time.sleep(0.1)
+        for station in [station_1, station_2]:
+            assert station.state() == tango.DevState.UNKNOWN
+
+        time.sleep(0.1)
+        assert controller.state() == tango.DevState.UNKNOWN
+
+        # putting a tile online makes it transition to UNKNOWN because it needs the
+        # subrack to be on in order to determine its state
+        for tile in [tile_1, tile_2, tile_3, tile_4]:
+            assert tile.adminMode == AdminMode.OFFLINE
+            assert tile.state() == tango.DevState.DISABLE
+            tile.adminMode = AdminMode.ONLINE
+            time.sleep(0.1)
+            assert tile.state() == tango.DevState.UNKNOWN
+
+        time.sleep(0.1)
+        for station in [station_1, station_2]:
+            assert station.state() == tango.DevState.UNKNOWN
+
+        time.sleep(0.1)
+        assert controller.state() == tango.DevState.UNKNOWN
+
+        # putting the subrack online will make it transition to OFF (having detected
+        # that the subrack hardware is turned off. Tile infers that its TPM is off, so
+        # transitions to OFF. Station has all it neds to infer that it is OFF. Finally,
+        # controller infers that it is OFF.
+        assert subrack.adminMode == AdminMode.OFFLINE
+        assert subrack.state() == tango.DevState.DISABLE
+        subrack.adminMode = AdminMode.ONLINE
+        time.sleep(0.1)
+        assert subrack.state() == tango.DevState.OFF
+
+        time.sleep(0.1)
+        for tile in [tile_1, tile_2, tile_3, tile_4]:
+            assert tile.state() == tango.DevState.OFF
+
+        time.sleep(0.1)
+        for station in [station_1, station_2]:
+            assert station.state() == tango.DevState.OFF
+
+        time.sleep(0.1)
+        assert controller.state() == tango.DevState.OFF
 
     def test_power_on_off(
-        self, tango_harness: TangoHarness, mocker: pytest_mock.mocker
+        self,
+        tango_harness: TangoHarness,
+        controller_device_state_changed_callback: MockChangeEventCallback,
     ):
         """
         Test that a MccsController device can enable an MccsSubarray device.
 
         :param tango_harness: a test harness for tango devices
-        :param mocker: fixture that wraps unittest.Mock
+        :param controller_device_state_changed_callback: a callback to
+            be used to subscribe to controller state change
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         subrack = tango_harness.get_device("low-mccs/subrack/01")
-        station = tango_harness.get_device("low-mccs/station/001")
+        station_1 = tango_harness.get_device("low-mccs/station/001")
+        station_2 = tango_harness.get_device("low-mccs/station/002")
         tile_1 = tango_harness.get_device("low-mccs/tile/0001")
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
-        apiu = tango_harness.get_device("low-mccs/apiu/001")
+        apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
+        apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
         antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
         antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
         antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
         antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
+        antenna_5 = tango_harness.get_device("low-mccs/antenna/000005")
+        antenna_6 = tango_harness.get_device("low-mccs/antenna/000006")
+        antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
+        antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
 
-        assert controller.State() == DevState.DISABLE
-        assert subrack.State() == DevState.DISABLE
-        assert station.State() == DevState.OFF
-        assert tile_1.State() == DevState.DISABLE
-        assert tile_2.State() == DevState.DISABLE
-        assert tile_3.State() == DevState.DISABLE
-        assert tile_4.State() == DevState.DISABLE
-        assert apiu.State() == DevState.DISABLE
-        assert antenna_1.State() == DevState.DISABLE
-        assert antenna_2.State() == DevState.DISABLE
-        assert antenna_3.State() == DevState.DISABLE
-        assert antenna_4.State() == DevState.DISABLE
+        controller.add_change_event_callback(
+            "state",
+            controller_device_state_changed_callback,
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
 
-        # TODO: For now we need to get this to OFF (highest state of
-        # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in SP-1501.
-        controller.Startup()
-        sleep(0.5)  # Allow time for Startup to complete
-        dev_states = {
-            controller: DevState.ON,
-            subrack: DevState.ON,
-            station: DevState.ON,
-            tile_1: DevState.ON,
-            tile_2: DevState.ON,
-            tile_3: DevState.ON,
-            tile_4: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
+        controller.adminMode = AdminMode.ONLINE
+        subrack.adminMode = AdminMode.ONLINE
+        station_1.adminMode = AdminMode.ONLINE
+        station_2.adminMode = AdminMode.ONLINE
+        tile_1.adminMode = AdminMode.ONLINE
+        tile_2.adminMode = AdminMode.ONLINE
+        tile_3.adminMode = AdminMode.ONLINE
+        tile_4.adminMode = AdminMode.ONLINE
+        apiu_1.adminMode = AdminMode.ONLINE
+        apiu_2.adminMode = AdminMode.ONLINE
+        antenna_1.adminMode = AdminMode.ONLINE
+        antenna_2.adminMode = AdminMode.ONLINE
+        antenna_3.adminMode = AdminMode.ONLINE
+        antenna_4.adminMode = AdminMode.ONLINE
+        antenna_5.adminMode = AdminMode.ONLINE
+        antenna_6.adminMode = AdminMode.ONLINE
+        antenna_7.adminMode = AdminMode.ONLINE
+        antenna_8.adminMode = AdminMode.ONLINE
 
-        assert subrack.IsTpmOn(1)
-        assert subrack.IsTpmOn(2)
-        assert subrack.IsTpmOn(3)
-        assert subrack.IsTpmOn(4)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )
 
-        # The default testMode is TestMode.NONE, in which case certain
-        # attributes are continually updated. By design, these
-        # attributes sometimes go out of range, putting the device into
-        # ALARM state.
-        # Before testing, we set the testMode to TestMode.TEST, which
-        # gives us static in-bounds values to test against. But if the
-        # device was already in ALARM state by then, it can take a while
-        # for the device to update its state from ALARM to ON.
-        # TODO: Move this into conftest
-        if any(
-            tile.State() == DevState.ALARM for tile in [tile_1, tile_2, tile_3, tile_4]
-        ):
-            sleep(1.5)
+        assert antenna_1.state() == tango.DevState.OFF
+        assert antenna_2.state() == tango.DevState.OFF
+        assert antenna_3.state() == tango.DevState.OFF
+        assert antenna_4.state() == tango.DevState.OFF
+        assert antenna_5.state() == tango.DevState.OFF
+        assert antenna_6.state() == tango.DevState.OFF
+        assert antenna_7.state() == tango.DevState.OFF
+        assert antenna_8.state() == tango.DevState.OFF
+        assert apiu_1.state() == tango.DevState.OFF
+        assert apiu_2.state() == tango.DevState.OFF
+        assert tile_1.state() == tango.DevState.OFF
+        assert tile_2.state() == tango.DevState.OFF
+        assert tile_3.state() == tango.DevState.OFF
+        assert tile_4.state() == tango.DevState.OFF
+        assert station_1.state() == tango.DevState.OFF
+        assert station_2.state() == tango.DevState.OFF
+        assert subrack.state() == tango.DevState.OFF
+        assert controller.state() == tango.DevState.OFF
 
-        dev_states = {
-            tile_1: DevState.ON,
-            tile_2: DevState.ON,
-            tile_3: DevState.ON,
-            tile_4: DevState.ON,
-            apiu: DevState.ON,
-            antenna_1: DevState.ON,
-            antenna_2: DevState.ON,
-            antenna_3: DevState.ON,
-            antenna_4: DevState.ON,
-        }
-        self.check_states_of_devices(dev_states)
+        controller.On()
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        )
 
-        assert apiu.IsAntennaOn(1)
-        assert apiu.IsAntennaOn(2)
-        assert apiu.IsAntennaOn(3)
-        assert apiu.IsAntennaOn(4)
+        assert antenna_1.state() == tango.DevState.ON
+        assert antenna_2.state() == tango.DevState.ON
+        assert antenna_3.state() == tango.DevState.ON
+        assert antenna_4.state() == tango.DevState.ON
+        assert antenna_5.state() == tango.DevState.ON
+        assert antenna_6.state() == tango.DevState.ON
+        assert antenna_7.state() == tango.DevState.ON
+        assert antenna_8.state() == tango.DevState.ON
+        assert apiu_1.state() == tango.DevState.ON
+        assert apiu_2.state() == tango.DevState.ON
+        assert tile_1.state() == tango.DevState.ON
+        assert tile_2.state() == tango.DevState.ON
+        assert tile_3.state() == tango.DevState.ON
+        assert tile_4.state() == tango.DevState.ON
+        assert station_1.state() == tango.DevState.ON
+        assert station_2.state() == tango.DevState.ON
+        assert subrack.state() == tango.DevState.ON
+        assert controller.state() == tango.DevState.ON
 
+        time.sleep(0.5)
         controller.Off()
-        sleep(0.5)  # Allow time for Off to complete
 
-        dev_states = {
-            controller: DevState.OFF,
-            subrack: DevState.OFF,
-            station: DevState.OFF,
-            tile_1: DevState.OFF,
-            tile_2: DevState.OFF,
-            tile_3: DevState.OFF,
-            tile_4: DevState.OFF,
-            apiu: DevState.OFF,
-            antenna_1: DevState.OFF,
-            antenna_2: DevState.OFF,
-            antenna_3: DevState.OFF,
-            antenna_4: DevState.OFF,
-        }
-        self.check_states_of_devices(dev_states)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )
+        time.sleep(0.5)
+        assert antenna_1.state() == tango.DevState.OFF
+        assert antenna_2.state() == tango.DevState.OFF
+        assert antenna_3.state() == tango.DevState.OFF
+        assert antenna_4.state() == tango.DevState.OFF
+        assert antenna_5.state() == tango.DevState.OFF
+        assert antenna_6.state() == tango.DevState.OFF
+        assert antenna_7.state() == tango.DevState.OFF
+        assert antenna_8.state() == tango.DevState.OFF
+        assert apiu_1.state() == tango.DevState.OFF
+        assert apiu_2.state() == tango.DevState.OFF
+        assert tile_1.state() == tango.DevState.OFF
+        assert tile_2.state() == tango.DevState.OFF
+        assert tile_3.state() == tango.DevState.OFF
+        assert tile_4.state() == tango.DevState.OFF
+        assert station_1.state() == tango.DevState.OFF
+        assert station_2.state() == tango.DevState.OFF
+        assert subrack.state() == tango.DevState.OFF
+        assert controller.state() == tango.DevState.OFF

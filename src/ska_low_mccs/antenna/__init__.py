@@ -7,9 +7,12 @@
 """This subpackage implements antenna functionality for MCCS."""
 
 __all__ = [
+    "AntennaComponentManager",
+    "AntennaHealthModel",
     "MccsAntenna",
-    "antenna_device",
     "demo_antenna_device",
 ]
 
+from .antenna_health_model import AntennaHealthModel
+from .antenna_component_manager import AntennaComponentManager
 from .antenna_device import MccsAntenna  # type: ignore[attr-defined]

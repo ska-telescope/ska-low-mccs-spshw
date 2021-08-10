@@ -139,7 +139,7 @@ class TpmTestFirmware(FirmwareBlock):
             # restore previous counters status using PPS phase
             self.board["fpga1.pps_manager.sync_tc.cnt_1_pulse"] = 0
             time.sleep(1.1)
-            for n in range(5):
+            for _n in range(5):
                 fpga1_cnt_hf_pps = self.board["fpga1.pps_manager.sync_phase.cnt_hf_pps"]
                 if abs(fpga1_cnt_hf_pps - fpga1_phase) <= 3:
                     logging.debug("FPGA1 clock synced to PPS phase!")
@@ -156,7 +156,7 @@ class TpmTestFirmware(FirmwareBlock):
 
             self.board["fpga2.pps_manager.sync_tc.cnt_1_pulse"] = 0x0
             sleep(0.1)
-            for n in range(5):
+            for _n in range(5):
                 fpga2_phase = self.board["fpga2.pps_manager.sync_phase.cnt_1_sysref"]
                 if fpga1_phase == fpga2_phase:
                     logging.debug("FPGA2 clock synced to SYSREF phase!")
@@ -208,12 +208,12 @@ class TpmTestFirmware(FirmwareBlock):
             self.board["board.regfile.ctrl.en_ddr_vdd"] = 1
             time.sleep(0.5)
 
-        for n in range(3):
+        for _n in range(3):
             logging.debug(self._device_name + " DDR3 reset")
             self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x1
             self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x0
 
-            for m in range(5):
+            for _m in range(5):
                 if self.board.memory_map.has_register(
                     self._device_name + ".regfile.stream_status.ddr_init_done"
                 ):

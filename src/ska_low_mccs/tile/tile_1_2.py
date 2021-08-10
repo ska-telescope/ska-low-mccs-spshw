@@ -1463,7 +1463,7 @@ class Tile12(object):
         """Checks FPGA synchronisation, returns when these are synchronised."""
         devices = ["fpga1", "fpga2"]
 
-        for n in range(5):
+        for _n in range(5):
             self.logger.info("Synchronising FPGA UTC time.")
             self.wait_pps_event()
             time.sleep(0.5)
@@ -2142,7 +2142,6 @@ class Tile12(object):
 
         # Read bitfile and cast as a list of unsigned integers
         # Cast in pieces to save memory
-        # formatted_data = list(struct.unpack_from('I' * (len(data) // 4), data))
         bitfile_length = len(data)
 
         # Check if ucp_smap_write is supported
@@ -2210,7 +2209,7 @@ class Tile12(object):
 
     def tpm_communication_check(self):
         """Brute force check to make sure we can communicate with programmed TPM."""
-        for n in range(4):
+        for _n in range(4):
             try:
                 self.tpm.calibrate_fpga_to_cpld()
                 magic0 = self[0x4]
@@ -2243,7 +2242,7 @@ class Tile12(object):
         # If firmware is not yet loaded, fill in some dummy information
         firmware = []
         if not hasattr(self.tpm, "tpm_firmware_information"):
-            for i in range(3):
+            for _i in range(3):
                 firmware.append(
                     {
                         "design": "unknown",

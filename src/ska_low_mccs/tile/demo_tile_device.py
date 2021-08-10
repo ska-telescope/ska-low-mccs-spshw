@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -11,60 +10,44 @@ This module implements a DemoTileDevice.
 DemoTileDevice extends TileDevice with extra interface features that
 support testing and demonstrating the MCCS Tile device.
 """
-from tango import DevState
+from __future__ import annotations
+
+from typing import Optional
+
 from tango.server import command, Device
 
-from ska_tango_base.control_model import AdminMode, SimulationMode
-from ska_low_mccs import MccsTile
+from ska_low_mccs.tile import MccsTile
 
 
-__all__ = ["ConnectionFailableDevice", "DemoTile"]
+__all__ = ["DemoTile"]
 
 
-class ConnectionFailableDevice(Device):
+class _FaultSimulatingDevice(Device):
     """
-    A tango device mixin that adds a single simulate_connection_failure command.
+    A tango device mixin that adds a single simulateFault command.
 
-    This can be used with any tango device that has a
-    hardware_manager attribute that is an instance of
-    :py:class:`~ska_low_mccs.hardware.simulable_hardware.SimulableHardwareManager`.
+    This can be used with any tango device that has a component manager
+    attribute.
     """
-
-    def is_SimulateConnectionFailure_allowed(self):
-        """
-        Return whether the SimulateConnectionFailure command is allowed to be called.
-
-        :return: whether the SimulateConnectionFailure command is
-            allowed to be called
-        :rtype: bool
-        """
-        return self.hardware_manager.simulation_mode == SimulationMode.TRUE
 
     @command(dtype_in=bool)
-    def SimulateConnectionFailure(self, is_fail):
+    def SimulateFault(self: _FaultSimulatingDevice, is_faulty: bool) -> None:
         """
-        Tells the simulate whether or not to simulate connection failure.
+        Tells the device whether or not to simulate a fault.
 
-        :param is_fail: whether or not to simulate connection failure.
-        :type is_fail: bool
+        :param is_faulty: whether or not to simulate a fault
+        :type is_faulty: bool
         """
-        self.hardware_manager.simulate_connection_failure(is_fail)
+        self.component_manager.update_component_fault(is_faulty)
 
 
-class DemoTile(MccsTile, ConnectionFailableDevice):
+class DemoTile(MccsTile, _FaultSimulatingDevice):
     """
     A version of the MccsTile tango device with extra functionality for
     testing/demos:
-
-    * an additional command that can be used, when the device is in
-      simulation mode, to tell the simulator to simulate connection
-      failure
-
-    * the ability to write adminMode as an int instead of as a
-      HealthState, in order to support webjive
     """
 
-    def init_device(self):
+    def init_device(self: DemoTile) -> None:
         """
         Tango hook for initialisation code.
 
@@ -73,57 +56,11 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
         super().init_device()
         self.logger.warn("I am a DEMO tile!")
 
-    @command()
-    def TakeOffline(self):
-        """
-        Disable the tile and put it into admin mode OFFLINE.
-
-        Implemented this way because webjive.
-        """
-        if self.get_state() == DevState.ON:
-            self.Off()
-        self.Disable()
-        self.write_adminMode(AdminMode.OFFLINE)
-
-    @command()
-    def PutOnline(self):
-        """
-        Put the tile into admin mode ONLINE, then enable it.
-
-        Implemented this way because webjive.
-        """
-        self.write_adminMode(AdminMode.ONLINE)
-        self.Off()
-        self.On()
-
-    @command()
-    def DemoOff(self):
-        """
-        Put the Tile into DISABLE state (i.e. turn the TPM off).
-
-        :todo: This is needed for demo purposes, just until we have
-            resolved SP-1501.
-        """
-        if self.get_state() == DevState.ON:
-            self.Off()
-        self.Disable()
-
-    @command()
-    def DemoOn(self):
-        """
-        Put the tile into ON state (i.e. turn the TPM on).
-
-        :todo: This is needed for demo purposes, just until we have
-            resolved SP-1501.
-        """
-        self.Off()
-        self.On()
-
 
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(args: Optional[str] = None, **kwargs: str) -> int:
     """
     Entry point for module.
 

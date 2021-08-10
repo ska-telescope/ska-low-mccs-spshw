@@ -1,6 +1,10 @@
 # type: ignore
 # -*- coding: utf-8 -*-
-"""An implementation of a TPM simulator."""
+"""An implementation of a static TPM simulator."""
+from __future__ import annotations
+
+import logging
+
 from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 
 
@@ -13,16 +17,14 @@ class StaticTpmSimulator(BaseTpmSimulator):
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
 
-    def __init__(self, logger, fail_connect=False):
+    def __init__(
+        self: StaticTpmSimulator,
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
-        :type logger: an instance of :py:class:`logging.Logger`, or
-            an object that implements the same interface
-        :param fail_connect: whether this simulator should initially
-            simulate failure to connect to the hardware
-        :type fail_connect: bool
         """
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -30,7 +32,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
         self._fpga1_temperature = self.FPGA1_TEMPERATURE
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
 
-        super().__init__(logger, fail_connect=fail_connect)
+        super().__init__(logger)
 
     @property
     def board_temperature(self):

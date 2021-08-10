@@ -127,7 +127,7 @@ def command_result_as_string(method):
 class MccsTileCli(metaclass=CliMeta):
     """
     Command-line interface to the
-    :py:class:`ska_low_mccs.MccsTile` tango device.
+    :py:class:`ska_low_mccs.tile.tile_device.MccsTile` tango device.
     """
 
     def __init__(self):

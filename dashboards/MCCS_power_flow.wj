@@ -825,7 +825,7 @@
       "inputs": {
         "command": {
           "device": "low-mccs/antenna/000001",
-          "command": "DemoOff",
+          "command": "Off",
           "acceptedType": "DevVoid"
         },
         "title": "\"Off\"",
@@ -1341,7 +1341,7 @@
       "inputs": {
         "command": {
           "device": "low-mccs/antenna/000002",
-          "command": "DemoOff",
+          "command": "Off",
           "acceptedType": "DevVoid"
         },
         "title": "\"Off\"",
@@ -1391,7 +1391,7 @@
       "inputs": {
         "command": {
           "device": "low-mccs/antenna/000003",
-          "command": "DemoOff",
+          "command": "Off",
           "acceptedType": "DevVoid"
         },
         "title": "\"Off\"",
@@ -1441,7 +1441,7 @@
       "inputs": {
         "command": {
           "device": "low-mccs/antenna/000004",
-          "command": "DemoOff",
+          "command": "Off",
           "acceptedType": "DevVoid"
         },
         "title": "\"Off\"",

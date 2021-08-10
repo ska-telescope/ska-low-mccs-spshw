@@ -16,200 +16,161 @@ assumed impossible for a real APIU to work with a simulated antenna, or
 a simulated APIU with real antennas. Therefore this module simulates an
 APIU and its antennas together.
 """
-from threading import Lock
+from __future__ import annotations
 
-from ska_low_mccs.hardware import OnOffHardwareSimulator, PowerMode
+import functools
+from typing import Any, Callable, Optional, TypeVar, cast
+from typing_extensions import Final
+
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import PowerMode
+
+from ska_low_mccs.component import ObjectComponent
 
 
-class AntennaHardwareSimulator(OnOffHardwareSimulator):
+Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
+
+
+def check_antenna_id(func: Wrapped) -> Wrapped:
     """
-    A simulator of the APIU-managed aspects of antenna hardware.
+    Return a function that checks the antenna id before calling a function.
 
-    This is part of the apiu module because the physical antenna is not
-    directly monitorable, but must rather be monitored (in part) via the
-    APIU.
+    This function is intended to be used as a decorator. It can only
+    be used to decorate methods whose first argument (after self) is the
+    antenna id:
+
+    .. code-block:: python
+
+        @check_antenna_id
+        def simulate_antenna_voltage(self, antenna_id, voltage):
+            ...
+
+    :param func: the wrapped function
+
+    :return: the wrapped function
     """
 
-    VOLTAGE = 3.3
-    CURRENT = 20.5
-    TEMPERATURE = 23.8
-
-    def __init__(self, fail_connect=False, power_mode=PowerMode.OFF):
+    @functools.wraps(func)
+    def _wrapper(
+        apiu_simulator: ApiuSimulator, antenna_id: int, *args: Any, **kwargs: Any
+    ) -> Any:
         """
-        Initialise a new instance.
+        Check power_mode before calling the function.
 
-        :param fail_connect: whether this simulator should initially
-            simulate failure to connect to the hardware
-        :type fail_connect: bool
-        :param power_mode: the initial power_mode of the simulated
-            hardware. For example, if set to ON, then
-            this simulator will simulate connecting to hardware and
-            finding it to be already powered on.
-        :type power_mode: :py:class:`.PowerMode`
+        This is a wrapper function that implements the functionality of
+        the decorator.
+
+        :param apiu_simulator: the apiu simulator ("self" in the method
+            call)
+        :param antenna_id: this APIU's internal id for the antenna to be
+            turned off
+        :param args: positional arguments to the wrapped function
+        :param kwargs: keyword arguments to the wrapped function
+
+        :raises ValueError: if the component is not powered on on.
+        :return: whatever the wrapped function returns
         """
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        super().__init__(fail_connect=fail_connect, power_mode=power_mode)
+        if antenna_id < 1 or antenna_id > apiu_simulator.antenna_count:
+            raise ValueError(
+                f"Cannot access antenna {antenna_id}; "
+                f"this APIU has {apiu_simulator.antenna_count} antennas."
+            )
+        return func(apiu_simulator, antenna_id, *args, **kwargs)
 
-    def off(self):
-        """Turn me off."""
-        super().off()
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-
-    def on(self):
-        """Turn me on."""
-        super().on()
-        self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
-        self._temperature = self.TEMPERATURE
-
-    @property
-    def voltage(self):
-        """
-        Return my voltage.
-
-        :return: my voltage
-        :rtype: float
-        """
-        self.check_power_mode(PowerMode.ON)
-        return self._voltage
-
-    @property
-    def current(self):
-        """
-        Return my current.
-
-        :return: my current
-        :rtype: float
-        """
-        self.check_power_mode(PowerMode.ON)
-        return self._current
-
-    @property
-    def temperature(self):
-        """
-        Return my temperature.
-
-        :return: my temperature
-        :rtype: float
-        """
-        self.check_power_mode(PowerMode.ON)
-        return self._temperature
-
-    def check_power_mode(self, power_mode, error=None):
-        """
-        Overrides the
-        :py:meth:`~ska_low_mccs.hardware.power_mode_hardware.BasePowerModeHardwareDriver.check_power_mode`
-        helper method with a more specific error message
-
-        :param power_mode: the asserted power mode
-        :type power_mode: :py:class:`ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        :param error: the error message for the exception to be raised
-            if not connected
-        :type error: str
-        """
-        super().check_power_mode(
-            power_mode, error or f"Antenna hardware is not {power_mode.name}."
-        )
-
-    def simulate_current(self, current):
-        """
-        Simulate a change in antenna current.
-
-        :param current: the new antenna current value to be simulated
-        :type current: float
-        """
-        self._current = current
-
-    def simulate_voltage(self, voltage):
-        """
-        Simulate a change in antenna voltage.
-
-        :param voltage: the new antenna voltage value to be simulated
-        :type voltage: float
-        """
-        self._voltage = voltage
-
-    def simulate_temperature(self, temperature):
-        """
-        Simulate a change in antenna temperature.
-
-        :param temperature: the new antenna temperature value to be simulated
-        :type temperature: float
-        """
-        self._temperature = temperature
+    return cast(Wrapped, _wrapper)
 
 
-class APIUSimulator(OnOffHardwareSimulator):
+class ApiuSimulator(ObjectComponent):
     """A simulator of APIU hardware."""
 
-    VOLTAGE = 3.4
-    CURRENT = 20.5
-    TEMPERATURE = 20.4
-    HUMIDITY = 23.9
+    DEFAULT_VOLTAGE = 3.2
+    DEFAULT_CURRENT = 20.2
+    DEFAULT_TEMPERATURE = 23.6
+    DEFAULT_HUMIDITY = 24.9
+    DEFAULT_ANTENNA_VOLTAGE: Final[float] = 3.4
+    DEFAULT_ANTENNA_CURRENT: Final[float] = 20.5
+    DEFAULT_ANTENNA_TEMPERATURE: Final[float] = 23.8
 
-    def __init__(self, antenna_count, fail_connect=False, power_mode=PowerMode.OFF):
+    def __init__(
+        self,
+        antenna_count,
+        initial_fault: bool = False,
+    ):
         """
         Initialise a new instance.
 
         :param antenna_count: number of antennas that are attached to
             this APIU simulator
         :type antenna_count: int
-        :param fail_connect: whether this simulator should initially
-            simulate failure to connect to the hardware
-        :type fail_connect: bool
-        :param power_mode: the initial power_mode of the simulated
-            hardware. For example, if the initial mode is ON, then
-            this simulator will simulate connecting to hardware and
-            finding it to be already powered on.
-        :type power_mode:
-            :py:class:`~ska_low_mccs.hardware.power_mode_hardware.PowerMode`
+        :param initial_fault: whether the simulator should start by
+            simulating a fault.
         """
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        self._humidity = None
+        self._is_faulty = initial_fault
+        self._fault_callback: Optional[Callable[[bool], None]] = None
+        self._antenna_power_changed_callback: Optional[
+            Callable[[list[bool]], None]
+        ] = None
 
-        self._antennas = [AntennaHardwareSimulator() for i in range(antenna_count)]
-        self._antennas_lock = Lock()
-        super().__init__(fail_connect=fail_connect, power_mode=power_mode)
+        self._voltage = self.DEFAULT_VOLTAGE
+        self._current = self.DEFAULT_CURRENT
+        self._temperature = self.DEFAULT_TEMPERATURE
+        self._humidity = self.DEFAULT_HUMIDITY
 
-    def connect(self):
+        self._antenna_data = [
+            {
+                "power_mode": PowerMode.OFF,
+                "voltage": self.DEFAULT_ANTENNA_VOLTAGE,
+                "current": self.DEFAULT_ANTENNA_CURRENT,
+                "temperature": self.DEFAULT_ANTENNA_TEMPERATURE,
+            }
+            for i in range(antenna_count)
+        ]
+
+    @property
+    def faulty(self: ApiuSimulator) -> bool:
         """
-        Establish a connection to the APIU hardware.
+        Return whether this component is faulty.
 
-        :return: whether successful
-        :rtype: bool
+        :return: whether this component is faulty.
         """
-        super().connect()
-        for antenna in self._antennas:
-            antenna.connect()
-        return True
+        return self._is_faulty
 
-    def off(self):
-        """Turn me off."""
-        super().off()
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        self._humidity = None
+    def set_fault_callback(
+        self: ApiuSimulator, fault_callback: Optional[Callable[[bool], None]]
+    ) -> None:
+        """
+        Set the callback to be called when the component faults.
 
-        with self._antennas_lock:
-            for antenna in self._antennas:
-                antenna.off()
+        If a callback is provided (i.e. not None), then this method
+        registers it, then calls it immediately.
 
-    def on(self):
-        """Turn me on."""
-        super().on()
-        self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
-        self._temperature = self.TEMPERATURE
-        self._humidity = self.HUMIDITY
+        If the value provided is None, then any set callback is removed.
 
-        # but don't turn antennas on
+        :param fault_callback: the callback to be called when a fault
+            occurs
+        """
+        self._fault_callback = fault_callback
+        if fault_callback is not None:
+            fault_callback(self._is_faulty)
+
+    def _update_fault(self: ApiuSimulator, is_faulty: bool) -> None:
+        """
+        Update whether this component is faulty, ensuring callbacks are called.
+
+        :param is_faulty: whether this component is faulty.
+        """
+        if self._is_faulty != is_faulty:
+            self._is_faulty = is_faulty
+            if self._fault_callback is not None:
+                self._fault_callback(is_faulty)
+
+    def simulate_fault(self: ApiuSimulator, is_faulty: bool) -> None:
+        """
+        Simulate an unspecified fault in the APIU (or recovery from a fault).
+
+        :param is_faulty: whether this component is faulty.
+        """
+        self._update_fault(is_faulty)
 
     @property
     def voltage(self):
@@ -219,8 +180,16 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my voltage
         :rtype: float
         """
-        self.check_power_mode(PowerMode.ON)
         return self._voltage
+
+    def simulate_voltage(self, voltage):
+        """
+        Simulate a change in APIU voltage.
+
+        :param voltage: the new APIU voltage value to be simulated
+        :type voltage: float
+        """
+        self._voltage = voltage
 
     @property
     def current(self):
@@ -230,8 +199,16 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my current
         :rtype: float
         """
-        self.check_power_mode(PowerMode.ON)
         return self._current
+
+    def simulate_current(self, current):
+        """
+        Simulate a change in APIU current.
+
+        :param current: the new APIU current value to be simulated
+        :type current: float
+        """
+        self._current = current
 
     @property
     def temperature(self):
@@ -241,8 +218,17 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my temperature
         :rtype: float
         """
-        self.check_power_mode(PowerMode.ON)
         return self._temperature
+
+    def simulate_temperature(self, temperature):
+        """
+        Simulate a change in APIU temperature.
+
+        :param temperature: the new APIU temperature value to be
+            simulated
+        :type temperature: float
+        """
+        self._temperature = temperature
 
     @property
     def humidity(self):
@@ -252,166 +238,250 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my humidity
         :rtype: float
         """
-        self.check_power_mode(PowerMode.ON)
         return self._humidity
+
+    def simulate_humidity(self, humidity):
+        """
+        Simulate a change in APIU humidity.
+
+        :param humidity: the new APIU humidity value to be simulated
+        :type humidity: float
+        """
+        self._humidity = humidity
+
+    def set_antenna_power_changed_callback(
+        self: ApiuSimulator,
+        antenna_power_changed_callback: Callable[[list[bool], None]],
+    ) -> None:
+        """
+        Set the callback to be called when there is a change to the power mode of one or
+        more antennas.
+
+        If a callback is provided (i.e. not None), then this method
+        registers it, then calls it immediately.
+
+        If the value provided is None, then any set callback is removed.
+
+        :param antenna_power_changed_callback: the callback to be called
+            when the power mode of an antenna changes
+        """
+        self._antenna_power_changed_callback = antenna_power_changed_callback
+        self._antenna_power_changed()
+
+    def _antenna_power_changed(self: ApiuSimulator) -> None:
+        """
+        Handle a change in antenna power.
+
+        This is a helper method that calls the callback if it exists.
+        """
+        if self._antenna_power_changed_callback is not None:
+            self._antenna_power_changed_callback(self.are_antennas_on())
 
     @property
     def antenna_count(self):
         """
-        Return the number of antennas powered by this APIU.
+        Return the number of antennas attached to this APIU.
 
-        :return: the number of antennas powered by this APIU
-        :rtype: int
+        :return: the number of antennas attached to this APIU.
         """
-        return len(self._antennas)
-
-    def _check_antenna_id(self, logical_antenna_id):
-        """
-        Helper method to check that an antenna id passed as an argument is within range.
-
-        :param logical_antenna_id: the id to check
-        :type logical_antenna_id: int
-
-        :raises ValueError: if the antenna id is out of range for this
-            APIU
-        """
-        if logical_antenna_id < 1 or logical_antenna_id > self.antenna_count:
-            raise ValueError(
-                f"Cannot access antenna {logical_antenna_id}; "
-                f"this APIU has {self.antenna_count} antennas."
-            )
+        return len(self._antenna_data)
 
     def are_antennas_on(self):
         """
-        Returns whether each antenna is powered or not.  Or None if the APIU itself is
-        turned off.
+        Return whether each antenna is powered or not.
 
         :return: whether each antenna is powered or not.
-        :rtype: list(bool) or None
+        :rtype: list(bool)
         """
-        if self.power_mode != PowerMode.ON:
-            return None
-        with self._antennas_lock:
-            return [antenna.power_mode == PowerMode.ON for antenna in self._antennas]
+        return [antenna["power_mode"] == PowerMode.ON for antenna in self._antenna_data]
 
-    def is_antenna_on(self, logical_antenna_id):
+    @check_antenna_id
+    def is_antenna_on(self, antenna_id) -> bool:
         """
         Return whether a specified antenna is turned on.
 
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna to be turned off
-        :type logical_antenna_id: int
+        :param antenna_id: this APIU's internal id for the antenna to be
+            turned off
+        :type antenna_id: int
 
-        :return: whether the antenna is on, or None if the APIU itself
-            is off
-        :rtype: bool or None
+        :return: whether the antenna is on
         """
-        self._check_antenna_id(logical_antenna_id)
-        if self.power_mode != PowerMode.ON:
-            return None
-        with self._antennas_lock:
-            return self._antennas[logical_antenna_id - 1].power_mode == PowerMode.ON
+        return self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.ON
 
-    def turn_off_antenna(self, logical_antenna_id):
+    @check_antenna_id
+    def turn_off_antenna(self, antenna_id) -> ResultCode | None:
         """
         Turn off a specified antenna.
 
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna to be turned off
-        :type logical_antenna_id: int
-        """
-        self.check_power_mode(PowerMode.ON)
-        self._check_antenna_id(logical_antenna_id)
-        with self._antennas_lock:
-            self._antennas[logical_antenna_id - 1].off()
+        :param antenna_id: this APIU's internal id for the antenna to be
+            turned off
+        :type antenna_id: int
 
-    def turn_on_antenna(self, logical_antenna_id):
+        :return: a result code, or None if there was nothing to do
+        """
+        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.OFF:
+            return None
+
+        self._antenna_data[antenna_id - 1]["power_mode"] = PowerMode.OFF
+        self._antenna_power_changed()
+        return ResultCode.OK
+
+    @check_antenna_id
+    def turn_on_antenna(self, antenna_id) -> ResultCode | None:
         """
         Turn on a specified antenna.
 
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna to be turned on
-        :type logical_antenna_id: int
+        :param antenna_id: this APIU's internal id for the antenna to be
+            turned on
+        :type antenna_id: int
+
+        :return: a result code, or None if there was nothing to do
         """
-        self.check_power_mode(PowerMode.ON)
-        self._check_antenna_id(logical_antenna_id)
-        with self._antennas_lock:
-            self._antennas[logical_antenna_id - 1].on()
+        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.ON:
+            return None
 
-    def turn_off_antennas(self):
-        """Turn off all antennas."""
-        self.check_power_mode(PowerMode.ON)
-        with self._antennas_lock:
-            for antenna in self._antennas:
-                antenna.off()
+        self._antenna_data[antenna_id - 1]["power_mode"] = PowerMode.ON
+        self._antenna_power_changed()
+        return ResultCode.OK
 
-    def turn_on_antennas(self):
-        """Turn on all antennas."""
-        self.check_power_mode(PowerMode.ON)
-        with self._antennas_lock:
-            for antenna in self._antennas:
-                antenna.on()
+    def turn_off_antennas(self) -> ResultCode | None:
+        """
+        Turn off all antennas.
 
-    def get_antenna_current(self, logical_antenna_id):
+        :return: a result code, or None if there was nothing to do
+        """
+        if all(
+            antenna["power_mode"] == PowerMode.OFF for antenna in self._antenna_data
+        ):
+            return None
+
+        for antenna in self._antenna_data:
+            antenna["power_mode"] = PowerMode.OFF
+        self._antenna_power_changed()
+        return ResultCode.OK
+
+    def turn_on_antennas(self) -> ResultCode | None:
+        """
+        Turn on all antennas.
+
+        :return: a result code, or None if there was nothing to do
+        """
+        if all(antenna["power_mode"] == PowerMode.ON for antenna in self._antenna_data):
+            return None
+
+        for antenna in self._antenna_data:
+            antenna["power_mode"] = PowerMode.ON
+        self._antenna_power_changed()
+        return ResultCode.OK
+
+    @check_antenna_id
+    def get_antenna_current(self, antenna_id):
         """
         Get the current of a specified antenna.
 
-        :param logical_antenna_id: this APIU's internal id for the
+        :param antenna_id: this APIU's internal id for the
             antenna for which the current is requested
-        :type logical_antenna_id: int
+        :type antenna_id: int
 
         :return: the antenna current
         :rtype: float
-        """
-        self.check_power_mode(PowerMode.ON)
-        self._check_antenna_id(logical_antenna_id)
-        with self._antennas_lock:
-            return self._antennas[logical_antenna_id - 1].current
 
-    def get_antenna_voltage(self, logical_antenna_id):
+        :raises ValueError: if the antenna is not powered on.
+        """
+        if not self.is_antenna_on(antenna_id):
+            raise ValueError("Antenna is not powered on.")
+
+        return self._antenna_data[antenna_id - 1]["current"]
+
+    @check_antenna_id
+    def simulate_antenna_current(self, antenna_id, current):
+        """
+        Simulate a change in antenna current.
+
+        :param antenna_id: this APIU's internal id for the
+            antenna for which the current is to be simulated
+        :type antenna_id: int
+        :param current: the new antenna current value to be simulated
+        :type current: float
+
+        :raises ValueError: if the antenna is not powered on.
+        """
+        if not self.is_antenna_on(antenna_id):
+            raise ValueError("Antenna is not powered on.")
+
+        self._antenna_data[antenna_id - 1]["current"] = current
+
+    @check_antenna_id
+    def get_antenna_voltage(self, antenna_id):
         """
         Get the voltage of a specified antenna.
 
-        :param logical_antenna_id: this APIU's internal id for the
+        :param antenna_id: this APIU's internal id for the
             antenna for which the voltage is requested
-        :type logical_antenna_id: int
+        :type antenna_id: int
 
         :return: the antenna voltage
         :rtype: float
-        """
-        self.check_power_mode(PowerMode.ON)
-        self._check_antenna_id(logical_antenna_id)
-        with self._antennas_lock:
-            return self._antennas[logical_antenna_id - 1].voltage
 
-    def get_antenna_temperature(self, logical_antenna_id):
+        :raises ValueError: if the antenna is not powered on.
+        """
+        if not self.is_antenna_on(antenna_id):
+            raise ValueError("Antenna is not powered on.")
+
+        return self._antenna_data[antenna_id - 1]["voltage"]
+
+    @check_antenna_id
+    def simulate_antenna_voltage(self, antenna_id, voltage):
+        """
+        Simulate a change in antenna voltage.
+
+        :param antenna_id: this APIU's internal id for the
+            antenna for which the voltage is to be simulated
+        :type antenna_id: int
+        :param voltage: the new antenna voltage value to be simulated
+        :type voltage: float
+
+        :raises ValueError: if the antenna is not powered on.
+        """
+        if not self.is_antenna_on(antenna_id):
+            raise ValueError("Antenna is not powered on.")
+
+        self._antenna_data[antenna_id - 1]["voltage"] = voltage
+
+    @check_antenna_id
+    def get_antenna_temperature(self, antenna_id):
         """
         Get the temperature of a specified antenna.
 
-        :param logical_antenna_id: this APIU's internal id for the
+        :param antenna_id: this APIU's internal id for the
             antenna for which the temperature is requested
-        :type logical_antenna_id: int
+        :type antenna_id: int
 
         :return: the antenna temperature
         :rtype: float
-        """
-        self.check_power_mode(PowerMode.ON)
-        self._check_antenna_id(logical_antenna_id)
-        with self._antennas_lock:
-            return self._antennas[logical_antenna_id - 1].temperature
 
-    def check_power_mode(self, power_mode, error=None):
+        :raises ValueError: if the antenna is not powered on.
         """
-        Overrides the
-        :py:meth:`~ska_low_mccs.hardware.power_mode_hardware.BasePowerModeHardwareDriver.check_power_mode`
-        helper method with a more specific error message
+        if not self.is_antenna_on(antenna_id):
+            raise ValueError("Antenna is not powered on.")
 
-        :param power_mode: the asserted power mode
-        :type power_mode: :py:class:`ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        :param error: the error message for the exception to be raise if
-            not connected
-        :type error: str
+        return self._antenna_data[antenna_id - 1]["temperature"]
+
+    @check_antenna_id
+    def simulate_antenna_temperature(self, antenna_id, temperature):
         """
-        super().check_power_mode(
-            power_mode, error or f"APIU hardware is not {power_mode.name}."
-        )
+        Simulate a change in antenna temperature.
+
+        :param antenna_id: this APIU's internal id for the
+            antenna for which the temperature is to be simulated
+        :type antenna_id: int
+        :param temperature: the new antenna temperature value to be
+            simulated
+        :type temperature: float
+
+        :raises ValueError: if the antenna is not powered on.
+        """
+        if not self.is_antenna_on(antenna_id):
+            raise ValueError("Antenna is not powered on.")
+
+        self._antenna_data[antenna_id - 1]["temperature"] = temperature

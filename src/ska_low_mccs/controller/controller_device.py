@@ -192,8 +192,6 @@ class MccsController(SKABaseDevice):
 
         :param health: the new health value
         """
-        self._health_state: Optional[HealthState]  # type hint only
-
         if self._health_state == health:
             return
         self._health_state = health
@@ -385,7 +383,7 @@ class MccsController(SKABaseDevice):
         FAILED_MESSAGE = "Allocate command failed"
 
         def do(
-            self: MccsController.RestartCommand, subarray_id: int
+            self: MccsController.RestartSubarrayCommand, subarray_id: int
         ) -> tuple[ResultCode, str]:
             """
             Do hook for the :py:meth:`.MccsController.RestartSubarray` command.

@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -43,8 +42,22 @@ Response dictionary for attributes:
 Commands "list_commands" and "list_attributes" are always implemented, and
 return a list of the available command/attribute names.
 """
-import requests
+from __future__ import annotations
+
 import json
+import requests
+from typing import Any, Optional
+from typing_extensions import TypedDict
+
+
+CommandResponseType = TypedDict(
+    "CommandResponseType",
+    {"status": str, "info": str, "command": str, "retvalue": Optional[str]},
+)
+AttributeResponseType = TypedDict(
+    "AttributeResponseType",
+    {"status": str, "info": str, "attribute": str, "value": Optional[str]},
+)
 
 
 class HardwareClient:
@@ -54,20 +67,18 @@ class HardwareClient:
     This must be subclassed to establish the actual network protocol.
     """
 
-    def __init__(self, ip_address, port=80):
+    def __init__(self: HardwareClient, ip_address: str, port: int = 80) -> None:
         """
         Create a new instance.
 
         :param ip_address: IP address of server
-        :type ip_address: str
         :param port: Port of server
-        :type port: int
         """
         self._ip = ip_address
         self._port = port
-        self._conn = None
+        self._conn: Optional[requests.Response] = None
 
-    def connect(self):
+    def connect(self: HardwareClient) -> Optional[bool]:
         """
         Check if connected and establish a connection with the client. If this is not
         possible, returns None.
@@ -76,16 +87,16 @@ class HardwareClient:
         """
         pass
 
-    def execute_command(self, command, parameters=""):
+    def execute_command(
+        self: HardwareClient, command: str, parameters: str = ""
+    ) -> CommandResponseType:
         """
         Execute the command.
 
         :param command: Name of command to be executed
-        :type command: str
         :param parameters: Parameters of the command
-        :type parameters: str
+
         :return: dictionary with execute_command result
-        :rtype: dict
         """
         return {
             "status": "OK",
@@ -94,34 +105,33 @@ class HardwareClient:
             "retvalue": "",
         }
 
-    def get_attribute(self, attribute):
+    def get_attribute(self: HardwareClient, attribute: str) -> AttributeResponseType:
         """
         Get the attribute from the device.
 
         :param attribute: Name of attribute to get
-        :type attribute: str
 
         :return: dictionary with get_attribute method result
-        :rtype: dict
         """
         return {
             "status": "OK",
             "info": attribute + " completed OK",
             "attribute": attribute,
-            "retvalue": "",
+            "value": "",
         }
 
-    def set_attribute(self, attribute, value):
+    def set_attribute(
+        self: HardwareClient,
+        attribute: str,
+        value: Any,
+    ) -> AttributeResponseType:
         """
         Set the attribute value.
 
         :param attribute: Name of attribute to set
-        :type attribute: str
         :param value: value to set
-        :type value: list or int or float
 
         :return: dictionary with set_attribute method result
-        :rtype: dict
         """
         return {
             "status": "OK",
@@ -134,15 +144,13 @@ class HardwareClient:
 class WebHardwareClient(HardwareClient):
     """Implementation of the HardwareClient protocol using a web based interface."""
 
-    def __init__(self, ip_address, port=80):
+    def __init__(self: WebHardwareClient, ip_address: str, port: int = 80) -> None:
         """
         Create a new instance of the HardwareClient protocol to a html based
         HardwareServer device.
 
         :param ip_address: IP address of server
-        :type ip_address: str
         :param port: Port of server
-        :type port: int
         """
         super().__init__(ip_address, port)
         try:
@@ -154,13 +162,13 @@ class WebHardwareClient(HardwareClient):
         except requests.exceptions.RequestException:
             self._conn = None
 
-    def connect(self):
+    def connect(self: WebHardwareClient) -> bool:
         """
         Check if connected and establish a connection with the client.
 
-        If this is not possible, returns within 2 seconds
+        If this is not possible, return within 2 seconds
+
         :return: return result of the connect method
-        :rtype:bool
         """
         if self._conn is None:
             try:
@@ -173,20 +181,20 @@ class WebHardwareClient(HardwareClient):
                 self._conn = None
         return not (self._conn is None)
 
-    def disconnect(self):
+    def disconnect(self: WebHardwareClient) -> None:
         """Disconnect from the client."""
         self._conn = None
 
-    def execute_command(self, command, parameters=""):
+    def execute_command(
+        self: WebHardwareClient, command: str, parameters: str = ""
+    ) -> CommandResponseType:
         """
         Execute a named command, with or without parameters.
 
         :param command: Name of command to be executed
-        :type command: str
         :param parameters: Parameters of the command
-        :type parameters: str
+
         :return: dictionary with command result
-        :rtype: dict
         """
         if self._conn is None:
             if not self.connect():
@@ -204,7 +212,7 @@ class WebHardwareClient(HardwareClient):
         if res.status_code != requests.codes.ok:
             return {
                 "status": "ERROR",
-                "info": "HTML status: " + str(res.raise_for_status()),
+                "info": "HTML status: " + str(res.status_code),
                 "command": command,
                 "retvalue": "",
             }
@@ -219,15 +227,13 @@ class WebHardwareClient(HardwareClient):
             }
         return result
 
-    def get_attribute(self, attribute):
+    def get_attribute(self: WebHardwareClient, attribute: str) -> AttributeResponseType:
         """
         Read the value associated to a named attribute.
 
         :param attribute: Name of attribute to be read
-        :type attribute: str
 
         :return: result of the attribute command
-        :rtype: dict
         """
         if self._conn is None:
             if not self.connect():
@@ -245,7 +251,7 @@ class WebHardwareClient(HardwareClient):
         if res.status_code != requests.codes.ok:
             return {
                 "status": "ERROR",
-                "info": "HTML status " + str(res.raise_for_status()),
+                "info": "HTML status " + str(res.status_code),
                 "attribute": attribute,
                 "value": None,
             }
@@ -260,17 +266,16 @@ class WebHardwareClient(HardwareClient):
             }
         return result
 
-    def set_attribute(self, attribute, value):
+    def set_attribute(
+        self: WebHardwareClient, attribute: str, value: Any
+    ) -> AttributeResponseType:
         """
         Set the value associated to a named attribute.
 
         :param attribute: Name of attribute to set
-        :type attribute: str
         :param value: value to set
-        :type value: list or int or float
 
         :return: result of the attribute command
-        :rtype: dict
         """
         if self._conn is None:
             if not self.connect():
@@ -288,7 +293,7 @@ class WebHardwareClient(HardwareClient):
         if res.status_code != requests.codes.ok:
             return {
                 "status": "ERROR",
-                "info": "HTML status " + str(res.raise_for_status()),
+                "info": "HTML status " + str(res.status_code),
                 "attribute": attribute,
                 "value": None,
             }

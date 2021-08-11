@@ -4,7 +4,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements a functionality for switching between component managers."""
+"""This module implements functionality for switching between component managers."""
 from __future__ import annotations  # allow forward references in type hints
 
 from typing import Any, Hashable, cast

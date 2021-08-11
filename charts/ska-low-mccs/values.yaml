@@ -67,7 +67,7 @@ deviceServers:
     command: "MccsSubarray"
     instances: ["subarray_01", "subarray_02"]
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
   stations:
     name: mccs-station
     # station instances have to be 0-padded to three digits
@@ -76,7 +76,7 @@ deviceServers:
     command: "MccsStation"
     instances: ["station_001", "station_002"]
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
   subracks:
     name: mccs-subrack
     # subrack instances have to be 0-padded to two digits
@@ -85,7 +85,7 @@ deviceServers:
     command: "MccsSubrack"
     instances: ["subrack_01"]
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
   tiles:
     name: mccs-tile
     # tile instances have to be 0-padded to four digits
@@ -99,7 +99,7 @@ deviceServers:
       limits:
         memory: 512Mi
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
   apius:
     name: mccs-apiu
     # apiu instances have to be 0-padded to three digits
@@ -108,7 +108,7 @@ deviceServers:
     command: "MccsAPIU"
     instances: ["apiu_001", "apiu_002"]
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
   antennas:
     name: mccs-antenna
     # antenna instances have to be 0-padded to six digits
@@ -118,7 +118,7 @@ deviceServers:
     instances: ["antenna_000001", "antenna_000002", "antenna_000003", "antenna_000004",
                 "antenna_000005", "antenna_000006", "antenna_000007", "antenna_000008"]
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
   station-beams:
     name: mccs-station-beam
     # beam instances have to be 0-padded to three digits
@@ -127,7 +127,7 @@ deviceServers:
     command: "MccsStationBeam"
     instances: ["beam_001", "beam_002", "beam_003", "beam_004"]
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
   subarray-beams:
     name: mccs-subarray-beam
     # subarray beam instances have to be 0-padded to two digits
@@ -136,7 +136,7 @@ deviceServers:
     command: "MccsSubarrayBeam"
     instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
     depends_on:
-      - device: low-mccs/control/control
+      - device: sys/database/2
 
 cli:
   # use the MCCS unix cli tool

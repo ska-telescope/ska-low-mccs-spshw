@@ -249,6 +249,19 @@ class _ResourceManager:
 
         return allocated
 
+    def get_unallocated(
+        self: _ResourceManager,
+    ) -> Mapping[str, Iterable[Hashable]]:
+        unallocated = {
+            resource_type: [
+                resource
+                for resource in self._allocations[resource_type]
+                if self._allocations[resource_type][resource] == None
+            ]
+            for resource_type in self._allocations
+        }
+
+        return unallocated
 
 class _HealthfulResourceManager(_ResourceManager):
     """A resource manager / tracker for resource types that may have a health state."""
@@ -464,6 +477,7 @@ class ControllerResourceManager:
         subracks: Iterable[str],
         stations: Iterable[str],
         subarray_beams: Iterable[str],
+        station_beams: Iterable[str],
         channel_blocks: Iterable[int],
     ) -> None:
         """
@@ -480,12 +494,27 @@ class ControllerResourceManager:
         :param channel_blocks: all channel blocks to be managed by this
             resource manager
         """
-        self._resource_manager = _HealthfulReadyResourceManager(
+        # self._resource_manager = _HealthfulReadyResourceManager(
+        #     subarrays,
+        #     {"stations", "subracks", "subarray_beams"},
+        #     stations=stations,
+        #     subracks=subracks,
+        #     subarray_beams=subarray_beams,
+        #     channel_blocks=channel_blocks,
+        # )
+
+        self._subarray_resource_manager = _HealthfulReadyResourceManager(
             subarrays,
-            {"stations", "subracks", "subarray_beams"},
-            stations=stations,
+            {"station_beams", "subracks", "subarray_beams"},
+            station_beams=station_beams,
             subracks=subracks,
-            subarray_beams=subarray_beams,
+            subarray_beams=subarray_beams,            
+        )
+
+        self._beam_resource_manager = _HealthfulReadyResourceManager(
+            stations,
+            {"station_beams"},
+            station_beams=station_beams,
             channel_blocks=channel_blocks,
         )
 
@@ -503,7 +532,8 @@ class ControllerResourceManager:
         :param resource: the resource whose health is to be set
         :param is_healthy: whether the resource is healthy or not
         """
-        self._resource_manager.set_health(resource_type, resource, is_healthy)
+        self._subarray_resource_manager.set_health(resource_type, resource, is_healthy)
+        self._beam_resource_manager.set_health(resource_type, resource, is_healthy)
 
     def set_ready(
         self: ControllerResourceManager,
@@ -516,7 +546,7 @@ class ControllerResourceManager:
         :param subarray: the subarray to be set as ready
         :param is_ready: whether the subarray is ready or not
         """
-        self._resource_manager.set_ready(subarray, is_ready)
+        self._subarray_resource_manager.set_ready(subarray, is_ready)
 
     def allocate(
         self: ControllerResourceManager,
@@ -542,7 +572,7 @@ class ControllerResourceManager:
                     channel_blocks=[2, 3],
                 )
         """
-        self._resource_manager.allocate(subarray, **resources)
+        self._subarray_resource_manager.allocate(subarray, **resources)
 
     def deallocate(
         self: ControllerResourceManager,
@@ -564,7 +594,7 @@ class ControllerResourceManager:
                     channel_blocks=[2, 3],
                 )
         """
-        self._resource_manager.deallocate(**resources)
+        self._subarray_resource_manager.deallocate(**resources)
 
     def deallocate_from(
         self: ControllerResourceManager,
@@ -576,7 +606,7 @@ class ControllerResourceManager:
         :param subarray: the subarray to which resources are to be
             allocated
         """
-        self._resource_manager.deallocate_from(subarray)
+        self._subarray_resource_manager.deallocate_from(subarray)
 
     def get_allocated(
         self: ControllerResourceManager,
@@ -591,5 +621,5 @@ class ControllerResourceManager:
         :return: the resources allocated to the subarray.
         """
         return cast(
-            Mapping[str, Iterable[str]], self._resource_manager.get_allocated(subarray)
+            Mapping[str, Iterable[str]], self._subarray_resource_manager.get_allocated(subarray)
         )

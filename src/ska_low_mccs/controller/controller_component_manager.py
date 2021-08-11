@@ -146,6 +146,7 @@ class ControllerComponentManager(MccsComponentManager):
         subrack_fqdns: Iterable[str],
         station_fqdns: Iterable[str],
         subarray_beam_fqdns: Iterable[str],
+        station_beam_fqdns: Iterable[str],
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -200,11 +201,15 @@ class ControllerComponentManager(MccsComponentManager):
         for fqdn in subarray_beam_fqdns:
             self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
 
+        for fqdn in station_beam_fqdns:
+            self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
+
         self._resource_manager = ControllerResourceManager(
             subarray_fqdns,
             subrack_fqdns,
             station_fqdns,
             subarray_beam_fqdns,
+            station_beam_fqdns,
             range(1, 48),
         )
 

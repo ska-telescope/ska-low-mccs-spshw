@@ -90,6 +90,22 @@ def subarray_beam_fqdns() -> list[str]:
         "low-mccs/subarraybeam/04",
     ]
 
+@pytest.fixture()
+def station_beam_fqdns() -> list[str]:
+    """
+    Return the FQDNs of station_beams managed by the controller.
+
+    :return: the FQDNs of station_beams managed by the controller.
+    """
+    # TODO: This must match the MccsStationBeams property of the
+    # controller. We should refactor the harness so that we can pull it
+    # straight from the device configuration.
+    return [
+        "low-mccs/beam/01",
+        "low-mccs/beam/02",
+        "low-mccs/beam/03",
+        "low-mccs/beam/04",
+    ]
 
 @pytest.fixture()
 def channel_blocks() -> list[int]:
@@ -107,6 +123,7 @@ def controller_resource_manager(
     subrack_fqdns: Iterable[str],
     station_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
+    station_beam_fqdns: Iterable[str],
     channel_blocks: Iterable[int],
 ) -> ControllerResourceManager:
     """
@@ -125,6 +142,7 @@ def controller_resource_manager(
         subrack_fqdns,
         station_fqdns,
         subarray_beam_fqdns,
+        station_beam_fqdns,
         channel_blocks,
     )
 

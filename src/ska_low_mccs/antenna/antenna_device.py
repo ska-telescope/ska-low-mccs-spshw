@@ -502,7 +502,7 @@ class MccsAntenna(SKABaseDevice):
 
         def do(self: MccsAntenna.OnCommand) -> tuple[ResultCode, str]:
             """
-            Stateless hook for Off() command functionality.
+            Stateless hook for On() command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

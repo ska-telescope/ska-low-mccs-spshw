@@ -1,0 +1,13 @@
+import logging
+from typing import Optional
+
+from tango import DevState
+from ska_tango_base import OpStateModel
+from ska_tango_base.commands import ResultCode, ResponseCommand, StateModelCommand
+
+class SKABaseDevice(StateModelCommand, ResponseCommand):
+    class OnCommand:
+        def __init__(self: SKABaseDevice.OnCommand, target: object, op_state_model: OpStateModel, logger: Optional[logging.Logger]=None) -> None: ...
+        def do(self: SKABaseDevice.OnCommand) -> tuple[ResultCode, str]: ...
+    def is_On_allowed(self: SKABaseDevice) -> bool: ...
+    def On(self: SKABaseDevice) -> tuple[list[ResultCode], list[Optional[str]]]: ...

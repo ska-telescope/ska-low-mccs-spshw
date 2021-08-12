@@ -14,8 +14,8 @@ from typing import Optional
 import tango
 from tango.server import attribute, device_property
 
-from ska_tango_base import SKABaseDevice
-from ska_tango_base.commands import ResultCode, ResponseCommand
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
@@ -68,7 +68,7 @@ class MccsAntenna(SKABaseDevice):
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for the MCCS antenna device."""
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsAntenna.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
@@ -487,7 +487,7 @@ class MccsAntenna(SKABaseDevice):
     # Commands
     # --------
 
-    class OnCommand(ResponseCommand):
+    class OnCommand(SKABaseDevice.OnCommand):
         """
         A class for the MccsAntenna's On() command.
 
@@ -500,7 +500,9 @@ class MccsAntenna(SKABaseDevice):
         state.
         """
 
-        def do(self: MccsAntenna.OnCommand) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsAntenna.OnCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for On() command functionality.
 

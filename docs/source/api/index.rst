@@ -24,6 +24,7 @@ API
   :maxdepth: 2
 
   Component subpackage<component/index>
+  Testing subpackage<testing/index>
   Device proxy<device_proxy>
   Health<health>
   Release<release>

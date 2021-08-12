@@ -72,8 +72,9 @@ class MccsAntenna(SKABaseDevice):
             self: MccsAntenna.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for device initialisation: initialises the attributes and
-            properties of the :py:class:`.MccsAntenna`.
+            Stateless hook for device initialisation.
+
+            Initialises the attributes and properties of the :py:class:`.MccsAntenna`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -413,7 +414,9 @@ class MccsAntenna(SKABaseDevice):
     @attribute(dtype=("float",), max_dim_x=100, label="calibrationCoefficient")
     def calibrationCoefficient(self: MccsAntenna) -> list[float]:
         """
-        Return theCalibration coefficient to be applied for the next frequency channel
+        Get the Calibration coefficients.
+
+        The coefficients to be applied for the next frequency channel
         in the calibration cycle.
 
         :return: the calibration coefficients

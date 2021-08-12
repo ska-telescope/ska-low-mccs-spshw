@@ -28,6 +28,7 @@ import ska_low_mccs.release as release
 
 __all__ = ["MccsController", "main"]
 
+# TODO when python 3.9.1 is released replace List & Tuple with builtin list & tuple
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 

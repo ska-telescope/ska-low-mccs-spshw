@@ -134,7 +134,6 @@ class TestMccsSubarray:
         assert device_under_test.stationFQDNs is None
         assert device_under_test.activationTime == 0
 
-    @pytest.mark.skip(reason="Occasional deadlock?")
     def test_healthState(self, device_under_test, device_health_state_changed_callback):
         """
         Test for healthState.

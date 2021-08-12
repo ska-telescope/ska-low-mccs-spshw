@@ -74,7 +74,6 @@ class TestMccsAPIU:
         assert device_under_test.simulationMode == SimulationMode.TRUE
         assert device_under_test.testMode == TestMode.TEST
 
-    @pytest.mark.skip(reason="Occasional deadlock?")
     def test_healthState(self, device_under_test, device_health_state_changed_callback):
         """
         Test for healthState.

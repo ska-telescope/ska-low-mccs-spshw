@@ -50,7 +50,6 @@ class TestMccsStationBeam(object):
         """
         return tango_harness.get_device("low-mccs/beam/001")
 
-    @pytest.mark.skip(reason="Occasional deadlock?")
     def test_healthState(self, device_under_test, device_health_state_changed_callback):
         """
         Test for healthState.

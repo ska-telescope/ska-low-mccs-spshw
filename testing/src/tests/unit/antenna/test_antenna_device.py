@@ -316,7 +316,6 @@ class TestMccsAntenna:
         """
         assert device_under_test.loggingLevel == LoggingLevel.WARNING
 
-    @pytest.mark.skip(reason="Occasional deadlock?")
     def test_healthState(self, device_under_test, device_health_state_changed_callback):
         """
         Test for healthState.

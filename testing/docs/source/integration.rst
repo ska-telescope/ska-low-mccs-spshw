@@ -25,6 +25,11 @@ test_integration
 .. automodule:: ska_low_mccs.tests.integration.test_integration
    :members:
 
+test_integration_pointing
+=========================
+.. automodule:: ska_low_mccs.tests.integration.test_integration_pointing
+   :members:
+
 test_integration_tmc
 ====================
 .. automodule:: ska_low_mccs.tests.integration.test_integration_tmc

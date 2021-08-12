@@ -249,13 +249,13 @@ Try it out:
    plugins: bdd-4.0.2, forked-1.3.0, mock-3.6.1, cov-2.12.0, repeat-0.9.1, json-report-1.3.0, metadata-1.11.0, xdist-1.34.0
    collecting ... collected 974 items
 
-   testing/src/testing/tests/integration/test_health_management.py::test_controller_health_rollup PASSED [  0%]
-   testing/src/testing/tests/functional/test_controller_subarray_interactions.py::test_allocate_subarray SKIPPED       [  0%]
+   testing/src/tests/integration/test_health_management.py::test_controller_health_rollup PASSED [  0%]
+   testing/src/tests/functional/test_controller_subarray_interactions.py::test_allocate_subarray SKIPPED       [  0%]
 
    ... [lots more test results] ...
 
-   testing/src/testing/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":17, "stations":["station1"]}] PASSED [ 99%]
-   testing/src/testing/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":1, "stations":[]}] PASSED [100%]
+   testing/src/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":17, "stations":["station1"]}] PASSED [ 99%]
+   testing/src/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":1, "stations":[]}] PASSED [100%]
    
    ---------------------------------- generated xml file: /app/build/reports/unit-tests.xml ----------------------------------
    ------------------------------------------------------- JSON report -------------------------------------------------------

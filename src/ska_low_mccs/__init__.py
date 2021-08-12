@@ -46,6 +46,7 @@ __all__ = [
     "component",
     "health",
     "release",
+    "testing",
     "utils",
 ]
 

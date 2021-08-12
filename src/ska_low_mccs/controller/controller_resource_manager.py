@@ -289,7 +289,7 @@ class _HealthfulResourceManager(_ResourceManager):
 
             .. code-block:: python
 
-                resource_manager = _ResourceManager(
+                resource_manager = _HealthfulResourceManager(
                     subarrays,
                     ["station_ids"],
                     station_ids={1, 2},

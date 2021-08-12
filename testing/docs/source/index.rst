@@ -5,14 +5,6 @@ MCCS documentation, see the `MCCS Prototype documentation`_.
 
 .. _MCCS Prototype documentation: https://developer.skatelescope.org/projects/ska-low-mccs/en/master/
 
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Harness:
-
-   mock
-
-
 .. toctree::
    :maxdepth: 1
    :caption: Tests:

@@ -29,10 +29,11 @@ from ska_tango_base.commands import ResultCode
 
 class CliMeta(type):
     """
-    Metaclass to catch and dissect :py:exc:`tango.DevFailed` and other exceptions for
-    all class methods.
+    Metaclass to catch exceptions.
 
-    They get turned into :py:exc:`fire.core.FireError` exceptions.
+    Dissect :py:exc:`tango.DevFailed` and other exceptions for all class
+    methods. They get turned into :py:exc:`fire.core.FireError`
+    exceptions.
     """
 
     def __new__(
@@ -55,6 +56,8 @@ class CliMeta(type):
     @classmethod
     def fire_except(cls: Type[CliMeta], method: Callable) -> Callable:
         """
+        Wrap a Tango exception and raise a FireError.
+
         Wraps the method so that any :py:exc:`tango.DevFailed` exception
         raised by a method is converted to a
         :py:exc:`fire.core.FireError`, so that the CLI framework handles
@@ -68,6 +71,8 @@ class CliMeta(type):
         @functools.wraps(method)
         def _wrapper(*args: tuple, **kwargs: dict) -> Any:
             """
+            Catch a tango.DevFailed and raise a FireError.
+
             Wrapper that catches any :py:exc:`tango.DevFailed` exception
             raised by the wrapped method, and converts it to a
             :py:exc:`fire.core.FireError`, so that the CLI framework
@@ -93,6 +98,8 @@ class CliMeta(type):
 
 def format_wrapper(method: Callable) -> Callable:
     """
+    Wrap the return message as a two line string.
+
     Wraps a method with a wrapper that ensures that the method returns results formatted
     as a two-line string.
 
@@ -103,7 +110,10 @@ def format_wrapper(method: Callable) -> Callable:
 
     @functools.wraps(method)
     def _wrapper(*args: tuple, **kwargs: dict) -> str:
-        """Wrapper that ensure device command methods return results formatted as a a
+        """
+        Wrap the return message as a two line string.
+
+        Wrapper that ensure device command methods return results formatted as a a
         two- line string.
 
         :param args: positional arguments to the wrapped method

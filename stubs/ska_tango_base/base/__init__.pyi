@@ -2,7 +2,9 @@ import logging
 from typing import Any, Callable, Hashable, Optional, Type, Union, cast
 
 from tango import DevState
-from ska_tango_base.commands import ResultCode
+from tango.server import Device
+
+from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, StateModelCommand
 from ska_tango_base.control_model import PowerMode
 
 class BaseComponentManager:
@@ -46,4 +48,19 @@ class OpStateModel:
     def perform_action(self: OpStateModel, action: str) -> None: ...
     def _straight_to_state(self: OpStateModel, op_state_name: str) -> None: ...
 
-class SKABaseDevice: ...
+class SKABaseDevice(Device):
+    def _init_state_model(self: SKABaseDevice) -> None: ...
+
+    class InitCommand(ResponseCommand, CompletionCommand):
+        def do(  # type: ignore[override]
+            self: SKABaseDevice.InitCommand
+        ) -> tuple[ResultCode, str]: ...
+
+    class OnCommand(StateModelCommand, ResponseCommand):
+        def __init__(self: SKABaseDevice.OnCommand, target: object, op_state_model: OpStateModel, logger: Optional[logging.Logger]=None) -> None: ...
+        def do(  # type: ignore[override]
+            self: SKABaseDevice.OnCommand
+        ) -> tuple[ResultCode, str]: ...
+
+    def is_On_allowed(self: SKABaseDevice) -> bool: ...
+    def On(self: SKABaseDevice) -> tuple[list[ResultCode], list[Optional[str]]]: ...

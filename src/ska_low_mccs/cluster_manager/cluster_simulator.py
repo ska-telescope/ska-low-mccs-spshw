@@ -12,7 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from enum import IntEnum
 from itertools import count
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, cast, Callable, Optional
 
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_low_mccs.component import ObjectComponent
@@ -571,18 +571,18 @@ class ClusterSimulator(ObjectComponent):
         return cast(int, self._configuration["master_node_id"])
 
     @property
-    def shadow_master_pool_node_ids(self: ClusterSimulator) -> Tuple[int]:
+    def shadow_master_pool_node_ids(self: ClusterSimulator) -> tuple[int]:
         """
         Return the ids of nodes in the shadow master pool.
 
         :return: the ids of nodes in the shadow master pool
         """
-        return cast(Tuple[int], self._configuration["shadow_master_pool_node_ids"])
+        return cast(tuple[int], self._configuration["shadow_master_pool_node_ids"])
 
     @property
     def shadow_master_pool_status(
         self: ClusterSimulator,
-    ) -> List[HealthState]:
+    ) -> list[HealthState]:
         """
         Return the statuses of nodes in the shadow master pool.
 

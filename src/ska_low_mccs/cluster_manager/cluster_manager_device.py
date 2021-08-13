@@ -20,11 +20,12 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
+from tango import DevState
 from tango.server import attribute, command
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 
 from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
 from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus, JobConfig
@@ -34,6 +35,8 @@ import ska_low_mccs.release as release
 
 __all__ = ["MccsClusterManagerDevice", "main"]
 
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+
 
 class MccsClusterManagerDevice(SKABaseDevice):
     """An implementation of a cluster manager Tango device server for MCCS."""
@@ -41,7 +44,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # ---------------
     # General methods
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsClusterManagerDevice) -> None:
         """
         Initialise the device.
 
@@ -52,7 +55,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         super().init_device()
 
     def _init_state_model(self: MccsClusterManagerDevice) -> None:
-        """ Initialise the state model"""
+        """Initialise the state model."""
         super()._init_state_model()
         self._health_state = None  # SKABaseDevice.InitCommand.do() does this too late.
         self._health_model = ClusterHealthModel(self.health_changed)
@@ -100,8 +103,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for this device."""
 
-        def do(  #type: ignore[override]
-            self: MccsClusterManagerDevice.InitCommand
+        def do(  # type: ignore[override]
+            self: MccsClusterManagerDevice.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
             Execute the Init Command.
@@ -210,7 +213,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -481,7 +483,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         return self.component_manager.master_mem_total
 
     @attribute(dtype=("DevShort",), max_dim_x=100, label="shadowMasterPoolNodeIds")
-    def shadowMasterPoolNodeIds(self: MccsClusterManagerDevice) -> List[int]:
+    def shadowMasterPoolNodeIds(self: MccsClusterManagerDevice) -> list[int]:
         """
         Return the ids of nodes in the shadow master pool.
 
@@ -489,7 +491,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         """
         return self.component_manager.shadow_master_pool_node_ids
 
-    @attribute(dtype=("DevState",), max_dim_x=100, label="shadowMasterPoolStatus")
+    @attribute(dtype=("",), max_dim_x=100, label="shadowMasterPoolStatus")
     def shadowMasterPoolStatus(self: MccsClusterManagerDevice) -> DevState:
         """
         Return the states of nodes in the shadow master pool.
@@ -507,7 +509,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "StartJob command completed OK"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsClusterManagerDevice.StartJobCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
@@ -530,7 +532,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
+    def StartJob(
+        self: MccsClusterManagerDevice, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Command to start a particular job.
 
@@ -549,7 +553,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "StopJob command completed OK"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsClusterManagerDevice.StopJobCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
@@ -572,7 +576,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StopJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
+    def StopJob(
+        self: MccsClusterManagerDevice, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Command to stop a particular job.
 
@@ -588,7 +594,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
     class SubmitJobCommand(BaseCommand):
         """Class for handling the SubmitJob(argin) command."""
-        def do(
+
+        def do(  # type: ignore[override]
             self: MccsClusterManagerDevice.SubmitJobCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
@@ -621,7 +628,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
     class GetJobStatusCommand(BaseCommand):
         """Class for handling the GetJobStatus(argin) command."""
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsClusterManagerDevice.GetJobStatusCommand, argin: str
         ) -> JobStatus:
             """
@@ -654,7 +661,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "Job stats cleared"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsClusterManagerDevice.ClearJobStatsCommand,
         ) -> tuple[ResultCode, str]:
             """
@@ -690,7 +697,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsClusterManagerDevice.PingMasterPoolCommand,
         ) -> tuple[ResultCode, str]:
             """

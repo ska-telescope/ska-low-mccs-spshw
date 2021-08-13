@@ -11,6 +11,8 @@
 This module contains the tests for the
 :py:mod:`ska_low_mccs.apiu.demo_apiu_device` module.
 """
+import time
+
 import pytest
 
 from ska_tango_base.control_model import AdminMode
@@ -77,6 +79,8 @@ class TestDemoAPIU:
 
         device_under_test.adminMode = AdminMode.ONLINE
         device_under_test.On()
+
+        time.sleep(0.1)
 
         assert_powered([False, False, False, False])
 

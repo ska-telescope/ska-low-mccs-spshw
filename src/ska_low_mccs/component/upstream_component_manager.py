@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -14,7 +15,9 @@ from ska_low_mccs.component import (
     ObjectComponent,
     ObjectComponentManager,
     check_communicating,
+    enqueue,
 )
+from ska_low_mccs.utils import threadsafe
 
 
 __all__ = ["PowerSupplyProxySimulator"]
@@ -203,6 +206,7 @@ class PowerSupplyProxySimulator(
         self.update_supplied_power_mode(None)
 
     @check_communicating
+    @enqueue
     def power_off(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn off supply of power to the downstream device.
@@ -212,6 +216,7 @@ class PowerSupplyProxySimulator(
         return cast(PowerSupplyProxySimulator._Component, self._component).power_off()
 
     @check_communicating
+    @enqueue
     def power_on(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn on supply of power to the downstream device.
@@ -265,6 +270,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
         """
+        self.__power_mode_lock = threading.Lock()
         self._target_power_mode: Optional[PowerMode] = None
 
         self._power_supply_communication_status = CommunicationStatus.DISABLED
@@ -380,20 +386,28 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._target_power_mode = PowerMode.ON
         return self._review_power()
 
+    @threadsafe
     def _review_power(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> ResultCode | None:
-        if self._target_power_mode is None:
-            return None
-        if self.power_mode == self._target_power_mode:
-            self._target_power_mode = None  # attained without any action needed
-            return None
-        if self.power_mode == PowerMode.OFF and self._target_power_mode == PowerMode.ON:
-            result_code = self._power_supply_component_manager.power_on()
-            self._target_power_mode = None
-            return result_code
-        if self.power_mode == PowerMode.ON and self._target_power_mode == PowerMode.OFF:
-            result_code = self._power_supply_component_manager.power_off()
-            self._target_power_mode = None
-            return result_code
-        return ResultCode.QUEUED
+        with self.__power_mode_lock:
+            if self._target_power_mode is None:
+                return None
+            if self.power_mode == self._target_power_mode:
+                self._target_power_mode = None  # attained without any action needed
+                return None
+            if (
+                self.power_mode == PowerMode.OFF
+                and self._target_power_mode == PowerMode.ON
+            ):
+                result_code = self._power_supply_component_manager.power_on()
+                self._target_power_mode = None
+                return result_code
+            if (
+                self.power_mode == PowerMode.ON
+                and self._target_power_mode == PowerMode.OFF
+            ):
+                result_code = self._power_supply_component_manager.power_off()
+                self._target_power_mode = None
+                return result_code
+            return ResultCode.QUEUED

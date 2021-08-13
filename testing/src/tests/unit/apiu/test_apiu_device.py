@@ -158,6 +158,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
+        time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.PowerUp()
         assert result_code == ResultCode.OK
@@ -190,6 +191,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
+        time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.PowerDown()
         assert result_code == ResultCode.OK
@@ -226,6 +228,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
+        time.sleep(0.1)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)
@@ -274,6 +277,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
+        time.sleep(0.1)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)

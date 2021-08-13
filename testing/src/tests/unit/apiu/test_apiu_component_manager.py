@@ -289,7 +289,6 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         apiu_component_manager.on()
         component_fault_callback.assert_next_call(False)
-
         cast(
             SwitchingApiuComponentManager, apiu_component_manager
         )._hardware_component_manager._component.simulate_fault(True)
@@ -323,6 +322,7 @@ class TestApiuComponentManager:
         apiu_component_manager.start_communicating()
         time.sleep(0.1)
         apiu_component_manager.on()
+        time.sleep(0.1)
         assert apiu_component_manager.power_mode == PowerMode.ON
 
         expected_are_antennas_on = [False] * apiu_antenna_count

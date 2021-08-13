@@ -164,6 +164,8 @@ class TestObjectComponentManager:
         :param component: a mock component for the component manager to manage.
         :param command: name of the command to be executed.
         """
+        setattr(component, command, MockCallable())
+
         with pytest.raises(ConnectionError, match="Not connected"):
             getattr(component_manager, command)()
         getattr(component, command).assert_not_called()
@@ -171,4 +173,4 @@ class TestObjectComponentManager:
         component_manager.start_communicating()
 
         getattr(component_manager, command)()
-        getattr(component, command).assert_called_once_with()
+        getattr(component, command).assert_next_call()

@@ -24,8 +24,6 @@ import tango
 
 from ska_tango_base.commands import ResultCode
 
-# ska_low_mccs.utils import call_with_json
-
 
 class CliMeta(type):
     """
@@ -37,7 +35,7 @@ class CliMeta(type):
     """
 
     def __new__(
-        cls: Type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict
+        cls: Type[CliMeta], name: str, bases: tuple[type], attrs: dict
     ) -> CliMeta:
         """
         Class constructor.
@@ -69,7 +67,7 @@ class CliMeta(type):
         """
 
         @functools.wraps(method)
-        def _wrapper(*args: tuple, **kwargs: dict) -> Any:
+        def _wrapper(*args: Any, **kwargs: Any) -> Any:
             """
             Catch a tango.DevFailed and raise a FireError.
 
@@ -96,7 +94,7 @@ class CliMeta(type):
         return _wrapper
 
 
-def format_wrapper(method: Callable) -> Callable:
+def format_wrapper(method: Callable) -> Callable[[tuple[ResultCode, str]], str]:
     """
     Wrap the return message as a two line string.
 
@@ -109,11 +107,11 @@ def format_wrapper(method: Callable) -> Callable:
     """
 
     @functools.wraps(method)
-    def _wrapper(*args: tuple, **kwargs: dict) -> str:
+    def _wrapper(*args: Any, **kwargs: Any) -> str:
         """
         Wrap the return message as a two line string.
 
-        Wrapper that ensure device command methods return results formatted as a a
+        Wrapper that ensure device command methods return results formatted as a
         two- line string.
 
         :param args: positional arguments to the wrapped method
@@ -199,75 +197,49 @@ class MccsControllerCli(metaclass=CliMeta):
         return self._dp.logginglevel.name
 
     @format_wrapper
-    def on(self: MccsControllerCli) -> tuple[ResultCode, str]:
+    def on(self: MccsControllerCli) -> str:
         """
         Turn the controller (and hence all of MCCS) on.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A return code and a string
+            message indicating status converted into a two line string
         """
         return self._dp.command_inout("On")
 
     @format_wrapper
-    def off(self: MccsControllerCli) -> tuple[ResultCode, str]:
+    def off(self: MccsControllerCli) -> str:
         """
         Turn the controller (and hence all of MCCS) off.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A return code and a string
+            message indicating status converted into a two line string
         """
         return self._dp.command_inout("Off")
 
     @format_wrapper
-    def standbylow(self: MccsControllerCli) -> tuple[ResultCode, str]:
-        """
-        Put the controller (and hence all of MCCS) into low-power standby mode.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        return self._dp.command_inout("StandbyLow")
-
-    @format_wrapper
-    def standbyfull(self: MccsControllerCli) -> tuple[ResultCode, str]:
+    def standbyfull(self: MccsControllerCli) -> str:
         """
         Put the controller (and hence all of MCCS) into full-power standby mode.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A return code and a string
+            message indicating status converted into a two line string
         """
         return self._dp.command_inout("StandbyFull")
 
     @format_wrapper
-    def operate(self: MccsControllerCli) -> tuple[ResultCode, str]:
-        """
-        Call the "Operate" command on the controller.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        return self._dp.command_inout("Operate")
-
-    @format_wrapper
-    def reset(self: MccsControllerCli) -> tuple[ResultCode, str]:
+    def reset(self: MccsControllerCli) -> str:
         """
         Reset the controller following a fatal error.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A return code and a string
+            message indicating status converted into a two line string
         """
         return self._dp.command_inout("Reset")
 
     @format_wrapper
     def allocate(
         self: MccsControllerCli,
-        subarray_id: int = 1,
+        subarray_id: int = 0,
         station_ids: list[list[int]] = [[1]],
         subarray_beam_ids: list[int] = [1],
         channel_blocks: list[int] = [1],
@@ -282,12 +254,6 @@ class MccsControllerCli(metaclass=CliMeta):
 
         :return: a result message
         """
-        #         if station_ids is None:
-        #             station_ids = []
-        #         station_proxies = []
-        #         for station in station_ids:
-        #             fqdn = f"low-mccs/station/{station:03}"
-        #             station_proxies.append(tango.DeviceProxy(fqdn))
         (rc, message) = self._dp.command_inout(
             "Allocate",
             json.dumps(
@@ -299,40 +265,22 @@ class MccsControllerCli(metaclass=CliMeta):
                 }
             ),
         )
-        #         for proxy in station_proxies:
-        #             status = proxy.adminmode.name
-        #             name = proxy.name()
-        #             print(f"{name}: {status}")
         return message
 
     @format_wrapper
-    def release(
-        self: MccsControllerCli, subarray_id: int = 0
-    ) -> tuple[ResultCode, str]:
+    def release(self: MccsControllerCli, subarray_id: int = 0) -> str:
         """
         Release resources from a subarray.
 
         :param subarray_id: the subarray id, defaults to 0
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A return code and a string
+            message indicating status converted into a two line string
         """
         return self._dp.command_inout("Release", subarray_id)
 
-    @format_wrapper
-    def maintenance(self: MccsControllerCli) -> tuple[ResultCode, str]:
-        """
-        Set admin mode to maintenance.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        return self._dp.command_inout("Maintenance")
-
-
-def main(*args: tuple, **kwargs: dict) -> int:
+def main(*args: str, **kwargs: str) -> int:
     """
     Entry point for module.
 

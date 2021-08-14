@@ -17,5 +17,5 @@ __all__ = [
 
 
 from .mock_callable import MockCallable, MockChangeEventCallback
-from .mock_device import MockDeviceBuilder  # type: ignore[attr-defined]
-from .mock_subarray import MockSubarrayBuilder  # type: ignore[attr-defined]
+from .mock_device import MockDeviceBuilder
+from .mock_subarray import MockSubarrayBuilder

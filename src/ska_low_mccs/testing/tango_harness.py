@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -9,14 +8,23 @@
 # See LICENSE.txt for more info.
 
 """This module implements a MCCS test harness for Tango devices."""
+from __future__ import annotations
 
-from __future__ import annotations  # Allow forward refs in type hints; see PEP 563
+# Even with 'from __future__ import annotations`, we still cannot use dict, list, type,
+# etc., in Python 3.7 code in certain circumstances, such as in type aliases and type
+# definitions. We have to use Dict, List, Type, etc. See
+# https://mypy.readthedocs.io/en/stable/runtime_troubles.html#future-annotations-import-pep-563
+# for details.
+# TODO: Update these when we move to a newer python version
+
+
 from collections import defaultdict
 import json
 import logging
 import socket
 from types import TracebackType
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Type, cast
+from typing_extensions import TypedDict
 import unittest.mock
 
 import tango
@@ -39,6 +47,78 @@ __all__ = [
 ]
 
 
+# TODO: These types need refinement in future. For now I have made them type aliases so
+# that we only need to refine them in one place.
+MemorizedType = Dict[str, Any]
+PropertiesType = Dict[str, Any]
+
+# TODO: The "total=False" below ought properly to apply only to the "patch" key. When we
+# have a python version that supports a class-based syntax for TypedDict, we should use
+# class inheritance to achieve this.
+DeviceSpecType = TypedDict(
+    "DeviceSpecType",
+    {
+        "name": str,
+        "proxy": Type[MccsDeviceProxy],
+        "patch": Type[ska_tango_base.base.SKABaseDevice],
+    },
+    total=False,
+)
+
+
+DeviceConfigType = TypedDict(
+    "DeviceConfigType",
+    {
+        "server": "str",
+        "class": Type[ska_tango_base.base.SKABaseDevice],
+        "fqdn": "str",
+        "properties": PropertiesType,
+        "memorized": MemorizedType,
+    },
+)
+
+
+MdtcDeviceInfoType = TypedDict(
+    "MdtcDeviceInfoType",
+    {
+        "name": str,
+        "properties": PropertiesType,
+        "memorized": MemorizedType,
+    },
+)
+
+
+MdtcInfoType = TypedDict(
+    "MdtcInfoType",
+    {
+        "class": Type[ska_tango_base.base.SKABaseDevice],
+        "devices": List[MdtcDeviceInfoType],
+    },
+)
+
+
+DevicesToLoadType = TypedDict(
+    "DevicesToLoadType",
+    {"path": str, "package": str, "devices": Optional[List[DeviceSpecType]]},
+)
+
+
+# TODO: The "total=False" below ought properly to apply only to the "patch" key. When we
+# have a python version that supports a class-based syntax for TypedDict, we should use
+# class inheritance to achieve this.
+DeviceToLoadType = TypedDict(
+    "DeviceToLoadType",
+    {
+        "path": str,
+        "package": str,
+        "device": str,
+        "proxy": Type[MccsDeviceProxy],
+        "patch": Type[ska_tango_base.base.SKABaseDevice],
+    },
+    total=False,
+)
+
+
 class MccsDeviceInfo:
     """
     Data structure class that loads and holds information about devices,
@@ -50,7 +130,7 @@ class MccsDeviceInfo:
         self: MccsDeviceInfo,
         path: str,
         package: str,
-        devices: dict = None,
+        devices: Optional[list[DeviceSpecType]] = None,
     ) -> None:
         """
         Create a new instance.
@@ -65,8 +145,8 @@ class MccsDeviceInfo:
         with open(path, "r") as json_file:
             self._source_data = json.load(json_file)
         self._package = package
-        self._devices = {}
-        self._proxies = {}
+        self._devices: dict[str, DeviceConfigType] = {}
+        self._proxies: dict[str, type[MccsDeviceProxy]] = {}
 
         if devices is not None:
             for device_spec in devices:
@@ -75,8 +155,8 @@ class MccsDeviceInfo:
     def include_device(
         self: MccsDeviceInfo,
         name: str,
-        proxy: MccsDeviceProxy,
-        patch: ska_tango_base.base.base_device.SKABaseDevice = None,
+        proxy: type[MccsDeviceProxy],
+        patch: Optional[type[ska_tango_base.base.SKABaseDevice]] = None,
     ) -> None:
         """
         Include a device in this specification.
@@ -126,7 +206,7 @@ class MccsDeviceInfo:
             raise ValueError(f"Device {name} not found in source data.")
 
     @property
-    def fqdns(self: MccsDeviceInfo) -> list[str]:
+    def fqdns(self: MccsDeviceInfo) -> Iterable[str]:
         """
         Return a list of device fqdns.
 
@@ -144,7 +224,7 @@ class MccsDeviceInfo:
         return {name: self._devices[name]["fqdn"] for name in self._devices}
 
     @property
-    def proxy_map(self: MccsDeviceInfo) -> dict[str, MccsDeviceProxy]:
+    def proxy_map(self: MccsDeviceInfo) -> dict[str, type[MccsDeviceProxy]]:
         """
         Return a map from FQDN to proxy type.
 
@@ -152,7 +232,7 @@ class MccsDeviceInfo:
         """
         return dict(self._proxies)
 
-    def as_mdtc_device_info(self: MccsDeviceInfo) -> dict:
+    def as_mdtc_device_info(self: MccsDeviceInfo) -> list[MdtcInfoType]:
         """
         Return this device info in a format required by
         :py:class:`tango.test_context.MultiDeviceTestContext`.
@@ -160,7 +240,9 @@ class MccsDeviceInfo:
         :return: device info in a format required by
             :py:class:`tango.test_context.MultiDeviceTestContext`.
         """
-        devices_by_class = defaultdict(list)
+        devices_by_class: dict[
+            type[ska_tango_base.base.SKABaseDevice], list[MdtcDeviceInfoType]
+        ] = defaultdict(list)
         for device in self._devices.values():
             devices_by_class[device["class"]].append(
                 {
@@ -169,7 +251,7 @@ class MccsDeviceInfo:
                     "memorized": device["memorized"],
                 }
             )
-        mdtc_device_info = [
+        mdtc_device_info: list[MdtcInfoType] = [
             {"class": klass, "devices": devices}
             for klass, devices in devices_by_class.items()
         ]
@@ -187,12 +269,17 @@ class TangoHarness:
     harness's ``connection factory`` to make connections.
     """
 
-    def __init__(self: TangoHarness) -> None:
-        """Initialise a new instance."""
+    def __init__(self: TangoHarness, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise a new instance.
+
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
+        """
         MccsDeviceProxy.set_default_connection_factory(self.connection_factory)
 
     @property
-    def connection_factory(self: TangoHarness) -> None:
+    def connection_factory(self: TangoHarness) -> Callable[[str], tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -232,9 +319,9 @@ class TangoHarness:
 
     def __exit__(
         self: TangoHarness,
-        exc_type: Type[BaseException],
-        exception: BaseException,
-        trace: TracebackType,
+        exc_type: Optional[Type[BaseException]],
+        exception: Optional[BaseException],
+        trace: Optional[TracebackType],
     ) -> bool:
         """
         Exit method for "with" context.
@@ -259,20 +346,28 @@ class BaseTangoHarness(TangoHarness):
     """
 
     def __init__(
-        self: BaseTangoHarness, device_info: MccsDeviceInfo, logger: logging.Logger
+        self: BaseTangoHarness,
+        device_info: Optional[MccsDeviceInfo],
+        logger: logging.Logger,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """
         Initialise a new instance.
 
         :param device_info: object that makes device info available
         :param logger: a logger for the harness
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
         """
         self._fqdns = [] if device_info is None else list(device_info.fqdns)
         self.logger = logger
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     @property
-    def connection_factory(self: BaseTangoHarness) -> Type[tango.DeviceProxy]:
+    def connection_factory(
+        self: BaseTangoHarness,
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -310,9 +405,10 @@ class ClientProxyTangoHarness(BaseTangoHarness):
     """A test harness for Tango devices that can return tailored client proxies."""
 
     def __init__(
-        self: BaseTangoHarness,
+        self: ClientProxyTangoHarness,
         device_info: Optional[MccsDeviceInfo],
         logger: logging.Logger,
+        *args: Any,
         **kwargs: Any,
     ) -> None:
         """
@@ -320,16 +416,17 @@ class ClientProxyTangoHarness(BaseTangoHarness):
 
         :param device_info: object that makes device info available
         :param logger: a logger for the harness
-        :param kwargs: keyword arguments
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
         """
         if device_info is None:
             self._proxy_map = {}
         else:
             self._proxy_map = dict(device_info.proxy_map)
-        super().__init__(device_info, logger, **kwargs)
+        super().__init__(device_info, logger, *args, **kwargs)
 
     def get_device(
-        self: BaseTangoHarness,
+        self: ClientProxyTangoHarness,
         fqdn: str,
     ) -> MccsDeviceProxy:
         """
@@ -357,6 +454,7 @@ class TestContextTangoHarness(BaseTangoHarness):
         device_info: Optional[MccsDeviceInfo],
         logger: logging.Logger,
         process: bool = False,
+        *args: Any,
         **kwargs: Any,
     ) -> None:
         """
@@ -366,7 +464,8 @@ class TestContextTangoHarness(BaseTangoHarness):
         :param logger: a logger for the harness
         :param process: whether to run the test context in a separate
             process or not
-        :param kwargs: keyword arguments
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
         """
         self._host = get_host_ip()
 
@@ -398,12 +497,12 @@ class TestContextTangoHarness(BaseTangoHarness):
                 host=self._host,
                 port=self._port,
             )
-        super().__init__(device_info, logger, **kwargs)
+        super().__init__(device_info, logger, *args, **kwargs)
 
     @property
     def connection_factory(
         self: TestContextTangoHarness,
-    ) -> Callable[[str, ...], tango.DeviceProxy]:
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -414,18 +513,16 @@ class TestContextTangoHarness(BaseTangoHarness):
         :return: a DeviceProxy for use in establishing connections.
         """
 
-        def connect(fqdn: str, *args: Any, **kwargs: Any) -> tango.DeviceProxy:
+        def connect(fqdn: str) -> tango.DeviceProxy:
             """
             Connect to the device.
 
             :param fqdn: the FQDN of the device to connect to
-            :param args: positional args to pass to the underlying connection
-            :param kwargs: keyword args to pass to the underlying connection
 
             :return: a connection to the device
             """
             return tango.DeviceProxy(
-                f"tango://{self._host}:{self._port}/{fqdn}#dbase=no", *args, **kwargs
+                f"tango://{self._host}:{self._port}/{fqdn}#dbase=no"
             )
 
         return connect
@@ -438,13 +535,13 @@ class TestContextTangoHarness(BaseTangoHarness):
         """
         if self._test_context is not None:
             self._test_context.__enter__()
-        return super().__enter__()
+        return cast(TestContextTangoHarness, super().__enter__())
 
     def __exit__(
         self: TestContextTangoHarness,
-        exc_type: Type[BaseException],
-        exception: BaseException,
-        trace: TracebackType,
+        exc_type: Optional[Type[BaseException]],
+        exception: Optional[BaseException],
+        trace: Optional[TracebackType],
     ) -> bool:
         """
         Exit method for "with" context.
@@ -467,14 +564,21 @@ class TestContextTangoHarness(BaseTangoHarness):
 class WrapperTangoHarness(TangoHarness):
     """A base class for a Tango test harness that wraps another harness."""
 
-    def __init__(self: WrapperTangoHarness, harness: TangoHarness) -> None:
+    def __init__(
+        self: WrapperTangoHarness,
+        harness: TangoHarness,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         Initialise a new instance.
 
         :param harness: the harness to be wrapped
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
         """
         self._harness = harness
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def __enter__(self: WrapperTangoHarness) -> WrapperTangoHarness:
         """
@@ -489,9 +593,9 @@ class WrapperTangoHarness(TangoHarness):
 
     def __exit__(
         self: WrapperTangoHarness,
-        exc_type: Type[BaseException],
-        exception: BaseException,
-        trace: TracebackType,
+        exc_type: Optional[Type[BaseException]],
+        exception: Optional[BaseException],
+        trace: Optional[TracebackType],
     ) -> bool:
         """
         Exit method for "with" context.
@@ -510,7 +614,7 @@ class WrapperTangoHarness(TangoHarness):
     @property
     def connection_factory(
         self: WrapperTangoHarness,
-    ) -> Callable[[str, ...], tango.DeviceProxy]:
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -566,6 +670,8 @@ class StartingStateTangoHarness(WrapperTangoHarness):
         bypass_cache: bool = True,
         check_ready: bool = True,
         set_test_mode: bool = True,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """
         Initialise a new instance.
@@ -579,12 +685,14 @@ class StartingStateTangoHarness(WrapperTangoHarness):
             before allowing tests to be run.
         :param set_test_mode: whether to set the device into test mode
             before allowing tests to be run.
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
         """
         self._bypass_cache = bypass_cache
         self._check_ready = check_ready
         self._set_test_mode = set_test_mode
 
-        super().__init__(harness)
+        super().__init__(harness, *args, **kwargs)
 
     def __enter__(self: StartingStateTangoHarness) -> StartingStateTangoHarness:
         """
@@ -622,8 +730,10 @@ class MockingTangoHarness(WrapperTangoHarness):
     def __init__(
         self: MockingTangoHarness,
         harness: TangoHarness,
-        mock_factory: Callable[[str], unittest.mock.Mock],
+        mock_factory: Callable[[], unittest.mock.Mock],
         initial_mocks: dict[str, unittest.mock.Mock],
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """
         Initialise a new instance.
@@ -632,14 +742,16 @@ class MockingTangoHarness(WrapperTangoHarness):
         :param mock_factory: the factory to be used to build mocks
         :param initial_mocks: a pre-build dictionary of mocks to be used
             for particular
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
         """
         self._mocks = defaultdict(mock_factory, initial_mocks)
-        super().__init__(harness)
+        super().__init__(harness, *args, **kwargs)
 
     @property
     def connection_factory(
         self: MockingTangoHarness,
-    ) -> Callable[[str, ...], Union[tango.DeviceProxy, unittest.mock.Mock]]:
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -652,20 +764,16 @@ class MockingTangoHarness(WrapperTangoHarness):
             but might actually provide mocks.
         """
 
-        def connect(
-            fqdn: str, *args: Any, **kwargs: Any
-        ) -> Union[tango.DeviceProxy, unittest.mock.Mock]:
+        def connect(fqdn: str) -> tango.DeviceProxy:
             """
             Connect to the device.
 
             :param fqdn: the FQDN of the device to connect to
-            :param args: positional args to pass to the underlying connection
-            :param kwargs: keyword args to pass to the underlying connection
 
             :return: a connection (possibly mocked) to the device
             """
             if fqdn in self.fqdns:
-                return self._harness.connection_factory(fqdn, *args, **kwargs)
+                return self._harness.connection_factory(fqdn)
             else:
                 return self._mocks[fqdn]
 

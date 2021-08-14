@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -29,7 +28,8 @@ class MockDeviceBuilder:
     """This module implements a mock builder for tango devices."""
 
     def __init__(
-        self: MockDeviceBuilder, from_factory: unittest.mock.Mock = unittest.mock.Mock
+        self: MockDeviceBuilder,
+        from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
     ) -> None:
         """
         Create a new instance.
@@ -40,7 +40,7 @@ class MockDeviceBuilder:
         self._from_factory = from_factory
 
         self._return_values: dict[str, Any] = {}
-        self._configuration = {}
+        self._configuration: dict[str, Any] = {}
 
     def add_attribute(self: MockDeviceBuilder, name: str, value: Any) -> None:
         """

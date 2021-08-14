@@ -1,22 +1,21 @@
-# type: ignore
 """This module contains pytest-specific test harness for MCCS functional (BDD) tests."""
 from __future__ import annotations
 
 import pytest
-from typing import Callable
+from typing import Any, Callable, Generator
+import unittest
 
 from ska_low_mccs import MccsDeviceProxy
 
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs.testing.tango_harness import TangoHarness
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.config.Config) -> None:
     """
     Register custom markers to avoid pytest warnings.
 
     :param config: the pytest config object
-    :type config: :py:class:`pytest.config.Config`
     """
     config.addinivalue_line("markers", "XTP-1170: XRay BDD test marker")
     config.addinivalue_line("markers", "XTP-1257: XRay BDD test marker")
@@ -28,7 +27,7 @@ def pytest_configure(config):
 
 
 @pytest.fixture(scope="module")
-def initial_mocks():
+def initial_mocks() -> dict[str, unittest.mock.Mock]:
     """
     Fixture that registers device proxy mocks prior to patching.
 
@@ -40,13 +39,12 @@ def initial_mocks():
     fixture module scope)
 
     :return: an empty dictionary
-    :rtype: dict
     """
     return {}
 
 
 @pytest.fixture(scope="module")
-def mock_factory():
+def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a mock factory for device proxy mocks. This default factory
     provides vanilla mocks, but this fixture can be overridden by test modules/classes
@@ -56,13 +54,12 @@ def mock_factory():
     fixture module scope)
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
     """
     return MockDeviceBuilder()
 
 
 @pytest.fixture(scope="module")
-def tango_config():
+def tango_config() -> dict[str, Any]:
     """
     Fixture that returns basic configuration information for a Tango test harness, such
     as whether or not to run in a separate process.
@@ -74,12 +71,20 @@ def tango_config():
 
 @pytest.fixture(scope="module")
 def tango_harness(
-    tango_harness_factory: Callable[[], TangoHarness],
+    tango_harness_factory: Callable[
+        [
+            dict[str, Any],
+            DevicesToLoadType,
+            Callable[[], unittest.mock.Mock],
+            dict[str, unittest.mock.Mock],
+        ],
+        TangoHarness,
+    ],
     tango_config: dict[str, str],
-    devices_to_load,
-    mock_factory,
-    initial_mocks,
-):
+    devices_to_load: DevicesToLoadType,
+    mock_factory: Callable[[], unittest.mock.Mock],
+    initial_mocks: dict[str, unittest.mock.Mock],
+) -> Generator[TangoHarness, None, None]:
     """
     Creates a test harness for testing Tango devices.
 
@@ -92,12 +97,9 @@ def tango_harness(
         test harness
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
-    :type devices_to_load: dict
     :param mock_factory: the factory to be used to build mocks
-    :type mock_factory: object
     :param initial_mocks: a pre-build dictionary of mocks to be used
         for particular
-    :type initial_mocks: dict<str, :py:class:`pytest_mock.mocker.Mock`>
 
     :yields: the test harness
     """
@@ -141,12 +143,11 @@ def mock_callback_called_timeout() -> float:
 
 
 @pytest.fixture(scope="module")
-def devices_to_load():
+def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -188,14 +189,13 @@ def devices_to_load():
 @pytest.fixture()
 def controller(
     tango_harness: TangoHarness,
-):
+) -> MccsDeviceProxy:
     """
     Return the controller device.
 
     :param tango_harness: a test harness for tango devices
 
     :return: the controller device
-    :rtype: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
     return tango_harness.get_device("low-mccs/control/control")
 
@@ -203,27 +203,25 @@ def controller(
 @pytest.fixture()
 def subrack(
     tango_harness: TangoHarness,
-):
+) -> MccsDeviceProxy:
     """
     Return the subrack device.
 
     :param tango_harness: a test harness for tango devices
 
     :return: the subrack device
-    :rtype: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
     return tango_harness.get_device("low-mccs/subrack/01")
 
 
 @pytest.fixture()
-def subarrays(tango_harness: TangoHarness):
+def subarrays(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of subarrays keyed by their number.
 
     :param tango_harness: a test harness for tango devices
 
     :return: subarrays by number
-    :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         1: tango_harness.get_device("low-mccs/subarray/01"),
@@ -232,14 +230,13 @@ def subarrays(tango_harness: TangoHarness):
 
 
 @pytest.fixture()
-def stations(tango_harness: TangoHarness):
+def stations(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of stations keyed by their number.
 
     :param tango_harness: a test harness for tango devices
 
     :return: stations by number
-    :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         1: tango_harness.get_device("low-mccs/station/001"),
@@ -248,14 +245,13 @@ def stations(tango_harness: TangoHarness):
 
 
 @pytest.fixture()
-def apius(tango_harness: TangoHarness):
+def apius(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of APIUs keyed by their number.
 
     :param tango_harness: a test harness for tango devices
 
     :return: APIUs by number
-    :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         1: tango_harness.get_device("low-mccs/apiu/001"),
@@ -264,14 +260,13 @@ def apius(tango_harness: TangoHarness):
 
 
 @pytest.fixture()
-def subarray_beams(tango_harness: TangoHarness):
+def subarray_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of subarray beams keyed by their number.
 
     :param tango_harness: a test harness for tango devices
 
     :return: subarray beams by number
-    :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         1: tango_harness.get_device("low-mccs/subarraybeam/01"),
@@ -282,14 +277,13 @@ def subarray_beams(tango_harness: TangoHarness):
 
 
 @pytest.fixture()
-def station_beams(tango_harness: TangoHarness):
+def station_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of station beams keyed by their number.
 
     :param tango_harness: a test harness for tango devices
 
     :return: station beams by number
-    :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         1: tango_harness.get_device("low-mccs/beam/001"),
@@ -300,14 +294,13 @@ def station_beams(tango_harness: TangoHarness):
 
 
 @pytest.fixture()
-def tiles(tango_harness: TangoHarness):
+def tiles(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of tiles keyed by their number.
 
     :param tango_harness: a test harness for tango devices
 
     :return: tiles by number
-    :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         1: tango_harness.get_device("low-mccs/tile/0001"),
@@ -318,14 +311,13 @@ def tiles(tango_harness: TangoHarness):
 
 
 @pytest.fixture()
-def antennas(tango_harness: TangoHarness):
+def antennas(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of antennas keyed by their number.
 
     :param tango_harness: a test harness for tango devices
 
     :return: antennas by number
-    :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         1: tango_harness.get_device("low-mccs/antenna/000001"),

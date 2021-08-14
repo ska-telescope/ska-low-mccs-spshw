@@ -1,4 +1,3 @@
-# type: ignore
 """This module contains pytest-specific test harness for MCCS integration tests."""
 from __future__ import annotations
 
@@ -9,7 +8,7 @@ import pytest
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
-def pytest_itemcollected(item):
+def pytest_itemcollected(item: pytest.Item) -> None:
     """
     Modify a test after it has been collected by pytest.
 
@@ -18,7 +17,6 @@ def pytest_itemcollected(item):
     in their own process.
 
     :param item: the collected test for which this hook is called
-    :type item: :py:class:`pytest.Item`
     """
     if "tango_harness" in item.fixturenames:
         item.add_marker("forked")

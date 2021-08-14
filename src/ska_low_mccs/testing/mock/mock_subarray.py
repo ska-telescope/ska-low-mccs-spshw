@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -27,7 +26,8 @@ class MockSubarrayBuilder(MockDeviceBuilder):
     """This module implements a mock builder for MCCS subarray devices."""
 
     def __init__(
-        self: MockSubarrayBuilder, from_factory: unittest.mock.Mock = unittest.mock.Mock
+        self: MockSubarrayBuilder,
+        from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
     ) -> None:
         """
         Create a new instance.

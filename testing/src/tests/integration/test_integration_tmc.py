@@ -1,4 +1,3 @@
-# type: ignore
 """This module contains integration tests of interactions between TMC and MCCS."""
 from __future__ import annotations
 
@@ -16,7 +15,8 @@ from ska_tango_base.control_model import AdminMode, ObsState, PowerMode
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.utils import call_with_json
 
-from ska_low_mccs.testing.mock import MockDeviceBuilder
+from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 @pytest.fixture()
@@ -38,7 +38,7 @@ def patched_station_device_class() -> MccsStation:
 
         @command(dtype_in=int)
         def FakeSubservientDevicesPowerMode(
-            self: PatchedStationDevice, power_mode
+            self: PatchedStationDevice, power_mode: int
         ) -> None:
             power_mode = PowerMode(power_mode)
             self.component_manager._apiu_power_mode = power_mode
@@ -52,14 +52,13 @@ def patched_station_device_class() -> MccsStation:
 
 
 @pytest.fixture()
-def devices_to_load(patched_station_device_class):
+def devices_to_load(patched_station_device_class: MccsStation) -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :param patched_station_device_class: a station device class that has
         been patched with extra commands to support testing
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
@@ -174,7 +173,7 @@ def initial_mocks(
 
 
 @pytest.fixture()
-def controller(tango_harness) -> MccsDeviceProxy:
+def controller(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to the controller.
 
@@ -186,7 +185,7 @@ def controller(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subarray_1(tango_harness) -> MccsDeviceProxy:
+def subarray_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray 1.
 
@@ -198,7 +197,7 @@ def subarray_1(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subarray_2(tango_harness) -> MccsDeviceProxy:
+def subarray_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray 2.
 
@@ -210,7 +209,7 @@ def subarray_2(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subrack(tango_harness) -> MccsDeviceProxy:
+def subrack(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to the subrack.
 
@@ -222,7 +221,7 @@ def subrack(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def station_1(tango_harness) -> MccsDeviceProxy:
+def station_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to station 1.
 
@@ -234,7 +233,7 @@ def station_1(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def station_2(tango_harness) -> MccsDeviceProxy:
+def station_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to station 2.
 
@@ -246,7 +245,7 @@ def station_2(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subarray_beam_1(tango_harness) -> MccsDeviceProxy:
+def subarray_beam_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 1.
 
@@ -258,7 +257,7 @@ def subarray_beam_1(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subarray_beam_2(tango_harness) -> MccsDeviceProxy:
+def subarray_beam_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 2.
 
@@ -270,7 +269,7 @@ def subarray_beam_2(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subarray_beam_3(tango_harness) -> MccsDeviceProxy:
+def subarray_beam_3(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 3.
 
@@ -282,7 +281,7 @@ def subarray_beam_3(tango_harness) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subarray_beam_4(tango_harness) -> MccsDeviceProxy:
+def subarray_beam_4(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 4.
 
@@ -297,19 +296,19 @@ class TestMccsIntegrationTmc:
     """Integration test cases for interactions between TMC and MCCS device classes."""
 
     def test_controller_on_off(
-        self,
-        controller,
-        subarray_1,
-        subarray_2,
-        subrack,
-        station_1,
-        station_2,
-        subarray_beam_1,
-        subarray_beam_2,
-        subarray_beam_3,
-        subarray_beam_4,
-        controller_device_state_changed_callback,
-        subarray_device_obs_state_changed_callback,
+        self: TestMccsIntegrationTmc,
+        controller: MccsDeviceProxy,
+        subarray_1: MccsDeviceProxy,
+        subarray_2: MccsDeviceProxy,
+        subrack: MccsDeviceProxy,
+        station_1: MccsDeviceProxy,
+        station_2: MccsDeviceProxy,
+        subarray_beam_1: MccsDeviceProxy,
+        subarray_beam_2: MccsDeviceProxy,
+        subarray_beam_3: MccsDeviceProxy,
+        subarray_beam_4: MccsDeviceProxy,
+        controller_device_state_changed_callback: MockChangeEventCallback,
+        subarray_device_obs_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that we can turn the controller on.

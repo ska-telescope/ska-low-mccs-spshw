@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -21,16 +20,16 @@ from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
 
-from ska_low_mccs.testing import TangoHarness
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def devices_to_load():
+def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -51,8 +50,8 @@ class TestSubrackTileIntegration:
     def test_subrack_tile_integration(
         self: TestSubrackTileIntegration,
         tango_harness: TangoHarness,
-        subrack_device_admin_mode_changed_callback,
-        tile_device_admin_mode_changed_callback,
+        subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
+        tile_device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that:

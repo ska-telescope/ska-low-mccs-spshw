@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -13,7 +12,7 @@
 from __future__ import annotations
 
 import time
-from typing import Callable
+from typing import Callable, Iterable, cast
 import unittest.mock
 
 import pytest
@@ -26,16 +25,15 @@ from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.utils import call_with_json
 
 from ska_low_mccs.testing.mock import MockDeviceBuilder
-from ska_low_mccs.testing.tango_harness import TangoHarness
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def devices_to_load():
+def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -181,7 +179,9 @@ def initial_mocks(
 class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
-    def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
+    def test_controller_allocate_subarray(
+        self: TestMccsIntegration, tango_harness: TangoHarness
+    ) -> None:
         """
         Test that an MccsController device can allocate resources to an MccsSubarray
         device.
@@ -231,7 +231,8 @@ class TestMccsIntegration:
         time.sleep(0.1)
 
         # check that station_1 and only station_1 is allocated
-        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
+        station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
+        assert list(station_fqdns) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -248,7 +249,8 @@ class TestMccsIntegration:
             )
 
         # check no side-effects
-        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
+        station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
+        assert list(station_fqdns) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -268,7 +270,9 @@ class TestMccsIntegration:
         assert result_code == ResultCode.QUEUED
 
         time.sleep(0.1)
-        assert list(subarray_1.stationFQDNs) == [
+
+        station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
+        assert list(station_fqdns) == [
             station_1.dev_name(),
             station_2.dev_name(),
         ]
@@ -276,7 +280,9 @@ class TestMccsIntegration:
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
 
-    def test_controller_release_subarray(self, tango_harness: TangoHarness):
+    def test_controller_release_subarray(
+        self: TestMccsIntegration, tango_harness: TangoHarness
+    ) -> None:
         """
         Test that an MccsController device can release the resources of an MccsSubarray
         device.

@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -10,6 +9,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains the tests for MccsStation."""
+from __future__ import annotations
+
 import json
 import unittest.mock
 
@@ -21,11 +22,13 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs import MccsDeviceProxy, release
+from ska_low_mccs import MccsDeviceProxy, MccsStation, release
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_under_test(tango_harness):
+def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
 
@@ -40,12 +43,11 @@ class TestMccsStation:
     """Test class for MccsStation tests."""
 
     @pytest.fixture()
-    def device_to_load(self):
+    def device_to_load(self: TestMccsStation) -> DeviceToLoadType:
         """
         Fixture that specifies the device to be loaded for testing.
 
         :return: specification of the device to be loaded
-        :rtype: dict
         """
         return {
             "path": "charts/ska-low-mccs/data/configuration.json",
@@ -54,7 +56,10 @@ class TestMccsStation:
             "proxy": MccsDeviceProxy,
         }
 
-    def test_InitDevice(self, device_under_test):
+    def test_InitDevice(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Initial state. A freshly initialised station device has no assigned
         resources.
@@ -62,7 +67,6 @@ class TestMccsStation:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -82,14 +86,17 @@ class TestMccsStation:
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
 
-    def test_healthState(self, device_under_test, device_health_state_changed_callback):
+    def test_healthState(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -103,112 +110,133 @@ class TestMccsStation:
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     # overridden base class attributes
-    def test_buildState(self, device_under_test):
+    def test_buildState(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for buildState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         build_info = release.get_release_info()
         assert device_under_test.buildState == build_info
 
     # overridden base class commands
-    def test_GetVersionInfo(self, device_under_test):
+    def test_GetVersionInfo(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for GetVersionInfo.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
-    def test_versionId(self, device_under_test):
+    def test_versionId(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for versionId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
-    def test_refLongitude(self, device_under_test):
+    def test_refLongitude(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for refLongitude.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.refLongitude == 0.0
 
-    def test_refLatitude(self, device_under_test):
+    def test_refLatitude(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for refLatitude.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.refLatitude == 0.0
 
-    def test_refHeight(self, device_under_test):
+    def test_refHeight(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for refHeight.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.refHeight == 0.0
 
-    def test_subarrayId(self, device_under_test):
+    def test_subarrayId(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for subarrayId attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.subarrayId == 0
         device_under_test.subarrayId = 1
         assert device_under_test.subarrayId == 1
 
-    def test_beamFQDNs(self, device_under_test):
+    def test_beamFQDNs(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for beamFQDNs attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.beamFQDNs is None
 
-    def test_transientBufferFQDN(self, device_under_test):
+    def test_transientBufferFQDN(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for transientBufferFQDN attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.transientBufferFQDN == ""
 
-    def test_delayCentre(self, device_under_test):
+    def test_delayCentre(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for delayCentre attribute. This is a messy test because there is some loss
         of floating-point precision during transfer, so you have to check approximate
@@ -217,7 +245,6 @@ class TestMccsStation:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert list(device_under_test.delayCentre) == []
 
@@ -234,69 +261,81 @@ class TestMccsStation:
         delay_centre_str = [float_format.format(x) for x in delay_centre]
         assert delay_centre_str == dummy_location_str
 
-    def test_calibrationCoefficients(self, device_under_test):
+    def test_calibrationCoefficients(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for calibrationCoefficients attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.calibrationCoefficients is None
 
-    def test_isCalibrated(self, device_under_test):
+    def test_isCalibrated(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for isCalibrated attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert not device_under_test.isCalibrated
 
-    def test_isConfigured(self, device_under_test):
+    def test_isConfigured(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for isConfigured attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert not device_under_test.isConfigured
 
-    def test_calibrationJobId(self, device_under_test):
+    def test_calibrationJobId(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for calibrationJobId attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.calibrationJobId == 0
 
-    def test_daqJobId(self, device_under_test):
+    def test_daqJobId(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for daqJobId attributes.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.daqJobId == 0
 
-    def test_dataDirectory(self, device_under_test):
+    def test_dataDirectory(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for dataDirectory attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.dataDirectory == ""
 
@@ -310,14 +349,15 @@ class TestPatchedStation:
     """
 
     @pytest.fixture()
-    def device_to_load(self, patched_station_class):
+    def device_to_load(
+        self: TestPatchedStation, patched_station_class: type[MccsStation]
+    ) -> DeviceToLoadType:
         """
         Fixture that specifies the device to be loaded for testing.
 
         :param patched_station_class: a subclass of MccsStation that has
             been patched for testing
         :return: specification of the device to be loaded
-        :rtype: dict
         """
         return {
             "path": "charts/ska-low-mccs/data/configuration.json",
@@ -328,17 +368,16 @@ class TestPatchedStation:
         }
 
     def test_configure(
-        self,
-        device_under_test,
+        self: TestPatchedStation,
+        device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
-    ):
+    ) -> None:
         """
         Test for configure command.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_component_manager: the mock component manage to patch
             into this station.
         """
@@ -349,17 +388,16 @@ class TestPatchedStation:
         mock_component_manager.configure.assert_next_call(1)
 
     def test_applyPointing(
-        self,
-        device_under_test,
+        self: TestPatchedStation,
+        device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
-    ):
+    ) -> None:
         """
         Test for ApplyPointing command.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_component_manager: the mock component manage to patch
             into this station.
         """

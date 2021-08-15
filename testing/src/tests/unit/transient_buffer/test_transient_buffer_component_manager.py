@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Union
 
 import pytest
-from _pytest.fixtures import SubRequest  # type: ignore[import]
+from _pytest.fixtures import SubRequest
 
 from ska_low_mccs.transient_buffer import (
     TransientBuffer,
@@ -50,7 +50,7 @@ class TestTransientBuffer:
         :param request: A pytest object giving access to the requesting test
             context.
 
-        :raises AssertionError: if parametrized with an unrecognised option
+        :raises ValueError: if parametrized with an unrecognised option
 
         :return: the tile class object under test
         """
@@ -59,7 +59,7 @@ class TestTransientBuffer:
         elif request.param == "transient_buffer_component_manager":
             transient_buffer_component_manager.start_communicating()
             return transient_buffer_component_manager
-        raise AssertionError(
+        raise ValueError(
             "transient_buffer fixture parametrized with unrecognised option"
         )
 

@@ -1,4 +1,3 @@
-# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -13,7 +12,8 @@ from __future__ import annotations
 import json
 import pytest
 import time
-from typing import Type
+from typing import Callable, Type
+import unittest
 
 from tango import DevState
 from tango.server import command
@@ -29,7 +29,8 @@ from ska_tango_base.control_model import (
 )
 from ska_low_mccs import MccsDeviceProxy, MccsSubarray, release
 
-from ska_low_mccs.testing.mock import MockDeviceBuilder
+from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
@@ -51,7 +52,7 @@ def patched_subarray_device_class() -> Type[MccsSubarray]:
 
         @command(dtype_in=int)
         def FakeSubservientDevicesObsState(
-            self: PatchedSubarrayDevice, obs_state
+            self: PatchedSubarrayDevice, obs_state: ObsState
         ) -> None:
             obs_state = ObsState(obs_state)
 
@@ -62,7 +63,9 @@ def patched_subarray_device_class() -> Type[MccsSubarray]:
 
 
 @pytest.fixture()
-def device_to_load(patched_subarray_device_class):
+def device_to_load(
+    patched_subarray_device_class: type[MccsSubarray],
+) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
@@ -70,7 +73,6 @@ def device_to_load(patched_subarray_device_class):
         device with extra methods for testing purposes.
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -82,15 +84,13 @@ def device_to_load(patched_subarray_device_class):
 
 
 @pytest.fixture()
-def mock_factory():
+def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a mock factory for device proxy mocks. This default factory
     provides vanilla mocks, but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
-        instance)
     """
     builder = MockDeviceBuilder()
     builder.add_attribute("healthState", HealthState.UNKNOWN)
@@ -102,7 +102,9 @@ class TestMccsSubarray:
     """Test class for MccsSubarray tests."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness):
+    def device_under_test(
+        self: TestMccsSubarray, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -112,7 +114,10 @@ class TestMccsSubarray:
         """
         return tango_harness.get_device("low-mccs/subarray/01")
 
-    def test_InitDevice(self, device_under_test):
+    def test_InitDevice(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Initial state.
 
@@ -121,7 +126,6 @@ class TestMccsSubarray:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -134,14 +138,17 @@ class TestMccsSubarray:
         assert device_under_test.stationFQDNs is None
         assert device_under_test.activationTime == 0
 
-    def test_healthState(self, device_under_test, device_health_state_changed_callback):
+    def test_healthState(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -154,78 +161,87 @@ class TestMccsSubarray:
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-    def test_GetVersionInfo(self, device_under_test):
+    def test_GetVersionInfo(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for GetVersionInfo.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
-    def test_buildState(self, device_under_test):
+    def test_buildState(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for buildState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         build_info = release.get_release_info()
         assert device_under_test.buildState == build_info
 
-    def test_versionId(self, device_under_test):
+    def test_versionId(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for versionId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.versionId == release.version
 
-    def test_scanId(self, device_under_test):
+    def test_scanId(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for scanID attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.scanId == -1
 
-    def test_stationFQDNs(self, device_under_test):
+    def test_stationFQDNs(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for stationFQDNs attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.stationFQDNs is None
 
     def test_assignResources(
-        self,
-        device_under_test,
-        device_admin_mode_changed_callback,
-        station_on_fqdn,
-        subarray_beam_on_fqdn,
-        channel_blocks,
-    ):
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        station_on_fqdn: str,
+        subarray_beam_on_fqdn: str,
+        channel_blocks: list[int],
+    ) -> None:
         """
         Test for assignResources.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         :param station_on_fqdn: the FQDN of a station that is powered
@@ -272,22 +288,21 @@ class TestMccsSubarray:
         assert device_under_test.assignedResources is None
 
     def test_configure(
-        self,
-        device_under_test,
-        device_admin_mode_changed_callback,
-        station_on_id,
-        station_on_fqdn,
-        subarray_beam_on_id,
-        subarray_beam_on_fqdn,
-        channel_blocks,
-    ):
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        station_on_id: int,
+        station_on_fqdn: str,
+        subarray_beam_on_id: int,
+        subarray_beam_on_fqdn: str,
+        channel_blocks: list[int],
+    ) -> None:
         """
         Test for configure command.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         :param station_on_id: the id number of a station that is
@@ -344,17 +359,16 @@ class TestMccsSubarray:
         assert device_under_test.obsState == ObsState.READY
 
     def test_sendTransientBuffer(
-        self,
-        device_under_test,
-        device_admin_mode_changed_callback,
-    ):
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for sendTransientBuffer.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         """
@@ -369,7 +383,7 @@ class TestMccsSubarray:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
-        segment_spec = []
+        segment_spec: list[int] = []
         returned = device_under_test.sendTransientBuffer(segment_spec)
         assert returned == [
             [ResultCode.OK],

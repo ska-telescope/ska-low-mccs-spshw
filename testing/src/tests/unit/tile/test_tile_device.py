@@ -1,4 +1,3 @@
-# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -10,9 +9,12 @@
 # See LICENSE.txt for more info.
 #########################################################################
 """This module contains the tests for MccsTile."""
+from __future__ import annotations
+
 import json
 import itertools
 import time
+from typing import Any, Optional
 
 import pytest
 import tango
@@ -23,11 +25,13 @@ from ska_tango_base.control_model import (
     HealthState,
 )
 from ska_low_mccs import MccsDeviceProxy, MccsTile
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_low_mccs.tile import StaticTpmSimulator
 
 
 @pytest.fixture()
-def device_to_load(patched_tile_device_class):
+def device_to_load(patched_tile_device_class: type[MccsTile]) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
@@ -35,7 +39,6 @@ def device_to_load(patched_tile_device_class):
         under test, patched with extra methods for testing.
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -47,7 +50,7 @@ def device_to_load(patched_tile_device_class):
 
 
 @pytest.fixture()
-def tile_device(tango_harness):
+def tile_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the tile device under test.
 
@@ -66,18 +69,17 @@ class TestMccsTile:
     """
 
     def test_healthState(
-        self,
-        tile_device,
-        device_admin_mode_changed_callback,
-        device_health_state_changed_callback,
-    ):
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         :param device_health_state_changed_callback: a callback that we
@@ -129,13 +131,13 @@ class TestMccsTile:
         ],
     )
     def test_component_attribute(
-        self,
-        tile_device,
-        device_state_changed_callback,
-        device_admin_mode_changed_callback,
-        attribute,
-        initial_value,
-        write_value,
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        device_state_changed_callback: MockChangeEventCallback,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        attribute: str,
+        initial_value: Any,
+        write_value: Any,
     ) -> None:
         """
         Test device attributes that map through to the component, and thus require the
@@ -144,7 +146,6 @@ class TestMccsTile:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_state_changed_callback: a callback that we can use
             to subscribe to state changes on the tile device
         :param device_admin_mode_changed_callback: a callback that
@@ -189,53 +190,61 @@ class TestMccsTile:
             tile_device.write_attribute(attribute, write_value)
             assert getattr(tile_device, attribute) == write_value
 
-    def test_cspDestinationIp(self, tile_device):
+    def test_cspDestinationIp(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the cspDestinationIp attribute.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         """
         assert tile_device.cspDestinationIp == ""
         tile_device.cspDestinationIp = "10.0.23.56"
         assert tile_device.cspDestinationIp == "10.0.23.56"
 
-    def test_cspDestinationMac(self, tile_device):
+    def test_cspDestinationMac(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the cspDestinationMac attribute.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         """
         assert tile_device.cspDestinationMac == ""
         tile_device.cspDestinationMac = "10:fe:fa:06:0b:99"
         assert tile_device.cspDestinationMac == "10:fe:fa:06:0b:99"
 
-    def test_cspDestinationPort(self, tile_device):
+    def test_cspDestinationPort(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the cspDestinationPort attribute.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         """
         assert tile_device.cspDestinationPort == 0
         tile_device.cspDestinationPort = 4567
         assert tile_device.cspDestinationPort == 4567
 
-    def test_antennaIds(self, tile_device):
+    def test_antennaIds(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the antennaIds attribute.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         """
         assert tuple(tile_device.antennaIds) == tuple()
         new_ids = tuple(range(8))
@@ -346,26 +355,23 @@ class TestMccsTileCommands:
         ],
     )
     def test_command_not_implemented(
-        self,
-        tile_device,
-        device_admin_mode_changed_callback,
-        device_command,
-        arg,
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_command: str,
+        arg: Any,
+    ) -> None:
         """
         A very weak test for commands that are not implemented yet.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
         :param device_command: the name of the device command under test
-        :type device_command: str
         :param arg: argument to the command (optional)
-        :type arg: str
         """
         tile_device.add_change_event_callback(
             "adminMode",
@@ -396,19 +402,18 @@ class TestMccsTileCommands:
             _ = getattr(tile_device, device_command)(*args)
 
     def test_On(
-        self,
-        tile_device,
-        device_admin_mode_changed_callback,
-        mock_subrack_device_proxy,
-        subrack_tpm_id,
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        mock_subrack_device_proxy: MccsDeviceProxy,
+        subrack_tpm_id: int,
+    ) -> None:
         """
         Test for On.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -450,17 +455,16 @@ class TestMccsTileCommands:
         assert tile_device.state() == tango.DevState.ON
 
     def test_Initialise(
-        self,
-        tile_device,
-        device_admin_mode_changed_callback,
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for Initialise.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -494,8 +498,10 @@ class TestMccsTileCommands:
         assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
 
     def test_GetFirmwareAvailable(
-        self, tile_device, device_admin_mode_changed_callback
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for:
 
@@ -506,7 +512,6 @@ class TestMccsTileCommands:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -546,7 +551,11 @@ class TestMccsTileCommands:
         minor = firmware_available[firmware_name]["minor"]
         assert tile_device.firmwareVersion == f"{major}.{minor}"
 
-    def test_DownloadFirmware(self, tile_device, device_admin_mode_changed_callback):
+    def test_DownloadFirmware(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for DownloadFirmware. Also functions as the test for the isProgrammed and
         the firmwareName properties.
@@ -554,7 +563,6 @@ class TestMccsTileCommands:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -585,8 +593,10 @@ class TestMccsTileCommands:
         assert tile_device.firmwareName == bitfile
 
     def test_MissingDownloadFirmwareFile(
-        self, tile_device, device_admin_mode_changed_callback
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for a missing firmware download. Also functions as the test for the
         isProgrammed and the firmwareName properties.
@@ -594,7 +604,6 @@ class TestMccsTileCommands:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -625,14 +634,17 @@ class TestMccsTileCommands:
         assert not tile_device.isProgrammed
         assert tile_device.firmwareName == existing_firmware_name
 
-    def test_GetRegisterList(self, tile_device, device_admin_mode_changed_callback):
+    def test_GetRegisterList(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for GetRegisterList.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -658,14 +670,17 @@ class TestMccsTileCommands:
             StaticTpmSimulator.REGISTER_MAP[0].keys()
         )
 
-    def test_ReadRegister(self, tile_device, device_admin_mode_changed_callback):
+    def test_ReadRegister(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for ReadRegister.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -706,14 +721,17 @@ class TestMccsTileCommands:
             ):
                 _ = tile_device.ReadRegister(bad_json_arg)
 
-    def test_WriteRegister(self, tile_device, device_admin_mode_changed_callback):
+    def test_WriteRegister(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for WriteRegister.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -755,14 +773,17 @@ class TestMccsTileCommands:
             ):
                 _ = tile_device.WriteRegister(bad_json_arg)
 
-    def test_ReadAddress(self, tile_device, device_admin_mode_changed_callback):
+    def test_ReadAddress(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for ReadAddress.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -792,7 +813,11 @@ class TestMccsTileCommands:
         with pytest.raises(tango.DevFailed):
             _ = tile_device.ReadAddress([address])
 
-    def test_WriteAddress(self, tile_device, device_admin_mode_changed_callback):
+    def test_WriteAddress(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for WriteAddress.
 
@@ -804,7 +829,6 @@ class TestMccsTileCommands:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -830,7 +854,11 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert message == MccsTile.WriteAddressCommand.SUCCEEDED_MESSAGE
 
-    def test_Configure40GCore(self, tile_device, device_admin_mode_changed_callback):
+    def test_Configure40GCore(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for.
 
@@ -841,7 +869,6 @@ class TestMccsTileCommands:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -916,20 +943,22 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize("channels", (2, 3))
     @pytest.mark.parametrize("frequencies", (1, 2, 3))
     def test_SetChanneliserTruncation(
-        self, tile_device, device_admin_mode_changed_callback, channels, frequencies
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        channels: int,
+        frequencies: int,
+    ) -> None:
         """
         Test for SetChanneliserTruncation.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
         :param channels: number of channels to set
-        :type channels: int
         :param frequencies: number of frequencies to set
         """
         tile_device.add_change_event_callback(
@@ -949,7 +978,9 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
 
-        array = [channels] + [frequencies] + [1.0] * (channels * frequencies)
+        array: list[float] = (
+            [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
+        )
 
         with pytest.raises(tango.DevFailed, match="NotImplementedError"):
             _ = tile_device.SetChanneliserTruncation(array)
@@ -959,15 +990,16 @@ class TestMccsTileCommands:
             _ = tile_device.SetChanneliserTruncation(array + [1.0])
 
     def test_LoadCalibrationCoefficients(
-        self, tile_device, device_admin_mode_changed_callback
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for LoadCalibrationCoefficients.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -989,7 +1021,7 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
 
-        antenna = 2
+        antenna = float(2)
         complex_coefficients = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
         ] * 5
@@ -1007,15 +1039,16 @@ class TestMccsTileCommands:
             _ = tile_device.LoadCalibrationCoefficients(coefficients[0:16])
 
     def test_LoadCalibrationCurve(
-        self, tile_device, device_admin_mode_changed_callback
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for LoadCalibrationCurve.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
@@ -1044,7 +1077,9 @@ class TestMccsTileCommands:
         ] * 5
         inp = list(itertools.chain.from_iterable(complex_coefficients))
         out = [[v.real, v.imag] for v in inp]
-        coefficients = [antenna] + [beam] + list(itertools.chain.from_iterable(out))
+        coefficients: list[float] = (
+            [float(antenna)] + [float(beam)] + list(itertools.chain.from_iterable(out))
+        )
 
         with pytest.raises(tango.DevFailed, match="NotImplementedError"):
             _ = tile_device.LoadCalibrationCurve(coefficients)
@@ -1058,8 +1093,12 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize("start_time", (None, 0))
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(
-        self, tile_device, device_admin_mode_changed_callback, start_time, duration
-    ):
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        start_time: Optional[int],
+        duration: Optional[int],
+    ) -> None:
         """
         Test for.
 
@@ -1070,14 +1109,11 @@ class TestMccsTileCommands:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type tile_device: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
         :param start_time: time to state the beamformer
-        :type start_time: int or None
         :param duration: duration of time that the beamformer should run
-        :type duration: int or None
         """
         tile_device.add_change_event_callback(
             "adminMode",

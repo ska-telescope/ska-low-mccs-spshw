@@ -85,8 +85,6 @@ def subrack_simulator() -> SubrackSimulator:
     Fixture that returns a TPM simulator.
 
     :return: a subrack simulator
-    :rtype:
-        :py:class:`ska_low_mccs.subrack.subrack_simulator.SubrackSimulator`
     """
     return SubrackSimulator()
 

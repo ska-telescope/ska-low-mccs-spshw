@@ -1,4 +1,3 @@
-# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -11,6 +10,7 @@
 """This module contains the tests of the cluster simulator."""
 from __future__ import annotations
 
+import logging
 from typing import Union
 
 import pytest
@@ -18,9 +18,9 @@ from _pytest.fixtures import SubRequest  # for type hinting
 
 from ska_tango_base.control_model import HealthState, SimulationMode
 
-from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus  # type: ignore[attr-defined]
 from ska_low_mccs.cluster_manager import (
-    ClusterComponentManager,
+    ClusterComponentManager,  # type: ignore[attr-defined]
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
@@ -43,7 +43,7 @@ class TestClusterCommon:
 
     @pytest.fixture(params=["cluster_simulator", "cluster_component_manager"])
     def cluster(
-        self,
+        self: TestClusterCommon,
         cluster_simulator: ClusterSimulator,
         cluster_simulator_component_manager: ClusterSimulatorComponentManager,
         cluster_component_manager: ClusterComponentManager,
@@ -71,6 +71,9 @@ class TestClusterCommon:
         :param request: A pytest object giving access to the requesting
             test context.
 
+        :raises ValueError:if fixture is parametrized with unrecognised
+            option
+
         :return: the hardware under test: a cluster manager or simulator
         """
         if request.param == "cluster_simulator":
@@ -81,6 +84,7 @@ class TestClusterCommon:
         elif request.param == "cluster_component_manager":
             cluster_component_manager.start_communicating()
             return cluster_component_manager
+        raise ValueError("Cluster fixture parametrized with unrecognised option")
 
     @pytest.mark.parametrize(
         "resource",
@@ -95,7 +99,7 @@ class TestClusterCommon:
         ),
     )
     def test_configuration(
-        self,
+        self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
         resource: str,
     ) -> None:
@@ -112,10 +116,10 @@ class TestClusterCommon:
         "status", ["errored", "failed", "finished", "killed", "lost"]
     )
     def test_closed_jobs_stats(
-        self,
+        self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
         status: str,
-    ):
+    ) -> None:
         """
         Test the stats on closed jobs.
 
@@ -137,7 +141,7 @@ class TestClusterCommon:
         "status", ("staging", "starting", "running", "killing", "unreachable")
     )
     def test_open_jobs_stats(
-        self,
+        self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
         status: str,
     ) -> None:
@@ -183,7 +187,7 @@ class TestClusterCommon:
         ),
     )
     def test_resource_stats(
-        self,
+        self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
         resource: str,
     ) -> None:
@@ -193,7 +197,6 @@ class TestClusterCommon:
         :param cluster: the simulated cluster
         :param resource: the name of the resource for which stats
             reporting is under test
-        :type resource: str
         """
         assert getattr(cluster, resource) == ClusterSimulator.RESOURCE_STATS[resource]
 
@@ -231,11 +234,11 @@ class TestClusterCommon:
         ),
     )
     def test_computed_resources(
-        self,
+        self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
         resource: str,
-        expected_value,
-    ):
+        expected_value: float,
+    ) -> None:
         """
         Test of resources that are computed.
 
@@ -243,12 +246,12 @@ class TestClusterCommon:
         :param resource: the name of the resource for which stats
             reporting is under test
         :param expected_value: the expected stat value for the resource
-        :type expected_value: int or float
         """
         assert getattr(cluster, resource) == expected_value
 
     def test_resources_relate(
-        self, cluster: Union[ClusterSimulator, ClusterComponentManager]
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that resources relate to each other as they should. For
@@ -279,7 +282,8 @@ class TestClusterCommon:
         )
 
     def test_ping_master_pool(
-        self, cluster: Union[ClusterSimulator, ClusterComponentManager]
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test the ping master node command. This command has not been implemented, so the
@@ -294,7 +298,8 @@ class TestClusterCommon:
             assert cluster.ping_master_pool() is None
 
     def test_shadow_master_pool_status(
-        self, cluster: Union[ClusterSimulator, ClusterComponentManager]
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that the shadow master pool status.
@@ -310,7 +315,8 @@ class TestClusterCommon:
         )
 
     def test_submit_job(
-        self, cluster: Union[ClusterSimulator, ClusterComponentManager]
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that when we submit a job, we get a job id for it, and the status of the
@@ -323,7 +329,8 @@ class TestClusterCommon:
         assert cluster.get_job_status(job_id) == JobStatus.STAGING
 
     def test_start_job(
-        self, cluster: Union[ClusterSimulator, ClusterComponentManager]
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that when we start a job, that job starts running.
@@ -342,7 +349,8 @@ class TestClusterCommon:
                     cluster.start_job(job_id)
 
     def test_stop_job(
-        self, cluster: Union[ClusterSimulator, ClusterComponentManager]
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that we can stop a job.
@@ -362,7 +370,9 @@ class TestClusterCommon:
 class TestClusterSimulator:
     """Contains tests specific to ClusterSimulator."""
 
-    def test_node_failure(self, cluster_simulator: ClusterSimulator) -> None:
+    def test_node_failure(
+        self: TestClusterSimulator, cluster_simulator: ClusterSimulator
+    ) -> None:
         """
         Test for the master node id is as expected, and that it changes if we simulate
         node failure.
@@ -403,7 +413,9 @@ class TestClusterSimulator:
 class TestClusterComponentManager:
     """Contains tests specific to ClusterComponentManager."""
 
-    def test_init_simulation_mode(self, logger) -> None:
+    def test_init_simulation_mode(
+        self: TestClusterComponentManager, logger: logging.Logger
+    ) -> None:
         """
         Test that we can't create a cluster manager that's not in simulation mode.
 
@@ -424,7 +436,8 @@ class TestClusterComponentManager:
             )
 
     def test_simulation_mode(
-        self, cluster_component_manager: ClusterComponentManager
+        self: TestClusterComponentManager,
+        cluster_component_manager: ClusterComponentManager,
     ) -> None:
         """
         Test that we can't take the cluster manager out of simulation mode.

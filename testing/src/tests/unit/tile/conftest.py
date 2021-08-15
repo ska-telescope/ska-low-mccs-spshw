@@ -34,7 +34,7 @@ from ska_low_mccs.tile import (
 )
 from ska_low_mccs.tile.tile_component_manager import _SubrackProxy
 
-from ska_low_mccs.testing import TangoHarness  # type: ignore[attr-defined]
+from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
     MockCallable,
     MockChangeEventCallback,

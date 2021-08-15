@@ -1,4 +1,3 @@
-# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,13 +7,17 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """This module contains the tests for the ska_low_mccs.point_station module."""
+from __future__ import annotations
 
 import pytest
 
 import numpy as np
 from astropy.time.core import Time
 
-from ska_low_mccs.station import point_station
+from ska_low_mccs.station.point_station import (  # type:ignore[attr-defined]
+    Pointing,
+    StationInformation,
+)
 
 locationsfile = "testing/data/AAVS2_loc_italia_190429.txt"
 outputfile = "testing/results/pointingtest.txt"
@@ -24,9 +27,9 @@ stat_lat, stat_lon, stat_height = (-26.82472208, 116.7644482, 346.59)
 class TestPointStation:
     """Tests of point_station.py."""
 
-    def test_create_pointing(self):
+    def test_create_pointing(self: TestPointStation) -> None:
         """Test pointing class instance and the supporting StationInformation object."""
-        station = point_station.StationInformation()
+        station = StationInformation()
         # Load standard AAVS displacements
         station.load_displacements(locationsfile)
         # Exercise bounds checks
@@ -45,7 +48,7 @@ class TestPointStation:
         assert station.latitude == stat_lat
         assert station.longitude == stat_lon
         assert station.ellipsoidalheight == stat_height
-        pointing = point_station.Pointing(station)
+        pointing = Pointing(station)
 
         point_kwargs = {
             "altitude": "90.0d",

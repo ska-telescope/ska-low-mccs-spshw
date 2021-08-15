@@ -1,4 +1,3 @@
-# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -11,6 +10,8 @@
 This module contains the tests for the
 :py:mod:`ska_low_mccs.apiu.demo_apiu_device` module.
 """
+from __future__ import annotations
+
 import time
 
 import pytest
@@ -18,16 +19,17 @@ import pytest
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.apiu.demo_apiu_device import DemoAPIU
+from ska_low_mccs.apiu.demo_apiu_device import DemoAPIU  # type: ignore[attr-defined]
+
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load():
+def device_to_load() -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -42,7 +44,10 @@ class TestDemoAPIU:
     """This class contains the tests for the DemoAPIU device class."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness):
+    def device_under_test(
+        self: TestDemoAPIU,
+        tango_harness: TangoHarness,
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -52,7 +57,10 @@ class TestDemoAPIU:
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test(self, device_under_test):
+    def test(
+        self: TestDemoAPIU,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test:
 
@@ -62,15 +70,13 @@ class TestDemoAPIU:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
 
-        def assert_powered(expected):
+        def assert_powered(expected: list[bool]) -> None:
             """
             Helper function to assert the power mode of each TPM.
 
             :param expected: the expected power mode of each TPM
-            :type expected: list(bool)
             """
             assert [
                 device_under_test.read_attribute(f"isAntenna{antenna_id}Powered").value

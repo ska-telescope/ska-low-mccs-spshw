@@ -1,4 +1,3 @@
-# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -19,15 +18,16 @@ import tango
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load():
+def device_to_load() -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -41,7 +41,10 @@ class TestMccsSubarrayBeam(object):
     """Test class for MccsSubarrayBeam tests."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness):
+    def device_under_test(
+        self: TestMccsSubarrayBeam,
+        tango_harness: TangoHarness,
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -51,14 +54,17 @@ class TestMccsSubarrayBeam(object):
         """
         return tango_harness.get_device("low-mccs/subarraybeam/01")
 
-    def test_healthState(self, device_under_test, device_health_state_changed_callback):
+    def test_healthState(
+        self: TestMccsSubarrayBeam,
+        device_under_test: MccsDeviceProxy,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -82,12 +88,12 @@ class TestMccsSubarrayBeam(object):
         ],
     )
     def test_attributes(
-        self,
+        self: TestMccsSubarrayBeam,
         device_under_test: MccsDeviceProxy,
         attribute: str,
         initial_value: Any,
         write_value: Any,
-    ):
+    ) -> None:
         """
         Test attribute values.
 
@@ -115,7 +121,7 @@ class TestMccsSubarrayBeam(object):
             assert getattr(device_under_test, attribute) == write_value
 
     def test_stationIds(
-        self,
+        self: TestMccsSubarrayBeam,
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
@@ -142,10 +148,10 @@ class TestMccsSubarrayBeam(object):
 
     @pytest.mark.parametrize("attribute", ["channels", "antennaWeights", "phaseCentre"])
     def test_empty_list_attributes(
-        self,
+        self: TestMccsSubarrayBeam,
         device_under_test: MccsDeviceProxy,
         attribute: str,
-    ):
+    ) -> None:
         """
         Test attribute values for attributes that return lists of floats.
 
@@ -167,7 +173,7 @@ class TestMccsSubarrayBeam(object):
         assert getattr(device_under_test, attribute) is None
 
     def test_desired_pointing(
-        self,
+        self: TestMccsSubarrayBeam,
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """

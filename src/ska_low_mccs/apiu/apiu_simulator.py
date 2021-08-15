@@ -243,7 +243,7 @@ class ApiuSimulator(ObjectComponent):
 
     def set_antenna_power_changed_callback(
         self: ApiuSimulator,
-        antenna_power_changed_callback: Callable[[list[bool]], None],
+        antenna_power_changed_callback: Optional[Callable[[list[bool]], None]],
     ) -> None:
         """
         Set the power changed callback.

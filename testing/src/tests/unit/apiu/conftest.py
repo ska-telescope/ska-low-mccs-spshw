@@ -77,7 +77,8 @@ def initial_power_mode() -> PowerMode:
 @pytest.fixture()
 def apiu_simulator(
     apiu_antenna_count: int,
-    component_fault_callback: MockCallable,
+    initial_fault: bool = False,
+    #    component_fault_callback: MockCallable,
 ) -> ApiuSimulator:
     """
     Return an APIU simulator.
@@ -85,14 +86,17 @@ def apiu_simulator(
     (This is a pytest fixture.)
 
     :param apiu_antenna_count: the number of antennas in the APIU
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param initial_fault: whether the simulator should start by
+        simulating a fault.
 
     :return: an APIU simulator
     """
+    #     :param component_fault_callback: callback to be called when the
+    #         component faults (or stops faulting)
     return ApiuSimulator(
         apiu_antenna_count,
-        component_fault_callback,
+        initial_fault,
+        #        component_fault_callback,
     )
 
 

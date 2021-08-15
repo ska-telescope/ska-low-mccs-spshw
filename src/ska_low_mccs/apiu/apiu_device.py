@@ -11,7 +11,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Optional, TypeVar
+from typing import List, Optional, Tuple
 
 from tango.server import attribute, command, device_property
 
@@ -25,7 +25,7 @@ from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsAPIU", "main"]
 
-DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]  # type: ignore[misc]
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 def create_return(success: Optional[bool], action: str) -> tuple[ResultCode, str]:
@@ -89,7 +89,7 @@ class MccsAPIU(SKABaseDevice):
         )
 
     def init_command_objects(self: MccsAPIU) -> None:
-        """Initialises the command handlers for commands supported by this device."""
+        """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -111,7 +111,7 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self: MccsAPIU.InitCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
-            Initialises the attributes and properties of the :py:class:`.MccsAPIU`.
+            Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -227,7 +227,7 @@ class MccsAPIU(SKABaseDevice):
 
     def are_antennas_on_changed(self: MccsAPIU, are_antennas_on: list[bool]) -> None:
         """
-        Callback to be called whenever power to the antennas changes.
+        Handle power changes to the antennas.
 
         Responsible for updating the tango side of things i.e. making sure the
         attribute is up to date and events are pushed.
@@ -395,8 +395,7 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.IsAntennaOn` command functionality.
+            Implement :py:meth:`.MccsAPIU.IsAntennaOn` command functionality.
 
             :param argin: the logical antenna id of the antenna to power
                 up
@@ -426,9 +425,7 @@ class MccsAPIU(SKABaseDevice):
             self: MccsAPIU.PowerUpAntennaCommand, argin: int
         ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerUpAntenna`
-            command functionality.
+            Implement :py:meth:`.MccsAPIU.PowerUpAntenna` command functionality.
 
             :param argin: the logical antenna id of the antenna to power
                 up
@@ -468,9 +465,7 @@ class MccsAPIU(SKABaseDevice):
             self: MccsAPIU.PowerDownAntennaCommand, argin: int
         ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerDownAntenna`
-            command functionality.
+            Implement :py:meth:`.MccsAPIU.PowerDownAntenna` command functionality.
 
             :param argin: the logical antenna id of the antenna to power
                 down
@@ -512,9 +507,7 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self: MccsAPIU.PowerUpCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerUp` command
-            functionality.
+            Implement :py:meth:`.MccsAPIU.PowerUp` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -549,9 +542,7 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self: MccsAPIU.PowerDownCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerDown`
-            command functionality.
+            Implement :py:meth:`.MccsAPIU.PowerDown` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

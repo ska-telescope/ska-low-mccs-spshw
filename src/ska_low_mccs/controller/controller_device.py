@@ -12,7 +12,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import Optional
+from typing import List, Optional, Tuple
 
 # PyTango imports
 from tango.server import attribute, command, device_property
@@ -28,7 +28,7 @@ import ska_low_mccs.release as release
 
 __all__ = ["MccsController", "main"]
 
-DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]  # type: ignore[misc]
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 class MccsController(SKABaseDevice):

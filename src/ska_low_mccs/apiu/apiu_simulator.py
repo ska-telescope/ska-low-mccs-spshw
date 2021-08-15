@@ -102,7 +102,6 @@ class ApiuSimulator(ObjectComponent):
 
         :param antenna_count: number of antennas that are attached to
             this APIU simulator
-        :type antenna_count: int
         :param initial_fault: whether the simulator should start by
             simulating a fault.
         """
@@ -174,7 +173,7 @@ class ApiuSimulator(ObjectComponent):
         self._update_fault(is_faulty)
 
     @property
-    def voltage(self: APIUSimulator) -> float:
+    def voltage(self: ApiuSimulator) -> float:
         """
         Return my voltage.
 
@@ -182,7 +181,7 @@ class ApiuSimulator(ObjectComponent):
         """
         return self._voltage
 
-    def simulate_voltage(self: APIUSimulator, voltage: float) -> None:
+    def simulate_voltage(self: ApiuSimulator, voltage: float) -> None:
         """
         Simulate a change in APIU voltage.
 
@@ -191,7 +190,7 @@ class ApiuSimulator(ObjectComponent):
         self._voltage = voltage
 
     @property
-    def current(self: APIUSimulator) -> float:
+    def current(self: ApiuSimulator) -> float:
         """
         Return my current.
 
@@ -199,7 +198,7 @@ class ApiuSimulator(ObjectComponent):
         """
         return self._current
 
-    def simulate_current(self: APIUSimulator, current: float) -> None:
+    def simulate_current(self: ApiuSimulator, current: float) -> None:
         """
         Simulate a change in APIU current.
 
@@ -208,7 +207,7 @@ class ApiuSimulator(ObjectComponent):
         self._current = current
 
     @property
-    def temperature(self: APIUSimulator) -> float:
+    def temperature(self: ApiuSimulator) -> float:
         """
         Return my temperature.
 
@@ -216,7 +215,7 @@ class ApiuSimulator(ObjectComponent):
         """
         return self._temperature
 
-    def simulate_temperature(self: APIUSimulator, temperature: float) -> None:
+    def simulate_temperature(self: ApiuSimulator, temperature: float) -> None:
         """
         Simulate a change in APIU temperature.
 
@@ -226,7 +225,7 @@ class ApiuSimulator(ObjectComponent):
         self._temperature = temperature
 
     @property
-    def humidity(self: APIUSimulator) -> float:
+    def humidity(self: ApiuSimulator) -> float:
         """
         Return my humidity.
 
@@ -244,11 +243,11 @@ class ApiuSimulator(ObjectComponent):
 
     def set_antenna_power_changed_callback(
         self: ApiuSimulator,
-        antenna_power_changed_callback: Callable[[list[bool], None]],
+        antenna_power_changed_callback: Callable[[list[bool]], None],
     ) -> None:
-       """
+        """
         Set the power changed callback.
-        
+
         To be called when there is a change to the power mode of one or
         more antennas.
 
@@ -273,7 +272,7 @@ class ApiuSimulator(ObjectComponent):
             self._antenna_power_changed_callback(self.are_antennas_on())
 
     @property
-    def antenna_count(self: APIUSimulator):
+    def antenna_count(self: ApiuSimulator) -> int:
         """
         Return the number of antennas attached to this APIU.
 
@@ -281,7 +280,7 @@ class ApiuSimulator(ObjectComponent):
         """
         return len(self._antenna_data)
 
-    def are_antennas_on(self: APIUSimulator) -> Optional[list[bool]]:
+    def are_antennas_on(self: ApiuSimulator) -> list[bool]:
         """
         Return whether each antenna is powered or not.
 
@@ -290,7 +289,7 @@ class ApiuSimulator(ObjectComponent):
         return [antenna["power_mode"] == PowerMode.ON for antenna in self._antenna_data]
 
     @check_antenna_id
-    def is_antenna_on(self: APIUSimulator, antenna_id: int) -> bool:
+    def is_antenna_on(self: ApiuSimulator, antenna_id: int) -> bool:
         """
         Return whether a specified antenna is turned on.
 
@@ -302,7 +301,7 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.ON
 
     @check_antenna_id
-    def turn_off_antenna(self: APIUSimulator, antenna_id: int) -> ResultCode | None:
+    def turn_off_antenna(self: ApiuSimulator, antenna_id: int) -> ResultCode | None:
         """
         Turn off a specified antenna.
 
@@ -319,7 +318,7 @@ class ApiuSimulator(ObjectComponent):
         return ResultCode.OK
 
     @check_antenna_id
-    def turn_on_antenna(self: APIUSimulator, antenna_id: int) -> ResultCode | None:
+    def turn_on_antenna(self: ApiuSimulator, antenna_id: int) -> ResultCode | None:
         """
         Turn on a specified antenna.
 
@@ -335,7 +334,7 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_power_changed()
         return ResultCode.OK
 
-    def turn_off_antennas(self: APIUSimulator) -> ResultCode | None:
+    def turn_off_antennas(self: ApiuSimulator) -> ResultCode | None:
         """
         Turn off all antennas.
 
@@ -351,7 +350,7 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_power_changed()
         return ResultCode.OK
 
-    def turn_on_antennas(self: APIUSimulator) -> ResultCode | None:
+    def turn_on_antennas(self: ApiuSimulator) -> ResultCode | None:
         """
         Turn on all antennas.
 
@@ -366,7 +365,7 @@ class ApiuSimulator(ObjectComponent):
         return ResultCode.OK
 
     @check_antenna_id
-    def get_antenna_current(self: APIUSimulator, antenna_id: int) -> float:
+    def get_antenna_current(self: ApiuSimulator, antenna_id: int) -> float:
         """
         Get the current of a specified antenna.
 
@@ -383,7 +382,9 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["current"]
 
     @check_antenna_id
-    def simulate_antenna_current(self: APIUSimulator, antenna_id: int, current: float) -> None:
+    def simulate_antenna_current(
+        self: ApiuSimulator, antenna_id: int, current: float
+    ) -> None:
         """
         Simulate a change in antenna current.
 
@@ -399,7 +400,7 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_data[antenna_id - 1]["current"] = current
 
     @check_antenna_id
-    def get_antenna_voltage(self: APIUSimulator, antenna_id: int) -> float:
+    def get_antenna_voltage(self: ApiuSimulator, antenna_id: int) -> float:
         """
         Get the voltage of a specified antenna.
 
@@ -416,7 +417,9 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["voltage"]
 
     @check_antenna_id
-    def simulate_antenna_voltage(self: APIUSimulator, antenna_id: int, voltage: float) -> None:
+    def simulate_antenna_voltage(
+        self: ApiuSimulator, antenna_id: int, voltage: float
+    ) -> None:
         """
         Simulate a change in antenna voltage.
 
@@ -432,9 +435,7 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_data[antenna_id - 1]["voltage"] = voltage
 
     @check_antenna_id
-    def get_antenna_temperature(
-        self: APIUSimulator, logical_antenna_id: int
-    ) -> float:
+    def get_antenna_temperature(self: ApiuSimulator, antenna_id: int) -> float:
         """
         Get the temperature of a specified antenna.
 
@@ -450,9 +451,10 @@ class ApiuSimulator(ObjectComponent):
 
         return self._antenna_data[antenna_id - 1]["temperature"]
 
-
     @check_antenna_id
-    def simulate_antenna_temperature(self: APIUSimulator, antenna_id: int, temperature: float) -> None:
+    def simulate_antenna_temperature(
+        self: ApiuSimulator, antenna_id: int, temperature: float
+    ) -> None:
         """
         Simulate a change in antenna temperature.
 

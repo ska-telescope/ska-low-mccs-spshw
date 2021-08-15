@@ -13,7 +13,7 @@ testing and demonstrating the MCCS APIU device.
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from tango.server import attribute, command
 
@@ -23,7 +23,7 @@ from ska_tango_base.commands import ResultCode
 
 __all__ = ["DemoAPIU"]
 
-DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 class DemoAPIU(MccsAPIU):

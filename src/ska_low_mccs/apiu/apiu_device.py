@@ -11,11 +11,11 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Callable, Optional
+from typing import Optional, TypeVar
 
 from tango.server import attribute, command, device_property
 
-from ska_tango_base import SKABaseDevice, DeviceStateModel
+from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 
@@ -30,6 +30,8 @@ DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]  # type
 
 def create_return(success: Optional[bool], action: str) -> tuple[ResultCode, str]:
     """
+    Create a tuple with ResultCode and string message.
+
     Helper function to package up a boolean result into a
     (:py:class:`~ska_tango_base.commands.ResultCode`, message) tuple.
 
@@ -107,7 +109,7 @@ class MccsAPIU(SKABaseDevice):
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for the MCCS APIU device."""
 
-        def do(self: MccsAPIU.InitCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsAPIU.InitCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
             Initialises the attributes and properties of the :py:class:`.MccsAPIU`.
 
@@ -218,20 +220,21 @@ class MccsAPIU(SKABaseDevice):
 
         :param health: the new health value
         """
-        self._health_state: HealthState  # typehint only
         if self._health_state == health:
             return
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    def are_antennas_on_changed(self, are_antennas_on):
+    def are_antennas_on_changed(self: MccsAPIU, are_antennas_on: list[bool]) -> None:
         """
-        Callback to be called whenever power to the antennas changes; responsible for
-        updating the tango side of things i.e. making sure the attribute is up to date,
-        and events are pushed.
+        Callback to be called whenever power to the antennas changes.
 
-        :param are_antennas_on: whether each antenna is pwoered
+        Responsible for updating the tango side of things i.e. making sure the
+        attribute is up to date and events are pushed.
+
+        :param are_antennas_on: whether each antenna is powered
         """
+        self._are_antennas_on: list[bool]
         if self._are_antennas_on == are_antennas_on:
             return
         self._are_antennas_on = list(are_antennas_on)
@@ -390,7 +393,7 @@ class MccsAPIU(SKABaseDevice):
     class IsAntennaOnCommand(BaseCommand):
         """The command class for the IsAntennaOn command."""
 
-        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:
+        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
             """
             Stateless hook for implementation of
             :py:meth:`.MccsAPIU.IsAntennaOn` command functionality.
@@ -404,7 +407,7 @@ class MccsAPIU(SKABaseDevice):
             return component_manager.is_antenna_on(argin)
 
     @command(dtype_in="DevULong", dtype_out=bool)
-    def IsAntennaOn(self: MccsAPIU, argin: int) -> bool:
+    def IsAntennaOn(self: MccsAPIU, argin: int) -> bool:  # type: ignore[override]
         """
         Power up the antenna.
 
@@ -419,9 +422,9 @@ class MccsAPIU(SKABaseDevice):
     class PowerUpAntennaCommand(ResponseCommand):
         """The command class for the PowerDownAntenna command."""
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsAPIU.PowerUpAntennaCommand, argin: int
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for implementation of
             :py:meth:`.MccsAPIU.PowerUpAntenna`
@@ -461,7 +464,7 @@ class MccsAPIU(SKABaseDevice):
     class PowerDownAntennaCommand(ResponseCommand):
         """The command class for the PowerDownAntenna command."""
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsAPIU.PowerDownAntennaCommand, argin: int
         ) -> tuple[ResultCode, str]:
             """
@@ -507,7 +510,7 @@ class MccsAPIU(SKABaseDevice):
         powered by this APIU.
         """
 
-        def do(self: MccsAPIU.PowerUpCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsAPIU.PowerUpCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
             Stateless hook for implementation of
             :py:meth:`.MccsAPIU.PowerUp` command
@@ -544,7 +547,7 @@ class MccsAPIU(SKABaseDevice):
         powered by this APIU.
         """
 
-        def do(self: MccsAPIU.PowerDownCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsAPIU.PowerDownCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
             Stateless hook for implementation of
             :py:meth:`.MccsAPIU.PowerDown`

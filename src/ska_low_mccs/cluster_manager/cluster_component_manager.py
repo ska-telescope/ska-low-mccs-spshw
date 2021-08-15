@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast
+from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 
@@ -31,11 +31,13 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: ClusterSimulatorComponentManager,
         logger: logging.Logger,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        power_mode_changed_callback: Callable[[PowerMode], None],
-        fault_callback: Callable[[bool], None],
-        shadow_master_pool_node_health_changed_callback: Callable[
-            [list[HealthState]], None
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
+        power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        fault_callback: Optional[Callable[[bool], None]],
+        shadow_master_pool_node_health_changed_callback: Optional[
+            Callable[[list[HealthState]], None]
         ],
     ) -> None:
         self._fault_callback = fault_callback
@@ -60,7 +62,8 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
 
         :param health: the healths of each node in the shadow master pool.
         """
-        self._shadow_master_pool_node_health_changed_callback(health)
+        if self._shadow_master_pool_node_health_changed_callback is not None:
+            self._shadow_master_pool_node_health_changed_callback(health)
 
     def component_shadow_master_pool_node_health_changed(
         self: ClusterSimulatorComponentManager, health: list[HealthState]
@@ -171,11 +174,13 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         self: ClusterComponentManager,
         logger: logging.Logger,
         initial_simulation_mode: SimulationMode,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerMode], None],
-        component_fault_callback: Callable[[bool], None],
-        component_shadow_master_pool_node_health_changed_callback: Callable[
-            [list[HealthState]], None
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
+        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        component_fault_callback: Optional[Callable[[bool], None]],
+        component_shadow_master_pool_node_health_changed_callback: Optional[
+            Callable[[list[HealthState]], None]
         ],
     ) -> None:
         """

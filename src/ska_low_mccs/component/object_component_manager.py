@@ -43,7 +43,9 @@ class ObjectComponentManager(MessageQueueComponentManager):
         self: ObjectComponentManager,
         component: ObjectComponent,
         logger: logging.Logger,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,

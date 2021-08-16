@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, cast, Type
+from typing import Callable, cast
 import unittest.mock
 
 import pytest

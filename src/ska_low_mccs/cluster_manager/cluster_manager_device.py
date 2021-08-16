@@ -57,7 +57,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
     def _init_state_model(self: MccsClusterManagerDevice) -> None:
         """Initialise the state model."""
         super()._init_state_model()
-        self._health_state = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_state: Optional[
+            HealthState
+        ] = None  # SKABaseDevice.InitCommand.do() does this too late.
         self._health_model = ClusterHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
@@ -203,7 +205,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
 
-    def health_changed(self: MccsClusterManagerDevice, health: HealthState):
+    def health_changed(self: MccsClusterManagerDevice, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 

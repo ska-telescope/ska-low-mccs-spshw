@@ -233,7 +233,7 @@ class ClusterSimulator(ObjectComponent):
         """
         self._fault_callback = fault_callback
         if fault_callback is not None:
-            fault_callback(self.faulty)
+            fault_callback(self._faulty)
 
     def set_shadow_master_pool_node_health_changed_callback(
         self: ClusterSimulator,
@@ -269,7 +269,7 @@ class ClusterSimulator(ObjectComponent):
             )
 
     @property
-    def faulty(self: ObjectComponent) -> bool:
+    def faulty(self: ClusterSimulator) -> bool:
         """
         Return whether this component is faulty.
 
@@ -708,7 +708,7 @@ class ClusterSimulator(ObjectComponent):
                 self._faulty = False
                 self.component_fault(False)
 
-    def component_fault(self, faulty) -> None:
+    def component_fault(self: ClusterSimulator, faulty: bool) -> None:
         """
         Handle notification that the component has faulted.
 

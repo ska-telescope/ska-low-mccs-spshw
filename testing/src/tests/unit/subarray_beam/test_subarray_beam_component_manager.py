@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable, Union
 
 import pytest
-from _pytest.fixtures import SubRequest  # type: ignore[import]
+from _pytest.fixtures import SubRequest
 
 from ska_low_mccs.subarray_beam import (
     SubarrayBeam,

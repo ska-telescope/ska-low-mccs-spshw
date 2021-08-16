@@ -1,5 +1,6 @@
-# type: ignore
 """This module contains the BDD tests for TMC-MCCS interactions."""
+from __future__ import annotations
+
 # import json
 # import time
 
@@ -10,9 +11,9 @@ import tango
 # from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode  # , HealthState, ObsState
 
-# from ska_low_mccs import MccsDeviceProxy
+from ska_low_mccs import MccsDeviceProxy
 
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 # from ska_low_mccs.testing.tango_harness import TangoHarness
 
@@ -21,17 +22,17 @@ from ska_low_mccs.testing.mock import MockCallable
     "features/controller_subarray_interactions.feature", "MCCS Start up low telescope"
 )
 def test_start_up_low_telescope(
-    controller, subarrays, stations, controller_device_state_changed_callback
-):
+    controller: MccsDeviceProxy,
+    subarrays: dict[int, MccsDeviceProxy],
+    stations: dict[int, MccsDeviceProxy],
+    controller_device_state_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
     :param controller: a proxy to the controller device
-    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param subarrays: proxies to the subarray devices, keyed by number
-    :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
-    :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param controller_device_state_changed_callback: a callback to be
         used to subscribe to controller state change
     """
@@ -55,42 +56,33 @@ def test_start_up_low_telescope(
 
 @given(parsers.parse("we have mvplow running an instance of {subsystem_name}"))
 def we_have_mvplow_running_an_instance_of(
-    subsystem_name,
-    controller,
-    controller_device_state_changed_callback: MockCallable,
-    subrack,
-    subarrays,
-    subarray_beams,
-    stations,
-    station_beams,
-    apius,
-    tiles,
-    antennas,
-):
+    subsystem_name: str,
+    controller: MccsDeviceProxy,
+    controller_device_state_changed_callback: MockChangeEventCallback,
+    subrack: MccsDeviceProxy,
+    subarrays: dict[int, MccsDeviceProxy],
+    subarray_beams: dict[int, MccsDeviceProxy],
+    stations: dict[int, MccsDeviceProxy],
+    station_beams: dict[int, MccsDeviceProxy],
+    apius: dict[int, MccsDeviceProxy],
+    tiles: dict[int, MccsDeviceProxy],
+    antennas: dict[int, MccsDeviceProxy],
+) -> None:
     """
     Asserts the existence/availability of a subsystem.
 
     :param subsystem_name: name of the subsystem
-    :type subsystem_name: str
     :param controller: a proxy to the controller device
-    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param controller_device_state_changed_callback: a callback to be
         used to subscribe to controller state change
     :param subrack: a proxy to the subrack device
     :param subarrays: proxies to the subarray devices, keyed by number
-    :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param subarray_beams: proxies to the subarray beam devices, keyed by number
-    :type subarray_beams: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
-    :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param station_beams: proxies to the station beam devices, keyed by number
-    :type station_beams: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param apius: proxies to the apiu devices, keyed by number
-    :type apius: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param tiles: proxies to the tile devices, keyed by number
-    :type tiles: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param antennas: proxies to the antenna devices, keyed by number
-    :type antennas: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     assert subsystem_name in ["mccs", "tmc"]
 
@@ -143,17 +135,16 @@ def we_have_mvplow_running_an_instance_of(
 
 @given(parsers.parse("{subsystem_name} is ready to {direction} a startup command"))
 def subsystem_is_ready_to_receive_a_startup_command(
-    controller, subsystem_name, direction
-):
+    subsystem_name: str,
+    direction: str,
+    controller: MccsDeviceProxy,
+) -> None:
     """
     Asserts that a subsystem is ready to receive an on command.
 
     :param controller: a proxy to the controller device
-    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param subsystem_name: name of the subsystem
-    :type subsystem_name: str
     :param direction: direction of communication
-    :type direction: str
 
     :raises AssertionError: if passed an unknown subsystem
     """
@@ -166,30 +157,29 @@ def subsystem_is_ready_to_receive_a_startup_command(
 
 
 @when(parsers.parse("tmc tells mccs controller to start up"))
-def tmc_tells_mccs_controller_to_start_up(controller):
+def tmc_tells_mccs_controller_to_start_up(controller: MccsDeviceProxy) -> None:
     """
     Start up the MCCS subsystem.
 
     :param controller: a proxy to the controller device
-    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
     controller.On()
 
 
 @then(parsers.parse("mccs controller state is {state_name}"))
 def check_mccs_controller_state(
-    controller, controller_device_state_changed_callback, state_name
-):
+    state_name: str,
+    controller: MccsDeviceProxy,
+    controller_device_state_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Asserts that mccs controller is on/off.
 
     :param controller: a proxy to the controller device
-    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param controller_device_state_changed_callback: a callback to be
         used to subscribe to controller state change
     :param state_name: asserted state of the device -- either "off" or
         "on"
-    :type state_name: str
     """
     state_map = {
         "off": tango.DevState.OFF,
@@ -201,15 +191,16 @@ def check_mccs_controller_state(
 
 
 @then(parsers.parse("all mccs station states are {state}"))
-def all_mccs_station_states_are_onoff(stations, state_name):
+def all_mccs_station_states_are_onoff(
+    state_name: str,
+    stations: dict[int, MccsDeviceProxy],
+) -> None:
     """
     Asserts that online or maintenance mccs station devices are on/off.
 
     :param stations: proxies to the station devices, keyed by number
-    :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param state_name: asserted state of the device -- either "off" or
         "on"
-    :type state_name: str
     """
     state_map = {
         "off": tango.DevState.OFF,

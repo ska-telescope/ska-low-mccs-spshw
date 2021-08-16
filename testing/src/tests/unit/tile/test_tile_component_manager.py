@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -12,11 +11,12 @@
 from __future__ import annotations
 
 import time
-from typing import Union
+from typing import Any, Union
 import unittest.mock
 
 import pytest
-from _pytest.fixtures import SubRequest  # type: ignore[import]
+import pytest_mock
+from _pytest.fixtures import SubRequest
 import tango
 
 from ska_tango_base.commands import ResultCode
@@ -274,7 +274,7 @@ class TestStaticSimulatorCommon:
         return tango.DevState.ON
 
     @pytest.fixture()
-    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> PowerMode.ON:
+    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> PowerMode:
         """
         Return the initial power mode of the TPM.
 
@@ -339,6 +339,9 @@ class TestStaticSimulatorCommon:
         :param request: A pytest object giving access to the requesting test
             context.
 
+        :raises ValueError:if fixture is parametrized with unrecognised
+            option
+
         :return: the tile class object under test
         """
         if request.param == "static_tpm_simulator":
@@ -361,6 +364,7 @@ class TestStaticSimulatorCommon:
             tile_component_manager.on()
             time.sleep(0.1)
             return tile_component_manager
+        raise ValueError("Tile fixture parametrized with unrecognised option")
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -382,20 +386,27 @@ class TestStaticSimulatorCommon:
             ("register_list", list(StaticTpmSimulator.REGISTER_MAP[0].keys())),
         ),
     )
-    def test_read_attribute(self, tile, attribute_name, expected_value):
+    def test_read_attribute(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        attribute_name: str,
+        expected_value: Any,
+    ) -> None:
         """
         Tests that read-only attributes take certain known initial values. This is a
         weak test; over time we should find ways to more thoroughly test each of these
         independently.
 
         :param tile: the tile class object under test.
-        :type tile: object
         :param attribute_name: the name of the attribute under test
-        :type attribute_name: str
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
             "==" equality test.
-        :type expected_value: object
         """
         assert getattr(tile, attribute_name) == expected_value
 
@@ -404,8 +415,17 @@ class TestStaticSimulatorCommon:
         (("phase_terminal_count", StaticTpmSimulator.PHASE_TERMINAL_COUNT, [1, 2]),),
     )
     def test_write_attribute(
-        self, tile, attribute_name, initial_value, values_to_write
-    ):
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        attribute_name: str,
+        initial_value: Any,
+        values_to_write: list,
+    ) -> None:
         """
         Tests that read-write attributes take certain known initial values, and that
         their values can be updated.
@@ -414,18 +434,14 @@ class TestStaticSimulatorCommon:
         thoroughly test each of these independently.
 
         :param tile: the tile class object under test.
-        :type tile: object
         :param attribute_name: the name of the attribute under test
-        :type attribute_name: str
         :param initial_value: the expected initial value of the
             attribute. This can be any type, but the test of the
             attribute is a simple "==" equality test.
-        :type initial_value: object
         :param values_to_write: a sequence of values to write, in order
             to check that the writes are sticking. The values can be of
             any type, but the test of the attribute is a simple "=="
             equality test.
-        :type values_to_write: list
         """
         assert getattr(tile, attribute_name) == initial_value
 
@@ -468,38 +484,60 @@ class TestStaticSimulatorCommon:
             ("check_pending_data_requests", 0),
         ),
     )
-    def test_command(self, mocker, tile, command_name, num_args):
+    def test_command(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        mocker: pytest_mock.mocker,
+        command_name: str,
+        num_args: int,
+    ) -> None:
         """
         Test of commands that aren't implemented yet. Since the comands don't really do
         anything, these tests simply check that the command can be called.
 
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: :py:class:`pytest_mock.mocker`
         :param tile: the tile class object under test.
-        :type tile: object
         :param command_name: the name of the command under test
-        :type command_name: str
         :param num_args: the number of args the command takes
-        :type num_args: int
         """
         args = [mocker.Mock()] * num_args
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)
 
-    def test_initialise(self, tile):
+    def test_initialise(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+    ) -> None:
         """
         Test of the initialise command, which programs the TPM.
 
         :param tile: the tile class object under test.
-        :type tile: object
-            :py:class:`~ska_low_mccs.tile.tile_hardware.TileHardwareManager`
         """
         assert not tile.is_programmed
         tile.initialise()
         assert tile.is_programmed
         assert tile.firmware_name == "itpm_v1_6.bit"
 
-    def test_download_firmware(self, tile, mocker):
+    def test_download_firmware(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        mocker: pytest_mock.mocker,
+    ) -> None:
         """
         Test of:
 
@@ -507,10 +545,7 @@ class TestStaticSimulatorCommon:
         * the is_programmed attribute
 
         :param tile: the tile class object under test.
-        :type tile: object
-            :py:class:`~ska_low_mccs.tile.tile_hardware.TileHardwareManager`
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: :py:class:`pytest_mock.mocker`
         """
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
@@ -522,17 +557,22 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize("read_offset", (0, 2))
     @pytest.mark.parametrize("read_length", (0, 4))
     @pytest.mark.parametrize("write_offset", (0, 3))
-    @pytest.mark.parametrize("write_values", ((), (1,), (2, 2)), ids=(0, 1, 2))
+    @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
     def test_read_and_write_register(
-        self,
-        tile,
-        device,
-        register,
-        read_offset,
-        read_length,
-        write_offset,
-        write_values,
-    ):
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        device: int,
+        register: str,
+        read_offset: int,
+        read_length: int,
+        write_offset: int,
+        write_values: list[int],
+    ) -> None:
         """
         Test of.
 
@@ -540,19 +580,12 @@ class TestStaticSimulatorCommon:
         * write_register command
 
         :param tile: the tile class object under test.
-        :type tile: object
         :param device: which FPGA is being addressed
-        :type device: int
         :param register: which register is being addressed
-        :type register: int
         :param read_offset: offset to start read at
-        :type read_offset: int
         :param read_length: length of read
-        :type read_length: int
         :param write_offset: offset to start write at
-        :type write_offset: int
         :param write_values: values to write to the register
-        :type write_values: list
         """
         buffer_size = max(read_offset + read_length, write_offset + len(write_values))
         buffer = [0] * buffer_size
@@ -565,18 +598,23 @@ class TestStaticSimulatorCommon:
             == expected_read
         )
 
-    @pytest.mark.parametrize("write_address", (9, 11))
-    @pytest.mark.parametrize("write_values", ((), (1,), (2, 2)), ids=(0, 1, 2))
-    @pytest.mark.parametrize("read_address", (10,))
-    @pytest.mark.parametrize("read_length", (0, 4))
+    @pytest.mark.parametrize("write_address", [9, 11])
+    @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
+    @pytest.mark.parametrize("read_address", [10])
+    @pytest.mark.parametrize("read_length", [0, 4])
     def test_read_and_write_address(
-        self,
-        tile,
-        write_address,
-        write_values,
-        read_address,
-        read_length,
-    ):
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        write_address: int,
+        write_values: list[int],
+        read_address: int,
+        read_length: int,
+    ) -> None:
         """
         Test of.
 
@@ -584,34 +622,26 @@ class TestStaticSimulatorCommon:
         * write_address command
 
         :param tile: the tile class object under test.
-        :type tile: object
         :param write_address: address to write to
-        :type write_address: int
         :param write_values: values to write
-        :type write_values: tuple
         :param read_address: address to read from
-        :type read_address: int
         :param read_length: length to read
-        :type read_length: int
         """
         min_address = min(read_address, write_address)
         max_address = max(read_address + read_length, write_address + len(write_values))
         buffer = [0] * (max_address - min_address)
 
-        def buffer_slice(address, length):
+        def buffer_slice(address: int, length: int) -> slice:
             """
             Helper function that returns a slice that tells you where to read from or
             write to the buffer.
 
             :param address: the start address being read from or written
                 to
-            :type address: int
             :param length: the size of the write or read
-            :type length: int
 
             :return: a buffer slice defining where in the buffer the
                 read or write should be applied
-            :rtype: :py:class:`slice`
             """
             return slice(address - min_address, address - min_address + length)
 
@@ -621,7 +651,15 @@ class TestStaticSimulatorCommon:
         tile.write_address(write_address, write_values)
         assert tile.read_address(read_address, read_length) == expected_read
 
-    def test_start_stop_beamformer(self, tile):
+    def test_start_stop_beamformer(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+    ) -> None:
         """
         Test of:
 
@@ -630,7 +668,6 @@ class TestStaticSimulatorCommon:
         * the is_beamformer_running attribute
 
         :param tile: the tile class object under test.
-        :type tile: object
         """
         assert not tile.is_beamformer_running
         tile.start_beamformer()
@@ -638,7 +675,15 @@ class TestStaticSimulatorCommon:
         tile.stop_beamformer()
         assert not tile.is_beamformer_running
 
-    def test_40g_configuration(self, tile):
+    def test_40g_configuration(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+    ) -> None:
         """
         Test of:
 
@@ -646,7 +691,6 @@ class TestStaticSimulatorCommon:
         * the get_40g_configuration command
 
         :param tile: the tile class object under test.
-        :type tile: object
         """
         assert tile.get_40g_configuration(-1, 0) == []
         assert tile.get_40g_configuration("mock_core_id") is None
@@ -704,7 +748,7 @@ class TestDynamicSimulatorCommon:
         return TestMode.NONE
 
     @pytest.fixture()
-    def initial_subrack_state(self: TestStaticSimulatorCommon) -> tango.DevState:
+    def initial_subrack_state(self: TestDynamicSimulatorCommon) -> tango.DevState:
         """
         Return the state in which the mock subrack should start.
 
@@ -717,7 +761,7 @@ class TestDynamicSimulatorCommon:
         return tango.DevState.ON
 
     @pytest.fixture()
-    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> PowerMode.ON:
+    def initial_tpm_power_mode(self: TestDynamicSimulatorCommon) -> PowerMode:
         """
         Return the initial power mode of the TPM.
 
@@ -772,6 +816,8 @@ class TestDynamicSimulatorCommon:
         :param request: A pytest object giving access to the requesting test
             context.
 
+        :raises ValueError: if parametrized with an unrecognised option
+
         :return: the tile class object under test
         """
         if request.param == "dynamic_tpm_simulator_component_manager":
@@ -785,6 +831,7 @@ class TestDynamicSimulatorCommon:
             time.sleep(0.1)
             tile_component_manager.on()
             return tile_component_manager
+        raise ValueError("Tile fixture parametrized with unrecognised option")
 
     @pytest.mark.parametrize(
         "attribute_name",
@@ -797,16 +844,20 @@ class TestDynamicSimulatorCommon:
         ),
     )
     def test_dynamic_attribute(
-        self: TestDynamicSimulatorCommon, tile, attribute_name
+        self: TestDynamicSimulatorCommon,
+        tile: Union[
+            DynamicTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        attribute_name: str,
     ) -> None:
         """
         Tests that dynamic attributes can be read, and that the are NOT equal to the
         static value assigned in the static dynamic simulator.
 
         :param tile: the tile class object under test.
-        :type tile: object
         :param attribute_name: the name of the attribute under test
-        :type attribute_name: str
         """
         attribute_value = getattr(tile, attribute_name)
         assert attribute_value is not None
@@ -831,7 +882,14 @@ class TestDynamicSimulatorCommon:
         ),
     )
     def test_read_static_attribute(
-        self: TestDynamicSimulatorCommon, tile, attribute_name, expected_value
+        self: TestDynamicSimulatorCommon,
+        tile: Union[
+            DynamicTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        attribute_name: str,
+        expected_value: Any,
     ) -> None:
         """
         Tests that read-only attributes take certain known initial values.
@@ -839,13 +897,10 @@ class TestDynamicSimulatorCommon:
         This test covers attributes that have not been made dynamic yet.
 
         :param tile: the tile class object under test.
-        :type tile: object
         :param attribute_name: the name of the attribute under test
-        :type attribute_name: str
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
             "==" equality test.
-        :type expected_value: object
         """
         assert getattr(tile, attribute_name) == expected_value
 
@@ -905,14 +960,19 @@ class TestDriverCommon:
         :param request: A pytest object giving access to the requesting test
             context.
 
+        :raises ValueError: if parametrized with an unrecognised option
+
         :return: the tile class object under test
         """
         if request.param == "tpm_driver":
             return tpm_driver
         elif request.param == "switching_tpm_component_manager":
             return switching_tpm_component_manager
+        raise ValueError("Tile fixture parametrized with unrecognised option")
 
-    def test_communication_fails(self: TestDriverCommon, tile) -> None:
+    def test_communication_fails(
+        self: TestDriverCommon, tile: Union[TpmDriver, SwitchingTpmComponentManager]
+    ) -> None:
         """
         Test was can create the driver but not start communication with the component.
 

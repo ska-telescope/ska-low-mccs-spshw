@@ -9,4 +9,4 @@
 
 __all__ = ["TangoHarness", "mock", "tango_harness"]
 
-from .tango_harness import TangoHarness  # type: ignore[attr-defined]
+from .tango_harness import TangoHarness

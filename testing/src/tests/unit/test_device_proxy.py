@@ -15,7 +15,7 @@ import pytest_mock
 
 from ska_low_mccs import MccsDeviceProxy
 
-from ska_low_mccs.testing.tango_harness import TangoHarness  # type: ignore[attr-defined]
+from ska_low_mccs.testing.tango_harness import TangoHarness
 
 
 class TestMccsDeviceProxy:
@@ -76,9 +76,7 @@ class TestMccsDeviceProxy:
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: :py:class:`pytest_mock.mocker`
         :param logger: the logger to be used by the object under test
-        :type logger: :py:class:`logging.Logger`
         """
         event_count = 3  # test should pass for any positive number
         fqdn = "mock/mock/1"

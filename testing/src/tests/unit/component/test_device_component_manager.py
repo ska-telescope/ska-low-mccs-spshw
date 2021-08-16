@@ -12,7 +12,7 @@ from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs.component import CommunicationStatus, DeviceComponentManager
 
-from ska_low_mccs.testing import TangoHarness  # type: ignore[attr-defined]
+from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockCallable
 
 

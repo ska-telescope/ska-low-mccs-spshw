@@ -16,7 +16,7 @@ import time
 from typing import Callable, Union, cast
 
 import pytest
-from _pytest.fixtures import SubRequest  # type: ignore[import]
+from _pytest.fixtures import SubRequest
 
 from ska_tango_base.control_model import PowerMode
 
@@ -103,7 +103,7 @@ class TestApiuCommon:
         :param request: A pytest object giving access to the requesting
             test context.
 
-        :raises AssertionError: if parametrized with an unrecognised option
+        :raises ValueError: if parametrized with an unrecognised option
 
         :return: the APIU class object under test
         """
@@ -120,7 +120,7 @@ class TestApiuCommon:
             time.sleep(0.1)
             apiu_component_manager.on()
             return apiu_component_manager
-        raise AssertionError("apiu fixture parametrized with unrecognised option")
+        raise ValueError("apiu fixture parametrized with unrecognised option")
 
     def test_apiu_properties(
         self: TestApiuCommon,
@@ -246,7 +246,6 @@ class TestApiuCommon:
             :param mode: whether all antennas are expected to be on or
                 off. If true, all antennas are expected to be on. If
                 false, all antennas are expected to be off.
-            :type mode: bool
             """
             are_antennas_on = apiu.are_antennas_on()
             if mode:

@@ -1,4 +1,3 @@
-# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,7 +7,10 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """This module contains the tests for the ska_low_mccs.utils module."""
+from __future__ import annotations
+
 import json
+from typing import Any
 
 import jsonschema
 import pytest
@@ -21,50 +23,45 @@ class TestUtils:
 
     # helper methods not tests
     @json_input()
-    def json_input_posargs_tester(self, stations, tiles):
+    def json_input_posargs_tester(
+        self: TestUtils, stations: list[str], tiles: list[str]
+    ) -> dict[str, list[str]]:
         """
         Helper method, takes arguments `stations` and `tiles` but decorated to take them
         as a JSON string encoding of a dictionary containing these keys.
 
         :param stations: value of "stations" key in JSON string
-        :type stations: list(str)
         :param tiles: value of "tiles" key in JSON string
-        :type tiles: list(str)
         :return: the args extracted from the json input string
-        :rtype: dict
         """
         return {"stations": stations, "tiles": tiles}
 
     @json_input()
-    def json_input_kwargs_tester(self, **kwargs):
+    def json_input_kwargs_tester(self: TestUtils, **kwargs: Any) -> dict[str, Any]:
         """
         Helper method, takes any arguments but decorated to take them as a JSON string
         encoding of a dictionary.
 
         :param kwargs: a dictionary of named arguments to this method
-        :type kwargs: dict
 
         :return: the kwargs extracted from the json input string
-        :rtype: dict
         """
         return kwargs
 
     @json_input("MccsController_Allocate_lax.json")
-    def json_input_schema_tester(self, **kwargs):
+    def json_input_schema_tester(self: TestUtils, **kwargs: Any) -> dict[str, Any]:
         """
         Helper method, takes any arguments but decorated to take them as a JSON string
         encoding of a dictionary. Additionally, this JSON string must validate against
         the specified schema.
 
         :param kwargs: a dictionary of named arguments to this method
-        :type kwargs: dict
 
         :return: the kwargs extracted from the json input string
-        :rtype: dict
         """
         return kwargs
 
-    def test_call_with_json_posargs(self):
+    def test_call_with_json_posargs(self: TestUtils) -> None:
         """Test for `call_with_json` with posargs provided."""
         arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
@@ -75,7 +72,7 @@ class TestUtils:
         )
         assert returned == arg_dict
 
-    def test_call_with_json_kwargs(self):
+    def test_call_with_json_kwargs(self: TestUtils) -> None:
         """Test for `call_with_json` with kwargs dictionary provided."""
         arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
@@ -87,25 +84,23 @@ class TestUtils:
         "json_arg_string",
         ['{"stations":["station1", "station2"],"tiles":["tile1", "tile2"]}'],
     )
-    def test_json_input_posargs(self, json_arg_string):
+    def test_json_input_posargs(self: TestUtils, json_arg_string: str) -> None:
         """
         Test for json_input decorator on a method defined with posargs.
 
         :param json_arg_string: a JSON string to be passed to the
             `json_input` decorator
-        :type json_arg_string: str
         """
         returned = self.json_input_posargs_tester(json_arg_string)
         assert returned == json.loads(json_arg_string)
 
     @pytest.mark.parametrize("json_arg_string", ["{}", '{"key": "value"}'])
-    def test_json_input_kwargs(self, json_arg_string):
+    def test_json_input_kwargs(self: TestUtils, json_arg_string: str) -> None:
         """
         Test for json_input decorator on a method defined with kwargs.
 
         :param json_arg_string: a JSON string to be passed to the
             `json_input` decorator
-        :type json_arg_string: str
         """
         returned = self.json_input_kwargs_tester(json_arg_string)
         assert returned == json.loads(json_arg_string)
@@ -117,13 +112,12 @@ class TestUtils:
             '{"subarray_id":16, "stations":["station1"]}',
         ],
     )
-    def test_json_input_schema(self, json_arg_string):
+    def test_json_input_schema(self: TestUtils, json_arg_string: str) -> None:
         """
         Test for method decorated with json_input with a schema.
 
         :param json_arg_string: a JSON string to be passed to the
             `json_input` decorator
-        :type json_arg_string: str
         """
         returned = self.json_input_schema_tester(json_arg_string)
         assert returned == json.loads(json_arg_string)
@@ -136,7 +130,7 @@ class TestUtils:
             '{"subarray_id":1, "stations":[]}',
         ],
     )
-    def test_json_input_schema_raises(self, json_arg_string):
+    def test_json_input_schema_raises(self: TestUtils, json_arg_string: str) -> None:
         """
         Test that a method decorated with @json_input with a schema argument will raise
         an exception on input that doesn't validate.
@@ -147,7 +141,6 @@ class TestUtils:
 
         :param json_arg_string: a JSON string to be passed to the
             `json_input` decorator
-        :type json_arg_string: str
         """
         with pytest.raises(jsonschema.ValidationError):
             self.json_input_schema_tester(json_arg_string)

@@ -1,9 +1,8 @@
-# type: ignore
 """Test for release module."""
 from ska_low_mccs import release
 
 
-def test_release():
+def test_release() -> None:
     """Test that all setup attributes have been set."""
     release_keys = [
         "author",

@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -23,11 +22,7 @@ from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
 
-from ska_low_mccs.testing.mock import (
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-    MockSubarrayBuilder,
-)
+from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import TangoHarness
 
 
@@ -37,7 +32,6 @@ def devices_to_load() -> dict[str, Any]:
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -66,7 +60,7 @@ def devices_to_load() -> dict[str, Any]:
 
 
 @pytest.fixture()
-def mock_subarray_factory() -> MockSubarrayBuilder:
+def mock_subarray_factory() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a factory for mock subarrays.
 
@@ -137,7 +131,9 @@ class TestPowerManagement:
         tests to use real subarray beam devices.
     """
 
-    def test_controller_state_rollup(self, tango_harness):
+    def test_controller_state_rollup(
+        self: TestPowerManagement, tango_harness: TangoHarness
+    ) -> None:
         """
         Test that changes to admin mode in subservient devices result in state changes
         which roll up to the controller.
@@ -147,7 +143,6 @@ class TestPowerManagement:
             the real thing. The only requirement is that it provide a
             ``get_device(fqdn)`` method that returns a
             :py:class:`tango.DeviceProxy`.
-        :type tango_harness: :py:class:`contextmanager`
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         station_1 = tango_harness.get_device("low-mccs/station/001")
@@ -279,10 +274,10 @@ class TestPowerManagement:
         assert controller.state() == tango.DevState.OFF
 
     def test_power_on_off(
-        self,
+        self: TestPowerManagement,
         tango_harness: TangoHarness,
         controller_device_state_changed_callback: MockChangeEventCallback,
-    ):
+    ) -> None:
         """
         Test that a MccsController device can enable an MccsSubarray device.
 

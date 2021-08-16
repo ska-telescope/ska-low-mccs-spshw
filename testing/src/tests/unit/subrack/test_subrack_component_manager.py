@@ -1,4 +1,3 @@
-# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -13,10 +12,10 @@
 from __future__ import annotations
 
 import time
-from typing import Union
+from typing import Any, Union
 
 import pytest
-from _pytest.fixtures import SubRequest  # type: ignore[import]
+from _pytest.fixtures import SubRequest
 
 from ska_tango_base.control_model import PowerMode
 
@@ -96,7 +95,7 @@ class TestSubrackCommon:
         :param request: A pytest object giving access to the requesting
             test context.
 
-        :raises AssertionError: if parametrized with an unrecognised option
+        :raises ValueError: if parametrized with an unrecognised option
 
         :return: the subrack class object under test
         """
@@ -113,7 +112,7 @@ class TestSubrackCommon:
             subrack_component_manager.on()
             time.sleep(0.1)
             return subrack_component_manager
-        raise AssertionError("subrack fixture parametrized with unrecognised option")
+        raise ValueError("subrack fixture parametrized with unrecognised option")
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -165,8 +164,16 @@ class TestSubrackCommon:
         ),
     )
     def test_read_attribute(
-        self, subrack: Union[SubrackSimulator], attribute_name, expected_value
-    ):
+        self: TestSubrackCommon,
+        subrack: Union[
+            SubrackSimulator,
+            SubrackSimulatorComponentManager,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        attribute_name: str,
+        expected_value: Any,
+    ) -> None:
         """
         Tests that read-only attributes take certain known initial values. This is a
         weak test; over time we should find ways to more thoroughly test each of these
@@ -174,11 +181,9 @@ class TestSubrackCommon:
 
         :param subrack: the subrack class object under test.
         :param attribute_name: the name of the attribute under test
-        :type attribute_name: str
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
             "==" equality test.
-        :type expected_value: object
         """
         subrack.turn_on_tpms()
         assert getattr(subrack, attribute_name) == expected_value
@@ -191,7 +196,16 @@ class TestSubrackCommon:
             "turn_off_tpms",
         ),
     )
-    def test_command(self, subrack: Union[SubrackSimulator], command_name):
+    def test_command(
+        self: TestSubrackCommon,
+        subrack: Union[
+            SubrackSimulator,
+            SubrackSimulatorComponentManager,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        command_name: str,
+    ) -> None:
         """
         Test of commands that require no parameters.
 
@@ -200,7 +214,6 @@ class TestSubrackCommon:
 
         :param subrack: the subrack class object under test.
         :param command_name: the name of the command under test
-        :type command_name: str
         """
         _ = getattr(subrack, command_name)()
 
@@ -217,8 +230,16 @@ class TestSubrackCommon:
         ),
     )
     def test_command_numeric(
-        self, subrack: Union[SubrackSimulator], command_name, num_args
-    ):
+        self: TestSubrackCommon,
+        subrack: Union[
+            SubrackSimulator,
+            SubrackSimulatorComponentManager,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        command_name: str,
+        num_args: int,
+    ) -> None:
         """
         Test of commands that require numeric parameters.
 
@@ -227,9 +248,7 @@ class TestSubrackCommon:
 
         :param subrack: the subrack class object under test.
         :param command_name: the name of the command under test
-        :type command_name: str
         :param num_args: the number of args the command takes
-        :type num_args: int
         """
         if num_args == 1:
             _ = getattr(subrack, command_name)(1)

@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -10,6 +9,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains the tests for MccsSubrack."""
+from __future__ import annotations
+
 import time
 
 import pytest
@@ -26,15 +27,16 @@ from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.subrack import SubrackSimulator
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load():
+def device_to_load() -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -48,7 +50,9 @@ class TestMccsSubrack:
     """Test class for MccsSubrack tests."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness):
+    def device_under_test(
+        self: TestMccsSubrack, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -58,14 +62,16 @@ class TestMccsSubrack:
         """
         return tango_harness.get_device("low-mccs/subrack/01")
 
-    def test_InitDevice(self, device_under_test):
+    def test_InitDevice(
+        self: TestMccsSubrack,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Initial state.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.state() == DevState.DISABLE
         assert device_under_test.status() == "The device is in DISABLE state."
@@ -74,14 +80,17 @@ class TestMccsSubrack:
         assert device_under_test.simulationMode == SimulationMode.TRUE
         assert device_under_test.testMode == TestMode.TEST
 
-    def test_healthState(self, device_under_test, device_health_state_changed_callback):
+    def test_healthState(
+        self: TestMccsSubrack,
+        device_under_test: MccsDeviceProxy,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -94,14 +103,16 @@ class TestMccsSubrack:
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-    def test_attributes(self, device_under_test):
+    def test_attributes(
+        self: TestMccsSubrack,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test of attributes.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.adminMode = AdminMode.ONLINE
         device_under_test.On()
@@ -149,14 +160,16 @@ class TestMccsSubrack:
             [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * device_under_test.tpmCount
         )
 
-    def test_PowerOnTpm(self, device_under_test):
+    def test_PowerOnTpm(
+        self: TestMccsSubrack,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for PowerOnTpm.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.adminMode = AdminMode.ONLINE
         device_under_test.On()
@@ -171,14 +184,16 @@ class TestMccsSubrack:
         assert result_code == ResultCode.OK
         assert message == "Subrack TPM 1 power-on is redundant"
 
-    def test_PowerOffTpm(self, device_under_test):
+    def test_PowerOffTpm(
+        self: TestMccsSubrack,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for PowerOffTpm.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.adminMode = AdminMode.ONLINE
         device_under_test.On()

@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -10,6 +9,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains the tests for MccsAPIU."""
+from __future__ import annotations
+
 import time
 
 import pytest
@@ -27,14 +28,16 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu import ApiuSimulator
 
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
+
 
 @pytest.fixture()
-def device_to_load():
+def device_to_load() -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -48,7 +51,9 @@ class TestMccsAPIU:
     """Test class for MccsAPIU tests."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness):
+    def device_under_test(
+        self: TestMccsAPIU, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -58,14 +63,13 @@ class TestMccsAPIU:
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test_InitDevice(self, device_under_test):
+    def test_InitDevice(self: TestMccsAPIU, device_under_test: MccsDeviceProxy) -> None:
         """
         Test for Initial state.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.state() == DevState.DISABLE
         assert device_under_test.status() == "The device is in DISABLE state."
@@ -74,14 +78,17 @@ class TestMccsAPIU:
         assert device_under_test.simulationMode == SimulationMode.TRUE
         assert device_under_test.testMode == TestMode.TEST
 
-    def test_healthState(self, device_under_test, device_health_state_changed_callback):
+    def test_healthState(
+        self: TestMccsAPIU,
+        device_under_test: MccsDeviceProxy,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -94,14 +101,17 @@ class TestMccsAPIU:
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-    def test_attributes(self, device_under_test, device_admin_mode_changed_callback):
+    def test_attributes(
+        self: TestMccsAPIU,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test of attributes.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         """
@@ -135,14 +145,17 @@ class TestMccsAPIU:
         device_under_test.humidityThreshold = 60.0
         assert device_under_test.humidityThreshold == 60.0
 
-    def test_PowerUp(self, device_under_test, device_admin_mode_changed_callback):
+    def test_PowerUp(
+        self: TestMccsAPIU,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for PowerUp.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         """
@@ -168,14 +181,17 @@ class TestMccsAPIU:
         assert result_code == ResultCode.OK
         assert message == "APIU power-up is redundant"
 
-    def test_PowerDown(self, device_under_test, device_admin_mode_changed_callback):
+    def test_PowerDown(
+        self: TestMccsAPIU,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for PowerDown.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         """
@@ -204,15 +220,16 @@ class TestMccsAPIU:
         assert message == "APIU power-down successful"
 
     def test_PowerUpAntenna(
-        self, device_under_test, device_admin_mode_changed_callback
-    ):
+        self: TestMccsAPIU,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for PowerUpAntenna.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         """
@@ -253,15 +270,16 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
     def test_PowerDownAntenna(
-        self, device_under_test, device_admin_mode_changed_callback
-    ):
+        self: TestMccsAPIU,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for PowerDownAntenna.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
         """

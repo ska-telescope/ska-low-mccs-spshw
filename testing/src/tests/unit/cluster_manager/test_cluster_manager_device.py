@@ -1,4 +1,3 @@
-# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -10,6 +9,8 @@
 # See LICENSE.txt for more info.
 #########################################################################
 """This module contains the tests for the MCCS cluster manager device."""
+from __future__ import annotations
+
 import json
 from typing import Any
 
@@ -20,16 +21,20 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsClusterManagerDevice, MccsDeviceProxy
-from ska_low_mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
+from ska_low_mccs.cluster_manager.cluster_simulator import (  # type: ignore[attr-defined]
+    ClusterSimulator,
+    JobStatus,
+)
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load():
+def device_to_load() -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/extra.json",
@@ -43,7 +48,9 @@ class TestMccsClusterManagerDevice:
     """Test class for MccsClusterManagerDevice tests."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness):
+    def device_under_test(
+        self: TestMccsClusterManagerDevice, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -53,14 +60,17 @@ class TestMccsClusterManagerDevice:
         """
         return tango_harness.get_device("low-mccs/clustermanager/clustermanager")
 
-    def test_healthState(self, device_under_test, device_health_state_changed_callback):
+    def test_healthState(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -115,7 +125,10 @@ class TestMccsClusterManagerDevice:
         ],
     )
     def test_attribute_constant_values(
-        self, device_under_test, attribute_name: str, attribute_value: Any
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+        attribute_name: str,
+        attribute_value: Any,
     ) -> None:
         """
         Test those attributes that take a constant initial value.
@@ -137,14 +150,16 @@ class TestMccsClusterManagerDevice:
 
         assert getattr(device_under_test, attribute_name) == attribute_value
 
-    def test_memoryAvail(self, device_under_test):
+    def test_memoryAvail(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for memoryAvail.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.memoryAvail
@@ -153,14 +168,16 @@ class TestMccsClusterManagerDevice:
             device_under_test.memoryTotal - device_under_test.memoryUsed
         )
 
-    def test_nodesAvail(self, device_under_test):
+    def test_nodesAvail(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for nodesAvail.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.nodesAvail
@@ -169,14 +186,16 @@ class TestMccsClusterManagerDevice:
             device_under_test.nodesTotal - device_under_test.nodesInUse
         )
 
-    def test_masterCpusAllocatedPercent(self, device_under_test):
+    def test_masterCpusAllocatedPercent(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for masterCpusAllocatedPercent.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.masterCpusAllocatedPercent
@@ -185,14 +204,16 @@ class TestMccsClusterManagerDevice:
             100.0 * device_under_test.masterCpusUsed / device_under_test.masterCpusTotal
         )
 
-    def test_masterDiskPercent(self, device_under_test):
+    def test_masterDiskPercent(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for masterDiskPercent.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.masterDiskPercent
@@ -201,14 +222,16 @@ class TestMccsClusterManagerDevice:
             100.0 * device_under_test.masterDiskUsed / device_under_test.masterDiskTotal
         )
 
-    def test_masterMemPercent(self, device_under_test):
+    def test_masterMemPercent(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for masterMemPercent.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.masterMemPercent
@@ -217,14 +240,16 @@ class TestMccsClusterManagerDevice:
             100.0 * device_under_test.masterMemUsed / device_under_test.masterMemTotal
         )
 
-    def test_shadowMasterPoolNodeIds(self, device_under_test):
+    def test_shadowMasterPoolNodeIds(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for shadowMasterPoolNodeIds.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.shadowMasterPoolNodeIds
@@ -234,14 +259,16 @@ class TestMccsClusterManagerDevice:
             == ClusterSimulator.CONFIGURATION["shadow_master_pool_node_ids"]
         )
 
-    def test_shadowMasterPoolStatus(self, device_under_test):
+    def test_shadowMasterPoolStatus(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for shadowMasterPoolStatus.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.shadowMasterPoolStatus
@@ -250,14 +277,16 @@ class TestMccsClusterManagerDevice:
             HealthState.OK,
         ) * len(device_under_test.shadowMasterPoolNodeIds)
 
-    def test_StartJob(self, device_under_test):
+    def test_StartJob(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for StartJob.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         ([result_code], [message]) = device_under_test.StartJob(
             next(iter(ClusterSimulator.OPEN_JOBS))
@@ -284,14 +313,16 @@ class TestMccsClusterManagerDevice:
                     == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
                 )
 
-    def test_StopJob(self, device_under_test):
+    def test_StopJob(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for StopJob.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         ([result_code], [message]) = device_under_test.StopJob(
             next(iter(ClusterSimulator.OPEN_JOBS))
@@ -310,14 +341,16 @@ class TestMccsClusterManagerDevice:
             assert result_code == ResultCode.FAILED
             assert message == ClusterSimulator.NONEXISTENT_JOB_MESSAGE
 
-    def test_SubmitJob(self, device_under_test):
+    def test_SubmitJob(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for SubmitJob.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         job_config = json.dumps({"mock_key": "mock_value"})
 
@@ -328,14 +361,16 @@ class TestMccsClusterManagerDevice:
         job_id = device_under_test.SubmitJob(job_config)
         assert device_under_test.GetJobStatus(job_id) == JobStatus.STAGING
 
-    def test_GetJobStatus(self, device_under_test):
+    def test_GetJobStatus(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for GetJobStatus.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(DevFailed, match="Not connected"):
             _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
@@ -344,14 +379,16 @@ class TestMccsClusterManagerDevice:
         for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
             assert status == device_under_test.GetJobStatus(job_id)
 
-    def test_ClearJobStats(self, device_under_test):
+    def test_ClearJobStats(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for ClearJobStats.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         ([result_code], [message]) = device_under_test.ClearJobStats()
         assert result_code == ResultCode.FAILED
@@ -365,14 +402,16 @@ class TestMccsClusterManagerDevice:
             message == MccsClusterManagerDevice.ClearJobStatsCommand.SUCCEEDED_MESSAGE
         )
 
-    def test_PingMasterPool(self, device_under_test):
+    def test_PingMasterPool(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for PingMasterPool.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         ([result_code], [message]) = device_under_test.PingMasterPool()
         assert result_code == ResultCode.FAILED

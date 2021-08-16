@@ -1,4 +1,3 @@
-# type: ignore
 """This module contains tests of pointing interactions between devices."""
 from __future__ import annotations
 
@@ -15,7 +14,7 @@ from ska_tango_base.control_model import AdminMode
 from ska_low_mccs import MccsDeviceProxy
 
 from ska_low_mccs.testing.mock import MockDeviceBuilder
-from ska_low_mccs.testing.tango_harness import TangoHarness
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 # some constants to refer to in the tests
@@ -42,12 +41,11 @@ BEAM_4_DELAY_RATE_ELEVATION = 0.4e-11
 
 
 @pytest.fixture()
-def devices_to_load():
+def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
@@ -150,7 +148,9 @@ def initial_mocks(
 class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
-    def test_stationbeam_apply_pointing(self, tango_harness: TangoHarness):
+    def test_stationbeam_apply_pointing(
+        self: TestMccsIntegration, tango_harness: TangoHarness
+    ) -> None:
         """
         Test that a MccsStationBeam device can apply delays to associated MccsTile
         devices.

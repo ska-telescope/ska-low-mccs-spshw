@@ -1,4 +1,3 @@
-# type: ignore
 """
 This module contains pytest fixtures and other test setups common to all ska_low_mccs
 tests: unit, integration and functional (BDD).
@@ -6,15 +5,16 @@ tests: unit, integration and functional (BDD).
 from __future__ import annotations
 
 import logging
-from typing import Callable
-import json
+from typing import Any, Callable, Generator, Set, cast
 import pytest
 import tango
+import unittest
 import yaml
 
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import (
     ClientProxyTangoHarness,
+    DevicesToLoadType,
     MccsDeviceInfo,
     MockingTangoHarness,
     StartingStateTangoHarness,
@@ -23,40 +23,37 @@ from ska_low_mccs.testing.tango_harness import (
 )
 
 
-def pytest_sessionstart(session):
+def pytest_sessionstart(session: pytest.Session) -> None:
     """
     Pytest hook; prints info about tango version.
 
     :param session: a pytest Session object
-    :type session: :py:class:`pytest.Session`
     """
     print(tango.utils.info())
 
 
 with open("testing/testbeds.yaml", "r") as stream:
-    _testbeds = yaml.safe_load(stream)
+    _testbeds: dict[str, set[str]] = yaml.safe_load(stream)
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.config.Config) -> None:
     """
     Register custom markers to avoid pytest warnings.
 
     :param config: the pytest config object
-    :type config: :py:class:`pytest.config.Config`
     """
-    all_tags = set().union(*_testbeds.values())
+    all_tags: Set[str] = cast(Set[str], set()).union(*_testbeds.values())
     for tag in all_tags:
         config.addinivalue_line("markers", f"needs_{tag}")
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.config.ArgumentParser) -> None:
     """
     Pytest hook; implemented to add the `--testbed` option, used to specify the context
     in which the test is running. This could be used, for example, to skip tests that
     have requirements not met by the context.
 
     :param parser: the command line options parser
-    :type parser: :py:class:`argparse.ArgumentParser`
     """
     parser.addoption(
         "--testbed",
@@ -66,7 +63,9 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(
+    config: pytest.config.Config, items: list[pytest.Item]
+) -> None:
     """
     Modify the list of tests to be run, after pytest has collected them.
 
@@ -82,9 +81,7 @@ def pytest_collection_modifyitems(config, items):
     "pss" context provides a TPM.
 
     :param config: the pytest config object
-    :type config: :py:class:`pytest.config.Config`
     :param items: list of tests collected by pytest
-    :type items: list(:py:class:`pytest.Item`)
     """
     testbed = config.getoption("--testbed")
     available_tags = _testbeds.get(testbed, set())
@@ -107,7 +104,7 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture()
-def initial_mocks():
+def initial_mocks() -> dict[str, unittest.mock.Mock]:
     """
     Fixture that registers device proxy mocks prior to patching.
 
@@ -116,26 +113,34 @@ def initial_mocks():
     mocks.
 
     :return: an empty dictionary
-    :rtype: dict
     """
     return {}
 
 
 @pytest.fixture()
-def mock_factory():
+def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a mock factory for device proxy mocks. This default factory
     provides vanilla mocks, but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
     """
     return MockDeviceBuilder()
 
 
 @pytest.fixture(scope="session")
-def tango_harness_factory(request, logger):
+def tango_harness_factory(
+    request: pytest.FixtureRequest, logger: logging.Logger
+) -> Callable[
+    [
+        dict[str, Any],
+        DevicesToLoadType,
+        Callable[[], unittest.mock.Mock],
+        dict[str, unittest.mock.Mock],
+    ],
+    TangoHarness,
+]:
     """
     Returns a factory for creating a test harness for testing Tango devices. The Tango
     context used depends upon the context in which the tests are being run, as specified
@@ -157,9 +162,7 @@ def tango_harness_factory(request, logger):
 
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`pytest.FixtureRequest`
     :param logger: the logger to be used by this object.
-    :type logger: :py:class:`logging.Logger`
 
     :return: a tango harness factory
     """
@@ -177,10 +180,10 @@ def tango_harness_factory(request, logger):
     testbed = request.config.getoption("--testbed")
 
     def build_harness(
-        tango_config: dict[str, str],
-        devices_to_load,
-        mock_factory,
-        initial_mocks,
+        tango_config: dict[str, Any],
+        devices_to_load: DevicesToLoadType,
+        mock_factory: Callable[[], unittest.mock.Mock],
+        initial_mocks: dict[str, unittest.mock.Mock],
     ) -> TangoHarness:
         """
         Builds the Tango test harness.
@@ -189,12 +192,9 @@ def tango_harness_factory(request, logger):
             test harness
         :param devices_to_load: fixture that provides a specification of the
             devices that are to be included in the devices_info dictionary
-        :type devices_to_load: dict
         :param mock_factory: the factory to be used to build mocks
-        :type mock_factory: object
         :param initial_mocks: a pre-build dictionary of mocks to be used
             for particular
-        :type initial_mocks: dict<str, :py:class:`pytest_mock.mocker.Mock`>
 
         :return: a tango test harness
         """
@@ -203,6 +203,7 @@ def tango_harness_factory(request, logger):
         else:
             device_info = MccsDeviceInfo(**devices_to_load)
 
+        tango_harness: TangoHarness  # type hint only
         if testbed == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
         else:
@@ -220,7 +221,7 @@ def tango_harness_factory(request, logger):
 
 
 @pytest.fixture()
-def tango_config() -> dict[str, str]:
+def tango_config() -> dict[str, Any]:
     """
     Fixture that returns basic configuration information for a Tango test harness, such
     as whether or not to run in a separate process.
@@ -232,12 +233,20 @@ def tango_config() -> dict[str, str]:
 
 @pytest.fixture()
 def tango_harness(
-    tango_harness_factory: Callable[[], TangoHarness],
+    tango_harness_factory: Callable[
+        [
+            dict[str, Any],
+            DevicesToLoadType,
+            Callable[[], unittest.mock.Mock],
+            dict[str, unittest.mock.Mock],
+        ],
+        TangoHarness,
+    ],
     tango_config: dict[str, str],
-    devices_to_load,
-    mock_factory,
-    initial_mocks,
-):
+    devices_to_load: DevicesToLoadType,
+    mock_factory: Callable[[], unittest.mock.Mock],
+    initial_mocks: dict[str, unittest.mock.Mock],
+) -> Generator[TangoHarness, None, None]:
     """
     Creates a test harness for testing Tango devices.
 
@@ -247,12 +256,9 @@ def tango_harness(
         test harness
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
-    :type devices_to_load: dict
     :param mock_factory: the factory to be used to build mocks
-    :type mock_factory: object
     :param initial_mocks: a pre-build dictionary of mocks to be used
         for particular
-    :type initial_mocks: dict<str, :py:class:`pytest_mock.mocker.Mock`>
 
     :yields: a tango test harness
     """
@@ -263,35 +269,13 @@ def tango_harness(
 
 
 @pytest.fixture(scope="session")
-def logger():
+def logger() -> logging.Logger:
     """
     Fixture that returns a default logger.
 
     :return: a logger
-    :rtype logger: :py:class:`logging.Logger`
     """
     return logging.getLogger()
-
-
-@pytest.fixture()
-def dummy_json_args():
-    """
-    A fixture to return dummy json arguments.
-
-    :return: dummy json encoded arguments
-    """
-    args = {"respond_to_fqdn": "resp", "callback": "call"}
-    return json.dumps(args)
-
-
-@pytest.fixture()
-def test_string():
-    """
-    A simple test string fixture.
-
-    :return: a simple test string
-    """
-    return "This is a simple text string"
 
 
 @pytest.fixture()

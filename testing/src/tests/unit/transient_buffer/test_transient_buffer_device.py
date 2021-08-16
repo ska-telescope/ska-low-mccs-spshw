@@ -1,4 +1,3 @@
-# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -15,14 +14,17 @@ from typing import Any
 import unittest.mock
 
 import pytest
+import pytest_mock
 
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsTransientBuffer
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_under_test(tango_harness):
+def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
 
@@ -33,11 +35,13 @@ def device_under_test(tango_harness):
     return tango_harness.get_device("low-mccs/transientbuffer/transientbuffer")
 
 
-class TestMccsTransientBuffer(object):
+class TestMccsTransientBuffer:
     """Tests of the MCCS transient buffer device."""
 
     @pytest.fixture()
-    def mock_component_manager(self, mocker) -> unittest.mock.Mock:
+    def mock_component_manager(
+        self: TestMccsTransientBuffer, mocker: pytest_mock.mocker
+    ) -> unittest.mock.Mock:
         """
         Return a mock to be used as a component manager for the transient buffer device.
 
@@ -50,7 +54,9 @@ class TestMccsTransientBuffer(object):
         return mocker.Mock()
 
     @pytest.fixture()
-    def patched_device_class(self, mock_component_manager) -> type[MccsTransientBuffer]:
+    def patched_device_class(
+        self: TestMccsTransientBuffer, mock_component_manager: unittest.mock.Mock
+    ) -> type[MccsTransientBuffer]:
         """
         Return a transient buffer device that is patched with a mock component manager.
 
@@ -77,7 +83,9 @@ class TestMccsTransientBuffer(object):
         return PatchedMccsTransientBuffer
 
     @pytest.fixture()
-    def device_to_load(self, patched_device_class):
+    def device_to_load(
+        self: TestMccsTransientBuffer, patched_device_class: MccsTransientBuffer
+    ) -> DeviceToLoadType:
         """
         Fixture that specifies the device to be loaded for testing.
 
@@ -85,7 +93,6 @@ class TestMccsTransientBuffer(object):
             that has been patched with a mock component manager
 
         :return: specification of the device to be loaded
-        :rtype: dict
         """
         return {
             "path": "charts/ska-low-mccs/data/extra.json",
@@ -95,14 +102,17 @@ class TestMccsTransientBuffer(object):
             "patch": patched_device_class,
         }
 
-    def test_healthState(self, device_under_test, device_health_state_changed_callback):
+    def test_healthState(
+        self: TestMccsTransientBuffer,
+        device_under_test: MccsDeviceProxy,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -125,8 +135,8 @@ class TestMccsTransientBuffer(object):
         ],
     )
     def test_attributes(
-        self,
-        mocker,
+        self: TestMccsTransientBuffer,
+        mocker: pytest_mock.mocker,
         device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
         device_attribute: str,

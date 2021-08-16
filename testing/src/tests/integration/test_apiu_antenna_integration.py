@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -23,16 +22,15 @@ from ska_tango_base.control_model import AdminMode
 from ska_low_mccs import MccsDeviceProxy
 
 from ska_low_mccs.testing.mock import MockDeviceBuilder
-from ska_low_mccs.testing import TangoHarness
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def devices_to_load():
+def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",

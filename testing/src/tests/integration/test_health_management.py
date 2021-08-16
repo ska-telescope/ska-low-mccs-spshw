@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -24,15 +23,15 @@ from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile import DemoTile
 
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def devices_to_load():
+def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -122,11 +121,11 @@ class TestHealthManagement:
     """Test cases for the MCCS health management subsystem."""
 
     def test_controller_health_rollup(
-        self,
-        tango_harness,
-        controller_device_state_changed_callback,
-        controller_device_health_state_changed_callback,
-    ):
+        self: TestHealthManagement,
+        tango_harness: TangoHarness,
+        controller_device_state_changed_callback: MockChangeEventCallback,
+        controller_device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test that health rolls up to the controller.
 
@@ -135,7 +134,6 @@ class TestHealthManagement:
             the real thing. The only requirement is that it provide a
             ``get_device(fqdn)`` method that returns a
             :py:class:`tango.DeviceProxy`.
-        :type tango_harness: :py:class:`contextmanager`
         :param controller_device_state_changed_callback: a callback to
             be used to subscribe to controller state change
         :param controller_device_health_state_changed_callback: a

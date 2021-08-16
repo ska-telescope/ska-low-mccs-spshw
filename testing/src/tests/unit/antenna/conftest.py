@@ -31,7 +31,7 @@ from ska_low_mccs.antenna.antenna_component_manager import (
 )
 from ska_low_mccs.component import CommunicationStatus
 
-from ska_low_mccs.testing import TangoHarness  # type: ignore[attr-defined]
+from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
 
 

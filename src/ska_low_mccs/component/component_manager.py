@@ -149,7 +149,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
     def __init__(
         self: MccsComponentManager,
         logger: logging.Logger,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,
@@ -220,8 +222,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         if self._communication_status != communication_status:
             with self.__communication_lock:
-                if self._communication_status != communication_status:
-                    self._communication_status = communication_status
+                self._communication_status = communication_status
+                if self._communication_status_changed_callback is not None:
                     self._communication_status_changed_callback(communication_status)
 
     @property

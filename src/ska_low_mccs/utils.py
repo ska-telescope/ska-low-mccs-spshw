@@ -18,10 +18,8 @@ from typing import Any, Callable, Optional
 
 import jsonschema
 
-from ska_tango_base.commands import ResultCode
 
-
-def call_with_json(func: Callable, **kwargs: dict[str, str]) -> tuple[ResultCode, str]:
+def call_with_json(func: Callable, **kwargs: Any) -> Any:
     """
     Allows the calling of a command that accepts a JSON string as input, with the actual
     unserialised parameters.
@@ -201,7 +199,7 @@ class ThreadsafeCheckingMeta(type):
         return _wrapper
 
     def __new__(
-        cls: type[ThreadsafeCheckingMeta], name: str, bases: tuple, attrs: dict
+        cls: type[ThreadsafeCheckingMeta], name: str, bases: tuple[type], attrs: dict
     ) -> ThreadsafeCheckingMeta:
         """
         Class constructor.

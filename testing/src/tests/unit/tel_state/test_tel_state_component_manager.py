@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Union
 
 import pytest
-from _pytest.fixtures import SubRequest  # type: ignore[import]
+from _pytest.fixtures import SubRequest
 
 from ska_low_mccs.tel_state import (
     TelState,
@@ -51,7 +51,7 @@ class TestTelState:
         :param request: A pytest object giving access to the requesting test
             context.
 
-        :raises AssertionError: if parametrized with an unrecognised option
+        :raises ValueError: if parametrized with an unrecognised option
 
         :return: the tile class object under test
         """
@@ -60,7 +60,7 @@ class TestTelState:
         elif request.param == "tel_state_component_manager":
             tel_state_component_manager.start_communicating()
             return tel_state_component_manager
-        raise AssertionError("tel_state fixture parametrized with unrecognised option")
+        raise ValueError("tel_state fixture parametrized with unrecognised option")
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value", "write_value"),

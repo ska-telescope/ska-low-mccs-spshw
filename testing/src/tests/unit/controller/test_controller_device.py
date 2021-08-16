@@ -1,4 +1,3 @@
-# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -10,6 +9,9 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """Contains the tests for the MccsController Tango device_under_test prototype."""
+from __future__ import annotations
+
+import unittest
 
 import pytest
 import tango
@@ -21,11 +23,15 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs import MccsDeviceProxy, release
+from ska_low_mccs import MccsController, MccsDeviceProxy, release
+from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load(patched_controller_device_class):
+def device_to_load(
+    patched_controller_device_class: type[MccsController],
+) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
@@ -33,7 +39,6 @@ def device_to_load(patched_controller_device_class):
         that has been patched with a mock component manager
 
     :return: specification of the device to be loaded
-    :rtype: dict
     """
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
@@ -45,7 +50,7 @@ def device_to_load(patched_controller_device_class):
 
 
 @pytest.fixture()
-def device_under_test(tango_harness):
+def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
 
@@ -59,41 +64,51 @@ def device_under_test(tango_harness):
 class TestMccsController:
     """Tests of the MccsController device."""
 
-    def test_State(self, device_under_test):
+    def test_State(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for State.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.State() == tango.DevState.DISABLE
 
-    def test_Status(self, device_under_test):
+    def test_Status(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Status.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.Status() == "The device is in DISABLE state."
 
-    def test_GetVersionInfo(self, device_under_test):
+    def test_GetVersionInfo(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for GetVersionInfo.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         vinfo = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [vinfo]
 
-    def test_adminMode(self, device_under_test, mock_component_manager):
+    def test_adminMode(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
+    ) -> None:
         """
         Test adminMode.
 
@@ -121,12 +136,12 @@ class TestMccsController:
         ],
     )
     def test_command(
-        self,
-        device_under_test,
-        device_command,
-        mock_component_manager,
-        component_method,
-    ):
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+        device_command: str,
+        mock_component_manager: unittest.mock.Mock,
+        component_method: str,
+    ) -> None:
         """
         Test that device commands are passed through to the component manager.
 
@@ -144,14 +159,16 @@ class TestMccsController:
         getattr(mock_component_manager, component_method).assert_called_once_with()
 
     @pytest.mark.skip(reason="too weak a test to count")
-    def test_Reset(self, device_under_test):
+    def test_Reset(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Reset.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(
             tango.DevFailed,
@@ -159,42 +176,45 @@ class TestMccsController:
         ):
             device_under_test.Reset()
 
-    def test_buildState(self, device_under_test):
+    def test_buildState(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for buildState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         binfo = ", ".join((release.name, release.version, release.description))
         assert device_under_test.buildState == binfo
 
-    def test_versionId(self, device_under_test):
+    def test_versionId(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for versionId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.versionId == release.version
 
     def test_healthState(
-        self,
-        device_under_test,
-        mock_component_manager,
-        device_health_state_changed_callback,
-    ):
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
         """
         Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_component_manager: a mock component manager that has
             been patched into the device under test
         :param device_health_state_changed_callback: a callback that we
@@ -231,57 +251,67 @@ class TestMccsController:
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-    def test_controlMode(self, device_under_test):
+    def test_controlMode(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for controlMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.controlMode == ControlMode.REMOTE
 
-    def test_simulationMode(self, device_under_test):
+    def test_simulationMode(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for simulationMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.simulationMode == SimulationMode.FALSE
 
-    def test_testMode(self, device_under_test):
+    def test_testMode(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for testMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.testMode == TestMode.TEST
 
-    def test_maxCapabilities(self, device_under_test):
+    def test_maxCapabilities(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for maxCapabilities.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.maxCapabilities is None
 
-    def test_availableCapabilities(self, device_under_test):
+    def test_availableCapabilities(
+        self: TestMccsController,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for availableCapabilities.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.availableCapabilities is None

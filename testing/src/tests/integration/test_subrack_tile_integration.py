@@ -122,6 +122,7 @@ class TestSubrackTileIntegration:
         # The subrack device tells the subrack to power on. Once the subrack has powered
         # on, the subrack device detects that change of state, and transitions to ON
         # state.
+        time.sleep(0.1)
         assert subrack_device.state() == DevState.ON
         assert not subrack_device.isTpmOn(1)
 

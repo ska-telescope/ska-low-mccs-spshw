@@ -148,6 +148,7 @@ class TestApiuAntennaIntegration:
         # The APIU device tells the APIU hardware to power on. Once the APIU hardware
         # has powered on, the APIU device detects that change of state, and transitions
         # to ON state.
+        time.sleep(0.1)
         assert apiu_device.state() == DevState.ON
 
         # It fires a change event...

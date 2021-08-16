@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 import pytest
 
@@ -152,10 +153,13 @@ class TestPowerSupplyProxySimulator:
 
         with pytest.raises(ConnectionError, match="Not connected"):
             getattr(component_manager, command)()
+        time.sleep(0.1)
         assert component_manager.supplied_power_mode is None
 
         component_manager.start_communicating()
+        time.sleep(0.1)
         assert component_manager.supplied_power_mode == PowerMode.OFF
 
         getattr(component_manager, command)()
+        time.sleep(0.1)
         assert component_manager.supplied_power_mode == expected_supplied_power_mode

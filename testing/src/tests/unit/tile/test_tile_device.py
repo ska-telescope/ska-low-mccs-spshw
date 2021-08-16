@@ -382,6 +382,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
 
@@ -432,6 +434,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
 
@@ -474,6 +478,8 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -519,6 +525,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
 
@@ -562,6 +570,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
@@ -600,6 +610,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
@@ -636,6 +648,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
@@ -666,6 +680,8 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -712,6 +728,8 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -760,6 +778,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
@@ -800,6 +820,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
@@ -837,6 +859,8 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -919,6 +943,8 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        time.sleep(0.1)
+
         tile_device.MockSubrackOn()
         time.sleep(0.1)
         tile_device.MockTilePoweredOn()
@@ -956,6 +982,8 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -1002,6 +1030,8 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -1059,6 +1089,8 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)

@@ -12,6 +12,7 @@
 """This module contains the tests of the subrack component manager."""
 from __future__ import annotations
 
+import time
 from typing import Union
 
 import pytest
@@ -110,6 +111,7 @@ class TestSubrackCommon:
         elif request.param == "subrack_component_manager":
             subrack_component_manager.start_communicating()
             subrack_component_manager.on()
+            time.sleep(0.1)
             return subrack_component_manager
         raise AssertionError("subrack fixture parametrized with unrecognised option")
 
@@ -257,6 +259,9 @@ class TestSubrackComponentManager:
         """
         subrack_component_manager.start_communicating()
         subrack_component_manager.on()
+
+        time.sleep(0.1)
+
         assert subrack_component_manager.power_mode == PowerMode.ON
 
         expected_are_tpms_on = [False] * subrack_component_manager.tpm_count

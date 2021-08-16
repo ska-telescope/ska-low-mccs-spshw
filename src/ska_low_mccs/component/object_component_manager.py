@@ -15,16 +15,18 @@ from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MccsComponentManager,
+    MessageQueueComponentManager,
     ObjectComponent,
     check_communicating,
+    enqueue,
 )
+from ska_low_mccs.utils import threadsafe
 
 
 __all__ = ["ObjectComponentManager"]
 
 
-class ObjectComponentManager(MccsComponentManager):
+class ObjectComponentManager(MessageQueueComponentManager):
     """
     An abstract component manager for a component that is an object in this process.
 
@@ -94,6 +96,7 @@ class ObjectComponentManager(MccsComponentManager):
             self.component_power_mode_changed
         )
 
+    @threadsafe
     def stop_communicating(self: ObjectComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
         super().stop_communicating()
@@ -117,6 +120,7 @@ class ObjectComponentManager(MccsComponentManager):
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating
+    @enqueue
     def off(self: ObjectComponentManager) -> ResultCode | None:
         """
         Turn the component off.
@@ -126,6 +130,7 @@ class ObjectComponentManager(MccsComponentManager):
         return self._component.off()
 
     @check_communicating
+    @enqueue
     def standby(self: ObjectComponentManager) -> ResultCode | None:
         """
         Put the component into low-power standby mode.
@@ -135,6 +140,7 @@ class ObjectComponentManager(MccsComponentManager):
         return self._component.standby()
 
     @check_communicating
+    @enqueue
     def on(self: ObjectComponentManager) -> ResultCode | None:
         """
         Turn the component on.
@@ -144,6 +150,7 @@ class ObjectComponentManager(MccsComponentManager):
         return self._component.on()
 
     @check_communicating
+    @enqueue
     def reset(self: ObjectComponentManager) -> ResultCode | None:
         """
         Reset the component (from fault state).

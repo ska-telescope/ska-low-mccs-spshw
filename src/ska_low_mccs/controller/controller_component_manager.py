@@ -180,9 +180,10 @@ class ControllerComponentManager(MccsComponentManager):
             subarray_beam_health_changed_callback
         )
 
-        self._communication_status_lock = threading.Lock()
+        self.__communication_status_lock = threading.Lock()
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
 
+        self.__power_mode_lock = threading.Lock()
         self._station_power_modes: dict[str, PowerMode] = {}
         self._subrack_power_modes: dict[str, PowerMode] = {}
 
@@ -311,7 +312,7 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self._communication_status_lock:
+        with self.__communication_status_lock:
             if (
                 CommunicationStatus.DISABLED
                 in self._device_communication_statuses.values()
@@ -343,18 +344,23 @@ class ControllerComponentManager(MccsComponentManager):
         self._evaluate_power_mode()
 
     def _evaluate_power_mode(self: ControllerComponentManager) -> None:
-        for power_mode in [
-            PowerMode.UNKNOWN,
-            PowerMode.OFF,
-            PowerMode.STANDBY,
-            PowerMode.ON,
-        ]:
-            if (
-                power_mode in self._subrack_power_modes.values()
-                or power_mode in self._station_power_modes.values()
-            ):
-                break
-        self.update_component_power_mode(power_mode)
+        # Many callback threads could be hitting this method at the same time, so it's
+        # possible (likely) that the GIL will suspend a thread between checking if it
+        # need to update, and actually updating. This leads to callbacks appearing out
+        # of order, which breaks tests. Therefore we need to serialise access.
+        with self.__power_mode_lock:
+            for power_mode in [
+                PowerMode.UNKNOWN,
+                PowerMode.OFF,
+                PowerMode.STANDBY,
+                PowerMode.ON,
+            ]:
+                if (
+                    power_mode in self._subrack_power_modes.values()
+                    or power_mode in self._station_power_modes.values()
+                ):
+                    break
+            self.update_component_power_mode(power_mode)
 
     def _subarray_health_changed(
         self: ControllerComponentManager,

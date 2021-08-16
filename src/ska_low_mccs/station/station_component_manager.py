@@ -28,6 +28,7 @@ from ska_low_mccs.component import (
     check_on,
     enqueue,
 )
+from ska_low_mccs.utils import threadsafe
 
 
 __all__ = ["StationComponentManager"]
@@ -176,7 +177,7 @@ class StationComponentManager(MccsComponentManager):
             for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
         }
 
-        self._power_mode_lock = threading.Lock()
+        self.__power_mode_lock = threading.Lock()
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
@@ -286,29 +287,32 @@ class StationComponentManager(MccsComponentManager):
         if communication_status == CommunicationStatus.ESTABLISHED:
             self._is_configured_changed_callback(self._is_configured)
 
+    @threadsafe
     def _antenna_power_mode_changed(
         self: StationComponentManager,
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        with self._power_mode_lock:
+        with self.__power_mode_lock:
             self._antenna_power_modes[fqdn] = power_mode
             self._evaluate_power_mode()
 
+    @threadsafe
     def _tile_power_mode_changed(
         self: StationComponentManager,
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        with self._power_mode_lock:
+        with self.__power_mode_lock:
             self._tile_power_modes[fqdn] = power_mode
             self._evaluate_power_mode()
 
+    @threadsafe
     def _apiu_power_mode_changed(
         self: StationComponentManager,
         power_mode: PowerMode,
     ) -> None:
-        with self._power_mode_lock:
+        with self.__power_mode_lock:
             self._apiu_power_mode = power_mode
             self._evaluate_power_mode()
 

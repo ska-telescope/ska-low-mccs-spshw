@@ -36,9 +36,9 @@ from .component_manager import (
     MccsComponentManagerProtocol,
 )
 from .util import check_communicating, check_on
+from .message_queue_component_manager import MessageQueueComponentManager, enqueue
 from .object_component import ObjectComponent
 from .object_component_manager import ObjectComponentManager
-from .message_queue_component_manager import MessageQueueComponentManager, enqueue
 from .device_component_manager import DeviceComponentManager, ObsDeviceComponentManager
 
 from .switching_component_manager import (

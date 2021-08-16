@@ -11,16 +11,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import cast, Union
 
 import pytest
 from _pytest.fixtures import SubRequest  # for type hinting
 
 from ska_tango_base.control_model import HealthState, SimulationMode
 
-from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus  # type: ignore[attr-defined]
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 from ska_low_mccs.cluster_manager import (
-    ClusterComponentManager,  # type: ignore[attr-defined]
+    ClusterComponentManager,
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
@@ -205,31 +205,31 @@ class TestClusterCommon:
         (
             (
                 "memory_avail",
-                ClusterSimulator.CONFIGURATION["memory_total"]
-                - ClusterSimulator.RESOURCE_STATS["memory_used"],
+                cast(float, ClusterSimulator.CONFIGURATION["memory_total"])
+                - cast(float, ClusterSimulator.RESOURCE_STATS["memory_used"]),
             ),
             (
                 "nodes_avail",
-                ClusterSimulator.CONFIGURATION["nodes_total"]
-                - ClusterSimulator.RESOURCE_STATS["nodes_in_use"],
+                cast(int, ClusterSimulator.CONFIGURATION["nodes_total"])
+                - cast(int, ClusterSimulator.RESOURCE_STATS["nodes_in_use"]),
             ),
             (
                 "master_cpus_allocated_percent",
-                ClusterSimulator.RESOURCE_STATS["master_cpus_used"]
+                cast(float, ClusterSimulator.RESOURCE_STATS["master_cpus_used"])
                 * 100.0
-                / ClusterSimulator.CONFIGURATION["master_cpus_total"],
+                / cast(float, ClusterSimulator.CONFIGURATION["master_cpus_total"]),
             ),
             (
                 "master_disk_percent",
-                ClusterSimulator.RESOURCE_STATS["master_disk_used"]
+                cast(float, ClusterSimulator.RESOURCE_STATS["master_disk_used"])
                 * 100.0
-                / ClusterSimulator.CONFIGURATION["master_disk_total"],
+                / cast(float, ClusterSimulator.CONFIGURATION["master_disk_total"]),
             ),
             (
                 "master_mem_percent",
-                ClusterSimulator.RESOURCE_STATS["master_mem_used"]
+                cast(float, ClusterSimulator.RESOURCE_STATS["master_mem_used"])
                 * 100
-                / ClusterSimulator.CONFIGURATION["master_mem_total"],
+                / cast(float, ClusterSimulator.CONFIGURATION["master_mem_total"]),
             ),
         ),
     )

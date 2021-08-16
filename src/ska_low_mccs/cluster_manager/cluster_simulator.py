@@ -614,7 +614,7 @@ class ClusterSimulator(ObjectComponent):
         for status in JobStatus:
             self._job_stats[status] = 0
 
-    def get_job_status(self: ClusterSimulator, job_id: str) -> int:
+    def get_job_status(self: ClusterSimulator, job_id: str) -> JobStatus:
         """
         Return the status of an open job.
 
@@ -629,7 +629,7 @@ class ClusterSimulator(ObjectComponent):
         except KeyError as key_error:
             raise ValueError(self.NONEXISTENT_JOB_MESSAGE) from key_error
 
-    def submit_job(self: ClusterSimulator, job_config: JobConfig) -> int:
+    def submit_job(self: ClusterSimulator, job_config: JobConfig) -> str:
         """
         Submit a job to the cluster.
 

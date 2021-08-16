@@ -24,7 +24,8 @@ class ClusterHealthModel(HealthModel):
     """A health model for a cluster manager."""
 
     def __init__(
-        self: ClusterHealthModel, health_changed_callback: Callable[[HealthState], None]
+        self: ClusterHealthModel,
+        health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
         Initialise a new instance.

@@ -155,6 +155,9 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None
         ],
+        station_beam_health_changed_callback: Callable[
+            [str, Optional[HealthState]], None
+        ],
     ) -> None:
         """
         Initialise a new instance.
@@ -174,6 +177,8 @@ class ControllerComponentManager(MccsComponentManager):
         :param station_health_changed_callback: callback to be called
             when the health of this station's APIU changes
         :param subarray_beam_health_changed_callback: callback to be
+            called when the health of this station's APIU changes
+        :param station_beam_health_changed_callback: callback to be
             called when the health of this station's APIU changes
         """
         self._station_health_changed_callback = station_health_changed_callback

@@ -123,7 +123,6 @@ def controller_resource_manager(
     subrack_fqdns: Iterable[str],
     station_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
-    station_beam_fqdns: Iterable[str],
     channel_blocks: Iterable[int],
 ) -> ControllerResourceManager:
     """
@@ -142,7 +141,6 @@ def controller_resource_manager(
         subrack_fqdns,
         station_fqdns,
         subarray_beam_fqdns,
-        station_beam_fqdns,
         channel_blocks,
     )
 

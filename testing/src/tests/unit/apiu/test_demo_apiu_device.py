@@ -19,7 +19,7 @@ import pytest
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.apiu.demo_apiu_device import DemoAPIU  # type: ignore[attr-defined]
+from ska_low_mccs.apiu.demo_apiu_device import DemoAPIU
 
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 

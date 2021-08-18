@@ -545,7 +545,7 @@ def main(*args: str, **kwargs: str) -> int:
 
     :return: exit code
     """
-    return MccsAntenna.run_server(args=args, **kwargs)
+    return MccsAntenna.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

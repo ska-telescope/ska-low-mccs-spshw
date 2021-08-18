@@ -15,4 +15,4 @@ __all__ = [
 
 from .antenna_health_model import AntennaHealthModel
 from .antenna_component_manager import AntennaComponentManager
-from .antenna_device import MccsAntenna  # type: ignore[attr-defined]
+from .antenna_device import MccsAntenna

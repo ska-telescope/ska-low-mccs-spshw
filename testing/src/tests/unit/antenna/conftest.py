@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, cast
+from typing import Callable
 import unittest.mock
 
 import pytest
@@ -326,7 +326,7 @@ def mock_apiu_device_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDevice
 @pytest.fixture()
 def patched_antenna_device_class(
     initial_are_antennas_on: list[bool],
-) -> MccsAntenna:
+) -> type[MccsAntenna]:
     """
     Return an antenna device class, patched with extra methods for testing.
 
@@ -381,4 +381,4 @@ def patched_antenna_device_class(
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
 
-    return cast(MccsAntenna, PatchedAntennaDevice)
+    return PatchedAntennaDevice

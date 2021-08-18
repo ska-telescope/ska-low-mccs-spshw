@@ -127,7 +127,7 @@ class TestMccsSubarray:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert device_under_test.healthState == HealthState.UNKNOWN
+        assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.TEST
@@ -156,10 +156,8 @@ class TestMccsSubarray:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.UNKNOWN
-        )
-        assert device_under_test.healthState == HealthState.UNKNOWN
+        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
+        assert device_under_test.healthState == HealthState.OK
 
     def test_GetVersionInfo(
         self: TestMccsSubarray,
@@ -254,12 +252,6 @@ class TestMccsSubarray:
             "adminMode",
             device_admin_mode_changed_callback,
         )
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
-        assert device_under_test.adminMode == AdminMode.OFFLINE
-
-        assert device_under_test.state() == DevState.DISABLE
-
-        device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
@@ -319,10 +311,6 @@ class TestMccsSubarray:
             "adminMode",
             device_admin_mode_changed_callback,
         )
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
-        assert device_under_test.adminMode == AdminMode.OFFLINE
-
-        device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
@@ -376,10 +364,6 @@ class TestMccsSubarray:
             "adminMode",
             device_admin_mode_changed_callback,
         )
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
-        assert device_under_test.adminMode == AdminMode.OFFLINE
-
-        device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 

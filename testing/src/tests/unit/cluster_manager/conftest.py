@@ -63,7 +63,7 @@ def cluster_simulator_component_manager(
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
     component_shadow_master_pool_node_health_changed_callback: Callable[
-        [list[HealthState]], None
+        [list[bool]], None
     ],
 ) -> ClusterSimulatorComponentManager:
     """
@@ -99,7 +99,7 @@ def cluster_component_manager(
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
     component_shadow_master_pool_node_health_changed_callback: Callable[
-        [list[HealthState]], None
+        [list[bool]], None
     ],
 ) -> ClusterComponentManager:
     """

@@ -745,7 +745,7 @@ def main(*args: str, **kwargs: str) -> int:
 
     :return: exit code
     """
-    return MccsClusterManagerDevice.run_server(args=args, **kwargs)
+    return MccsClusterManagerDevice.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

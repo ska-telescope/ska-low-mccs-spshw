@@ -94,8 +94,6 @@ class TestApiuAntennaIntegration:
 
         :param tango_harness: a test harness for tango devices
         """
-        assert False
-        return
         antenna_device = tango_harness.get_device("low-mccs/antenna/000001")
         apiu_device = tango_harness.get_device("low-mccs/apiu/001")
         mock_tile_device = tango_harness.get_device("low-mccs/tile/0001")
@@ -112,7 +110,6 @@ class TestApiuAntennaIntegration:
         # ... except for the tile device, which is mocked to always be in ON state
         assert mock_tile_device.state() == DevState.ON
 
-        return
         antenna_device.adminMode = AdminMode.ONLINE
         # The antenna device tries to establish communication with its antenna. To do
         # that it has to go through its APIU and its Tile.

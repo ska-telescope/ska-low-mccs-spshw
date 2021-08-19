@@ -96,7 +96,6 @@ def we_have_mvplow_running_an_instance_of(
         tango.DevState.DISABLE
     )
 
-    controller.adminMode = AdminMode.ONLINE
     subrack.adminMode = AdminMode.ONLINE
     subarrays[1].adminMode = AdminMode.ONLINE
     subarrays[2].adminMode = AdminMode.ONLINE
@@ -124,6 +123,7 @@ def we_have_mvplow_running_an_instance_of(
     antennas[6].adminMode = AdminMode.ONLINE
     antennas[7].adminMode = AdminMode.ONLINE
     antennas[8].adminMode = AdminMode.ONLINE
+    controller.adminMode = AdminMode.ONLINE
 
     controller_device_state_changed_callback.assert_next_change_event(
         tango.DevState.UNKNOWN

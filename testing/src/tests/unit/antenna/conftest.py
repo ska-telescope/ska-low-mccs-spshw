@@ -324,7 +324,9 @@ def mock_apiu_device_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDevice
 
 
 @pytest.fixture()
-def patched_antenna_device_class(initial_are_antennas_on: list[bool]) -> MccsAntenna:
+def patched_antenna_device_class(
+    initial_are_antennas_on: list[bool],
+) -> type[MccsAntenna]:
     """
     Return an antenna device class, patched with extra methods for testing.
 

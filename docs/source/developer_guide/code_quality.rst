@@ -53,16 +53,16 @@ Linting
 MCCS uses flake8 for linting. Flake8 has excellent plugin support. The
 following plugins are used:
 
-* ``flake8-black`` – as mentioned above, this is used to check that the
+* ``flake8-black`` - as mentioned above, this is used to check that the
   code has been blacked
 
-* ``flake8-builtins`` – prevents use of python builtins (such as "id")
+* ``flake8-builtins`` - prevents use of python builtins (such as "id")
   as variable names
 
-* ``flake8-use-fstring`` – enforces use of python f-strings rather than
+* ``flake8-use-fstring`` - enforces use of python f-strings rather than
   old-style format-strings or older-style %-strings
 
-* ``pep8-naming`` – forces attribute names to follow PEP8.
+* ``pep8-naming`` - forces attribute names to follow PEP8.
   Unfortunately, the Tango community has conventions that are
   inconsistent with PEP8, such as capitalising device commands. Thus,
   certain PEP8 checks are turned off for Tango device modules
@@ -87,8 +87,8 @@ logger to be passed in as an argument:
 .. code-block:: python
 
    class ExampleClass:
-       def __init__(self, logger=None):
-           self._logger = logger
+       def __init__(self, logger=None):
+           self._logger = logger
 
 And in some other method, we have error handling code that calls
 
@@ -97,7 +97,7 @@ And in some other method, we have error handling code that calls
    self._logger.error("Something went wrong")
 
 This code contains a logical error: since the logger is optional,
-``self._logger`` might be ``None`` when we try to call its error method.
+``self._logger`` might be ``None`` when we try to call its error method.
 
 This will cause a runtime error if the code is ever run; but because
 this error is in error handling code, it might not have test coverage,
@@ -112,11 +112,11 @@ Code complexity
 ***************
 The flake8 linter has a built-in McCabe cyclomatic complexity
 calculator. Despite the impressive name, this is a fairly simple metric
-that counts paths through a function/method. A score of 10 or more is
+that counts paths through a function/method. A score of 10 or more is
 usually considered a problem.
 
 In MCCS, this functionality is enabled in ``make lint`` and
-``tox -e lint``, and is separately available via ``tox -e complexity``. At
+``tox -e lint``, and is separately available via ``tox -e complexity``. At
 present, our worst score is 10, and we guard against code that scores
 higher than this.
 
@@ -133,7 +133,7 @@ for this:
   documentation.
 
 * Where a to-do annotation is required at a specific location in the
-  code, a comment beginning with ``# TODO:`` or ``# FIXME:`` etc. can be
+  code, a comment beginning with ``# TODO:`` or ``# FIXME:`` etc. can be
   inserted. The tox target ``tox -e todo`` will generate a report of
   these.
 

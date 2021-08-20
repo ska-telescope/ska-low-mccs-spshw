@@ -70,7 +70,7 @@ Here is an example of a ``devices_to_load`` fixture that specifies a
 large number of devices to be launched for an end-to-end integration
 test:
 
-.. code-block: python
+.. code-block:: python
 
    @pytest.fixture()
    def devices_to_load():
@@ -102,7 +102,7 @@ test:
 Our tests use the ``tango_harness`` fixture to get proxies to the
 devices under test:
 
-.. code-block: python
+.. code-block:: python
 
    def test_controller_health_rollup(self, tango_harness):
        controller = tango_harness.get_device("low-mccs/control/control")
@@ -135,7 +135,7 @@ Here's an example of the ``device_to_load`` fixture for unit testing of
 the controller device. In this example, the patched class is provided
 via its own fixture.
 
-.. code-block: python
+.. code-block:: python
 
    @pytest.fixture()
    def device_to_load(patched_controller_device_class):
@@ -175,7 +175,7 @@ that are not under test. Two fixtures are available for this:
   this up by define a ``mock_factory`` fixture that returns mock devices
   that are in state ON:
 
-  .. code-block: python
+  .. code-block:: python
 
      @pytest.fixture()
      def mock_factory() -> MockDeviceBuilder:
@@ -207,7 +207,7 @@ that are not under test. Two fixtures are available for this:
   fixture which mock to provide when a proxy to a particular FQDN is
   requested:
 
-  .. code-block: python
+  .. code-block:: python
 
      @pytest.fixture()
      def apiu_fqdn() -> str:
@@ -262,7 +262,7 @@ We can do this by:
 
 3. Checking that the mock APIU device has been called as expected.
 
-  .. code-block: python
+  .. code-block:: python
 
      @pytest.mark.parametrize("voltage", [19.0])
      def test_voltage(

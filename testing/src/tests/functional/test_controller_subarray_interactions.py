@@ -19,9 +19,9 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @scenario(
-    "features/controller_subarray_interactions.feature", "MCCS Start up low telescope"
+    "features/controller_subarray_interactions.feature", "MCCS Turn on low telescope"
 )
-def test_start_up_low_telescope(
+def test_turn_on_low_telescope(
     controller: MccsDeviceProxy,
     subarrays: dict[int, MccsDeviceProxy],
     stations: dict[int, MccsDeviceProxy],
@@ -133,8 +133,8 @@ def we_have_mvplow_running_an_instance_of(
     )
 
 
-@given(parsers.parse("{subsystem_name} is ready to {direction} a startup command"))
-def subsystem_is_ready_to_receive_a_startup_command(
+@given(parsers.parse("{subsystem_name} is ready to {direction} an on command"))
+def subsystem_is_ready_to_receive_an_on_command(
     subsystem_name: str,
     direction: str,
     controller: MccsDeviceProxy,
@@ -156,14 +156,19 @@ def subsystem_is_ready_to_receive_a_startup_command(
         raise AssertionError(f"Unknown subsystem {subsystem_name}")
 
 
-@when(parsers.parse("tmc tells mccs controller to start up"))
-def tmc_tells_mccs_controller_to_start_up(controller: MccsDeviceProxy) -> None:
+@when(parsers.parse("tmc tells mccs controller to turn on"))
+def tmc_tells_mccs_controller_to_turn_on(
+    controller: MccsDeviceProxy,
+    controller_device_state_changed_callback: MockChangeEventCallback,
+) -> None:
     """
-    Start up the MCCS subsystem.
+    Issue an on command to MCCS Controller
 
     :param controller: a proxy to the controller device
     """
     controller.On()
+    controller_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+    assert controller.state() == tango.DevState.ON
 
 
 @then(parsers.parse("mccs controller state is {state_name}"))
@@ -251,7 +256,7 @@ def all_mccs_station_states_are_onoff(
 #     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
 #     """
 #     if subsystem_name == "mccs":
-#         tmc_tells_mccs_controller_to_start_up(controller)
+#         tmc_tells_mccs_controller_to_turn_on(controller)
 #         check_mccs_device_state(controller, "on")
 #         check_mccs_device_state(subarrays[1], "off")
 #         check_mccs_device_state(subarrays[2], "off")

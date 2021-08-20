@@ -19,6 +19,14 @@ prototype for the `Square Kilometre Array`_.
 
 .. toctree::
    :maxdepth: 1
+   :caption: Developer guide
+
+   developer_guide/device_model
+   developer_guide/test_harness
+   developer_guide/code_quality
+
+.. toctree::
+   :maxdepth: 1
    :caption: Reference material
 
    reference/power

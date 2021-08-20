@@ -35,7 +35,7 @@ Code formatting / style
 Black
 ^^^^^
 MCCS uses the ``black`` code formatter to format its code. Formatting is
-built into "make lint" and "tox -e lint", and there is also support for
+built into ``make lint`` and ``tox -e lint``, and there is also support for
 adding it as a pre-commit hook.
 
 The CI pipeline obviously does not format code, but does check that the
@@ -86,15 +86,15 @@ logger to be passed in as an argument:
 
 .. code-block:: python
 
-    class ExampleClass:
+   class ExampleClass:
        def __init__(self, logger=None):
-            self._logger = logger
+           self._logger = logger
 
 And in some other method, we have error handling code that calls
 
 .. code-block:: python
 
-    self._logger.error("Something went wrong")
+   self._logger.error("Something went wrong")
 
 This code contains a logical error: since the logger is optional,
 ``self._logger`` might be ``None`` when we try to call its error method.
@@ -115,8 +115,8 @@ calculator. Despite the impressive name, this is a fairly simple metric
 that counts paths through a function/method. A score of 10 or more is
 usually considered a problem.
 
-In MCCS, this functionality is enabled in  "make lint" and
-"tox -e lint", and is separately available via "tox -e complexity". At
+In MCCS, this functionality is enabled in ``make lint`` and
+``tox -e lint``, and is separately available via ``tox -e complexity``. At
 present, our worst score is 10, and we guard against code that scores
 higher than this.
 
@@ -133,7 +133,7 @@ for this:
   documentation.
 
 * Where a to-do annotation is required at a specific location in the
-  code, a comment beginning with  "# TODO:" or "# FIXME:" etc can be
+  code, a comment beginning with ``# TODO:`` or ``# FIXME:`` etc. can be
   inserted. The tox target ``tox -e todo`` will generate a report of
   these.
 

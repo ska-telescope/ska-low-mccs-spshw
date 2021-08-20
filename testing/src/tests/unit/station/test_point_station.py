@@ -10,11 +10,12 @@
 from __future__ import annotations
 
 import pytest
+from typing import Any
 
 import numpy as np
 from astropy.time.core import Time
 
-from ska_low_mccs.station.point_station import (  # type:ignore[attr-defined]
+from ska_low_mccs.station.point_station import (
     Pointing,
     StationInformation,
 )
@@ -43,14 +44,14 @@ class TestPointStation:
         # Set station reference position to array centre
         station.set_location(stat_lat, stat_lon, stat_height)
         # We have 256 elements and therefore expect a 256 x 3 array
-        assert station.antennas.xyz.shape == (256, 3)
+        assert station.antennas.xyz.shape == (256, 3)  # type: ignore[attr-defined]
         # Check location data
         assert station.latitude == stat_lat
         assert station.longitude == stat_lon
         assert station.ellipsoidalheight == stat_height
         pointing = Pointing(station)
 
-        point_kwargs = {
+        point_kwargs: dict[str, Any] = {
             "altitude": "90.0d",
             "azimuth": "0.0d",
         }

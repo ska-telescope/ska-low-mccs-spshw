@@ -23,7 +23,7 @@ import warnings
 from datetime import datetime
 
 from multiprocessing import Queue, Process
-from multiprocessing.queues import Empty
+from multiprocessing.queues import Empty  # type: ignore[attr-defined]
 
 import fire
 

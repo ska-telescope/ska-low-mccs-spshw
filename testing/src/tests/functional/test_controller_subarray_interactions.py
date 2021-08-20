@@ -159,16 +159,13 @@ def subsystem_is_ready_to_receive_an_on_command(
 @when(parsers.parse("tmc tells mccs controller to turn on"))
 def tmc_tells_mccs_controller_to_turn_on(
     controller: MccsDeviceProxy,
-    controller_device_state_changed_callback: MockChangeEventCallback,
 ) -> None:
     """
-    Issue an on command to MCCS Controller
+    Issue an on command to MCCS Controller.
 
     :param controller: a proxy to the controller device
     """
     controller.On()
-    controller_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
-    assert controller.state() == tango.DevState.ON
 
 
 @then(parsers.parse("mccs controller state is {state_name}"))

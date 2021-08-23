@@ -126,9 +126,9 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 
     :return: a factory for device proxy mocks
     """
-    print(f"RCL: mdb = MockDeviceBuilder()...")
+    print("RCL: mdb = MockDeviceBuilder()...")
     mdb = MockDeviceBuilder()
-    print(f"RCL: mdb = MockDeviceBuilder() Done")
+    print("RCL: mdb = MockDeviceBuilder() Done")
     return mdb
 
 
@@ -193,30 +193,26 @@ def tango_harness_factory(
 
         :return: a tango test harness
         """
-        print(f"RCL: build_harness...")
+        print("RCL: build_harness...")
         if devices_to_load is None:
-            print(f"RCL: device_info = None...")
+            print("RCL: device_info = None...")
             device_info = None
         else:
-            print(f"RCL: device_info = MccsDeviceInfo(**devices_to_load)...")
+            print("RCL: device_info = MccsDeviceInfo(**devices_to_load)...")
             device_info = MccsDeviceInfo(**devices_to_load)
-
-        print(f"RCL: 1111")
 
         tango_harness: TangoHarness  # type hint only
         if testbed == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
         else:
             tango_harness = ClientProxyTangoHarness(device_info, logger)
-        print(f"RCL: 2222")
 
         starting_state_harness = StartingStateTangoHarness(tango_harness)
 
-        print(f"RCL: 3333")
         mocking_harness = MockingTangoHarness(
             starting_state_harness, mock_factory, initial_mocks
         )
-        print(f"RCL: 4444")
+        print("RCL: return mocking_harness")
 
         return mocking_harness
 
@@ -265,11 +261,11 @@ def tango_harness(
 
     :yields: a tango test harness
     """
-    print(f"RCL: with tango_harness_factory...2222")
+    print("RCL: with tango_harness_factory...2")
     with tango_harness_factory(
         tango_config, devices_to_load, mock_factory, initial_mocks
     ) as harness:
-        print(f"RCL: about to yield the harness...2222")
+        print("RCL: about to yield the harness...2")
         yield harness
 
 

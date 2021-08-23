@@ -37,6 +37,13 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ]
+                        },
+                        "attribute_properties": {
+                            "adminMode": {
+                                "__value": [
+                                    "0"
+                                ]
+                            }
                         }
                     }
                 }

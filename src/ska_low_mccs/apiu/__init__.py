@@ -17,11 +17,11 @@ __all__ = [
     "demo_apiu_device",
 ]
 
-from .apiu_simulator import ApiuSimulator  # type: ignore[attr-defined]
+from .apiu_simulator import ApiuSimulator
 from .apiu_component_manager import (
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
     ApiuComponentManager,
 )
 from .apiu_health_model import ApiuHealthModel
-from .apiu_device import MccsAPIU  # type: ignore[attr-defined]
+from .apiu_device import MccsAPIU

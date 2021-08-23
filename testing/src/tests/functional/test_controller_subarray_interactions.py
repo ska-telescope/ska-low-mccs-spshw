@@ -19,9 +19,9 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @scenario(
-    "features/controller_subarray_interactions.feature", "MCCS Turn on low telescope"
+    "features/controller_subarray_interactions.feature", "MCCS Start up low telescope"
 )
-def test_turn_on_low_telescope(
+def test_start_up_low_telescope(
     controller: MccsDeviceProxy,
     subarrays: dict[int, MccsDeviceProxy],
     stations: dict[int, MccsDeviceProxy],
@@ -96,6 +96,7 @@ def we_have_mvplow_running_an_instance_of(
         tango.DevState.DISABLE
     )
 
+    controller.adminMode = AdminMode.ONLINE
     subrack.adminMode = AdminMode.ONLINE
     subarrays[1].adminMode = AdminMode.ONLINE
     subarrays[2].adminMode = AdminMode.ONLINE
@@ -123,7 +124,6 @@ def we_have_mvplow_running_an_instance_of(
     antennas[6].adminMode = AdminMode.ONLINE
     antennas[7].adminMode = AdminMode.ONLINE
     antennas[8].adminMode = AdminMode.ONLINE
-    controller.adminMode = AdminMode.ONLINE
 
     controller_device_state_changed_callback.assert_next_change_event(
         tango.DevState.UNKNOWN
@@ -133,8 +133,8 @@ def we_have_mvplow_running_an_instance_of(
     )
 
 
-@given(parsers.parse("{subsystem_name} is ready to {direction} an on command"))
-def subsystem_is_ready_to_receive_an_on_command(
+@given(parsers.parse("{subsystem_name} is ready to {direction} a startup command"))
+def subsystem_is_ready_to_receive_a_startup_command(
     subsystem_name: str,
     direction: str,
     controller: MccsDeviceProxy,
@@ -156,12 +156,10 @@ def subsystem_is_ready_to_receive_an_on_command(
         raise AssertionError(f"Unknown subsystem {subsystem_name}")
 
 
-@when(parsers.parse("tmc tells mccs controller to turn on"))
-def tmc_tells_mccs_controller_to_turn_on(
-    controller: MccsDeviceProxy,
-) -> None:
+@when(parsers.parse("tmc tells mccs controller to start up"))
+def tmc_tells_mccs_controller_to_start_up(controller: MccsDeviceProxy) -> None:
     """
-    Issue an on command to MCCS Controller.
+    Start up the MCCS subsystem.
 
     :param controller: a proxy to the controller device
     """
@@ -253,7 +251,7 @@ def all_mccs_station_states_are_onoff(
 #     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
 #     """
 #     if subsystem_name == "mccs":
-#         tmc_tells_mccs_controller_to_turn_on(controller)
+#         tmc_tells_mccs_controller_to_start_up(controller)
 #         check_mccs_device_state(controller, "on")
 #         check_mccs_device_state(subarrays[1], "off")
 #         check_mccs_device_state(subarrays[2], "off")

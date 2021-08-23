@@ -2,8 +2,88 @@ import logging
 from typing import Any, Callable, Hashable, Optional
 
 from ska_tango_base.base import BaseComponentManager, OpStateModel
-from ska_tango_base.obs import ObsStateModel
+from ska_tango_base.obs import ObsStateModel, SKAObsDevice
 from ska_tango_base.control_model import ObsState
+from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, StateModelCommand, ObservationCommand
+
+class SKASubarray(SKAObsDevice):
+
+    class InitCommand(SKAObsDevice.InitCommand):
+        def do( # type: ignore[override]
+            self: SKASubarray.InitCommand
+        ) -> tuple[ResultCode, str]: ...
+
+
+    class ScanCommand(ObservationCommand, ResponseCommand):
+        def __init__(
+            self: SKASubarray.ScanCommand,
+            target: Any,
+            op_state_model: OpStateModel,
+            obs_state_model: SubarrayObsStateModel,
+            logger: Optional[logging.Logger]=None
+        ) -> None: ...
+        def do(  # type: ignore[override]
+            self: SKASubarray.ScanCommand, argin: str) -> tuple[ResultCode, str]: ...
+
+
+    class EndScanCommand(ObservationCommand, ResponseCommand):
+        def __init__(
+            self: SKASubarray.EndScanCommand,
+            target: Any,
+            op_state_model: OpStateModel,
+            obs_state_model: SubarrayObsStateModel,
+            logger: Optional[logging.Logger]=None
+        ) -> None: ...
+        def do(  # type: ignore[override]
+            self: SKASubarray.EndScanCommand) -> tuple[ResultCode, str]: ...
+
+
+    class EndCommand(ObservationCommand, ResponseCommand):
+        def __init__(
+            self: SKASubarray.EndCommand,
+            target: Any,
+            op_state_model: OpStateModel,
+            obs_state_model: SubarrayObsStateModel,
+            logger: Optional[logging.Logger]=None
+        ) -> None: ...
+        def do(  # type: ignore[override]
+            self: SKASubarray.EndCommand) -> tuple[ResultCode, str]: ...
+
+
+    class AbortCommand(ObservationCommand, ResponseCommand, CompletionCommand):
+        def __init__(
+            self: SKASubarray.AbortCommand,
+            target: Any,
+            op_state_model: OpStateModel,
+            obs_state_model: SubarrayObsStateModel,
+            logger: Optional[logging.Logger]=None
+        ) -> None: ...
+        def do(  # type: ignore[override]
+            self: SKASubarray.AbortCommand) -> tuple[ResultCode, str]: ...
+
+
+    class ObsResetCommand(ObservationCommand, ResponseCommand, CompletionCommand):
+        def __init__(
+            self: SKASubarray.ObsResetCommand,
+            target: Any,
+            op_state_model: OpStateModel,
+            obs_state_model: SubarrayObsStateModel,
+            logger: Optional[logging.Logger]=None
+        ) -> None: ...
+        def do(  # type: ignore[override]
+            self: SKASubarray.ObsResetCommand) -> tuple[ResultCode, str]: ...
+
+
+    class RestartCommand(ObservationCommand, ResponseCommand, CompletionCommand):
+        def __init__(
+            self: SKASubarray.RestartCommand,
+            target: Any,
+            op_state_model: OpStateModel,
+            obs_state_model: SubarrayObsStateModel,
+            logger: Optional[logging.Logger]=None
+        ) -> None: ...
+        def do(  # type: ignore[override]
+            self: SKASubarray.RestartCommand) -> tuple[ResultCode, str]: ...
 
 
 class SubarrayObsStateModel(ObsStateModel):

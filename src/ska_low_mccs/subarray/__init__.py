@@ -17,4 +17,4 @@ from .subarray_component_manager import SubarrayComponentManager
 
 from .subarray_health_model import SubarrayHealthModel
 
-from .subarray_device import MccsSubarray  # type: ignore[attr-defined]
+from .subarray_device import MccsSubarray

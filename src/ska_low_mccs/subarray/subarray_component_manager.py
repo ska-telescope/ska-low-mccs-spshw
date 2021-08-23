@@ -110,7 +110,7 @@ class SubarrayComponentManager(
         resources_changed_callback: Callable[[set[str], set[str]], None],
         configured_changed_callback: Callable[[bool], None],
         scanning_changed_callback: Callable[[bool], None],
-        obs_fault_callback: Callable[[bool], None],
+        obs_fault_callback: Callable[[], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None

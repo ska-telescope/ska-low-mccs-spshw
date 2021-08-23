@@ -134,8 +134,16 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 
 @pytest.fixture(scope="session")
 def tango_harness_factory(
-    request, logger
-):
+    request: pytest.FixtureRequest, logger: logging.Logger
+) -> Callable[
+    [
+        dict[str, Any],
+        DevicesToLoadType,
+        Callable[[], unittest.mock.Mock],
+        dict[str, unittest.mock.Mock],
+    ],
+    TangoHarness,
+]:
     """
     Returns a factory for creating a test harness for testing Tango devices. The Tango
     context used depends upon the context in which the tests are being run, as specified

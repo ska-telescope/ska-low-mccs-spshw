@@ -131,7 +131,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
     """
     A base component manager for MCCS.
 
-    This class exists to motify the interface of the
+    This class exists to modify the interface of the
     :py:class:`ska_tango_base.base.component_manager.BaseComponentManager`.
     The ``BaseComponentManager`` accepts an ``op_state_model` argument,
     and is expected to interact directly with it. This is not a very

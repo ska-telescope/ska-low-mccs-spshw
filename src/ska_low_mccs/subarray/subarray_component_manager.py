@@ -249,14 +249,6 @@ class SubarrayComponentManager(
         station_fqdns_to_add = station_fqdns - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
 
-        if len(station_fqdns_to_add) != len(subarray_beam_fqdns_to_add):
-            self.logger.error(
-                f"Mismatch: assigning {len(station_fqdns_to_add)} stations, "
-                f"{len(subarray_beam_fqdns_to_add)} subarray beams."
-            )
-            self._assign_completed_callback()
-            return ResultCode.FAILED
-
         if station_fqdns_to_add or subarray_beam_fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             for fqdn in station_fqdns_to_add:

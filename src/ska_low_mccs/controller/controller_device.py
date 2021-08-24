@@ -291,7 +291,7 @@ class MccsController(SKABaseDevice):
         >>> proxy.Allocate(
                 json.dumps(
                 {
-                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
+                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
                     "subarray_id": 1,
                     "subarray_beam_ids": [1],
                     "station_ids": [[1,2]],
@@ -332,7 +332,7 @@ class MccsController(SKABaseDevice):
 
             :param argin: JSON-formatted string
                 {
-                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
                 "subarray_id": int,
                 "subarray_beam_ids": list[int],
                 "station_ids": list[list[int]],

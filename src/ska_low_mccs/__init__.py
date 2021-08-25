@@ -52,7 +52,7 @@ __all__ = [
 
 from .device_proxy import MccsDeviceProxy
 
-from .apiu import MccsAPIU  # type: ignore[attr-defined]
+from .apiu import MccsAPIU
 from .cluster_manager import MccsClusterManagerDevice  # type: ignore[attr-defined]
 from .controller import MccsController  # type: ignore[attr-defined]
 from .tile import MccsTile  # type: ignore[attr-defined]

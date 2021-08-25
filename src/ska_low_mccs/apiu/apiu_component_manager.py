@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast
+from typing import Any, Callable, cast, Optional
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode
@@ -40,7 +40,9 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Callable[[list[bool]], None],
+        component_antenna_power_changed_callback: Optional[
+            Callable[[list[bool]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new instance.

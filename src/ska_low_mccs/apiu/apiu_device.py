@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -9,11 +8,14 @@
 # See LICENSE.txt for more info.
 
 """This module implements the MCCS APIU device."""
-from __future__ import annotations
+
+from __future__ import annotations  # allow forward references in type hints
+
+from typing import List, Optional, Tuple
 
 from tango.server import attribute, command, device_property
 
-from ska_tango_base import SKABaseDevice
+from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 
@@ -23,24 +25,25 @@ from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsAPIU", "main"]
 
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
-def create_return(success, action):
+
+def create_return(success: Optional[bool], action: str) -> tuple[ResultCode, str]:
     """
+    Create a tuple with ResultCode and string message.
+
     Helper function to package up a boolean result into a
     (:py:class:`~ska_tango_base.commands.ResultCode`, message) tuple.
 
     :param success: whether execution of the action was successful. This
         may be None, in which case the action was not performed due to
         redundancy (i.e. it was already done).
-    :type success: bool or None
     :param action: Informal description of the action that the command
         performs, for use in constructing a message
-    :type action: str
 
     :return: A tuple containing a return code and a string
         message indicating status. The message is for
         information purpose only.
-    :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
     """
     if success is None:
         return (ResultCode.OK, f"APIU {action} is redundant")
@@ -85,8 +88,8 @@ class MccsAPIU(SKABaseDevice):
             self.are_antennas_on_changed,
         )
 
-    def init_command_objects(self):
-        """Initialises the command handlers for commands supported by this device."""
+    def init_command_objects(self: MccsAPIU) -> None:
+        """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -106,15 +109,13 @@ class MccsAPIU(SKABaseDevice):
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for the MCCS APIU device."""
 
-        def do(self):
+        def do(self: MccsAPIU.InitCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsAPIU`.
+            Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -208,7 +209,7 @@ class MccsAPIU(SKABaseDevice):
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
 
-    def health_changed(self, health):
+    def health_changed(self: MccsAPIU, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -218,22 +219,22 @@ class MccsAPIU(SKABaseDevice):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    def are_antennas_on_changed(self, are_antennas_on):
+    def are_antennas_on_changed(self: MccsAPIU, are_antennas_on: list[bool]) -> None:
         """
-        Callback to be called whenever power to the antennas changes; responsible for
-        updating the tango side of things i.e. making sure the attribute is up to date,
-        and events are pushed.
+        Handle power changes to the antennas.
 
-        :param are_antennas_on: whether each antenna is pwoered
-        :type are_antennas_on: list(bool)
+        Responsible for updating the tango side of things i.e. making sure the
+        attribute is up to date and events are pushed.
+
+        :param are_antennas_on: whether each antenna is powered
         """
+        self._are_antennas_on: list[bool]
         if self._are_antennas_on == are_antennas_on:
             return
         self._are_antennas_on = list(are_antennas_on)
@@ -256,8 +257,8 @@ class MccsAPIU(SKABaseDevice):
         """
         return self.component_manager.simulation_mode
 
-    @simulationMode.write
-    def simulationMode(self: MccsAPIU, value):
+    @simulationMode.write  # type: ignore[no-redef]
+    def simulationMode(self: MccsAPIU, value: SimulationMode) -> None:
         """
         Set the simulation mode.
 
@@ -266,52 +267,47 @@ class MccsAPIU(SKABaseDevice):
         self.component_manager.simulation_mode = value
 
     @attribute(dtype=int, label="antennas count")
-    def antennaCount(self):
+    def antennaCount(self: MccsAPIU) -> int:
         """
         Return the number of antennas connected to this APIU.
 
         :return: the number of antennas connected to this APIU
-        :rtype: int
         """
         return self.component_manager.antenna_count
 
     @attribute(dtype=(bool,), max_dim_x=256, label="Are Antennas On")
-    def areAntennasOn(self):
+    def areAntennasOn(self: MccsAPIU) -> list[bool]:
         """
         Return whether each antenna is powered or not.
 
         :return: whether each antenna is powered or not
-        :rtype: list(bool)
         """
         return self.component_manager.are_antennas_on()
 
     @attribute(dtype="DevDouble", label="Voltage", unit="Volts")
-    def voltage(self):
+    def voltage(self: MccsAPIU) -> float:
         """
         Return the voltage attribute.
 
         :return: the voltage attribute
-        :rtype: float
         """
         return self.component_manager.voltage
 
     @attribute(dtype="DevDouble", label="Current", unit="Amps")
-    def current(self):
+    def current(self: MccsAPIU) -> float:
         """
         Return the current attribute.
 
         :return: the current value of the current attribute
-        :rtype: float
         """
         return self.component_manager.current
 
     @attribute(dtype="DevDouble", label="Temperature", unit="degC")
-    def temperature(self):
+    def temperature(self: MccsAPIU) -> float:
         """
         Return the temperature attribute.
 
         :return: the value of the temperature attribute
-        :rtype: float
         """
         return self.component_manager.temperature
 
@@ -320,82 +316,74 @@ class MccsAPIU(SKABaseDevice):
         label="Humidity",
         unit="percent",
     )
-    def humidity(self):
+    def humidity(self: MccsAPIU) -> float:
         """
         Return the humidity attribute.
 
         :return: the value of the humidity attribute
-        :rtype: float
         """
         return self.component_manager.humidity
 
     @attribute(dtype="DevBoolean", label="Is alive?")
-    def isAlive(self):
+    def isAlive(self: MccsAPIU) -> bool:
         """
         Return the isAlive attribute.
 
         :return: the value of the isAlive attribute
-        :rtype: bool
         """
         return self._isAlive
 
     @attribute(dtype="DevDouble", label="Over current threshold", unit="Amp")
-    def overCurrentThreshold(self):
+    def overCurrentThreshold(self: MccsAPIU) -> float:
         """
         Return the overCurrentThreshold attribute.
 
         :return: the value of the overCurrentThreshold attribute
-        :rtype: float
         """
         return self._overCurrentThreshold
 
-    @overCurrentThreshold.write
-    def overCurrentThreshold(self, value):
+    @overCurrentThreshold.write  # type: ignore[no-redef]
+    def overCurrentThreshold(self: MccsAPIU, value: float) -> None:
         """
         Set the overCurrentThreshold attribute.
 
         :param value: new value for the overCurrentThreshold attribute
-        :type value: float
         """
         self._overCurrentThreshold = value
 
     @attribute(dtype="DevDouble", label="Over Voltage threshold", unit="Volt")
-    def overVoltageThreshold(self):
+    def overVoltageThreshold(self: MccsAPIU) -> float:
         """
         Return the overVoltageThreshold attribute.
 
         :return: the value of the overVoltageThreshold attribute
-        :rtype: float
         """
         return self._overVoltageThreshold
 
-    @overVoltageThreshold.write
-    def overVoltageThreshold(self, value):
+    @overVoltageThreshold.write  # type: ignore[no-redef]
+    def overVoltageThreshold(self: MccsAPIU, value: float) -> None:
         """
         Set the overVoltageThreshold attribute.
 
         :param value: new value for the overVoltageThreshold attribute
-        :type value: float
         """
         self._overVoltageThreshold = value
 
     @attribute(dtype="DevDouble", label="Humidity threshold", unit="percent")
-    def humidityThreshold(self):
+    def humidityThreshold(self: MccsAPIU) -> float:
         """
         Return the humidity threshold.
 
         :return: the value of the humidityThreshold attribute
-        :rtype: float
         """
         return self._humidityThreshold
 
-    @humidityThreshold.write
-    def humidityThreshold(self, value):
+    @humidityThreshold.write  # type: ignore[no-redef]
+    def humidityThreshold(self: MccsAPIU, value: float) -> None:
         """
         Set the humidityThreshold attribute.
 
         :param value: new value for the humidityThreshold attribute
-        :type value: float
         """
         self._humidityThreshold = value
 
@@ -405,32 +393,27 @@ class MccsAPIU(SKABaseDevice):
     class IsAntennaOnCommand(BaseCommand):
         """The command class for the IsAntennaOn command."""
 
-        def do(self, argin):
+        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.IsAntennaOn` command functionality.
+            Implement :py:meth:`.MccsAPIU.IsAntennaOn` command functionality.
 
             :param argin: the logical antenna id of the antenna to power
                 up
-            :type argin: int
 
             :return: whether the specified antenna is on or not
-            :rtype: bool
             """
             component_manager = self.target
             return component_manager.is_antenna_on(argin)
 
     @command(dtype_in="DevULong", dtype_out=bool)
-    def IsAntennaOn(self, argin):
+    def IsAntennaOn(self: MccsAPIU, argin: int) -> bool:  # type: ignore[override]
         """
         Power up the antenna.
 
         :param argin: the logical antenna id of the antenna to power
             up
-        :type argin: int
 
         :return: whether the specified antenna is on or not
-        :rtype: bool
         """
         handler = self.get_command_object("IsAntennaOn")
         return handler(argin)
@@ -438,20 +421,18 @@ class MccsAPIU(SKABaseDevice):
     class PowerUpAntennaCommand(ResponseCommand):
         """The command class for the PowerDownAntenna command."""
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsAPIU.PowerUpAntennaCommand, argin: int
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerUpAntenna`
-            command functionality.
+            Implement :py:meth:`.MccsAPIU.PowerUpAntenna` command functionality.
 
             :param argin: the logical antenna id of the antenna to power
                 up
-            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             success = component_manager.turn_on_antenna(argin)
@@ -461,40 +442,37 @@ class MccsAPIU(SKABaseDevice):
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
     )
-    def PowerUpAntenna(self, argin):
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def PowerUpAntenna(self: MccsAPIU, argin: int) -> DevVarLongStringArrayType:
         """
         Power up the antenna.
 
         :param argin: the logical antenna id of the antenna to power
             up
-        :type argin: int
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerUpAntenna")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class PowerDownAntennaCommand(ResponseCommand):
         """The command class for the PowerDownAntenna command."""
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsAPIU.PowerDownAntennaCommand, argin: int
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerDownAntenna`
-            command functionality.
+            Implement :py:meth:`.MccsAPIU.PowerDownAntenna` command functionality.
 
             :param argin: the logical antenna id of the antenna to power
                 down
-            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             success = component_manager.turn_off_antenna(argin)
@@ -504,22 +482,20 @@ class MccsAPIU(SKABaseDevice):
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
     )
-    def PowerDownAntenna(self, argin):
+    def PowerDownAntenna(self: MccsAPIU, argin: int) -> DevVarLongStringArrayType:
         """
         Power down the antenna.
 
         :param argin: the logical antenna id of the antenna to power
             down
-        :type argin: int
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerDownAntenna")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class PowerUpCommand(ResponseCommand):
         """
@@ -529,16 +505,13 @@ class MccsAPIU(SKABaseDevice):
         powered by this APIU.
         """
 
-        def do(self):
+        def do(self: MccsAPIU.PowerUpCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerUp` command
-            functionality.
+            Implement :py:meth:`.MccsAPIU.PowerUp` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             success = component_manager.turn_on_antennas()
@@ -547,18 +520,17 @@ class MccsAPIU(SKABaseDevice):
     @command(
         dtype_out="DevVarLongStringArray",
     )
-    def PowerUp(self):
+    def PowerUp(self: MccsAPIU) -> DevVarLongStringArrayType:
         """
         Power up.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerUp")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class PowerDownCommand(ResponseCommand):
         """
@@ -568,16 +540,13 @@ class MccsAPIU(SKABaseDevice):
         powered by this APIU.
         """
 
-        def do(self):
+        def do(self: MccsAPIU.PowerDownCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
             """
-            Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerDown`
-            command functionality.
+            Implement :py:meth:`.MccsAPIU.PowerDown` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             success = component_manager.turn_off_antennas()
@@ -586,18 +555,17 @@ class MccsAPIU(SKABaseDevice):
     @command(
         dtype_out="DevVarLongStringArray",
     )
-    def PowerDown(self):
+    def PowerDown(self: MccsAPIU) -> DevVarLongStringArrayType:
         """
         Power down.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerDown")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
 
 # ----------
@@ -605,19 +573,16 @@ class MccsAPIU(SKABaseDevice):
 # ----------
 
 
-def main(args=None, **kwargs):
+def main(*args: str, **kwargs: str) -> int:
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return MccsAPIU.run_server(args=args, **kwargs)
+    return MccsAPIU.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

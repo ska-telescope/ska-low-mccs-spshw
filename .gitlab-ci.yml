@@ -12,12 +12,6 @@ variables:
   MINIKUBE: "false"
   CHARTS_TO_PUBLISH: ska-low-mccs
 
-# before_script is used to define the command that should be run before all jobs, including deploy jobs, but after the restoration of artifacts.
-# This can be an array or a multi-line string.
-before_script:
-  - python3 -m pip install -r requirements-dev.txt
-  - python3 -m pip install pipdeptree
-
 stages:
   - lint
   - test
@@ -31,10 +25,21 @@ stages:
   - publish
   - release
 
+.poetry: &install_poetry
+  - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python3 -
+  - export PATH="$PATH:$HOME/.local/bin/" 
+  - poetry config repositories.skao ${CAR_PYPI_REPOSITORY_URL}
+.reports: &ready_reports
+  - mkdir -p build
+  - mkdir -p build/reports/
+
 linting:
   stage: lint
   tags:
     - k8srunner
+  before_script:
+    - *install_poetry
+    - *ready_reports
   script:
     - tox -e checklint
   artifacts:
@@ -52,6 +57,9 @@ test:
   stage: test
   tags:
     - k8srunner
+  before_script:
+    - *install_poetry
+    - *ready_reports
   script:
     - tox -e py37
   artifacts:
@@ -60,14 +68,15 @@ test:
 
 list_dependencies:
   stage: test
+  before_script:
+    - *install_poetry
+    - *ready_reports
   script:
-    - pipdeptree --json >> pip_deps.json
-    - pipdeptree >> pip_deps.txt
+    - poetry show --tree >> poetry_deps.txt
     - dpkg -l >> system_deps.txt
     - awk 'FNR>5 {print $2 ", " $3}' system_deps.txt >> system_deps.csv
     - mkdir .public
-    - cp pip_deps.txt .public/
-    - cp pip_deps.json .public/
+    - cp poetry_deps.txt .public/
     - cp system_deps.txt .public/
     - cp system_deps.csv .public/
     - mv .public public
@@ -198,13 +207,15 @@ publish package to CAR:
   tags:
     - k8srunner
   variables:
-    TWINE_USERNAME: $CAR_PYPI_USERNAME
-    TWINE_PASSWORD: $CAR_PYPI_PASSWORD
-    PACKAGE_TAG: $CI_COMMIT_SHORT_SHA
+    POETRY_HTTP_BASIC_PYPI_USERNAME: $CAR_PYPI_USERNAME
+    POETRY_HTTP_BASIC_PYPI_PASSWORD: $CAR_PYPI_PASSWORD
+  before_script:
+    - *install_poetry
+    - *ready_reports
   script:
-    - python3 -m pip install twine
-    - tox -e package # takes $PACKAGE_TAG as input
-    - twine upload --repository-url $CAR_PYPI_REPOSITORY_URL dist/*
+    - poetry build
+    - poetry publish --repository skao
+  when: on_success
   only:
     refs:
       - tags

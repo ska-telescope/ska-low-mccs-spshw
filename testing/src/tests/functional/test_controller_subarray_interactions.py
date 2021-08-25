@@ -13,6 +13,9 @@ from ska_tango_base.control_model import AdminMode  # , HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
 
+# TODO: Previously we used a pytest_mock module_mocker here, rather than a mocker, to
+# ensure that the mocks have module scope. Did we lose this scope when we changed over
+# to a MockChangeEventCallback? Does it matter?
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 # from ska_low_mccs.testing.tango_harness import TangoHarness

@@ -18,7 +18,10 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
     :param item: the collected test for which this hook is called
     """
-    if "tango_harness" in item.fixturenames:
+    # TODO: use of item.fixturenames is all over the interwebs, and it works, but it
+    # doesn't seem to exist in the pytest docs or source code, and mypy thinks that
+    # "Item" has no attribute "fixturenames". We need to understand this mystery.
+    if "tango_harness" in item.fixturenames:  # type: ignore[attr-defined]
         item.add_marker("forked")
 
 

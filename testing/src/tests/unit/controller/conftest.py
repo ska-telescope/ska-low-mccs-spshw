@@ -368,7 +368,7 @@ def subrack_proxies(
 
 
 @pytest.fixture()
-def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
+def mock_component_manager(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:
     """
     Return a mock component manager.
 

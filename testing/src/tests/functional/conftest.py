@@ -11,7 +11,8 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
-def pytest_configure(config: pytest.config.Config) -> None:
+# TODO: pytest is partially typehinted but does not yet export Config
+def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
 

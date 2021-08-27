@@ -307,12 +307,12 @@ class TestClusterCommon:
         :param cluster: the object under test: either a simulator or a
             component manager.
         """
-        assert cluster.shadow_master_pool_status == (
+        assert cluster.shadow_master_pool_status == [
             HealthState.OK,
             HealthState.OK,
             HealthState.OK,
             HealthState.OK,
-        )
+        ]
 
     def test_submit_job(
         self: TestClusterCommon,
@@ -465,10 +465,10 @@ class TestClusterComponentManager:
         """
         cluster_component_manager.start_communicating()
         component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            (HealthState.OK, HealthState.OK, HealthState.OK, HealthState.OK)
+            [HealthState.OK, HealthState.OK, HealthState.OK, HealthState.OK]
         )
 
         cluster_component_manager._component.simulate_node_failure(1, True)
         component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            (HealthState.FAILED, HealthState.OK, HealthState.OK, HealthState.OK)
+            [HealthState.FAILED, HealthState.OK, HealthState.OK, HealthState.OK]
         )

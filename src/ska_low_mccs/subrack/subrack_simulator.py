@@ -143,14 +143,14 @@ class SubrackSimulator(ObjectComponent):
             inject our own bays instead of letting this simulator create
             them.
         """
-        self._backplane_temperatures = backplane_temperatures
-        self._board_temperatures = board_temperatures
+        self._backplane_temperatures = list(backplane_temperatures)
+        self._board_temperatures = list(board_temperatures)
         self._board_current = board_current
-        self._subrack_fan_speeds = subrack_fan_speeds
-        self._subrack_fan_mode = subrack_fan_mode
-        self._power_supply_currents = power_supply_currents
-        self._power_supply_voltages = power_supply_voltages
-        self._power_supply_fan_speeds = power_supply_fan_speeds
+        self._subrack_fan_speeds = list(subrack_fan_speeds)
+        self._subrack_fan_mode = list(subrack_fan_mode)
+        self._power_supply_currents = list(power_supply_currents)
+        self._power_supply_voltages = list(power_supply_voltages)
+        self._power_supply_fan_speeds = list(power_supply_fan_speeds)
 
         self._tpm_data = _tpm_data or [
             {

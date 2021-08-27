@@ -60,7 +60,7 @@ class DemoTile(MccsTile, _FaultSimulatingDevice):
 # ----------
 # Run server
 # ----------
-def main(args: Optional[str] = None, **kwargs: str) -> int:
+def main(args: Optional[str] = None, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 

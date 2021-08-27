@@ -17,10 +17,11 @@ from typing import Any, Union
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
+    SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
@@ -29,7 +30,7 @@ from ska_low_mccs.subrack import (
 from ska_low_mccs.testing.mock import MockCallable
 
 
-class TestSubrackCommon:
+class TestSubrackSimulatorCommon:
     """
     This class contains tests common to several subrack component manager classes.
 
@@ -55,7 +56,7 @@ class TestSubrackCommon:
         ]
     )
     def subrack(
-        self: TestSubrackCommon,
+        self: TestSubrackSimulatorCommon,
         subrack_simulator: SubrackSimulator,
         subrack_simulator_component_manager: SubrackSimulatorComponentManager,
         switching_subrack_component_manager: SwitchingSubrackComponentManager,
@@ -164,7 +165,7 @@ class TestSubrackCommon:
         ),
     )
     def test_read_attribute(
-        self: TestSubrackCommon,
+        self: TestSubrackSimulatorCommon,
         subrack: Union[
             SubrackSimulator,
             SubrackSimulatorComponentManager,
@@ -197,7 +198,7 @@ class TestSubrackCommon:
         ),
     )
     def test_command(
-        self: TestSubrackCommon,
+        self: TestSubrackSimulatorCommon,
         subrack: Union[
             SubrackSimulator,
             SubrackSimulatorComponentManager,
@@ -225,15 +226,228 @@ class TestSubrackCommon:
             ("turn_off_tpm", 1),
             ("set_subrack_fan_speed", 2),
             ("set_subrack_fan_mode", 2),
-            ("set_subrack_fan_speed", 2),
             ("set_power_supply_fan_speed", 2),
         ),
     )
     def test_command_numeric(
-        self: TestSubrackCommon,
+        self: TestSubrackSimulatorCommon,
         subrack: Union[
             SubrackSimulator,
             SubrackSimulatorComponentManager,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        command_name: str,
+        num_args: int,
+    ) -> None:
+        """
+        Test of commands that require numeric parameters.
+
+        These tests don't really do anything, they simply check that the
+        command can be called.
+
+        :param subrack: the subrack class object under test.
+        :param command_name: the name of the command under test
+        :param num_args: the number of args the command takes
+        """
+        if num_args == 1:
+            _ = getattr(subrack, command_name)(1)
+        elif num_args == 2:
+            _ = getattr(subrack, command_name)(1, 1)
+
+
+class TestSubrackDriverCommon:
+    """
+    This class contains tests common to several subrack component manager classes.
+
+    Because the subrack component manager is designed to pass commands
+    through to the subrack simulator or driver, many commands are common
+    to:
+
+    * the SubrackDriver,
+    * the SwitchingSubrackComponentManager (when in driver mode)
+    * the SubrackComponentManager (when in driver mode and turned on)
+
+    Therefore this class contains common tests, parametrised to test
+    against each class.
+    """
+
+    @pytest.fixture(
+        params=[
+            "subrack_driver",
+            "switching_subrack_component_manager",
+            "subrack_component_manager",
+        ]
+    )
+    def subrack(
+        self: TestSubrackDriverCommon,
+        subrack_driver: SubrackDriver,
+        switching_subrack_component_manager: SwitchingSubrackComponentManager,
+        subrack_component_manager: SubrackComponentManager,
+        request: SubRequest,
+    ) -> Union[
+        SubrackDriver,
+        SwitchingSubrackComponentManager,
+        SubrackComponentManager,
+    ]:
+        """
+        Return the subrack class under test.
+
+        This is parametrised to return:
+
+        * a subrack driver,
+
+        * a component manager that switches between subrack driver and
+          simulator (in driver mode), and
+
+        * a subrack component manager (in driver mode and turned on)
+
+        So any test that relies on this fixture will be run three times:
+        once for each of the above classes.
+
+        :param subrack_driver: the subrack driver to return
+        :param switching_subrack_component_manager:
+            a component manager that switches between subrack simulator
+            and driver (in driver mode)
+        :param subrack_component_manager: the subrack component manager
+            to return (in driver mode and powered on)
+        :param request: A pytest object giving access to the requesting
+            test context.
+
+        :raises ValueError: if parametrized with an unrecognised option
+
+        :return: the subrack class object under test
+        """
+        if request.param == "subrack_driver":
+            return subrack_driver
+        elif request.param == "switching_subrack_component_manager":
+            switching_subrack_component_manager.simulation_mode = SimulationMode.FALSE
+            switching_subrack_component_manager.start_communicating()
+            return switching_subrack_component_manager
+        elif request.param == "subrack_component_manager":
+            subrack_component_manager.simulation_mode = SimulationMode.FALSE
+            subrack_component_manager.start_communicating()
+            subrack_component_manager.on()
+            time.sleep(0.1)
+            return subrack_component_manager
+        raise ValueError("subrack fixture parametrized with unrecognised option")
+
+    @pytest.mark.parametrize(
+        ("attribute_name", "expected_value"),
+        (
+            (
+                "backplane_temperatures",
+                SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURE,
+            ),
+            ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURE),
+            ("board_current", SubrackSimulator.DEFAULT_BOARD_CURRENT),
+            ("subrack_fan_speeds", SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS),
+            (
+                "subrack_fan_speeds_percent",
+                [
+                    speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                    for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
+                ],
+            ),
+            ("subrack_fan_mode", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODE),
+            ("tpm_count", 8),
+            ("tpm_temperatures", [0.0] * 8),
+            (
+                "tpm_powers",
+                [
+                    SubrackSimulator.DEFAULT_TPM_VOLTAGE
+                    * SubrackSimulator.DEFAULT_TPM_CURRENT
+                ]
+                * 8,
+            ),
+            ("tpm_voltages", [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8),
+            (
+                "power_supply_fan_speeds",
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
+            ),
+            (
+                "power_supply_currents",
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENT,
+            ),
+            (
+                "power_supply_powers",
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_POWER,
+            ),
+            (
+                "power_supply_voltages",
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE,
+            ),
+            ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
+            ("tpm_currents", [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8),
+        ),
+    )
+    def test_read_attribute(
+        self: TestSubrackDriverCommon,
+        subrack: Union[
+            SubrackDriver,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        attribute_name: str,
+        expected_value: Any,
+    ) -> None:
+        """
+        Tests that read-only attributes take certain known initial values. This is a
+        weak test; over time we should find ways to more thoroughly test each of these
+        independently.
+
+        :param subrack: the subrack class object under test.
+        :param attribute_name: the name of the attribute under test
+        :param expected_value: the expected value of the attribute. This
+            can be any type, but the test of the attribute is a single
+            "==" equality test.
+        """
+        subrack.turn_on_tpms()
+        assert getattr(subrack, attribute_name) == expected_value
+
+    @pytest.mark.parametrize(
+        "command_name",
+        (
+            "are_tpms_on",
+            "turn_on_tpms",
+            "turn_off_tpms",
+        ),
+    )
+    def test_command(
+        self: TestSubrackDriverCommon,
+        subrack: Union[
+            SubrackDriver,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        command_name: str,
+    ) -> None:
+        """
+        Test of commands that require no parameters.
+
+        These tests don't really do anything, they simply check that the
+        command can be called.
+
+        :param subrack: the subrack class object under test.
+        :param command_name: the name of the command under test
+        """
+        _ = getattr(subrack, command_name)()
+
+    @pytest.mark.parametrize(
+        ("command_name", "num_args"),
+        (
+            ("is_tpm_on", 1),
+            ("turn_on_tpm", 1),
+            ("turn_off_tpm", 1),
+            ("set_subrack_fan_speed", 2),
+            ("set_subrack_fan_mode", 2),
+            ("set_power_supply_fan_speed", 2),
+        ),
+    )
+    def test_command_numeric(
+        self: TestSubrackDriverCommon,
+        subrack: Union[
+            SubrackDriver,
             SwitchingSubrackComponentManager,
             SubrackComponentManager,
         ],

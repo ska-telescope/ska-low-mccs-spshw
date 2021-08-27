@@ -46,7 +46,7 @@ class ControllerResourceManager:
         """
         self._resource_manager = HealthfulReadyResourceManager(
             subarrays,
-            {"stations", "subracks", "subarray_beams"},
+            {"station_beams", "subracks", "subarray_beams"},
             stations=stations,
             subracks=subracks,
             subarray_beams=subarray_beams,
@@ -109,7 +109,7 @@ class ControllerResourceManager:
                     channel_blocks=[2, 3],
                 )
         """
-        station_beam = self._resource_pool.getFreeResource("station_beam")
+        station_beam = self._resource_pool.getFreeResource("station_beams")
         resources.update({"station_beams": station_beam})
         self._resource_manager.allocate(subarray, **resources)
 

@@ -123,6 +123,7 @@ def controller_resource_manager(
     subrack_fqdns: Iterable[str],
     station_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
+    station_beam_fqdns: Iterable[str],
     channel_blocks: Iterable[int],
 ) -> ControllerResourceManager:
     """
@@ -141,6 +142,7 @@ def controller_resource_manager(
         subrack_fqdns,
         station_fqdns,
         subarray_beam_fqdns,
+        station_beam_fqdns,
         channel_blocks,
     )
 
@@ -203,6 +205,7 @@ def controller_component_manager(
     subrack_fqdns: Iterable[str],
     station_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
+    station_beam_fqdns: Iterable[str],
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
@@ -238,6 +241,7 @@ def controller_component_manager(
         subrack_fqdns,
         station_fqdns,
         subarray_beam_fqdns,
+        station_beam_fqdns,
         logger,
         communication_status_changed_callback,
         component_power_mode_changed_callback,

@@ -155,9 +155,9 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None
         ],
-        station_beam_health_changed_callback: Callable[
-            [str, Optional[HealthState]], None
-        ],
+        # station_beam_health_changed_callback: Callable[
+            # [str, Optional[HealthState]], None
+        # ],
     ) -> None:
         """
         Initialise a new instance.

@@ -483,9 +483,9 @@ class ResourcePool:
         Sets all resources as free (allocatable).
         """
         self._resources: dict[Hashable, dict[Hashable, bool]] = {
-            resource_type: {resources[resource_type]: True} for resource_type in resources
+            resource_type: {resource: True for resource in resources[resource_type]} 
+            for resource_type in resources
         }
-        self._resources = resources
 
     def getFreeResource(
         self: ResourcePool,
@@ -498,9 +498,10 @@ class ResourcePool:
 
         :raises ValueError: if there a no free resources.
         """
+        print(self._resources)
         for resource in self._resources[resource_type]:
             if self._resources[resource_type][resource]:
-                return self._resources[resource_type][resource]
+                return resource
         
         raise ValueError(f"No free resources of type: {resource_type}.")        
 

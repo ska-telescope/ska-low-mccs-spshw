@@ -82,7 +82,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
-            self._health_model.shadow_master_pool_node_health_changed,
+            self._health_model.shadow_master_pool_node_health_changed,  # type: ignore[arg-type]
         )
 
     def init_command_objects(self: MccsClusterManagerDevice) -> None:

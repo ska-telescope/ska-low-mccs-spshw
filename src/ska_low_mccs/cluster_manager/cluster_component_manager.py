@@ -37,7 +37,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         fault_callback: Optional[Callable[[bool], None]],
         shadow_master_pool_node_health_changed_callback: Optional[
-            Callable[[list[bool]], None]
+            Callable[[list[HealthState]], None]
         ],
     ) -> None:
         self._fault_callback = fault_callback
@@ -55,7 +55,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         )
 
     def update_component_shadow_master_pool_node_health(
-        self: ClusterSimulatorComponentManager, health: list[bool]
+        self: ClusterSimulatorComponentManager, health: list[HealthState]
     ) -> None:
         """
         Update the shadow master pool node health, calling callbacks as required.
@@ -66,7 +66,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
             self._shadow_master_pool_node_health_changed_callback(health)
 
     def component_shadow_master_pool_node_health_changed(
-        self: ClusterSimulatorComponentManager, health: list[bool]
+        self: ClusterSimulatorComponentManager, health: list[HealthState]
     ) -> None:
         """
         Handle a change of health in a shadow master pool node.
@@ -180,7 +180,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         component_shadow_master_pool_node_health_changed_callback: Optional[
-            Callable[[list[bool]], None]
+            Callable[[list[HealthState]], None]
         ],
     ) -> None:
         """

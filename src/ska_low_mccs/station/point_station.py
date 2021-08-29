@@ -184,8 +184,7 @@ class Pointing(object):
         pointing_time: Optional[float] = None,
     ) -> None:
         """
-        Calculate the delay given the altitude and azimuth coordinates of a sky object
-        as astropy angles.
+        Calculate the delay given the altitude and azimuth coordinates of a sky object.
 
         :param altitude: altitude coordinates of a sky object as astropy angle
         :param azimuth: azimuth coordinates of a sky object as astropy angles
@@ -219,8 +218,12 @@ class Pointing(object):
         pointing_time: Optional[float] = None,
         delta_time: float = 1.0,
     ) -> None:
-        """Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
+        """
+        Calculate the phase shift between two antennas.
+
+        Which is given by the phase constant (2 * pi / wavelength)
         multiplied by the projection of the baseline vector onto the plane wave arrival vector
+
         :param right_ascension: Right ascension of source - astropy Angle / string convertable to Angle
         :param declination: Declination of source - astropy Angle / string convertable to Angle
         :param pointing_time: Time of observation (in format astropy time)
@@ -341,8 +344,9 @@ class Pointing(object):
         right_ascension: float, declination: float, time: float, location: float
     ) -> List[Angle]:
         """
-        Calculate the altitude and azimuth coordinates of a sky object from right
-        ascension and declination and time.
+        Calculate the altitude and azimuth coordinates of a sky object.
+
+        From right ascension and declination and time.
 
         :param right_ascension: Right ascension of source - astropy Angle / string convertable to Angle
         :param declination: Declination of source - astropy Angle / string convertable to Angle
@@ -375,8 +379,8 @@ class Pointing(object):
         self: Pointing, right_ascension: float, declination: float, pointing_time: float
     ) -> bool:
         """
-        Determine whether the target is above the horizon, at the specified time for the
-        reference antenna.
+        Determine if the target is above the horizon, given the time for the reference
+        antenna.
 
         :param right_ascension: The right ascension of the target as a astropy angle
         :param declination: The declination of the target as an astropy angle.
@@ -403,8 +407,9 @@ class PointingDriver:
 
     def __init__(self: PointingDriver) -> None:
         """
-        Initialize point_driver object with a default StationInformation setup for array
-        centre and create the Pointing object.
+        Initialize point_driver object with a default StationInformation.
+
+        Setup for array centre and create the Pointing object.
 
         Otherwise leave everything at None.
         """
@@ -423,7 +428,6 @@ class PointingDriver:
         Command to set the station reference position.
 
         :param lat: latitude (WGS84, decimal degrees north)
-
         :param lon: longitude (WGS84, decimal degrees east)
         :param height: Ellipsoidal height (m)
 
@@ -544,7 +548,9 @@ class PointingDriver:
 
     def pointing_job(self: PointingDriver, jobs: Queue, results: Queue) -> None:
         """
-        Worker method for pointing job processes. Keep get times from the jobs queue,
+        Worker method for pointing job processes.
+
+        Keep get times from the jobs queue,
         processing delays for each time and output results to results queue.
 
         :param jobs: queue of jobs
@@ -577,8 +583,9 @@ class PointingDriver:
         self: PointingDriver, count: int, interval: float, nproc: int
     ) -> Optional[PointingDriver]:
         """
-        Multiprocessing version of the sequence CLI command, adding a parameter to set
-        the number of processes.
+        Multiprocessing version of the sequence CLI command.
+
+        Adding a parameter to set the number of processes.
 
         :param count: The number of frames to process
         :param interval: The time interval between frames

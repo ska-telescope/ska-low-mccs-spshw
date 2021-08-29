@@ -80,7 +80,8 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
 
         def do(  # type: ignore[override]
-            self: MccsSubarrayBeam.InitCommand) -> tuple[ResultCode, str]:
+            self: MccsSubarrayBeam.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Initialises the attributes and properties of the
             :py:class:`.MccsSubarrayBeam`.

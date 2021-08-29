@@ -15,7 +15,7 @@ from typing import Any, List, Optional, Tuple
 from tango.server import attribute, command
 
 from ska_tango_base.subarray import SKASubarray
-from ska_tango_base.base.op_state_model import OpStateModel
+from ska_tango_base.base import OpStateModel
 from ska_tango_base.commands import (
     ObservationCommand,
     ResponseCommand,
@@ -286,7 +286,7 @@ class MccsSubarray(SKASubarray):
 
     def health_changed(self: MccsSubarray, health: HealthState) -> None:
         """
-        Called whenever the HealthModel's health state changes.
+        Handle the HealthModel's health state changes.
 
         Responsible for updating the tango side of things i.e. making sure the attribute
         is up to date, and events are pushed.
@@ -593,7 +593,8 @@ class MccsSubarray(SKASubarray):
             self: MccsSubarray.ScanCommand, argin: dict[str, Any]
         ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the scan command.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Scan`
             command for this :py:class:`.MccsSubarray` device.
 
@@ -652,7 +653,8 @@ class MccsSubarray(SKASubarray):
             self: MccsSubarray.EndCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the end command.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.End` command for this
             :py:class:`.MccsSubarray` device.
 
@@ -732,7 +734,7 @@ class MccsSubarray(SKASubarray):
             self: MccsSubarray.RestartCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Implementing the functionality of the RestartComand.
+            Implement the functionality of the RestartComand.
 
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Restart` command for this
             :py:class:`.MccsSubarray` device.
@@ -758,9 +760,7 @@ class MccsSubarray(SKASubarray):
             self: MccsSubarray.SendTransientBufferCommand, argin: list[int]
         ) -> tuple[ResultCode, str]:
             """
-            Stateless do-hook for the
-            :py:meth:`.MccsSubarray.SendTransientBuffer`
-            command
+            Implement the SendTransientBuffer command.
 
             :param argin: specification of the segment of the transient
                 buffer to send, comprising:

@@ -49,8 +49,9 @@ class MccsDeviceProxy:
         cls: Type[MccsDeviceProxy], connection_factory: ConnectionFactory
     ) -> None:
         """
-        Set the default connection factory for this class. This is super
-        useful for unit testing: we can mock out
+        Set the default connection factory for this class.
+
+        This is super useful for unit testing: we can mock out
         :py:class:`tango.DeviceProxy` altogether, by simply setting this
         class's default connection factory to a mock factory.
 
@@ -313,7 +314,7 @@ class MccsDeviceProxy:
 
     def _change_event_received(self: MccsDeviceProxy, event: tango.EventData) -> None:
         """
-        Callback called by the tango system when a subscribed event occurs.
+        Handle subscribe events from the Tango system with this callback.
 
         It in turn invokes all its own callbacks.
 
@@ -368,7 +369,7 @@ class MccsDeviceProxy:
 
     def _read(self: MccsDeviceProxy, attribute_name: str) -> Any:
         """
-        Manually read an attribute.
+        Read an attribute manually.
 
         Used when we receive an event with empty attribute data.
 
@@ -385,7 +386,7 @@ class MccsDeviceProxy:
 
     def __setattr__(self: MccsDeviceProxy, name: str, value: Any) -> None:
         """
-        Handler for setting attributes on this object.
+        Handle the setting of attributes on this object.
 
         If the name matches an attribute that this object already has,
         we update it. But we refuse to create any new attributes.
@@ -406,7 +407,7 @@ class MccsDeviceProxy:
 
     def __getattr__(self: MccsDeviceProxy, name: str, default_value: Any = None) -> Any:
         """
-        Handler for any requested attribute not found in the usual way.
+        Handle any requested attribute not found in the usual way.
 
         If this proxy is in pass-through mode, then we try to get this
         attribute from the underlying proxy.

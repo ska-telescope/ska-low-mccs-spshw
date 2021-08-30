@@ -17,4 +17,4 @@ __all__ = [
 from .transient_buffer import TransientBuffer
 from .transient_buffer_component_manager import TransientBufferComponentManager
 from .transient_buffer_health_model import TransientBufferHealthModel
-from .transient_buffer_device import MccsTransientBuffer  # type: ignore[attr-defined]
+from .transient_buffer_device import MccsTransientBuffer

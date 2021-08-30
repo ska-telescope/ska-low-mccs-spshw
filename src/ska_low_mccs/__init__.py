@@ -60,8 +60,8 @@ from .tile import MccsTile  # type: ignore[attr-defined]
 from .antenna import MccsAntenna
 from .station import MccsStation  # type: ignore[attr-defined]
 from .station_beam import MccsStationBeam  # type: ignore[attr-defined]
-from .subarray import MccsSubarray  # type: ignore[attr-defined]
-from .subarray_beam import MccsSubarrayBeam  # type: ignore[attr-defined]
+from .subarray import MccsSubarray
+from .subarray_beam import MccsSubarrayBeam
 from .subrack import MccsSubrack  # type: ignore[attr-defined]
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer

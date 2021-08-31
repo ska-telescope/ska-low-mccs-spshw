@@ -295,14 +295,15 @@ class MockChangeEventCallback(MockCallable):
 
         :raises AssertionError: if the callback has not been called.
         """
-        called_mock = None
-        while True:
-            try:
-                called_mock = self._queue.get(timeout=self._called_timeout)
-            except queue.Empty:
-                break
+        called_mock = self._queue.get(timeout=self._called_timeout)
         if called_mock is None:
             raise AssertionError("Callback has not been called.")
+
+        while True:
+            try:
+                called_mock = self._queue.get(timeout=self._not_called_timeout)
+            except queue.Empty:
+                break
 
         (args, kwargs) = called_mock.call_args
         (call_name, call_value, call_quality) = args

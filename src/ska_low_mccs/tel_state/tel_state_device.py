@@ -35,7 +35,7 @@ class MccsTelState(SKATelState):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsTelState) -> None:
         """
         Initialise the device.
 

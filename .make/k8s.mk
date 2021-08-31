@@ -156,18 +156,20 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 
 # run helm test
 functional-test helm-test test: ## test the application on K8s
-	@helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
+	@rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
+	helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
+	$(MAKE) logs > $(TEST_RESULTS_DIR)/device-logs.txt; \
 	test_retcode=$$?; \
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
 	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_WAIT} -f $$yaml; \
-	rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
 	kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR); \
 	python3 .wait_for_report_file.py; \
 	report_retcode=$$?; \
-	echo "test report:"; \
-	cat $(TEST_RESULTS_DIR)/*; echo; \
+	echo "Test artefacts are in $(TEST_RESULTS_DIR)"; \
+	echo "Test output:"; \
+	cat $(TEST_RESULTS_DIR)/functional-test-output.txt; echo; \
 	kubectl -n $(KUBE_NAMESPACE) delete pod -l transient; \
 	kubectl -n $(KUBE_NAMESPACE) delete -f $$yaml --now; rm $$yaml; \
 	exit $$test_retcode || $$report_retcode

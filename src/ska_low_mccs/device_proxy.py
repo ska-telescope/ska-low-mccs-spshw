@@ -378,10 +378,22 @@ class MccsDeviceProxy:
         """
         return self._device.read_attribute(attribute_name)
 
-    def __del__(self: MccsDeviceProxy) -> None:
-        """Cleanup before destruction."""
-        for subscription_id in self._change_event_subscription_ids:
-            self._device.unsubscribe_event(subscription_id)
+    # TODO: This method is commented out because it is implicated in our segfault
+    # issues:
+    # a) We know that any time we access Tango from a python-native thread, we have to
+    #    wrap it in ``with tango.EnsureOmniThread():`` to avoid segfaults.
+    # b) Although we don't explicitly launch a thread here, the ``__del__`` method is
+    #    run on the python garbage collection thread, which is a python-native thread!
+    # c) Wrapping a __del__ method in ``with tango.EnsureOmniThread():`` seems fraught
+    #    with danger of re-entrancy / deadlock.
+    # Therefore this method is commented out for now. Unfortunately this means we don't
+    # clean up properly after ourselves, so we should find a better solution if
+    # possible.
+    #
+    # def __del__(self: MccsDeviceProxy) -> None:
+    #     """Cleanup before destruction."""
+    #     for subscription_id in self._change_event_subscription_ids:
+    #         self._device.unsubscribe_event(subscription_id)
 
     def __setattr__(self: MccsDeviceProxy, name: str, value: Any) -> None:
         """

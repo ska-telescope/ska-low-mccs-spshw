@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 
+import tango
 from tango.server import attribute, command, device_property
 
 from ska_tango_base import SKABaseDevice
@@ -72,6 +73,16 @@ class MccsSubrack(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self):
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.

@@ -40,7 +40,7 @@ class MccsSubarrayBeam(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsSubarrayBeam) -> None:
         """
         Initialise the device.
 

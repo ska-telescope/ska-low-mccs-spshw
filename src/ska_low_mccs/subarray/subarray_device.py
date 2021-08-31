@@ -47,7 +47,7 @@ class MccsSubarray(SKASubarray):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsSubarray) -> None:
         """
         Initialise the device.
 

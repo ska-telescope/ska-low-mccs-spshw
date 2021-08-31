@@ -33,7 +33,7 @@ class MccsTransientBuffer(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsTransientBuffer) -> None:
         """
         Initialise the device.
 

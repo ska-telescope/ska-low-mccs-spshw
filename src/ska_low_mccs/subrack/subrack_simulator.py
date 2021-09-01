@@ -174,7 +174,7 @@ class SubrackSimulator(ObjectComponent):
         tpm_power_changed_callback: Callable[[list[bool], None]],
     ) -> None:
         """
-        Set the callback to be called when the the power mode of a TPM changes.
+        Set the callback to be called when the power mode of a TPM changes.
 
         If a callback is provided (i.e. not None), then this method
         registers it, then calls it immediately.
@@ -454,7 +454,7 @@ class SubrackSimulator(ObjectComponent):
 
     def simulate_power_supply_fan_speeds(self, power_supply_fan_speeds):
         """
-        Set the the power supply fan_speeds for this subrack.
+        Set the power supply fan_speeds for this subrack.
 
         :param power_supply_fan_speeds: the simulated  power supply fan_speeds
         :type power_supply_fan_speeds: list(float)
@@ -473,7 +473,7 @@ class SubrackSimulator(ObjectComponent):
 
     def simulate_power_supply_currents(self, power_supply_currents):
         """
-        Set the the power supply current for this subrack.
+        Set the power supply current for this subrack.
 
         :param power_supply_currents: the simulated  power supply current
         :type power_supply_currents: list(float)
@@ -496,7 +496,7 @@ class SubrackSimulator(ObjectComponent):
 
     def simulate_power_supply_powers(self, power_supply_powers):
         """
-        Set the the power supply power for this subrack.
+        Set the power supply power for this subrack.
 
         :param power_supply_powers: the simulated  power supply power
         :type power_supply_powers: list(float)
@@ -518,7 +518,7 @@ class SubrackSimulator(ObjectComponent):
 
     def simulate_power_supply_voltages(self, power_supply_voltages):
         """
-        Set the the power supply voltage for this subrack.
+        Set the power supply voltage for this subrack.
 
         :param power_supply_voltages: the simulated  power supply voltage
         :type power_supply_voltages: list(float)

@@ -110,47 +110,6 @@ class TestApiuAntennaIntegration:
         # ... except for the tile device, which is mocked to always be in ON state
         assert mock_tile_device.state() == DevState.ON
 
-
-
-
-
-        #antenna_device.adminMode = AdminMode.ONLINE
-        # The antenna device tries to establish communication with its antenna. To do
-        # that it has to go through its APIU and its Tile.
-        # So it creates proxies to the APIU and Tile devices.
-        # The first thing it needs to know is whether those devices are turned on, so it
-        # subscribes to change events on device state. There's nothing more to do until
-        # it receives those change events, so it transitions to UNKNOWN (since it is now
-        # trying to establish communication with its antenna) and returns.
-        
-        # TODO: refactor above description
-        #assert antenna_device.state() == DevState.UNKNOWN
-        assert antenna_device.state() == DevState.OFF
-
-        # The tile device sends an event advising that it is ON, and the APIU device
-        # sends an event advising that it is DISABLE.
-        # TODO: refactor this whole section
-        #time.sleep(0.1)
-
-        # The antenna device receives these events, and realises that it can't establish
-        # communication with its antenna through an APIU device that isn't even
-        # monitoring its APIU.
-        # The antenna device doesn't FAULT, or time-out, or enter a backoff-retry loop.
-        # It simply remains in UNKNOWN state, waiting for the next event.
-        #assert antenna_device.state() == DevState.UNKNOWN
-
-        apiu_device.adminMode = AdminMode.ONLINE
-        # The APIU device establishes communication with its APIU. It finds that the
-        # APIU is turned off, so it transitions to OFF...
-        assert apiu_device.state() == DevState.OFF
-
-        # ... and fires a change event...
-        time.sleep(0.1)
-        # ... which is received by the antenna device. Since the event indicates that
-        # the APIU hardware is OFF, the antenna device has established that its antenna
-        # is not powered, so it transitions to OFF state.
-        assert antenna_device.state() == DevState.OFF
-
         apiu_device.On()
         # The APIU device tells the APIU hardware to power on. Once the APIU hardware
         # has powered on, the APIU device detects that change of state, and transitions
@@ -158,21 +117,11 @@ class TestApiuAntennaIntegration:
         time.sleep(0.1)
         assert apiu_device.state() == DevState.ON
 
-        # It fires a change event...
-        time.sleep(0.1)
-        # ...which is received by the antenna device.
-
         # The antenna device subscribes to change events on the power mode of the
         # antennas managed by the APIU. The APIU device knows that the antenna is off...
         assert not apiu_device.isAntennaOn(1)
-        # ... and fires a change event...
-        time.sleep(0.1)
-        # ... which is received by the antenna. The antenna device now knows that its
-        # antenna is powered off, so it stays in state OFF.
-        assert antenna_device.state() == DevState.OFF
 
         antenna_device.On()
-
         # The antenna device tells the antenna to turn on. It does this by telling the
         # APIU device to tell its APIU hardware to turn on antenna 1.
         # The APIU device does so, and then detects that antenna 1 is on.

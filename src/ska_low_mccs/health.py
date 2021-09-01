@@ -18,7 +18,7 @@ __all__ = ["HealthModel"]
 
 class HealthModel:
     """
-    A simple health model the supports:
+    A simple health model the supports.
 
     * HealthState.UNKNOWN -- when communication with the component is
       not established.

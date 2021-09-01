@@ -17,4 +17,4 @@ __all__ = [
 from .tel_state import TelState
 from .tel_state_component_manager import TelStateComponentManager
 from .tel_state_health_model import TelStateHealthModel
-from .tel_state_device import MccsTelState  # type: ignore[attr-defined]
+from .tel_state_device import MccsTelState

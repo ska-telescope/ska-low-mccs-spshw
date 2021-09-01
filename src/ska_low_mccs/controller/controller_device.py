@@ -14,10 +14,9 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 from typing import List, Optional, Tuple
 
-# PyTango imports
+import tango
 from tango.server import attribute, command, device_property
 
-# Additional import
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.commands import ResponseCommand, ResultCode
@@ -46,6 +45,16 @@ class MccsController(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsController) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsController) -> None:
         """Initialise the state model."""
         super()._init_state_model()
@@ -291,7 +300,7 @@ class MccsController(SKABaseDevice):
         >>> proxy.Allocate(
                 json.dumps(
                 {
-                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
+                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
                     "subarray_id": 1,
                     "subarray_beam_ids": [1],
                     "station_ids": [[1,2]],
@@ -332,7 +341,7 @@ class MccsController(SKABaseDevice):
 
             :param argin: JSON-formatted string
                 {
-                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
                 "subarray_id": int,
                 "subarray_beam_ids": list[int],
                 "station_ids": list[list[int]],

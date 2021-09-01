@@ -38,6 +38,16 @@ class MccsAntenna(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsAntenna) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
         self._health_state: Optional[

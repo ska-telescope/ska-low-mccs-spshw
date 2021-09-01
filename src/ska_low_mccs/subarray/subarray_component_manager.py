@@ -110,7 +110,7 @@ class SubarrayComponentManager(
         resources_changed_callback: Callable[[set[str], set[str]], None],
         configured_changed_callback: Callable[[bool], None],
         scanning_changed_callback: Callable[[bool], None],
-        obs_fault_callback: Callable[[bool], None],
+        obs_fault_callback: Callable[[], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None
@@ -248,14 +248,6 @@ class SubarrayComponentManager(
 
         station_fqdns_to_add = station_fqdns - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
-
-        if len(station_fqdns_to_add) != len(subarray_beam_fqdns_to_add):
-            self.logger.error(
-                f"Mismatch: assigning {len(station_fqdns_to_add)} stations, "
-                f"{len(subarray_beam_fqdns_to_add)} subarray beams."
-            )
-            self._assign_completed_callback()
-            return ResultCode.FAILED
 
         if station_fqdns_to_add or subarray_beam_fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)

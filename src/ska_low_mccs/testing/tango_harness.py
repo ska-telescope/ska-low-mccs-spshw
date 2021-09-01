@@ -500,6 +500,9 @@ class TestContextTangoHarness(BaseTangoHarness):
                 process=process,
                 host=self._host,
                 port=self._port,
+                # debug=5,
+                # uncomment this to get debug info, including cppTango debugging symbols
+                # when run against a 'Debug' cppTango build.
             )
         super().__init__(device_info, logger, *args, **kwargs)
 

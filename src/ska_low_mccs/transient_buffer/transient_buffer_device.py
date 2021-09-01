@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -11,6 +10,7 @@
 """This module implements the MCCS transient buffer device."""
 from __future__ import annotations
 
+import tango
 from tango.server import attribute
 
 from ska_tango_base.base import SKABaseDevice
@@ -33,6 +33,16 @@ class MccsTransientBuffer(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsTransientBuffer) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsTransientBuffer) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
@@ -61,10 +71,11 @@ class MccsTransientBuffer(SKABaseDevice):
         initialisation.
         """
 
-        def do(self: MccsTransientBuffer.InitCommand) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsTransientBuffer.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsTransientBuffer`.
+            Initialise the attributes and properties of the MccsTransientBuffer.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -113,7 +124,7 @@ class MccsTransientBuffer(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def health_changed(self, health):
+    def health_changed(self: MccsTransientBuffer, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -123,7 +134,6 @@ class MccsTransientBuffer(SKABaseDevice):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -134,42 +144,38 @@ class MccsTransientBuffer(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(dtype="DevString", label="stationId")
-    def stationId(self):
+    def stationId(self: MccsTransientBuffer) -> int:
         """
         Return the station id.
 
         :return: the station id
-        :rtype: int
         """
         return self.component_manager.station_id
 
     @attribute(dtype="DevString", label="transientBufferJobId")
-    def transientBufferJobId(self):
+    def transientBufferJobId(self: MccsTransientBuffer) -> int:
         """
         Return the transient buffer job id.
 
         :return: the transient buffer job id
-        :rtype: int
         """
         return self.component_manager.transient_buffer_job_id
 
     @attribute(dtype="DevLong", label="resamplingBits")
-    def resamplingBits(self):
+    def resamplingBits(self: MccsTransientBuffer) -> int:
         """
         Return the resampling bit depth.
 
         :return: the resampling bit depth
-        :rtype: int
         """
         return self.component_manager.resampling_bits
 
     @attribute(dtype="DevShort", label="nStations")
-    def nStations(self):
+    def nStations(self: MccsTransientBuffer) -> int:
         """
         Return the number of stations.
 
         :return: the number of stations
-        :rtype: int
         """
         return self.component_manager.n_stations
 
@@ -178,22 +184,20 @@ class MccsTransientBuffer(SKABaseDevice):
         max_dim_x=100,
         label="transientFrequencyWindow",
     )
-    def transientFrequencyWindow(self):
+    def transientFrequencyWindow(self: MccsTransientBuffer) -> list[float]:
         """
         Return the transient frequency window.
 
         :return: the transient frequency window
-        :rtype: list(float)
         """
         return self.component_manager.transient_frequency_window
 
     @attribute(dtype=("DevString",), max_dim_x=100, label="stationIds")
-    def stationIds(self):
+    def stationIds(self: MccsTransientBuffer) -> list[str]:
         """
         Return the station ids.
 
         :return: the station ids
-        :rtype: list(str)
         """
         return self.component_manager.station_ids
 
@@ -201,19 +205,16 @@ class MccsTransientBuffer(SKABaseDevice):
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(*args: str, **kwargs: str) -> int:
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return MccsTransientBuffer.run_server(args=args, **kwargs)
+    return MccsTransientBuffer.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

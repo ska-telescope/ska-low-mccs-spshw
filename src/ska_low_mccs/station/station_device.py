@@ -45,6 +45,16 @@ class MccsStation(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self):
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsStation) -> None:
         super()._init_state_model()
         self._obs_state_model = StationObsStateModel(

@@ -1,10 +1,14 @@
 import logging
 from typing import Any, Callable, Hashable, Optional
 
-from ska_tango_base.base import BaseComponentManager, OpStateModel
-from ska_tango_base.obs import ObsStateModel, SKAObsDevice
+from ska_tango_base.base import BaseComponentManager
+from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.control_model import ObsState
 from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, StateModelCommand, ObservationCommand
+from ska_tango_base.obs import SKAObsDevice
+from ska_tango_base.obs.obs_state_model import ObsStateModel
+from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
+
 
 class SKASubarray(SKAObsDevice):
 
@@ -84,18 +88,6 @@ class SKASubarray(SKAObsDevice):
         ) -> None: ...
         def do(  # type: ignore[override]
             self: SKASubarray.RestartCommand) -> tuple[ResultCode, str]: ...
-
-
-class SubarrayObsStateModel(ObsStateModel):
-    def __init__(
-        self: SubarrayObsStateModel,
-        logger: logging.Logger,
-        callback: Optional[Callable[[ObsState], None]]=None) -> None: ...
-
-    def _obs_state_changed(
-        self: SubarrayObsStateModel,
-        machine_state: ObsStateModel,
-    ) -> None: ...
 
 
 class SubarrayComponentManager(BaseComponentManager):

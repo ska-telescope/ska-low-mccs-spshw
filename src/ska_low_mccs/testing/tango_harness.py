@@ -30,8 +30,8 @@ import unittest.mock
 import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
-
-import ska_tango_base
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.control_model import TestMode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
@@ -60,7 +60,7 @@ DeviceSpecType = TypedDict(
     {
         "name": str,
         "proxy": Type[MccsDeviceProxy],
-        "patch": Type[ska_tango_base.base.SKABaseDevice],
+        "patch": Type[SKABaseDevice],
     },
     total=False,
 )
@@ -70,7 +70,7 @@ DeviceConfigType = TypedDict(
     "DeviceConfigType",
     {
         "server": "str",
-        "class": Type[ska_tango_base.base.SKABaseDevice],
+        "class": Type[SKABaseDevice],
         "fqdn": "str",
         "properties": PropertiesType,
         "memorized": MemorizedType,
@@ -91,7 +91,7 @@ MdtcDeviceInfoType = TypedDict(
 MdtcInfoType = TypedDict(
     "MdtcInfoType",
     {
-        "class": Type[ska_tango_base.base.SKABaseDevice],
+        "class": Type[SKABaseDevice],
         "devices": List[MdtcDeviceInfoType],
     },
 )
@@ -113,7 +113,7 @@ DeviceToLoadType = TypedDict(
         "package": str,
         "device": str,
         "proxy": Type[MccsDeviceProxy],
-        "patch": Type[ska_tango_base.base.SKABaseDevice],
+        "patch": Type[SKABaseDevice],
     },
     total=False,
 )
@@ -156,7 +156,7 @@ class MccsDeviceInfo:
         self: MccsDeviceInfo,
         name: str,
         proxy: type[MccsDeviceProxy],
-        patch: Optional[type[ska_tango_base.base.SKABaseDevice]] = None,
+        patch: Optional[type[SKABaseDevice]] = None,
     ) -> None:
         """
         Include a device in this specification.
@@ -241,7 +241,7 @@ class MccsDeviceInfo:
             :py:class:`tango.test_context.MultiDeviceTestContext`.
         """
         devices_by_class: dict[
-            type[ska_tango_base.base.SKABaseDevice], list[MdtcDeviceInfoType]
+            type[SKABaseDevice], list[MdtcDeviceInfoType]
         ] = defaultdict(list)
         for device in self._devices.values():
             devices_by_class[device["class"]].append(
@@ -719,7 +719,7 @@ class StartingStateTangoHarness(WrapperTangoHarness):
                 if self._check_ready:
                     assert device.check_initialised()
                 if self._set_test_mode:
-                    device.testMode = ska_tango_base.control_model.TestMode.TEST
+                    device.testMode = TestMode.TEST
 
 
 class MockingTangoHarness(WrapperTangoHarness):

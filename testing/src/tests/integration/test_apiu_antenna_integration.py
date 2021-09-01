@@ -17,8 +17,6 @@ import unittest.mock
 import pytest
 from tango import DevState
 
-from ska_tango_base.control_model import AdminMode
-
 from ska_low_mccs import MccsDeviceProxy
 
 from ska_low_mccs.testing.mock import MockDeviceBuilder

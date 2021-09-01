@@ -177,18 +177,15 @@ class MccsDeviceInfo:
                 class_name = next(iter(device_spec))
                 fqdn = next(iter(device_spec[class_name]))
                 properties = device_spec[class_name][fqdn]["properties"]
-                print(f"RCL: properties = {properties}")
 
                 attribute_properties = device_spec[class_name][fqdn].get(
                     "attribute_properties", {}
                 )
-                print(f"RCL: attribute_properties = {properties}")
                 memorized = {
                     name: value["__value"]
                     for name, value in attribute_properties.items()
                     if "__value" in value
                 }
-                print(f"RCL: memorized = {memorized}")
 
                 if patch is None:
                     package = __import__(self._package, fromlist=[class_name])
@@ -207,7 +204,6 @@ class MccsDeviceInfo:
                 break
         else:
             raise ValueError(f"Device {name} not found in source data.")
-        print("RCL: Done - hang is somewhere else!")
 
     @property
     def fqdns(self: MccsDeviceInfo) -> Iterable[str]:

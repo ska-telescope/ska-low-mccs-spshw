@@ -103,11 +103,9 @@ def tango_harness(
 
     :yields: the test harness
     """
-    print("RCL: with tango_harness_factory...1")
     with tango_harness_factory(
         tango_config, devices_to_load, mock_factory, initial_mocks
     ) as harness:
-        print("RCL: about to yield the harness...1")
         yield harness
 
 

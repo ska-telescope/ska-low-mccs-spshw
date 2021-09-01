@@ -126,9 +126,7 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 
     :return: a factory for device proxy mocks
     """
-    print("RCL: mdb = MockDeviceBuilder()...")
     mdb = MockDeviceBuilder()
-    print("RCL: mdb = MockDeviceBuilder() Done")
     return mdb
 
 
@@ -201,12 +199,9 @@ def tango_harness_factory(
 
         :return: a tango test harness
         """
-        print("RCL: build_harness...")
         if devices_to_load is None:
-            print("RCL: device_info = None...")
             device_info = None
         else:
-            print("RCL: device_info = MccsDeviceInfo(**devices_to_load)...")
             device_info = MccsDeviceInfo(**devices_to_load)
 
         tango_harness: TangoHarness  # type hint only
@@ -214,13 +209,10 @@ def tango_harness_factory(
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
         else:
             tango_harness = ClientProxyTangoHarness(device_info, logger)
-
         starting_state_harness = StartingStateTangoHarness(tango_harness)
-
         mocking_harness = MockingTangoHarness(
             starting_state_harness, mock_factory, initial_mocks
         )
-        print("RCL: return mocking_harness")
 
         return mocking_harness
 
@@ -269,11 +261,9 @@ def tango_harness(
 
     :yields: a tango test harness
     """
-    print("RCL: with tango_harness_factory...2")
     with tango_harness_factory(
         tango_config, devices_to_load, mock_factory, initial_mocks
     ) as harness:
-        print("RCL: about to yield the harness...2")
         yield harness
 
 

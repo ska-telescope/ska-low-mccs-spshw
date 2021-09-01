@@ -4,8 +4,10 @@ from typing import Any, Callable, Hashable, Optional, Type, Union, cast
 from tango import DevState
 from tango.server import Device
 
+from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, StateModelCommand
 from ska_tango_base.control_model import PowerMode
+
 
 class BaseComponentManager:
     def __init__(
@@ -31,22 +33,6 @@ class BaseComponentManager:
     ) -> None: ...
     def component_fault(self: BaseComponentManager) -> None: ...
 
-class OpStateModel:
-    def __init__(
-        self: OpStateModel,
-        logger: logging.Logger,
-        callback: Callable[[DevState], None],
-    ): ...
-    @property
-    def op_state(self: OpStateModel) -> DevState: ...
-    def _op_state_changed(self: OpStateModel, machine_state: str) -> None: ...
-    def is_action_allowed(
-        self: OpStateModel,
-        action: str,
-        raise_if_disallowed: bool = False,
-    ) -> bool: ...
-    def perform_action(self: OpStateModel, action: str) -> None: ...
-    def _straight_to_state(self: OpStateModel, op_state_name: str) -> None: ...
 
 class SKABaseDevice(Device):
     def _init_state_model(self: SKABaseDevice) -> None: ...

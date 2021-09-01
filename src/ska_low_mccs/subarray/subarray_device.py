@@ -16,7 +16,7 @@ import tango
 from tango.server import attribute, command
 
 from ska_tango_base.subarray import SKASubarray
-from ska_tango_base.base import OpStateModel
+from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import (
     ObservationCommand,
     ResponseCommand,
@@ -24,7 +24,7 @@ from ska_tango_base.commands import (
     StateModelCommand,
 )
 from ska_tango_base.control_model import HealthState
-from ska_tango_base.subarray import SubarrayObsStateModel
+from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subarray import SubarrayComponentManager, SubarrayHealthModel

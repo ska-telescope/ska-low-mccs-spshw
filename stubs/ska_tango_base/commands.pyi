@@ -2,8 +2,8 @@ import enum
 import logging
 from typing import Any, Optional
 
-from ska_tango_base.base import OpStateModel
-from ska_tango_base.subarray import SubarrayObsStateModel
+from ska_tango_base.base.op_state_model import OpStateModel
+from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 
 class ResultCode(enum.IntEnum):
     OK = 0

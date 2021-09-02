@@ -62,7 +62,7 @@ class ClusterHealthModel(HealthModel):
         return HealthState.OK
 
     def shadow_master_pool_node_health_changed(
-        self: ClusterHealthModel, shadow_master_pool_node_health_ok: list[bool]
+        self: ClusterHealthModel, shadow_master_pool_node_healths: list[HealthState]
     ) -> None:
         """
         Handle a change in health of a node in the shadow master pool.
@@ -70,9 +70,12 @@ class ClusterHealthModel(HealthModel):
         This is a callback hook that is called when a node that belongs
         to the shadow master pool experiences a change in health.
 
-        :param shadow_master_pool_node_health_ok: whether the health
+        :param shadow_master_pool_node_healths: whether the health
             of each node in the shadow master pool is okay
         """
+        shadow_master_pool_node_health_ok = [
+            (health == HealthState.OK) for health in shadow_master_pool_node_healths
+        ]
         if all(shadow_master_pool_node_health_ok):
             self._node_health = HealthState.OK
         elif any(shadow_master_pool_node_health_ok):

@@ -12,7 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from enum import IntEnum
 from itertools import count
-from typing import Any, cast, Callable, Optional, Tuple
+from typing import Any, cast, Callable, Iterator, Optional, Tuple
 
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_low_mccs.component import ObjectComponent
@@ -118,6 +118,9 @@ class JobIdGenerator:
         """
         self._id_format = id_format
         self._counter = count(start=start)
+
+    def __iter__(self: JobIdGenerator) -> Iterator:
+        return self
 
     def __next__(self: JobIdGenerator) -> str:
         """
@@ -637,7 +640,7 @@ class ClusterSimulator(ObjectComponent):
 
         :return: the job_id
         """
-        job_id = next(self._job_id_generator)  # type: ignore [call-overload]
+        job_id = next(self._job_id_generator)
         self._open_jobs[job_id] = JobStatus.STAGING
         return job_id
 

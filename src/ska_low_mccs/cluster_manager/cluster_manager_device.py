@@ -82,7 +82,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
-            self._health_model.shadow_master_pool_node_health_changed,  # type: ignore[arg-type]
+            self._health_model.shadow_master_pool_node_health_changed,
         )
 
     def init_command_objects(self: MccsClusterManagerDevice) -> None:
@@ -493,8 +493,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
         """
         return self.component_manager.shadow_master_pool_node_ids
 
-    @attribute(dtype=("",), max_dim_x=100, label="shadowMasterPoolStatus")
-    def shadowMasterPoolStatus(self: MccsClusterManagerDevice) -> DevState:
+    @attribute(dtype=("DevState",), max_dim_x=100, label="shadowMasterPoolStatus")
+    def shadowMasterPoolStatus(self: MccsClusterManagerDevice) -> list[DevState]:
         """
         Return the states of nodes in the shadow master pool.
 

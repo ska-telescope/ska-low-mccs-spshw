@@ -237,6 +237,7 @@ class MockDeviceBuilder:
             )
             if attribute_value is not None:
                 mock_event_data = unittest.mock.Mock()
+                mock_event_data.err = False
                 mock_event_data.attr_value.name = attribute_name
                 mock_event_data.attr_value.value = attribute_value
                 mock_event_data.attr_value.quality = tango.AttrQuality.ATTR_VALID

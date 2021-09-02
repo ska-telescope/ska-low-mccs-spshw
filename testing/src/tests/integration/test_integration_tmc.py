@@ -418,6 +418,12 @@ class TestMccsIntegrationTmc:
         assert station_1.state() == tango.DevState.ON
         assert station_2.state() == tango.DevState.ON
 
+        # TODO: Subarray is ON, and resources are all healthy, but there's a small
+        # chance that the controller hasn't yet received all the events telling it so.
+        # We need a better way to handle this than taking a short nap with our fingers
+        # crossed.
+        time.sleep(1.0)
+
         # allocate station_1 to subarray_1
         ([result_code], [message]) = call_with_json(
             controller.Allocate,

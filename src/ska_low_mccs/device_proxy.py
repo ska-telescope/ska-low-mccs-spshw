@@ -324,8 +324,11 @@ class MccsDeviceProxy:
         # handling, but it seems like the safer way to go
         with self._change_event_lock:
             attribute_data = self._process_event(event)
-            for callback in self._change_event_callbacks[attribute_data.name.lower()]:
-                self._call_callback(callback, attribute_data)
+            if attribute_data is not None:
+                for callback in self._change_event_callbacks[
+                    attribute_data.name.lower()
+                ]:
+                    self._call_callback(callback, attribute_data)
 
     def _call_callback(
         self: MccsDeviceProxy,
@@ -343,7 +346,7 @@ class MccsDeviceProxy:
 
     def _process_event(
         self: MccsDeviceProxy, event: tango.EventData
-    ) -> tango.DeviceAttribute:
+    ) -> Optional[tango.DeviceAttribute]:
         """
         Process a received event.
 
@@ -355,7 +358,12 @@ class MccsDeviceProxy:
 
         :return: the attribute value data
         """
-        if event.attr_value is None:
+        if event.err:
+            self._logger.warn(
+                f"Received failed change event: error stack is {event.errors}."
+            )
+            return None
+        elif event.attr_value is None:
             warning_message = (
                 "Received change event with empty value. Falling back to manual "
                 f"attribute read. Event.err is {event.err}. Event.errors is\n"

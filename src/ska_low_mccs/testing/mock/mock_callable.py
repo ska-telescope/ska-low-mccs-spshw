@@ -295,25 +295,45 @@ class MockChangeEventCallback(MockCallable):
 
         :raises AssertionError: if the callback has not been called.
         """
-        called_mock = self._queue.get(timeout=self._called_timeout)
-        if called_mock is None:
-            raise AssertionError("Callback has not been called.")
+        called_mock = None
+        failure_message = "Callback has not been called"
 
         while True:
+            timeout = (
+                self._called_timeout
+                if called_mock is None
+                else self._not_called_timeout
+            )
             try:
-                called_mock = self._queue.get(timeout=self._not_called_timeout)
+                called_mock = self._queue.get(timeout=timeout)
             except queue.Empty:
                 break
 
-        (args, kwargs) = called_mock.call_args
-        (call_name, call_value, call_quality) = args
+            (args, kwargs) = called_mock.call_args
+            (call_name, call_value, call_quality) = args
 
-        assert (
-            call_name.lower() == self._event_name
-        ), f"Event name '{call_name.lower()}'' does not match expected name '{self._event_name}'"
-        assert (
-            call_value == value
-        ), f"Call value {call_value} does not match expected value {value}"
-        assert (
-            call_quality == quality
-        ), f"Call quality {call_quality} does not match expected quality {quality}"
+            if call_name.lower() != self._event_name:
+                failure_message = (
+                    f"Event name '{call_name.lower()}' does not match expected name "
+                    f"'{self._event_name}'"
+                )
+                called_mock = None
+                continue
+
+            if call_value != value:
+                failure_message = (
+                    f"Call value {call_value} does not match expected value {value}"
+                )
+                called_mock = None
+                continue
+
+            if call_quality != quality:
+                failure_message = (
+                    f"Call quality {call_quality} does not match expected quality "
+                    f"{quality}"
+                )
+                called_mock = None
+                continue
+
+        if called_mock is None:
+            raise AssertionError(failure_message)

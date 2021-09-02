@@ -24,7 +24,7 @@ from ska_tango_base.control_model import AdminMode, HealthState
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.utils import call_with_json
 
-from ska_low_mccs.testing.mock import MockDeviceBuilder
+from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
@@ -180,13 +180,17 @@ class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
     def test_controller_allocate_subarray(
-        self: TestMccsIntegration, tango_harness: TangoHarness
+        self: TestMccsIntegration,
+        tango_harness: TangoHarness,
+        state_changed_callback_factory: Callable[[], MockChangeEventCallback],
     ) -> None:
         """
         Test that an MccsController device can allocate resources to an MccsSubarray
         device.
 
         :param tango_harness: a test harness for tango devices
+        :param state_changed_callback_factory: a factory for callbacks
+            to be used to subscribe to change events on device state
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
@@ -194,23 +198,75 @@ class TestMccsIntegration:
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
 
+        controller_device_state_changed_callback = state_changed_callback_factory()
+        subarray_1_device_state_changed_callback = state_changed_callback_factory()
+        subarray_2_device_state_changed_callback = state_changed_callback_factory()
+        station_1_device_state_changed_callback = state_changed_callback_factory()
+        station_2_device_state_changed_callback = state_changed_callback_factory()
+
+        controller.add_change_event_callback(
+            "state", controller_device_state_changed_callback
+        )
+        subarray_1.add_change_event_callback(
+            "state", subarray_1_device_state_changed_callback
+        )
+        subarray_2.add_change_event_callback(
+            "state", subarray_2_device_state_changed_callback
+        )
+        station_1.add_change_event_callback(
+            "state", station_1_device_state_changed_callback
+        )
+        station_2.add_change_event_callback(
+            "state", station_2_device_state_changed_callback
+        )
+
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+        subarray_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+        subarray_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+
+        station_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+
+        station_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+
         controller.adminMode = AdminMode.ONLINE
         subarray_1.adminMode = AdminMode.ONLINE
         subarray_2.adminMode = AdminMode.ONLINE
         station_1.adminMode = AdminMode.ONLINE
         station_2.adminMode = AdminMode.ONLINE
 
-        time.sleep(0.6)
-
-        print(f"Station 1: {station_1.state()}")
-        print(f"Station 2: {station_2.state()}")
-        print(f"Subarray 1: {subarray_1.state()}")
-        print(f"Subarray 2: {subarray_2.state()}")
-        print(f"Controller: {controller.state()}")
-
         # Subracks are mocked ON. APIUs, Antennas and Tiles are mocked ON, so stations
         # will be ON too. Therefore controller will already be ON.
-        assert controller.state() == tango.DevState.ON
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        )
+        subarray_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        subarray_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.ON
+        )
+        subarray_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        subarray_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.ON
+        )
+
+        # TODO: Subarray is ON, and resources are all healthy, but there's a small
+        # chance that the controller hasn't yet received all the events telling it so.
+        # We need a better way to handle this than taking a short nap with our fingers
+        # crossed.
+        time.sleep(1.0)
 
         # check initial state
         assert subarray_1.stationFQDNs is None
@@ -281,13 +337,17 @@ class TestMccsIntegration:
         assert station_2.subarrayId == 1
 
     def test_controller_release_subarray(
-        self: TestMccsIntegration, tango_harness: TangoHarness
+        self: TestMccsIntegration,
+        tango_harness: TangoHarness,
+        state_changed_callback_factory: Callable[[], MockChangeEventCallback],
     ) -> None:
         """
         Test that an MccsController device can release the resources of an MccsSubarray
         device.
 
         :param tango_harness: a test harness for tango devices
+        :param state_changed_callback_factory: a factory for callbacks
+            to be used to subscribe to change events on device state
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
@@ -295,23 +355,75 @@ class TestMccsIntegration:
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
 
+        controller_device_state_changed_callback = state_changed_callback_factory()
+        subarray_1_device_state_changed_callback = state_changed_callback_factory()
+        subarray_2_device_state_changed_callback = state_changed_callback_factory()
+        station_1_device_state_changed_callback = state_changed_callback_factory()
+        station_2_device_state_changed_callback = state_changed_callback_factory()
+
+        controller.add_change_event_callback(
+            "state", controller_device_state_changed_callback
+        )
+        subarray_1.add_change_event_callback(
+            "state", subarray_1_device_state_changed_callback
+        )
+        subarray_2.add_change_event_callback(
+            "state", subarray_2_device_state_changed_callback
+        )
+        station_1.add_change_event_callback(
+            "state", station_1_device_state_changed_callback
+        )
+        station_2.add_change_event_callback(
+            "state", station_2_device_state_changed_callback
+        )
+
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+        subarray_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+        subarray_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+
+        station_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+
+        station_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+
         controller.adminMode = AdminMode.ONLINE
         subarray_1.adminMode = AdminMode.ONLINE
         subarray_2.adminMode = AdminMode.ONLINE
         station_1.adminMode = AdminMode.ONLINE
         station_2.adminMode = AdminMode.ONLINE
 
-        time.sleep(0.6)
-
-        print(f"Controller: {controller.state()}")
-        print(f"Subarray 1: {subarray_1.state()}")
-        print(f"Subarray 2: {subarray_2.state()}")
-        print(f"Station 1: {station_1.state()}")
-        print(f"Station 2: {station_2.state()}")
-
         # Subracks are mocked ON. APIUs, Antennas and Tiles are mocked ON, so stations
         # will be ON too. Therefore controller will already be ON.
-        assert controller.state() == tango.DevState.ON
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        )
+        subarray_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        subarray_1_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.ON
+        )
+        subarray_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        subarray_2_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.ON
+        )
+
+        # TODO: Subarray is ON, and resources are all healthy, but there's a small
+        # chance that the controller hasn't yet received all the events telling it so.
+        # We need a better way to handle this than taking a short nap with our fingers
+        # crossed.
+        time.sleep(1.0)
 
         # allocate station_1 to subarray_1
         ([result_code], [message]) = call_with_json(

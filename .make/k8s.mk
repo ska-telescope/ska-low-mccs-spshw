@@ -158,8 +158,8 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 functional-test helm-test test: ## test the application on K8s
 	@rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
 	helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
-	$(MAKE) logs > $(TEST_RESULTS_DIR)/device-logs.txt; \
 	test_retcode=$$?; \
+	$(MAKE) logs > $(TEST_RESULTS_DIR)/device-logs.txt; \
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \

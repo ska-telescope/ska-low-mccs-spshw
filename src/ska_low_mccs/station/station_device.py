@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from typing import List, Optional, Tuple
 
-from tango import DevState
+import tango
 from tango.server import attribute, command, device_property
 
 from ska_tango_base.obs import SKAObsDevice
@@ -48,7 +48,7 @@ class MccsStation(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsStation) -> None:
         """
         Initialise the device.
 
@@ -193,11 +193,11 @@ class MccsStation(SKAObsDevice):
         :return: ``True`` if the command is allowed
         """
         return self.get_state() in [
-            DevState.OFF,
-            DevState.STANDBY,
-            DevState.ON,
-            DevState.UNKNOWN,
-            DevState.FAULT,
+            tango.DevState.OFF,
+            tango.DevState.STANDBY,
+            tango.DevState.ON,
+            tango.DevState.UNKNOWN,
+            tango.DevState.FAULT,
         ]
 
     # ----------
@@ -270,7 +270,7 @@ class MccsStation(SKAObsDevice):
         self.push_change_event("healthState", health)
 
     # Reimplementation for debugging purposes
-    def _update_state(self: MccsStation, state: DevState) -> None:
+    def _update_state(self: MccsStation, state: tango.DevState) -> None:
         """
         Update the device state.
 

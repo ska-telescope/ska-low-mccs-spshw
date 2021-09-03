@@ -22,8 +22,8 @@ from typing import Any, Callable, List, Optional
 import warnings
 from datetime import datetime
 
-from multiprocessing import Queue, Process
-from multiprocessing.queues import Empty  # type: ignore[attr-defined]
+import multiprocessing
+import queue
 
 import fire
 
@@ -546,7 +546,11 @@ class PointingDriver:
         """
         return self.sequence(1, 0)
 
-    def pointing_job(self: PointingDriver, jobs: Queue, results: Queue) -> None:
+    def pointing_job(
+        self: PointingDriver,
+        jobs: queue.Queue[Time],
+        results: queue.Queue[Optional[dict[str, Any]]],
+    ) -> None:
         """
         Worker method for pointing job processes.
 
@@ -571,7 +575,7 @@ class PointingDriver:
                         "delays": self.pointing._delays,
                     }
                 results.put(result)
-            except Empty:
+            except queue.Empty:
                 # Another process grabbed the job
                 # This process will exit on the next loop.
                 pass
@@ -601,11 +605,13 @@ class PointingDriver:
             print("nproc must be >= 1")
             return None
 
-        job_queue: Queue = Queue()
-        results_queue: Queue = Queue()
+        job_queue: queue.Queue[Time] = multiprocessing.Queue()
+        results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
 
         processes = [
-            Process(target=self.pointing_job, args=(job_queue, results_queue))
+            multiprocessing.Process(
+                target=self.pointing_job, args=(job_queue, results_queue)
+            )
             for x in range(nproc)
         ]
 

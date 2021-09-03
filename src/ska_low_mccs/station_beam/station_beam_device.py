@@ -44,7 +44,7 @@ class MccsStationBeam(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsStationBeam) -> None:
         """
         Initialise the device.
 

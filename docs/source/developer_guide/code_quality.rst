@@ -17,16 +17,15 @@ MCCS uses pytest to test its code, with the pytest-cov plugin for
 measuring coverage. In accordance with the `SKA Software Testing Policy
 and Strategy`_, we use branch coverage as our key coverage metric.
 
-Some code has been deliberately excluded from coverage calculations,
-such as
+Tests are set to fail if coverage falls below 80%. Some code has been
+deliberately excluded from coverage calculations, such as
 
 * Command line interface modules
 
 * Historical code that will not be further developed, such as driver
   code for the outdated TPM 1.2.
 
-MCCS aspires to a test coverage is 80%. Once this is achieved, we will
-set guards against it dropping below that.
+* Module entry points
 
 ***********************
 Code formatting / style

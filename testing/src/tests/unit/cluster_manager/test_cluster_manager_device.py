@@ -21,7 +21,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsClusterManagerDevice, MccsDeviceProxy
-from ska_low_mccs.cluster_manager.cluster_simulator import (  # type: ignore[attr-defined]
+from ska_low_mccs.cluster_manager.cluster_simulator import (
     ClusterSimulator,
     JobStatus,
 )

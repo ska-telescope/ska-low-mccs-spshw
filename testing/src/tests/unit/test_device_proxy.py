@@ -101,6 +101,7 @@ class TestMccsDeviceProxy:
             event_quality = f"mock_quality_{i+1}"
 
             mock_event = mocker.Mock()
+            mock_event.err = False
             mock_event.attr_value.name = event_name
             mock_event.attr_value.value = event_value
             mock_event.attr_value.quality = event_quality

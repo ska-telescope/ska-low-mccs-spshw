@@ -15,4 +15,4 @@ __all__ = [
 
 from .station_beam_component_manager import StationBeamComponentManager
 from .station_beam_health_model import StationBeamHealthModel
-from .station_beam_device import MccsStationBeam  # type: ignore[attr-defined]
+from .station_beam_device import MccsStationBeam

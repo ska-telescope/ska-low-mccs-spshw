@@ -20,7 +20,7 @@ from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def patched_station_device_class() -> MccsStation:
+def patched_station_device_class() -> type[MccsStation]:
     """
     Return a station device class, patched with extra commands for testing.
 

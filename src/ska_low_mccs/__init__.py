@@ -53,13 +53,13 @@ __all__ = [
 from .device_proxy import MccsDeviceProxy
 
 from .apiu import MccsAPIU
-from .cluster_manager import MccsClusterManagerDevice  # type: ignore[attr-defined]
+from .cluster_manager import MccsClusterManagerDevice
 from .controller import MccsController
 from .tile import MccsTile  # type: ignore[attr-defined]
 
 from .antenna import MccsAntenna
-from .station import MccsStation  # type: ignore[attr-defined]
-from .station_beam import MccsStationBeam  # type: ignore[attr-defined]
+from .station import MccsStation
+from .station_beam import MccsStationBeam
 from .subarray import MccsSubarray
 from .subarray_beam import MccsSubarrayBeam
 from .subrack import MccsSubrack  # type: ignore[attr-defined]

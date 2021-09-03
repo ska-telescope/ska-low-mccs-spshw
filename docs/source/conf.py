@@ -9,9 +9,12 @@ import sys
 import os
 import typing
 
-# Do we need this
-# import sphinx_rtd_theme
-
+# WORKAROUND: https://github.com/sphinx-doc/sphinx/issues/9243
+import sphinx.builders.html
+import sphinx.builders.latex
+import sphinx.builders.texinfo
+import sphinx.builders.text
+import sphinx.ext.autodoc
 
 # This is an elaborate hack to insert write property into _all_
 # mock decorators. It is needed for getting @attribute to build
@@ -55,7 +58,10 @@ autodoc_mock_imports = [
 ]
 
 
-autodoc_default_options = {"special-members": "__init__"}
+autodoc_default_options = {
+    "members": True,
+    "special-members": "__init__",
+}
 
 
 def setup(app):

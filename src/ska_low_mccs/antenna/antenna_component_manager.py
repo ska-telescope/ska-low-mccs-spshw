@@ -21,6 +21,7 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
+    MessageQueue,
     PowerSupplyProxyComponentManager,
     check_communicating,
     check_on,
@@ -38,6 +39,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         self: _ApiuProxy,
         fqdn: str,
         logical_antenna_id: int,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -49,6 +51,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :param fqdn: the FQDN of the APIU
         :param logical_antenna_id: this antenna's id within the APIU
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -71,6 +75,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         super().__init__(
             fqdn,
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
@@ -251,6 +256,7 @@ class _TileProxy(DeviceComponentManager):
         self: _TileProxy,
         fqdn: str,
         logical_antenna_id: int,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -260,6 +266,8 @@ class _TileProxy(DeviceComponentManager):
 
         :param fqdn: the FQDN of the Tile device
         :param logical_antenna_id: this antenna's id within the Tile
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -275,6 +283,7 @@ class _TileProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
+            message_queue,
             logger,
             communication_status_changed_callback,
             lambda power_mode: None,  # tile doesn't manage antenna power
@@ -394,9 +403,12 @@ class AntennaComponentManager(MccsComponentManager):
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
+        self._message_queue = MessageQueue(logger)
+
         self._apiu_proxy = _ApiuProxy(
             apiu_fqdn,
             apiu_antenna_id,
+            self._message_queue,
             logger,
             self._apiu_communication_status_changed,
             self._apiu_power_mode_changed,
@@ -406,6 +418,7 @@ class AntennaComponentManager(MccsComponentManager):
         self._tile_proxy = _TileProxy(
             tile_fqdn,
             tile_antenna_id,
+            self._message_queue,
             logger,
             self._tile_communication_status_changed,
             self._tile_component_fault_changed,

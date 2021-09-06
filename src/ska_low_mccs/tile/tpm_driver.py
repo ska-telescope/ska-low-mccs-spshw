@@ -18,6 +18,7 @@ from pyfabil.base.definitions import Device
 
 from ska_low_mccs.component import (
     CommunicationStatus,
+    MessageQueue,
     MessageQueueComponentManager,
     enqueue,
 )
@@ -52,6 +53,7 @@ class TpmDriver(MessageQueueComponentManager):
 
     def __init__(
         self,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         ip: str,
         port: int,
@@ -64,6 +66,8 @@ class TpmDriver(MessageQueueComponentManager):
 
         Tries to connect to the given IP and port.
 
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: a logger for this simulator to use
         :type logger: an instance of :py:class:`logging.Logger`, or
             an object that implements the same interface
@@ -117,6 +121,7 @@ class TpmDriver(MessageQueueComponentManager):
         )
 
         super().__init__(
+            message_queue,
             logger,
             communication_status_changed_callback,
             None,

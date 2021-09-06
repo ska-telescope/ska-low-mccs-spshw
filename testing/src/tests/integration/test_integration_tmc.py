@@ -394,6 +394,8 @@ class TestMccsIntegrationTmc:
         assert subarray_beam_3.state() == tango.DevState.ON
         assert subarray_beam_4.state() == tango.DevState.ON
 
+        time.sleep(0.1)
+
         ([result_code], _) = controller.On()
         assert result_code == ResultCode.OK  # should be QUEUED but base classes
 

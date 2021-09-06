@@ -22,6 +22,7 @@ from ska_tango_base.control_model import HealthState, PowerMode
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
+    MessageQueue,
     DeviceComponentManager,
     check_communicating,
     check_on,
@@ -209,9 +210,12 @@ class ControllerComponentManager(MccsComponentManager):
             range(1, 48),
         )
 
+        self._message_queue = MessageQueue(logger, num_workers=3)
+
         self._subarrays: dict[str, _SubarrayProxy] = {
             fqdn: _SubarrayProxy(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
@@ -223,6 +227,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._subracks: dict[str, DeviceComponentManager] = {
             fqdn: DeviceComponentManager(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._subrack_power_mode_changed, fqdn),
@@ -234,6 +239,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._stations: dict[str, _StationProxy] = {
             fqdn: _StationProxy(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._station_power_mode_changed, fqdn),
@@ -245,6 +251,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._subarray_beams: dict[str, DeviceComponentManager] = {
             fqdn: DeviceComponentManager(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,

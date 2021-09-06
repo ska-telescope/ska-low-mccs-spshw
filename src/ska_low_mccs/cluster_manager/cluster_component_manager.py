@@ -20,6 +20,7 @@ from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
+    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -30,6 +31,7 @@ __all__ = ["ClusterComponentManager"]
 class ClusterSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: ClusterSimulatorComponentManager,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
@@ -48,6 +50,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         cluster_simulator = ClusterSimulator()
         super().__init__(
             cluster_simulator,
+            message_queue,
             logger,
             communication_status_changed_callback,
             power_mode_changed_callback,
@@ -200,7 +203,10 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
             callback to be called when the health of a node in the
             shadow pool changes
         """
+        self._message_queue = MessageQueue(logger)
+
         cluster_simulator = ClusterSimulatorComponentManager(
+            self._message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,

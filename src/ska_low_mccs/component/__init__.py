@@ -18,6 +18,7 @@ __all__ = [
     "PowerSupplyProxySimulator",
     "MccsComponentManager",
     "MccsComponentManagerProtocol",
+    "MessageQueue",
     "MessageQueueComponentManager",
     "ObjectComponent",
     "ObjectComponentManager",
@@ -36,7 +37,11 @@ from .component_manager import (
     MccsComponentManagerProtocol,
 )
 from .util import check_communicating, check_on
-from .message_queue_component_manager import MessageQueueComponentManager, enqueue
+from .message_queue_component_manager import (
+    MessageQueue,
+    MessageQueueComponentManager,
+    enqueue,
+)
 from .object_component import ObjectComponent
 from .object_component_manager import ObjectComponentManager
 from .device_component_manager import DeviceComponentManager, ObsDeviceComponentManager

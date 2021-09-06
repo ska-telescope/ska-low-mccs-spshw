@@ -11,6 +11,7 @@ import pytest
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.component import (
+    MessageQueue,
     MessageQueueComponentManager,
     enqueue,
 )
@@ -23,6 +24,7 @@ class ExampleMessageQueueComponentManager(MessageQueueComponentManager):
 
     def __init__(
         self: ExampleMessageQueueComponentManager,
+        logger: logging.Logger,
         command_complete_callback: MockCallable,
         *args: Any,
         task_duration: float = 0.2,
@@ -31,6 +33,7 @@ class ExampleMessageQueueComponentManager(MessageQueueComponentManager):
         """
         Initialise a new instance.
 
+        :param logger: a logger to be used by this component manager
         :param command_complete_callback: a callback to be called when
             the command completes.
         :param args: positional args to pass down to the superclass
@@ -39,7 +42,7 @@ class ExampleMessageQueueComponentManager(MessageQueueComponentManager):
         """
         self._command_complete_callback = command_complete_callback
         self._task_duration = task_duration
-        super().__init__(*args, **kwargs)
+        super().__init__(MessageQueue(logger), logger, *args, **kwargs)
 
     def run_synchronously(self: ExampleMessageQueueComponentManager) -> ResultCode:
         """
@@ -144,8 +147,8 @@ class TestMessageQueueComponentManager:
         :return: a message passing component manager for testing.
         """
         return ExampleMessageQueueComponentManager(
-            command_complete_callback,
             logger,
+            command_complete_callback,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

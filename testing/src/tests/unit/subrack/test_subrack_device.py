@@ -120,11 +120,11 @@ class TestMccsSubrack:
 
         assert (
             list(device_under_test.backplaneTemperatures)
-            == SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURE
+            == SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES
         )
         assert (
             list(device_under_test.boardTemperatures)
-            == SubrackSimulator.DEFAULT_BOARD_TEMPERATURE
+            == SubrackSimulator.DEFAULT_BOARD_TEMPERATURES
         )
         assert device_under_test.boardCurrent == SubrackSimulator.DEFAULT_BOARD_CURRENT
         assert (
@@ -136,15 +136,15 @@ class TestMccsSubrack:
             == SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS
         )
         assert device_under_test.powerSupplyCurrents == pytest.approx(
-            SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENT
+            SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS
         )
         assert device_under_test.powerSupplyVoltages == pytest.approx(
-            SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE
+            SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES
         )
 
         assert (
             list(device_under_test.powerSupplyPowers)
-            == SubrackSimulator.DEFAULT_POWER_SUPPLY_POWER
+            == SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS
         )
         assert (
             list(device_under_test.tpmTemperatures)

@@ -354,7 +354,7 @@ class MccsSubrack(SKABaseDevice):
         """
         Return the subrack fan speeds in percent. This is the commanded value, the
         relation between this level and the actual RPMs is not linear. Subrack speed is
-        managed automatically by the controller, by default (see subrack_fan_mode)
+        managed automatically by the controller, by default (see subrack_fan_modes)
         Commanded speed is the same for fans 1-2 and 3-4.
 
         :return: the subrack fan speeds in percent
@@ -377,7 +377,7 @@ class MccsSubrack(SKABaseDevice):
         :return: the subrack fan mode, 1 AUTO 0 MANUAL
         :rtype: tuple(int)
         """
-        return tuple(self.component_manager.subrack_fan_mode)
+        return tuple(self.component_manager.subrack_fan_modes)
 
     @attribute(
         dtype=("DevBoolean",),
@@ -944,7 +944,7 @@ class MccsSubrack(SKABaseDevice):
                 self.logger.error("Fan_id and mode are mandatory parameters")
                 raise ValueError("Fan_id and mode are mandatory parameter")
 
-            success = component_manager.set_subrack_fan_mode(fan_id, mode)
+            success = component_manager.set_subrack_fan_modes(fan_id, mode)
             return create_return(success, self.SUCCEEDED_MESSAGE)
 
     @command(

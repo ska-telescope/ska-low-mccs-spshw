@@ -171,7 +171,7 @@ def subrack_driver(
     component_tpm_power_changed_callback: MockCallable,
 ) -> SubrackDriver:
     """
-    Return an subrack simulator component manager.
+    Return a subrack driver (with HTTP connection monkey-patched).
 
     (This is a pytest fixture.)
 
@@ -195,16 +195,16 @@ def subrack_driver(
 
         ATTRIBUTE_VALUES = {
             "tpm_on_off": [False, False, False],
-            "backplane_temperatures": SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURE,
-            "board_temperatures": SubrackSimulator.DEFAULT_BOARD_TEMPERATURE,
+            "backplane_temperatures": SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
+            "board_temperatures": SubrackSimulator.DEFAULT_BOARD_TEMPERATURES,
             "board_current": SubrackSimulator.DEFAULT_BOARD_CURRENT,
             "subrack_fan_speeds": SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS,
             "subrack_fan_speeds_percent": [
                 speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
                 for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
             ],
-            "subrack_fan_mode": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODE,
-            "tpm_count": 8,
+            "subrack_fan_modes": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES,
+            "tpm_count": SubrackSimulator.TPM_BAY_COUNT,
             #  "tpm_temperatures" is not implemented in driver
             "tpm_powers": [
                 SubrackSimulator.DEFAULT_TPM_VOLTAGE
@@ -213,9 +213,9 @@ def subrack_driver(
             * 8,
             "tpm_voltages": [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8,
             "power_supply_fan_speeds": SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
-            "power_supply_currents": SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENT,
-            "power_supply_powers": SubrackSimulator.DEFAULT_POWER_SUPPLY_POWER,
-            "power_supply_voltages": SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE,
+            "power_supply_currents": SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
+            "power_supply_powers": SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,
+            "power_supply_voltages": SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,
             "tpm_present": SubrackSimulator.DEFAULT_TPM_PRESENT,
             "tpm_currents": [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8,
         }
@@ -223,6 +223,12 @@ def subrack_driver(
         def __init__(
             self: MockResponse, params: Optional[dict[str, str]] = None
         ) -> None:
+            """
+            Initialise a new instance.
+
+            :param params: requests.get parameters for which values are
+                to be returned in this response.
+            """
             self.status_code = requests.codes.ok
 
             self._json: dict[str, str] = {}
@@ -275,10 +281,6 @@ def subrack_driver(
 
         :return: a response
         """
-        assert (
-            MockResponse.ATTRIBUTE_VALUES["subrack_fan_speeds"]
-            == SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
-        )
         return MockResponse(params)
 
     monkeypatch.setattr(requests, "request", mock_request)

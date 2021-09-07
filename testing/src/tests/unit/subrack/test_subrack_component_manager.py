@@ -120,9 +120,9 @@ class TestSubrackSimulatorCommon:
         (
             (
                 "backplane_temperatures",
-                SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURE,
+                SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
             ),
-            ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURE),
+            ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURES),
             ("board_current", SubrackSimulator.DEFAULT_BOARD_CURRENT),
             ("subrack_fan_speeds", SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS),
             (
@@ -132,36 +132,46 @@ class TestSubrackSimulatorCommon:
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
-            ("subrack_fan_mode", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODE),
-            ("tpm_count", 8),
-            ("tpm_temperatures", [SubrackSimulator.DEFAULT_TPM_TEMPERATURE] * 8),
+            ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
+            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
+            (
+                "tpm_temperatures",
+                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE]
+                * SubrackSimulator.TPM_BAY_COUNT,
+            ),
             (
                 "tpm_powers",
                 [
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * 8,
+                * SubrackSimulator.TPM_BAY_COUNT,
             ),
-            ("tpm_voltages", [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8),
+            (
+                "tpm_voltages",
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+            ),
             (
                 "power_supply_fan_speeds",
                 SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
             ),
             (
                 "power_supply_currents",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENT,
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
             ),
             (
                 "power_supply_powers",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_POWER,
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,
             ),
             (
                 "power_supply_voltages",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE,
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,
             ),
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
-            ("tpm_currents", [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8),
+            (
+                "tpm_currents",
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+            ),
         ),
     )
     def test_read_attribute(
@@ -225,7 +235,7 @@ class TestSubrackSimulatorCommon:
             ("turn_on_tpm", 1),
             ("turn_off_tpm", 1),
             ("set_subrack_fan_speed", 2),
-            ("set_subrack_fan_mode", 2),
+            ("set_subrack_fan_modes", 2),
             ("set_power_supply_fan_speed", 2),
         ),
     )
@@ -337,9 +347,9 @@ class TestSubrackDriverCommon:
         (
             (
                 "backplane_temperatures",
-                SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURE,
+                SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
             ),
-            ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURE),
+            ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURES),
             ("board_current", SubrackSimulator.DEFAULT_BOARD_CURRENT),
             ("subrack_fan_speeds", SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS),
             (
@@ -349,36 +359,42 @@ class TestSubrackDriverCommon:
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
-            ("subrack_fan_mode", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODE),
-            ("tpm_count", 8),
-            ("tpm_temperatures", [0.0] * 8),
+            ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
+            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
+            ("tpm_temperatures", [0.0] * SubrackSimulator.TPM_BAY_COUNT),
             (
                 "tpm_powers",
                 [
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * 8,
+                * SubrackSimulator.TPM_BAY_COUNT,
             ),
-            ("tpm_voltages", [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8),
+            (
+                "tpm_voltages",
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+            ),
             (
                 "power_supply_fan_speeds",
                 SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
             ),
             (
                 "power_supply_currents",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENT,
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
             ),
             (
                 "power_supply_powers",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_POWER,
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,
             ),
             (
                 "power_supply_voltages",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE,
+                SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,
             ),
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
-            ("tpm_currents", [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8),
+            (
+                "tpm_currents",
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+            ),
         ),
     )
     def test_read_attribute(
@@ -440,7 +456,7 @@ class TestSubrackDriverCommon:
             ("turn_on_tpm", 1),
             ("turn_off_tpm", 1),
             ("set_subrack_fan_speed", 2),
-            ("set_subrack_fan_mode", 2),
+            ("set_subrack_fan_modes", 2),
             ("set_power_supply_fan_speed", 2),
         ),
     )

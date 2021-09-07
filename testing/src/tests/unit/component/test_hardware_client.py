@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-import pytest_mock
 import requests
 
 from ska_low_mccs.component import WebHardwareClient
@@ -13,16 +12,19 @@ from ska_low_mccs.component import WebHardwareClient
 class TestWebHardwareClient:
     """Tests of the WebHardwareClient class."""
 
-    def test(
+    def test_web_hardware_client_interface(
         self: TestWebHardwareClient,
         monkeypatch: pytest.monkeypatch,
-        mocker: pytest_mock.mocker,
     ) -> None:
         """
         Test the web hardware client.
 
+        This test monkeypatches the requests library to return canned
+        mock responses. It therefore only tests that the
+        ``WebHardwareClient`` class drivers the requests library
+        correctly.
+
         :param monkeypatch: the pytest monkey-patching fixture
-        :param mocker: a fixture that wraps unittest.mock
         """
         good_ip = "192.0.2.0"
         a_bad_ip = "192.0.2.1"
@@ -60,8 +62,9 @@ class TestWebHardwareClient:
             if good_ip in url:
                 return MockResponse()
             raise requests.exceptions.RequestException(
-                "Test harness has monkeypatched requests.requests so that successful "
-                f"connections can only be made to {good_ip}."
+                f"Cannot connect to URL {url}: Test harness has monkeypatched "
+                "requests.request() so that successful connections can only be made to "
+                f"{good_ip}."
             )
 
         def mock_get(url: str, params: Any = None, **kwargs: Any) -> MockResponse:
@@ -81,8 +84,9 @@ class TestWebHardwareClient:
             if good_ip in url:
                 return MockResponse()
             raise requests.exceptions.RequestException(
-                "Test harness has monkeypatched requests.get so that successful "
-                f"connections can only be made to {good_ip}."
+                f"Cannot connect to URL {url}: Test harness has monkeypatched "
+                "requests.get() so that successful connections can only be made to "
+                f"{good_ip}."
             )
 
         monkeypatch.setattr(requests, "request", mock_request)

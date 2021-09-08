@@ -74,7 +74,7 @@ class MessageQueue:
     A message-passing queue for asynchronous tasking.
 
     To call a method asynchronously, just put onto the queue a triple
-    consistiong of the method to be called, the args, and the kwargs. A
+    consisting of the method to be called, the args, and the kwargs. A
     worker queue will pull the task off the queue and execute it.
     """
 
@@ -123,7 +123,8 @@ class MessageQueue:
 
         :param logger: a logger for the message queue to use
         :param max_size: an optional maximum allowed queue size. The
-            default value is 1.
+            default value is 0, which is a special case signifying no
+            queue size limit.
         :param num_workers: the number of worker threads servicing
             the queue. The default value is 1.
         """
@@ -183,7 +184,7 @@ class MessageQueueComponentManager(MccsComponentManager):
         :param args: positional arguments to pass to the parent class
         :param kwargs: keyword arguments to pass to the parent class.
         """
-        self._message_queue = message_queue or MessageQueue(logger)
+        self._message_queue = message_queue
         super().__init__(logger, *args, **kwargs)
 
     def enqueue(

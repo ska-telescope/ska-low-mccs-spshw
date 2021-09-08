@@ -394,6 +394,7 @@ class TestMccsIntegrationTmc:
         assert subarray_beam_3.state() == tango.DevState.ON
         assert subarray_beam_4.state() == tango.DevState.ON
 
+        # TODO: Understand this race condition and resolve it properly
         time.sleep(0.1)
 
         ([result_code], _) = controller.On()

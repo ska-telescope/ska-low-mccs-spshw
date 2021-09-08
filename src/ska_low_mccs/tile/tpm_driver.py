@@ -934,7 +934,7 @@ class TpmDriver(MessageQueueComponentManager):
 
     def start_acquisition(self, start_time=None, delay=2):
         """
-        Start data acquisitiong.
+        Start data acquisition.
 
         :param start_time: the time at which to start data acquisition,
             defaults to None

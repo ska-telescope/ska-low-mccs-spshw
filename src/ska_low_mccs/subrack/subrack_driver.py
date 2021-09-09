@@ -55,17 +55,17 @@ class SubrackDriver(MccsComponentManager):
             all methods are completed and tested
     """
 
-    DEFAULT_BACKPLANE_TEMPERATURE = [38.0, 39.0]
-    DEFAULT_BOARD_TEMPERATURE = [39.0, 40.0]
+    DEFAULT_BACKPLANE_TEMPERATURES = [38.0, 39.0]
+    DEFAULT_BOARD_TEMPERATURES = [39.0, 40.0]
     DEFAULT_BOARD_CURRENT = 1.1
     DEFAULT_SUBRACK_FAN_SPEED = [4999.0, 5000.0, 5001.0, 5002.0]
     MAX_SUBRACK_FAN_SPEED = 8000.0
-    DEFAULT_SUBRACK_FAN_MODE = [ControlMode.AUTO] * 4
+    DEFAULT_SUBRACK_FAN_MODES = [ControlMode.AUTO] * 4
     DEFAULT_TPM_POWER_MODES = [PowerMode.OFF] * 8
     DEFAULT_TPM_PRESENT = [True] * 8
-    DEFAULT_POWER_SUPPLY_POWER = [50.0, 70.0]
-    DEFAULT_POWER_SUPPLY_VOLTAGE = [12.0, 12.1]
-    DEFAULT_POWER_SUPPLY_CURRENT = [50.0 / 12.0, 70.0 / 12.1]
+    DEFAULT_POWER_SUPPLY_POWERS = [50.0, 70.0]
+    DEFAULT_POWER_SUPPLY_VOLTAGES = [12.0, 12.1]
+    DEFAULT_POWER_SUPPLY_CURRENTS = [50.0 / 12.0, 70.0 / 12.1]
     DEFAULT_POWER_SUPPLY_FAN_SPEED = [90.0, 100.0]
     DEFAULT_TPM_COUNT = 8
 
@@ -105,13 +105,13 @@ class SubrackDriver(MccsComponentManager):
         self._ip = ip
         self._port = port
 
-        self._backplane_temperatures = self.DEFAULT_BACKPLANE_TEMPERATURE
-        self._board_temperatures = self.DEFAULT_BOARD_TEMPERATURE
+        self._backplane_temperatures = self.DEFAULT_BACKPLANE_TEMPERATURES
+        self._board_temperatures = self.DEFAULT_BOARD_TEMPERATURES
         self._board_current = self.DEFAULT_BOARD_CURRENT
         self._subrack_fan_speeds = self.DEFAULT_SUBRACK_FAN_SPEED
-        self._subrack_fan_mode = self.DEFAULT_SUBRACK_FAN_MODE
-        self._power_supply_currents = self.DEFAULT_POWER_SUPPLY_CURRENT
-        self._power_supply_voltages = self.DEFAULT_POWER_SUPPLY_VOLTAGE
+        self._subrack_fan_modes = self.DEFAULT_SUBRACK_FAN_MODES
+        self._power_supply_currents = self.DEFAULT_POWER_SUPPLY_CURRENTS
+        self._power_supply_voltages = self.DEFAULT_POWER_SUPPLY_VOLTAGES
         self._power_supply_fan_speeds = self.DEFAULT_POWER_SUPPLY_FAN_SPEED
         if tpm_present is None:
             self._tpm_present = self.DEFAULT_TPM_PRESENT
@@ -230,17 +230,17 @@ class SubrackDriver(MccsComponentManager):
         return self._subrack_fan_speeds_percent
 
     @property
-    def subrack_fan_mode(self) -> ControlMode:
+    def subrack_fan_modes(self) -> ControlMode:
         """
         Return the subrack fan Mode.
 
         :return: subrack fan mode AUTO or  MANUAL
         """
         self.logger.debug("Reading backplane fan mode")
-        response = self._client.get_attribute("subrack_fan_mode")
+        response = self._client.get_attribute("subrack_fan_modes")
         if response["status"] == "OK":
-            self._subrack_fan_mode = response["value"]
-        return self._subrack_fan_mode
+            self._subrack_fan_modes = response["value"]
+        return self._subrack_fan_modes
 
     @property
     def tpm_count(self):
@@ -576,7 +576,7 @@ class SubrackDriver(MccsComponentManager):
         )
         return True
 
-    def set_subrack_fan_mode(self, fan_id, mode: ControlMode):
+    def set_subrack_fan_modes(self, fan_id, mode: ControlMode):
         """
         Set Fan Operational Mode for the subrack's fan.
 

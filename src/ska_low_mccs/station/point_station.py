@@ -398,7 +398,7 @@ class Pointing(object):
         return alt > 0.0
 
 
-class PointingDriver:
+class PointingDriver:  # pragma: no cover
     """
     The class provides the Fire CLI interface to the Pointing class.
 

@@ -14,15 +14,17 @@ from __future__ import annotations
 
 import logging
 
-from typing import Callable
+from typing import Any, Callable, Optional
 import unittest.mock
 
 import pytest
+import requests
 
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.component import MessageQueue
 from ska_low_mccs.subrack import (
+    SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
@@ -158,6 +160,142 @@ def switching_subrack_component_manager(
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
         message_queue,
+        logger,
+        subrack_ip,
+        subrack_port,
+        communication_status_changed_callback,
+        component_fault_callback,
+        component_tpm_power_changed_callback,
+    )
+
+
+@pytest.fixture()
+def subrack_driver(
+    monkeypatch: pytest.monkeypatch,
+    logger: logging.Logger,
+    subrack_ip: str,
+    subrack_port: int,
+    communication_status_changed_callback: MockCallable,
+    component_fault_callback: MockCallable,
+    component_tpm_power_changed_callback: MockCallable,
+) -> SubrackDriver:
+    """
+    Return a subrack driver (with HTTP connection monkey-patched).
+
+    (This is a pytest fixture.)
+
+    :param monkeypatch: the pytest monkey-patching fixture
+    :param logger: the logger to be used by this object.
+    :param subrack_ip: the IP address of the subrack
+    :param subrack_port: the subrack port
+    :param communication_status_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_fault_callback: callback to be called when the
+        component faults (or stops faulting)
+    :param component_tpm_power_changed_callback: callback to be
+        called when the power mode of an tpm changes
+
+    :return: an subrack simulator component manager.
+    """
+
+    class MockResponse:
+        """A mock class to replace requests.Response."""
+
+        ATTRIBUTE_VALUES = {
+            "tpm_on_off": [False, False, False],
+            "backplane_temperatures": SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
+            "board_temperatures": SubrackSimulator.DEFAULT_BOARD_TEMPERATURES,
+            "board_current": SubrackSimulator.DEFAULT_BOARD_CURRENT,
+            "subrack_fan_speeds": SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS,
+            "subrack_fan_speeds_percent": [
+                speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
+            ],
+            "subrack_fan_modes": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES,
+            "tpm_count": SubrackSimulator.TPM_BAY_COUNT,
+            #  "tpm_temperatures" is not implemented in driver
+            "tpm_powers": [
+                SubrackSimulator.DEFAULT_TPM_VOLTAGE
+                * SubrackSimulator.DEFAULT_TPM_CURRENT
+            ]
+            * 8,
+            "tpm_voltages": [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8,
+            "power_supply_fan_speeds": SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
+            "power_supply_currents": SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
+            "power_supply_powers": SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,
+            "power_supply_voltages": SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,
+            "tpm_present": SubrackSimulator.DEFAULT_TPM_PRESENT,
+            "tpm_currents": [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8,
+        }
+
+        def __init__(
+            self: MockResponse, params: Optional[dict[str, str]] = None
+        ) -> None:
+            """
+            Initialise a new instance.
+
+            :param params: requests.get parameters for which values are
+                to be returned in this response.
+            """
+            self.status_code = requests.codes.ok
+
+            self._json: dict[str, str] = {}
+
+            if params is not None:
+                if params["type"] == "command":
+                    self._json = {
+                        "status": "OK",
+                        "info": f"{params['param']} completed OK",
+                        "command": params["param"],
+                        "retvalue": "",
+                    }
+                elif params["type"] == "getattribute":
+                    self._json = {
+                        "status": "OK",
+                        "info": f"{params['param']} completed OK",
+                        "attribute": params["param"],
+                        "value": self.ATTRIBUTE_VALUES[params["param"]],
+                    }
+
+        def json(self: MockResponse) -> dict[str, str]:
+            """
+            A mock method to replace the patched :py:meth:`request.Response.json`.
+
+            This implementation always returns the same key-value pair.
+
+            :return: a dictionary with a single key-value pair in it.
+            """
+            return self._json
+
+    def mock_request(method: str, url: str, **kwargs: Any) -> MockResponse:
+        """
+        A mock method to replace requests.request.
+
+        :param method: "GET" or "POST"
+        :param url: the URL
+        :param kwargs: other keyword args
+
+        :return: a response
+        """
+        return MockResponse()
+
+    def mock_get(url: str, params: Any = None, **kwargs: Any) -> MockResponse:
+        """
+        A mock method to replace requests.get.
+
+        :param url: the URL
+        :param params: arguments to the GET
+        :param kwargs: other keyword args
+
+        :return: a response
+        """
+        return MockResponse(params)
+
+    monkeypatch.setattr(requests, "request", mock_request)
+    monkeypatch.setattr(requests, "get", mock_get)
+
+    return SubrackDriver(
         logger,
         subrack_ip,
         subrack_port,

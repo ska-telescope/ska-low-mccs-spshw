@@ -53,10 +53,10 @@ class SubrackSimulator(ObjectComponent):
     DEFAULT_TPM_POWER = DEFAULT_TPM_CURRENT * DEFAULT_TPM_VOLTAGE
     """The default power for a module contained in a subrack bay."""
 
-    DEFAULT_BACKPLANE_TEMPERATURE = [38.0, 39.0]
+    DEFAULT_BACKPLANE_TEMPERATURES = [38.0, 39.0]
     """The default temperature for the subrack backplane."""
 
-    DEFAULT_BOARD_TEMPERATURE = [39.0, 40.0]
+    DEFAULT_BOARD_TEMPERATURES = [39.0, 40.0]
     """The default temperature for the subrack management board."""
 
     DEFAULT_BOARD_CURRENT = 1.1
@@ -72,26 +72,29 @@ class SubrackSimulator(ObjectComponent):
     MAX_SUBRACK_FAN_SPEED = 8000.0
     """The maximum fan speed for the subrack."""
 
-    DEFAULT_SUBRACK_FAN_MODE = [ControlMode.AUTO] * 4
+    DEFAULT_SUBRACK_FAN_MODES = [ControlMode.AUTO] * 4
     """
     The default fan mode for the subrack.
 
     This can be overruled using the set_fan_mode method.
     """
 
-    DEFAULT_TPM_POWER_MODES = [PowerMode.OFF] * 8
+    TPM_BAY_COUNT = 8
+    """The number of TPM bays (not all bays may house TPMs)"""
+
+    DEFAULT_TPM_POWER_MODES = [PowerMode.OFF] * TPM_BAY_COUNT
     """The default on/off status of the housed TPMs."""
 
-    DEFAULT_TPM_PRESENT = [True] * 8
+    DEFAULT_TPM_PRESENT = [True] * TPM_BAY_COUNT
     """Whether each TPM is present in the subrack by default."""
 
-    DEFAULT_POWER_SUPPLY_POWER = [50.0, 70.0]
+    DEFAULT_POWER_SUPPLY_POWERS = [50.0, 70.0]
     """The default power supply power."""
 
-    DEFAULT_POWER_SUPPLY_VOLTAGE = [12.0, 12.1]
+    DEFAULT_POWER_SUPPLY_VOLTAGES = [12.0, 12.1]
     """The default power supply voltage."""
 
-    DEFAULT_POWER_SUPPLY_CURRENT = [50.0 / 12.0, 70.0 / 12.1]
+    DEFAULT_POWER_SUPPLY_CURRENTS = [50.0 / 12.0, 70.0 / 12.1]
     """The default power supply current."""
 
     DEFAULT_POWER_SUPPLY_FAN_SPEEDS = [90.0, 100.0]
@@ -99,13 +102,13 @@ class SubrackSimulator(ObjectComponent):
 
     def __init__(
         self,
-        backplane_temperatures=DEFAULT_BACKPLANE_TEMPERATURE,
-        board_temperatures=DEFAULT_BOARD_TEMPERATURE,
+        backplane_temperatures=DEFAULT_BACKPLANE_TEMPERATURES,
+        board_temperatures=DEFAULT_BOARD_TEMPERATURES,
         board_current=DEFAULT_BOARD_CURRENT,
         subrack_fan_speeds=DEFAULT_SUBRACK_FAN_SPEEDS,
-        subrack_fan_mode: ControlMode = DEFAULT_SUBRACK_FAN_MODE,
-        power_supply_currents=DEFAULT_POWER_SUPPLY_CURRENT,
-        power_supply_voltages=DEFAULT_POWER_SUPPLY_VOLTAGE,
+        subrack_fan_modes: ControlMode = DEFAULT_SUBRACK_FAN_MODES,
+        power_supply_currents=DEFAULT_POWER_SUPPLY_CURRENTS,
+        power_supply_voltages=DEFAULT_POWER_SUPPLY_VOLTAGES,
         power_supply_fan_speeds=DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
         tpm_power_modes: list[PowerMode] = DEFAULT_TPM_POWER_MODES,
         tpm_present=DEFAULT_TPM_PRESENT,
@@ -125,7 +128,7 @@ class SubrackSimulator(ObjectComponent):
         :param subrack_fan_speeds: the initial fan_speeds of the subrack backplane
             management board
         :type subrack_fan_speeds: list(float)
-        :param subrack_fan_mode: the initial fan mode of the subrack backplane
+        :param subrack_fan_modes: the initial fan mode of the subrack backplane
         :param power_supply_currents: the initial currents for the 2 power supply in the
             subrack
         :type power_supply_currents: list(float)
@@ -143,14 +146,14 @@ class SubrackSimulator(ObjectComponent):
             inject our own bays instead of letting this simulator create
             them.
         """
-        self._backplane_temperatures = backplane_temperatures
-        self._board_temperatures = board_temperatures
+        self._backplane_temperatures = list(backplane_temperatures)
+        self._board_temperatures = list(board_temperatures)
         self._board_current = board_current
-        self._subrack_fan_speeds = subrack_fan_speeds
-        self._subrack_fan_mode = subrack_fan_mode
-        self._power_supply_currents = power_supply_currents
-        self._power_supply_voltages = power_supply_voltages
-        self._power_supply_fan_speeds = power_supply_fan_speeds
+        self._subrack_fan_speeds = list(subrack_fan_speeds)
+        self._subrack_fan_modes = list(subrack_fan_modes)
+        self._power_supply_currents = list(power_supply_currents)
+        self._power_supply_voltages = list(power_supply_voltages)
+        self._power_supply_fan_speeds = list(power_supply_fan_speeds)
 
         self._tpm_data = _tpm_data or [
             {
@@ -290,13 +293,13 @@ class SubrackSimulator(ObjectComponent):
         ]
 
     @property
-    def subrack_fan_mode(self) -> ControlMode:
+    def subrack_fan_modes(self) -> ControlMode:
         """
         Return the subrack fan Mode.
 
         :return: subrack fan mode AUTO or  MANUAL
         """
-        return self._subrack_fan_mode
+        return self._subrack_fan_modes
 
     @property
     def bay_count(self):
@@ -650,7 +653,7 @@ class SubrackSimulator(ObjectComponent):
             speed_percent / 100.0 * SubrackSimulator.MAX_SUBRACK_FAN_SPEED
         )
 
-    def set_subrack_fan_mode(self, fan_id, mode: ControlMode):
+    def set_subrack_fan_modes(self, fan_id, mode: ControlMode):
         """
         Set Fan Operational Mode for the subrack's fan.
 
@@ -658,7 +661,7 @@ class SubrackSimulator(ObjectComponent):
         :type fan_id: int
         :param mode: AUTO or MANUAL
         """
-        self.subrack_fan_mode[fan_id - 1] = mode
+        self.subrack_fan_modes[fan_id - 1] = mode
 
     def set_power_supply_fan_speed(self, power_supply_fan_id, speed_percent):
         """

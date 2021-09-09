@@ -143,7 +143,7 @@ class json_input:  # noqa: N801
 CHECK_THREAD_SAFETY = False
 
 
-class ThreadsafeCheckingMeta(type):
+class ThreadsafeCheckingMeta(type):  # pragma: no cover
     """Metaclass that checks for methods being run by multiple concurrent threads."""
 
     @staticmethod
@@ -230,7 +230,7 @@ class ThreadsafeCheckingMeta(type):
         return super(ThreadsafeCheckingMeta, cls).__new__(cls, name, bases, attrs)
 
 
-def threadsafe(func: Callable) -> Callable:
+def threadsafe(func: Callable) -> Callable:  # pragma: no cover
     """
     Use this method as a decorator for marking a method as threadsafe.
 

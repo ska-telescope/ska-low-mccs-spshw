@@ -3571,7 +3571,7 @@ class MccsTile(SKABaseDevice):
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(args=None, **kwargs):  # pragma: no cover
     """
     Entry point for module.
 

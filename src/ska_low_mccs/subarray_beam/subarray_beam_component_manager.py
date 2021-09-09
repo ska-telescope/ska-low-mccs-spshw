@@ -17,6 +17,7 @@ from ska_low_mccs.subarray_beam import SubarrayBeam
 from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
+    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -49,8 +50,10 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
         self._is_configured_changed_callback = is_configured_changed_callback
 
+        self._message_queue = MessageQueue(logger)
         super().__init__(
             SubarrayBeam(logger),
+            self._message_queue,
             logger,
             communication_status_changed_callback,
             None,

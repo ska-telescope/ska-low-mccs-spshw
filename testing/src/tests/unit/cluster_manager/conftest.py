@@ -25,7 +25,7 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulatorComponentManager,
     ClusterSimulator,
 )
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import CommunicationStatus, MessageQueue
 
 
 @pytest.fixture()
@@ -58,6 +58,7 @@ def cluster_simulator() -> ClusterSimulator:
 
 @pytest.fixture()
 def cluster_simulator_component_manager(
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -69,6 +70,8 @@ def cluster_simulator_component_manager(
     """
     Return a cluster simulator component manager.
 
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -84,6 +87,7 @@ def cluster_simulator_component_manager(
     :return: a cluster simulator component manager
     """
     return ClusterSimulatorComponentManager(
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_power_mode_changed_callback,

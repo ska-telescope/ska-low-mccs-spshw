@@ -1,8 +1,11 @@
 """This module contains pytest-specific test harness for MCCS unit tests."""
+import logging
 from typing import Callable, Optional
 import unittest
 
 import pytest
+
+from ska_low_mccs.component import MessageQueue
 
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, DevicesToLoadType
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
@@ -235,3 +238,15 @@ def device_to_load() -> Optional[DeviceToLoadType]:
     :return: specification of the device to be loaded
     """
     return None
+
+
+@pytest.fixture()
+def message_queue(logger: logging.Logger) -> MessageQueue:
+    """
+    Return a message queue for use in testing.
+
+    :param logger: a logger to be used by the message queue.
+
+    :return: a message queue for use in testing.
+    """
+    return MessageQueue(logger)

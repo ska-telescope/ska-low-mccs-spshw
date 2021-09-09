@@ -125,10 +125,7 @@ def we_have_mvplow_running_an_instance_of(
     antennas[7].adminMode = AdminMode.ONLINE
     antennas[8].adminMode = AdminMode.ONLINE
 
-    controller_device_state_changed_callback.assert_next_change_event(
-        tango.DevState.UNKNOWN
-    )
-    controller_device_state_changed_callback.assert_next_change_event(
+    controller_device_state_changed_callback.assert_last_change_event(
         tango.DevState.OFF
     )
 

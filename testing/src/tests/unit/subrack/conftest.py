@@ -21,6 +21,7 @@ import pytest
 
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
+from ska_low_mccs.component import MessageQueue
 from ska_low_mccs.subrack import (
     SubrackSimulator,
     SubrackSimulatorComponentManager,
@@ -91,6 +92,7 @@ def subrack_simulator() -> SubrackSimulator:
 
 @pytest.fixture()
 def subrack_simulator_component_manager(
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -101,6 +103,8 @@ def subrack_simulator_component_manager(
 
     (This is a pytest fixture.)
 
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -113,6 +117,7 @@ def subrack_simulator_component_manager(
     :return: an subrack simulator component manager.
     """
     return SubrackSimulatorComponentManager(
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_fault_callback,
@@ -122,6 +127,7 @@ def subrack_simulator_component_manager(
 
 @pytest.fixture()
 def switching_subrack_component_manager(
+    message_queue: MessageQueue,
     logger: logging.Logger,
     subrack_ip: str,
     subrack_port: int,
@@ -134,6 +140,8 @@ def switching_subrack_component_manager(
 
     (This is a pytest fixture.)
 
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
@@ -149,6 +157,7 @@ def switching_subrack_component_manager(
     """
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
+        message_queue,
         logger,
         subrack_ip,
         subrack_port,

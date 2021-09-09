@@ -29,7 +29,7 @@ from ska_low_mccs.apiu import (
     ApiuComponentManager,
     SwitchingApiuComponentManager,
 )
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import CommunicationStatus, MessageQueue
 
 from ska_low_mccs.testing.mock import MockCallable
 
@@ -103,6 +103,7 @@ def apiu_simulator(
 @pytest.fixture()
 def apiu_simulator_component_manager(
     apiu_antenna_count: int,
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -114,6 +115,8 @@ def apiu_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param apiu_antenna_count: the number of antennas in the APIU
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -127,6 +130,7 @@ def apiu_simulator_component_manager(
     """
     return ApiuSimulatorComponentManager(
         apiu_antenna_count,
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_fault_callback,
@@ -137,6 +141,7 @@ def apiu_simulator_component_manager(
 @pytest.fixture()
 def switching_apiu_component_manager(
     apiu_antenna_count: int,
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: Callable[[bool], None],
@@ -148,6 +153,8 @@ def switching_apiu_component_manager(
     (This is a pytest fixture.)
 
     :param apiu_antenna_count: the number of antennas in the APIU
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -162,6 +169,7 @@ def switching_apiu_component_manager(
     return SwitchingApiuComponentManager(
         SimulationMode.TRUE,
         apiu_antenna_count,
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_fault_callback,

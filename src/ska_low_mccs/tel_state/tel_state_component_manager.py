@@ -17,6 +17,7 @@ from ska_low_mccs.tel_state import TelState
 from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
+    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -40,8 +41,11 @@ class TelStateComponentManager(ObjectComponentManager):
             called when the status of the communications channel between
             the component manager and its component changes
         """
+        self._message_queue = MessageQueue(logger)
+
         super().__init__(
             TelState(logger),
+            self._message_queue,
             logger,
             communication_status_changed_callback,
             None,

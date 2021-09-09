@@ -15,6 +15,7 @@ from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
+    MessageQueue,
     MessageQueueComponentManager,
     ObjectComponent,
     check_communicating,
@@ -42,6 +43,7 @@ class ObjectComponentManager(MessageQueueComponentManager):
     def __init__(
         self: ObjectComponentManager,
         component: ObjectComponent,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
@@ -55,6 +57,8 @@ class ObjectComponentManager(MessageQueueComponentManager):
         Initialise a new instance.
 
         :param component: the commponent object to be managed by this
+            component manager
+        :param message_queue: the message queue to be used by this
             component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
@@ -72,6 +76,7 @@ class ObjectComponentManager(MessageQueueComponentManager):
         self._fail_communicate = False
 
         super().__init__(
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,

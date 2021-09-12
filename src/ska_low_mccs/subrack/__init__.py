@@ -16,12 +16,12 @@ __all__ = [
     "SubrackHealthModel",
 ]
 
-from .subrack_simulator import SubrackSimulator  # type: ignore[attr-defined]
-from .subrack_driver import SubrackDriver  # type: ignore[attr-defined]
+from .subrack_simulator import SubrackSimulator
+from .subrack_driver import SubrackDriver
 from .subrack_component_manager import (
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
     SubrackComponentManager,
 )
 from .subrack_health_model import SubrackHealthModel
-from .subrack_device import MccsSubrack  # type: ignore[attr-defined]
+from .subrack_device import MccsSubrack

@@ -62,6 +62,6 @@ from .station import MccsStation
 from .station_beam import MccsStationBeam
 from .subarray import MccsSubarray
 from .subarray_beam import MccsSubarrayBeam
-from .subrack import MccsSubrack  # type: ignore[attr-defined]
+from .subrack import MccsSubrack
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer

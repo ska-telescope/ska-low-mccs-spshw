@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -11,12 +10,21 @@ This module implements a DemoSubrack Tango device.
 DemoSubrack extends MccsSubrack with extra interface features that
 support testing and demonstrating the MCCS Subrack device.
 """
+
+from __future__ import annotations  # allow forward references in type hints
+
+from typing import List, Optional, Tuple
+
 from tango.server import attribute, command
 
+from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsSubrack
 
 
 __all__ = ["DemoSubrack"]
+
+
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 class DemoSubrack(MccsSubrack):
@@ -26,7 +34,7 @@ class DemoSubrack(MccsSubrack):
     because Webjive.
     """
 
-    def init_device(self):
+    def init_device(self: DemoSubrack) -> None:
         """
         Tango hook for initialisation code.
 
@@ -36,157 +44,145 @@ class DemoSubrack(MccsSubrack):
         self.logger.warn("I am a DEMO subrack!")
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOnTpm1(self):
+    def PowerOnTpm1(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn on power to TPM 1.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(1)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOnTpm2(self):
+    def PowerOnTpm2(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn on power to TPM 2.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(2)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOnTpm3(self):
+    def PowerOnTpm3(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn on power to TPM 3.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(3)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOnTpm4(self):
+    def PowerOnTpm4(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn on power to TPM 4.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(4)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOffTpm1(self):
+    def PowerOffTpm1(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn off power to TPM 1.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(1)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOffTpm2(self):
+    def PowerOffTpm2(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn off power to TPM 2.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(2)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOffTpm3(self):
+    def PowerOffTpm3(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn off power to TPM 3.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(3)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerOffTpm4(self):
+    def PowerOffTpm4(self: DemoSubrack) -> DevVarLongStringArrayType:
         """
         Turn off power to TPM 4.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(4)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     @attribute(dtype=bool, label="Is TPM 1 powered")
-    def isTpm1Powered(self):
+    def isTpm1Powered(self: DemoSubrack) -> bool:
         """
         Return whether TPM 1 is powered.
 
         :return: whether TPM 1 is powered
-        :rtype: bool
         """
         handler = self.get_command_object("IsTpmOn")
         return handler(1)
 
     @attribute(dtype=bool, label="Is TPM 2 powered")
-    def isTpm2Powered(self):
+    def isTpm2Powered(self: DemoSubrack) -> bool:
         """
         Return whether TPM 2 is powered.
 
         :return: whether TPM 2 is powered
-        :rtype: bool
         """
         handler = self.get_command_object("IsTpmOn")
         return handler(2)
 
     @attribute(dtype=bool, label="Is TPM 3 powered")
-    def isTpm3Powered(self):
+    def isTpm3Powered(self: DemoSubrack) -> bool:
         """
         Return whether TPM 3 is powered.
 
         :return: whether TPM 3 is powered
-        :rtype: bool
         """
         handler = self.get_command_object("IsTpmOn")
         return handler(3)
 
     @attribute(dtype=bool, label="Is TPM 4 powered")
-    def isTpm4Powered(self):
+    def isTpm4Powered(self: DemoSubrack) -> bool:
         """
         Return whether TPM 4 is powered.
 
         :return: whether TPM 4 is powered
-        :rtype: bool
         """
         handler = self.get_command_object("IsTpmOn")
         return handler(4)
@@ -195,19 +191,16 @@ class DemoSubrack(MccsSubrack):
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):  # pragma: no cover
+def main(*args: str, **kwargs: str) -> int:
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return DemoSubrack.run_server(args=args, **kwargs)
+    return DemoSubrack.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

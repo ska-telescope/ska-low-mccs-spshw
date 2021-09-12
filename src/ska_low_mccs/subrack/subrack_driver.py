@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -24,10 +23,11 @@ Some assumptions of this class are:
 
 These assumptions may need to change in future.
 """
-from __future__ import annotations
+from __future__ import annotations  # allow forward references in type hints
 
 import time
-from typing import Callable
+import logging
+from typing import Callable, cast, Optional
 
 from ska_tango_base.control_model import PowerMode
 
@@ -38,7 +38,6 @@ from ska_low_mccs.component import (
     MessageQueueComponentManager,
     WebHardwareClient,
 )
-
 
 __all__ = ["SubrackDriver"]
 
@@ -71,28 +70,24 @@ class SubrackDriver(MessageQueueComponentManager):
     DEFAULT_TPM_COUNT = 8
 
     def __init__(
-        self,
+        self: SubrackDriver,
         message_queue: MessageQueue,
-        logger,
-        ip,
-        port,
+        logger: logging.Logger,
+        ip: str,
+        port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_tpm_power_changed_callback: Callable[[PowerMode], None],
-        tpm_present=None,
-    ):
+        component_tpm_power_changed_callback: Optional[Callable[[list[bool]], None]],
+        tpm_present: Optional[list[bool]] = None,
+    ) -> None:
         """
         Initialise a new instance and tries to connect to the given IP and port.
 
         :param message_queue: the message queue to be used by this
             driver
         :param logger: a logger for this driver to use
-        :type logger: an instance of :py:class:`logging.Logger`, or
-            an object that implements the same interface
         :param ip: IP address for hardware tile
-        :type ip: str
         :param port: IP address for hardware control
-        :type port: int
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -103,7 +98,6 @@ class SubrackDriver(MessageQueueComponentManager):
             changes
         :param tpm_present: List of TPMs which are expected to be
             present in the subrack. Usually from Tango database.
-        :type tpm_present: list(bool)
         """
         self.logger = logger
         self._ip = ip
@@ -139,7 +133,7 @@ class SubrackDriver(MessageQueueComponentManager):
             component_fault_callback,
         )
 
-    def start_communicating(self):
+    def start_communicating(self: SubrackDriver) -> None:
         """Establish communication with the subrack."""
         super().start_communicating()
         self.enqueue(self._connect_to_subrack)
@@ -152,7 +146,7 @@ class SubrackDriver(MessageQueueComponentManager):
             self.logger.error("status:ERROR")
             self.logger.info("info: Not connected")
 
-    def stop_communicating(self):
+    def stop_communicating(self: SubrackDriver) -> None:
         """Stop communicating with the subrack."""
         super().stop_communicating()
         self._client.disconnect()
@@ -167,119 +161,112 @@ class SubrackDriver(MessageQueueComponentManager):
             self._component_tpm_power_changed_callback(self.are_tpms_on())
 
     @property
-    def backplane_temperatures(self):
+    def backplane_temperatures(self: SubrackDriver) -> list[float]:
         """
         Return the subrack backplane temperatures.
 
         :return: the subrack backplane temperatures
-        :rtype: list(float)
         """
         self.logger.debug("Reading backplane temperature")
+
         response = self._client.get_attribute("backplane_temperatures")
         if response["status"] == "OK":
-            self._backplane_temperatures = response["value"]
+            self._backplane_temperatures = cast(list[float], response["value"])
         return self._backplane_temperatures
 
     @property
-    def board_temperatures(self):
+    def board_temperatures(self: SubrackDriver) -> list[float]:
         """
         Return the subrack management board temperatures.
 
         :return: the board temperatures, in degrees celsius
-        :rtype: list(float)
         """
         self.logger.debug("Reading board temperature")
         response = self._client.get_attribute("board_temperatures")
         if response["status"] == "OK":
-            self._board_temperatures = response["value"]
+            self._board_temperatures = cast(list[float], response["value"])
         return self._board_temperatures
 
     @property
-    def board_current(self):
+    def board_current(self: SubrackDriver) -> float:
         """
         Return the subrack management board current.
 
         :return: the subrack management board current
-        :rtype: float
         """
         self.logger.debug("Reading board current")
         response = self._client.get_attribute("board_current")
         if response["status"] == "OK":
-            self._board_current = response["value"]
+            self._board_current = cast(float, response["value"])
         return self._board_current
 
     @property
-    def subrack_fan_speeds(self):
+    def subrack_fan_speeds(self: SubrackDriver) -> list[float]:
         """
         Return the subrack backplane fan speeds (in RPMs).
 
         :return: the subrack fan speeds (RPMs)
-        :rtype: list(float)
         """
         self.logger.debug("Reading backplane fan speed")
         response = self._client.get_attribute("subrack_fan_speeds")
         if response["status"] == "OK":
-            self._subrack_fan_speeds = response["value"]
+            self._subrack_fan_speeds = cast(list[float], response["value"])
         return self._subrack_fan_speeds
 
     @property
-    def subrack_fan_speeds_percent(self):
+    def subrack_fan_speeds_percent(self: SubrackDriver) -> list[float]:
         """
         Return the subrack backplane fan speeds in percent.
 
         :return: the fan speed, in percent
-        :rtype: list(float)
         """
         self.logger.debug("Reading backplane fan speed percent")
         response = self._client.get_attribute("subrack_fan_speeds_percent")
         if response["status"] == "OK":
-            self._subrack_fan_speeds_percent = response["value"]
+            self._subrack_fan_speeds_percent = cast(list[float], response["value"])
         return self._subrack_fan_speeds_percent
 
     @property
-    def subrack_fan_modes(self) -> ControlMode:
+    def subrack_fan_modes(self: SubrackDriver) -> list[ControlMode]:
         """
         Return the subrack fan Mode.
 
         :return: subrack fan mode AUTO or  MANUAL
         """
-        self.logger.debug("Reading backplane fan mode")
+        self.logger.debug("Reading backplane fan modes")
         response = self._client.get_attribute("subrack_fan_modes")
         if response["status"] == "OK":
             self._subrack_fan_modes = response["value"]
         return self._subrack_fan_modes
 
     @property
-    def tpm_count(self):
+    def tpm_count(self: SubrackDriver) -> int:
         """
         Return the number of TPMs housed in this subrack. If powered off return the last
         value stored, as it should not change often and is meaningless when powered off.
 
         :return: the number of TPMs housed in this subrack
-        :rtype: int
         """
         self.logger.debug("Reading number of TPMs")
         response = self._client.get_attribute("tpm_present")
         if response["status"] == "OK":
-            self._tpm_count = sum(response["value"])
+            self._tpm_count = sum(cast(list[int], response["value"]))
         return self._tpm_count
 
     @property
-    def bay_count(self):
+    def bay_count(self: SubrackDriver) -> int:
         """
         Return the number of TPM bays housed in this subrack.
 
         :return: the number of TPM bays housed in this subrack
-        :rtype: int
         """
         return self._bay_count
 
-    def _check_tpm_id(self, logical_tpm_id):
+    def _check_tpm_id(self: SubrackDriver, logical_tpm_id: int) -> None:
         """
         Helper method to check that a TPM id passed as an argument is within range.
 
         :param logical_tpm_id: the id to check
-        :type logical_tpm_id: int
 
         :raises ValueError: if the tpm id is out of range for this
             subrack
@@ -295,173 +282,160 @@ class SubrackDriver(MessageQueueComponentManager):
             )
 
     @property
-    def tpm_temperatures(self):
+    def tpm_temperatures(self: SubrackDriver) -> list[float]:
         """
         Return the temperatures of the TPMs housed in this subrack.
 
         :return: the temperatures of the TPMs housed in this subrack
-        :rtype: list(float)
         """
         self.logger.warning("SubrackDriver: tpm_temperatures is not implemented")
         return [0.0] * 8
 
     @property
-    def tpm_currents(self):
+    def tpm_currents(self: SubrackDriver) -> list[float]:
         """
         Return the currents of the TPMs housed in this subrack.
 
         :return: the currents of the TPMs housed in this subrack
-        :rtype: list(float)
         """
         response = self._client.get_attribute("tpm_currents")
         if response["status"] == "OK":
-            self._tpm_currents = response["value"]
+            self._tpm_currents = cast(list[float], response["value"])
         return self._tpm_currents
 
     @property
-    def tpm_powers(self):
+    def tpm_powers(self: SubrackDriver) -> list[float]:
         """
         Return the powers of the TPMs housed in this subrack.
 
         :return: the powers of the TPMs housed in this subrack
-        :rtype: list(float)
         """
         response = self._client.get_attribute("tpm_powers")
         if response["status"] == "OK":
-            self._tpm_powers = response["value"]
+            self._tpm_powers = cast(list[float], response["value"])
         return self._tpm_powers
 
     @property
-    def tpm_voltages(self):
+    def tpm_voltages(self: SubrackDriver) -> list[float]:
         """
         Return the voltages of the TPMs housed in this subrack.
 
         :return: the voltages of the TPMs housed in this subrack
-        :rtype: list(float)
         """
         response = self._client.get_attribute("tpm_voltages")
         if response["status"] == "OK":
-            self._tpm_voltages = response["value"]
+            self._tpm_voltages = cast(list[float], response["value"])
         return self._tpm_voltages
 
     @property
-    def power_supply_fan_speeds(self):
+    def power_supply_fan_speeds(self: SubrackDriver) -> list[float]:
         """
         Return the power supply fan speeds for this subrack.
 
         :return: the power supply fan speed
-        :rtype: list(float)
         """
         response = self._client.get_attribute("power_supply_fan_speeds")
         if response["status"] == "OK":
-            self._power_supply_fan_speeds = response["value"]
+            self._power_supply_fan_speeds = cast(list[float], response["value"])
         return self._power_supply_fan_speeds
 
     @property
-    def power_supply_currents(self):
+    def power_supply_currents(self: SubrackDriver) -> list[float]:
         """
         Return the power supply currents for this subrack.
 
         :return: the power supply current
-        :rtype: list(float)
         """
         response = self._client.get_attribute("power_supply_currents")
         if response["status"] == "OK":
-            self._power_supply_currents = response["value"]
+            self._power_supply_currents = cast(list[float], response["value"])
         return self._power_supply_currents
 
     @property
-    def power_supply_powers(self):
+    def power_supply_powers(self: SubrackDriver) -> list[float]:
         """
         Return the power supply power for this subrack.
 
         :return: the power supply power
-        :rtype: list(float)
         """
         response = self._client.get_attribute("power_supply_powers")
         if response["status"] == "OK":
-            self._power_supply_powers = response["value"]
+            self._power_supply_powers = cast(list[float], response["value"])
         return self._power_supply_powers
 
     @property
-    def power_supply_voltages(self):
+    def power_supply_voltages(self: SubrackDriver) -> list[float]:
         """
         Return the power supply voltages for this subrack.
 
         :return: the power supply voltages
-        :rtype: list(float)
         """
         response = self._client.get_attribute("power_supply_voltages")
         if response["status"] == "OK":
-            self._power_supply_voltages = response["value"]
+            self._power_supply_voltages = cast(list[float], response["value"])
         return self._power_supply_voltages
 
     @property
-    def tpm_present(self):
+    def tpm_present(self: SubrackDriver) -> list[bool]:
         """
         Return the tpm detected in the subrack.
 
         :return: list of tpm detected
-        :rtype: list(bool)
         """
         response = self._client.get_attribute("tpm_present")
         if response["status"] == "OK":
-            self._tpm_present = response["value"]
+            self._tpm_present = cast(list[bool], response["value"])
         return self._tpm_present
 
     @property
-    def tpm_supply_fault(self):
+    def tpm_supply_fault(self: SubrackDriver) -> list[int]:
         """
         Return info about about TPM supply fault status.
 
         :return: the TPM supply fault status
-        :rtype: list(int)
         """
         response = self._client.get_attribute("tpm_supply_fault")
         if response["status"] == "OK":
-            self._tpm_supply_fault = response["value"]
+            self._tpm_supply_fault = cast(list[int], response["value"])
         return self._tpm_supply_fault
 
-    def are_tpms_on(self):
+    def are_tpms_on(self: SubrackDriver) -> Optional[list[bool]]:
         """
-        Returns whether each TPM is powered or not. Or None if the subrack itself is
-        turned off.
+        Returns whether each TPM is powered or not.
+
+        Or None if the subrack itself is turned off.
 
         :return: whether each TPM is powered or not.
-        :rtype: list(bool) or None
         """
         response = self._client.get_attribute("tpm_on_off")
         if response["status"] == "OK":
-            self._are_tpms_on = response["value"]
+            self._are_tpms_on = cast(list[bool], response["value"])
         return self._are_tpms_on
 
-    def is_tpm_on(self, logical_tpm_id):
+    def is_tpm_on(self: SubrackDriver, logical_tpm_id: int) -> Optional[bool]:
         """
         Return whether a specified TPM is turned on.
 
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be checked
-        :type logical_tpm_id: int
 
         :return: whether the TPM is on, or None if the subrack itself
             is off
-        :rtype: bool or None
         """
         self._check_tpm_id(logical_tpm_id)
         return self._are_tpms_on[logical_tpm_id - 1]
 
-    def turn_off_tpm(self, logical_tpm_id):
+    def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn off a specified TPM.
 
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be turned off
-        :type logical_tpm_id: int
+
         :return: success value
-        :rtype: bool
         """
         self._check_tpm_id(logical_tpm_id)
-        response = self._client.execute_command("turn_off_tpm", logical_tpm_id)
+        response = self._client.execute_command("turn_off_tpm", str(logical_tpm_id))
         self.logger.debug(
             "TpmDriver:" + response["command"] + ": " + response["status"]
         )
@@ -480,18 +454,17 @@ class SubrackDriver(MessageQueueComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    def turn_on_tpm(self, logical_tpm_id):
+    def turn_on_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn on a specified TPM.
 
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be turned on
-        :type logical_tpm_id: int
+
         :return: success status
-        :rtype: bool
         """
         self._check_tpm_id(logical_tpm_id)
-        response = self._client.execute_command("turn_on_tpm", logical_tpm_id)
+        response = self._client.execute_command("turn_on_tpm", str(logical_tpm_id))
         self.logger.debug(
             "TpmDriver:" + response["command"] + ": " + response["status"]
         )
@@ -510,11 +483,11 @@ class SubrackDriver(MessageQueueComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    def turn_on_tpms(self):
+    def turn_on_tpms(self: SubrackDriver) -> bool:
         """
         Turn on all TPMs.
+
         :return: success value
-        :rtype: bool
         """
         response = self._client.execute_command("turn_on_tpms")
         self.logger.debug(
@@ -535,11 +508,11 @@ class SubrackDriver(MessageQueueComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    def turn_off_tpms(self):
+    def turn_off_tpms(self: SubrackDriver) -> bool:
         """
         Turn off all TPMs.
+
         :return: success value
-        :rtype: bool
         """
         response = self._client.execute_command("turn_off_tpms")
         self.logger.debug(
@@ -560,16 +533,16 @@ class SubrackDriver(MessageQueueComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    def set_subrack_fan_speed(self, fan_id, speed_percent):
+    def set_subrack_fan_speed(
+        self: SubrackDriver, fan_id: int, speed_percent: float
+    ) -> bool:
         """
         Set the subrack backplane fan speed in percent.
 
         :param fan_id: id of the selected fan accepted value: 1-4
-        :type fan_id: int
         :param speed_percent: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
-        :type speed_percent: float
+
         :return: success value
-        :rtype: bool
         """
         params = str(fan_id) + "," + str(speed_percent)
         response = self._client.execute_command("set_subrack_fan_speed", params)
@@ -583,18 +556,19 @@ class SubrackDriver(MessageQueueComponentManager):
         )
         return True
 
-    def set_subrack_fan_modes(self, fan_id, mode: ControlMode):
+    def set_subrack_fan_modes(
+        self: SubrackDriver, fan_id: int, mode: ControlMode
+    ) -> bool:
         """
         Set Fan Operational Mode for the subrack's fan.
 
         :param fan_id: id of the selected fan accepted value: 1-4
-        :type fan_id: int
         :param mode: AUTO or MANUAL
+
         :return: success value
-        :rtype: bool
         """
         params = str(fan_id) + "," + str(mode)
-        response = self._client.execute_command("set_fan_mode", params)
+        response = self._client.execute_command("set_fan_modes", params)
         self.logger.debug(
             "TpmDriver:"
             + response["command"]
@@ -605,16 +579,16 @@ class SubrackDriver(MessageQueueComponentManager):
         )
         return True
 
-    def set_power_supply_fan_speed(self, power_supply_fan_id, speed_percent):
+    def set_power_supply_fan_speed(
+        self: SubrackDriver, power_supply_fan_id: int, speed_percent: float
+    ) -> bool:
         """
         Set the power supply  fan speed.
 
         :param power_supply_fan_id: power supply id from 0 to 2
-        :type power_supply_fan_id: int
         :param speed_percent: fan speed in percent
-        :type speed_percent: float
+
         :return: success value
-        :rtype: bool
         """
         params = str(power_supply_fan_id) + "," + str(speed_percent)
         response = self._client.execute_command("set_power_supply_fan_speed", params)

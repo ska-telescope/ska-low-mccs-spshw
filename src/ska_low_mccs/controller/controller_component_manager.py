@@ -17,7 +17,7 @@ import threading
 from typing import Callable, Optional, Iterable
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.control_model import HealthState, PowerMode, AdminMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -562,3 +562,18 @@ class ControllerComponentManager(MccsComponentManager):
         """
         self._resource_manager.deallocate_from(subarray_fqdn)
         return self._subarrays[subarray_fqdn].restart()
+
+    @check_communicating
+    def startup(
+        self: ControllerComponentManager
+    ) -> ResultCode:
+        """
+        Transition controller components to ONLINE.
+
+        :return: a result code
+        """
+        for subrack in self._subracks:
+            subrack.adminMode = AdminMode.ONLINE
+        for subarray in self._subarrays:
+            subarray.adminMode = AdminMode.ONLINE
+        return ResultCode.OK

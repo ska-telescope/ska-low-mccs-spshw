@@ -563,7 +563,6 @@ class ControllerComponentManager(MccsComponentManager):
         self._resource_manager.deallocate_from(subarray_fqdn)
         return self._subarrays[subarray_fqdn].restart()
 
-    @check_communicating
     def startup(
         self: ControllerComponentManager
     ) -> ResultCode:

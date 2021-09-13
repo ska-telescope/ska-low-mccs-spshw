@@ -17,6 +17,7 @@ from ska_low_mccs.transient_buffer import TransientBuffer
 from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
+    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -40,8 +41,11 @@ class TransientBufferComponentManager(ObjectComponentManager):
             called when the status of the communications channel between
             the component manager and its component changes
         """
+        self._message_queue = MessageQueue(logger)
+
         super().__init__(
             TransientBuffer(logger),
+            self._message_queue,
             logger,
             communication_status_changed_callback,
             None,

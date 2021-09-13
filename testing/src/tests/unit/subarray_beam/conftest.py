@@ -23,7 +23,7 @@ from ska_low_mccs.subarray_beam import (
     SubarrayBeamComponentManager,
 )
 
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import CommunicationStatus, MessageQueue
 
 
 @pytest.fixture()
@@ -76,6 +76,7 @@ def subarray_beam_component(
 
 @pytest.fixture()
 def subarray_beam_component_manager(
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_is_beam_locked_changed_callback: Callable[[bool], None],
@@ -84,6 +85,8 @@ def subarray_beam_component_manager(
     """
     Return a subarray beam component manager.
 
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between

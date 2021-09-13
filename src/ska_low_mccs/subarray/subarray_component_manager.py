@@ -22,6 +22,7 @@ import ska_tango_base.subarray
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
+    MessageQueue,
     ObsDeviceComponentManager,
     check_communicating,
     check_on,
@@ -174,6 +175,8 @@ class SubarrayComponentManager(
 
         self._scan_id: Optional[int] = None
 
+        self._message_queue = MessageQueue(logger)
+
         super().__init__(
             logger,
             communication_status_changed_callback,
@@ -263,6 +266,7 @@ class SubarrayComponentManager(
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn] = _StationProxy(
                     fqdn,
+                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     functools.partial(self._station_power_mode_changed, fqdn),
@@ -273,6 +277,7 @@ class SubarrayComponentManager(
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn] = _SubarrayBeamProxy(
                     fqdn,
+                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,

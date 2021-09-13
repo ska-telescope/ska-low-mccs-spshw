@@ -20,8 +20,8 @@ before_script:
 
 stages:
   - lint
-  - test
   - build
+  - test
   - integration
   - upload_results
   - teardown

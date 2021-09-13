@@ -21,6 +21,7 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
+    MessageQueue,
     check_communicating,
     check_on,
     enqueue,
@@ -96,6 +97,8 @@ class StationBeamComponentManager(MccsComponentManager):
         self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
         self._station_health_changed_callback = station_health_changed_callback
         self._station_fault_changed_callback = station_fault_changed_callback
+
+        self._message_queue = MessageQueue(logger)
 
         super().__init__(
             logger,
@@ -198,6 +201,7 @@ class StationBeamComponentManager(MccsComponentManager):
             if self._station_fqdn is not None:
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
+                    self._message_queue,
                     self.logger,
                     self._device_communication_status_changed,
                     None,

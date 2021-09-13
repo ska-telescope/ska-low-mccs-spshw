@@ -64,7 +64,7 @@ class SubrackHardwareManager {
   +power_supply_fan_speeds
   +power_supply_powers
   +power_supply_voltages
-  +subrack_fan_mode
+  +subrack_fan_modes
   +subrack_fan_speeds
   +subrack_fan_speeds_percent
   +tpm_count
@@ -82,7 +82,7 @@ class SubrackHardwareManager {
   +is_tpm_on()
   +poll()
   +set_power_supply_fan_speed()
-  +set_subrack_fan_mode()
+  +set_subrack_fan_modes()
   +set_subrack_fan_speed()
   +turn_off_tpm()
   +turn_off_tpms()

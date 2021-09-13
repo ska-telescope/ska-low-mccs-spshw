@@ -23,6 +23,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs import MccsDeviceProxy, MccsTile
+from ska_low_mccs.component import MessageQueue
 from ska_low_mccs.tile import (
     TpmDriver,
     DynamicTpmSimulator,
@@ -205,6 +206,7 @@ def tile_subrack_proxy(
     tango_harness: TangoHarness,
     subrack_fqdn: str,
     subrack_tpm_id: int,
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
@@ -218,6 +220,8 @@ def tile_subrack_proxy(
     :param tango_harness: a test harness for MCCS tango devices
     :param subrack_fqdn: FQDN of the tile's subrack device
     :param subrack_tpm_id: the id of the tile in the subrack device
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: a loger for the tile component manager to use
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
@@ -232,6 +236,7 @@ def tile_subrack_proxy(
     return _SubrackProxy(
         subrack_fqdn,
         subrack_tpm_id,
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
@@ -271,6 +276,7 @@ def tpm_version() -> str:
 
 @pytest.fixture()
 def tpm_driver(
+    message_queue: MessageQueue,
     logger: logging.Logger,
     tpm_ip: str,
     tpm_cpld_port: int,
@@ -283,6 +289,8 @@ def tpm_driver(
 
     (This is a pytest fixture.)
 
+    :param message_queue: a message queue for the component manager to
+        use
     :param logger: the logger to be used by this object.
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
@@ -296,6 +304,7 @@ def tpm_driver(
     :return: a TPM driver
     """
     return TpmDriver(
+        message_queue,
         logger,
         tpm_ip,
         tpm_cpld_port,
@@ -337,6 +346,7 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 
 @pytest.fixture()
 def static_tpm_simulator_component_manager(
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -346,6 +356,8 @@ def static_tpm_simulator_component_manager(
 
     (This is a pytest fixture.)
 
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -356,6 +368,7 @@ def static_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return StaticTpmSimulatorComponentManager(
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_fault_callback,
@@ -364,6 +377,7 @@ def static_tpm_simulator_component_manager(
 
 @pytest.fixture()
 def dynamic_tpm_simulator_component_manager(
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -373,6 +387,8 @@ def dynamic_tpm_simulator_component_manager(
 
     (This is a pytest fixture.)
 
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -383,6 +399,7 @@ def dynamic_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return DynamicTpmSimulatorComponentManager(
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_fault_callback,
@@ -393,6 +410,7 @@ def dynamic_tpm_simulator_component_manager(
 def switching_tpm_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
+    message_queue: MessageQueue,
     logger: logging.Logger,
     tpm_ip: str,
     tpm_cpld_port: int,
@@ -408,6 +426,8 @@ def switching_tpm_component_manager(
     :param simulation_mode: the initial simulation mode of this
         component manager
     :param test_mode: the initial test mode of this component manager
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: the logger to be used by this object.
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
@@ -424,6 +444,7 @@ def switching_tpm_component_manager(
     return SwitchingTpmComponentManager(
         simulation_mode,
         test_mode,
+        message_queue,
         logger,
         tpm_ip,
         tpm_cpld_port,

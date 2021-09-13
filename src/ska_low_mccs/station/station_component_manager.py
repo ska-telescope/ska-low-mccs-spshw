@@ -24,6 +24,7 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
+    MessageQueue,
     check_communicating,
     check_on,
     enqueue,
@@ -42,6 +43,7 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logical_tile_id: int,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -57,6 +59,8 @@ class _TileProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -77,6 +81,7 @@ class _TileProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
@@ -182,8 +187,11 @@ class StationComponentManager(MccsComponentManager):
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
 
+        self._message_queue = MessageQueue(logger)
+
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
+            self._message_queue,
             logger,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
             self._apiu_power_mode_changed,
@@ -193,6 +201,7 @@ class StationComponentManager(MccsComponentManager):
         self._antenna_proxies = [
             DeviceComponentManager(
                 antenna_fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(
                     self._device_communication_status_changed, antenna_fqdn
@@ -208,6 +217,7 @@ class StationComponentManager(MccsComponentManager):
                 tile_fqdn,
                 station_id,
                 logical_tile_id,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
                 functools.partial(self._tile_power_mode_changed, tile_fqdn),

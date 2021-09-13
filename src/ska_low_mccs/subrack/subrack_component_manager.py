@@ -23,6 +23,7 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
     DriverSimulatorSwitchingComponentManager,
+    MessageQueue,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
 )
@@ -36,6 +37,7 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
 
     def __init__(
         self: SubrackSimulatorComponentManager,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -44,6 +46,8 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
         """
         Initialise a new instance.
 
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -55,6 +59,7 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
         """
         super().__init__(
             SubrackSimulator(),
+            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -107,7 +112,7 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
             "subrack_fan_speeds",
             "simulate_subrack_fan_speeds",
             "subrack_fan_speeds_percent",
-            "subrack_fan_mode",
+            "subrack_fan_modes",
             "bay_count",
             "tpm_count",
             "tpm_temperatures",
@@ -135,7 +140,7 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
             "turn_on_tpms",
             "turn_off_tpms",
             "set_subrack_fan_speed",
-            "set_subrack_fan_mode",
+            "set_subrack_fan_modes",
             "set_power_supply_fan_speed",
             "current",
             "humidity",
@@ -184,6 +189,7 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
     def __init__(
         self: SwitchingSubrackComponentManager,
         initial_simulation_mode: SimulationMode,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         subrack_ip: str,
         subrack_port: int,
@@ -196,6 +202,8 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
 
         :param initial_simulation_mode: the simulation mode that the
             component should start in
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: a logger for this object to use
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
@@ -210,6 +218,7 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
             called when the power mode of an tpm changes
         """
         subrack_driver = SubrackDriver(
+            message_queue,
             logger,
             subrack_ip,
             subrack_port,
@@ -218,6 +227,7 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
             component_tpm_power_changed_callback,
         )
         subrack_simulator = SubrackSimulatorComponentManager(
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -263,8 +273,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             we start connecting to the real upstream power supply
             device.
         """
+        self._message_queue = MessageQueue(logger)
+
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
+            self._message_queue,
             logger,
             subrack_ip,
             subrack_port,
@@ -274,6 +287,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
+            self._message_queue,
             logger,
             self._power_supply_communication_status_changed,
             self.component_power_mode_changed,
@@ -355,7 +369,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "subrack_fan_speeds",
             "simulate_subrack_fan_speeds",
             "subrack_fan_speeds_percent",
-            "subrack_fan_mode",
+            "subrack_fan_modes",
             "bay_count",
             "tpm_count",
             "tpm_temperatures",
@@ -383,7 +397,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "turn_on_tpms",
             "turn_off_tpms",
             "set_subrack_fan_speed",
-            "set_subrack_fan_mode",
+            "set_subrack_fan_modes",
             "set_power_supply_fan_speed",
             "current",
             "humidity",

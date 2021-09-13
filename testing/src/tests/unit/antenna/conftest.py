@@ -29,7 +29,7 @@ from ska_low_mccs.antenna.antenna_component_manager import (
     _ApiuProxy,
     _TileProxy,
 )
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import CommunicationStatus, MessageQueue
 
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
@@ -100,6 +100,7 @@ def antenna_apiu_proxy(
     tango_harness: TangoHarness,
     apiu_fqdn: str,
     apiu_antenna_id: int,
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
@@ -114,6 +115,8 @@ def antenna_apiu_proxy(
     :param tango_harness: a test harness for MCCS tango devices
     :param apiu_fqdn: FQDN of the antenna's APIU device
     :param apiu_antenna_id: the id of the antenna in the APIU device
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: a loger for the antenna component manager to use
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
@@ -130,6 +133,7 @@ def antenna_apiu_proxy(
     return _ApiuProxy(
         apiu_fqdn,
         apiu_antenna_id,
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
@@ -143,6 +147,7 @@ def antenna_tile_proxy(
     tango_harness: TangoHarness,
     tile_fqdn: str,
     tile_antenna_id: int,
+    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: Callable[[bool], None],
@@ -155,6 +160,8 @@ def antenna_tile_proxy(
     :param tango_harness: a test harness for MCCS tango devices
     :param tile_fqdn: FQDN of the antenna's tile device
     :param tile_antenna_id: the id of the antenna in the tile device
+    :param message_queue: the message queue to be used by this component
+        manager
     :param logger: a loger for the antenna component manager to use
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
@@ -167,6 +174,7 @@ def antenna_tile_proxy(
     return _TileProxy(
         tile_fqdn,
         tile_antenna_id,
+        message_queue,
         logger,
         communication_status_changed_callback,
         component_fault_callback,

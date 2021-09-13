@@ -21,7 +21,7 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs.component import MccsComponentManager
 
 
-__all__ = ["MessageQueueComponentManager", "enqueue"]
+__all__ = ["MessageQueue", "MessageQueueComponentManager", "enqueue"]
 
 
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
@@ -69,14 +69,20 @@ def enqueue(func: Wrapped) -> Wrapped:
     return cast(Wrapped, _wrapper)
 
 
-class MessageQueueComponentManager(MccsComponentManager):
-    """A component manager that provides message queue functionality."""
+class MessageQueue:
+    """
+    A message-passing queue for asynchronous tasking.
+
+    To call a method asynchronously, just put onto the queue a triple
+    consisting of the method to be called, the args, and the kwargs. A
+    worker queue will pull the task off the queue and execute it.
+    """
 
     class _Worker(threading.Thread):
         """A worker thread that takes tasks from the queue and performs them."""
 
         def __init__(
-            self: MessageQueueComponentManager._Worker,
+            self: MessageQueue._Worker,
             queue: queue.Queue,
             logger: logging.Logger,
         ) -> None:
@@ -91,7 +97,7 @@ class MessageQueueComponentManager(MccsComponentManager):
             self._logger = logger
             self.setDaemon(True)
 
-        def run(self: MessageQueueComponentManager._Worker) -> None:
+        def run(self: MessageQueue._Worker) -> None:
             with tango.EnsureOmniThread():
                 while True:
                     try:
@@ -99,7 +105,6 @@ class MessageQueueComponentManager(MccsComponentManager):
                         command(*args, **kwargs)
                     except Exception as e:
                         trace = traceback.format_exc()
-
                         self._logger.error(
                             f"Worker thread discarded task '{command}' as a result of "
                             f"exception: {e}.\ntraceback: {trace}"
@@ -108,36 +113,79 @@ class MessageQueueComponentManager(MccsComponentManager):
                         self._queue.task_done()
 
     def __init__(
+        self: MessageQueue,
+        logger: logging.Logger,
+        max_size: int = 0,
+        num_workers: int = 1,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param logger: a logger for the message queue to use
+        :param max_size: an optional maximum allowed queue size. The
+            default value is 0, which is a special case signifying no
+            queue size limit.
+        :param num_workers: the number of worker threads servicing
+            the queue. The default value is 1.
+        """
+        self._logger = logger
+        self._queue: queue.Queue = queue.Queue(maxsize=max_size)
+        self._threads = [
+            self._Worker(self._queue, self._logger) for i in range(num_workers)
+        ]
+        for thread in self._threads:
+            thread.start()
+
+    def __del__(self: MessageQueue) -> None:
+        """Release resources prior to instance deletion."""
+        self._queue.join()
+
+    def enqueue(
+        self: MessageQueue,
+        func: Callable,
+        *args: Any,
+        **kwargs: Any,
+    ) -> ResultCode:
+        """
+        Put a method call onto the queue.
+
+        :param func: the method to be called.
+        :param args: positional arguments to the method
+        :param kwargs: keyword arguments to the method
+
+        :return: a result code
+        """
+        try:
+            self._queue.put_nowait((func, args, kwargs))
+        except queue.Full:
+            self._logger.error(
+                f"Could not enqueue '{func}', queue is full. "
+                f"Queue contents: {list(self._queue.queue)}."
+            )
+            return ResultCode.FAILED
+        return ResultCode.QUEUED
+
+
+class MessageQueueComponentManager(MccsComponentManager):
+    """A component manager that provides message queue functionality."""
+
+    def __init__(
         self: MessageQueueComponentManager,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         *args: Any,
-        max_queue_size: int = 3,
-        thread_pool_size: int = 1,
         **kwargs: Any,
     ) -> None:
         """
         Initialise a new instance.
 
+        :param message_queue: a message queue for this component manager to use
         :param logger: a logger for this component manager to use
         :param args: positional arguments to pass to the parent class
-        :param max_queue_size: an optional maximum allowed queue size.
-            The default value is 1.
-        :param thread_pool_size: the number of worker threads servicing
-            the queue. The default value is 1.
         :param kwargs: keyword arguments to pass to the parent class.
         """
-        self._logger = logger
-        self.__queue: queue.Queue = queue.Queue(maxsize=max_queue_size)
-        self.__threads = [
-            self._Worker(self.__queue, self._logger) for i in range(thread_pool_size)
-        ]
-        for thread in self.__threads:
-            thread.start()
+        self._message_queue = message_queue
         super().__init__(logger, *args, **kwargs)
-
-    def __del__(self: MessageQueueComponentManager) -> None:
-        """Release resources prior to instance deletion."""
-        self.__queue.join()
 
     def enqueue(
         self: MessageQueueComponentManager,
@@ -154,12 +202,4 @@ class MessageQueueComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        try:
-            self.__queue.put_nowait((func, args, kwargs))
-        except queue.Full:
-            self._logger.error(
-                f"Could not enqueue '{func}', queue is full. "
-                f"Queue contents: {list(self.__queue.queue)}."
-            )
-            return ResultCode.FAILED
-        return ResultCode.QUEUED
+        return self._message_queue.enqueue(func, *args, **kwargs)

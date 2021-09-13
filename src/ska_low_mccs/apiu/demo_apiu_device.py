@@ -190,7 +190,7 @@ class DemoAPIU(MccsAPIU):
 # ----------
 # Run server
 # ----------
-def main(*args: str, **kwargs: str) -> int:
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 

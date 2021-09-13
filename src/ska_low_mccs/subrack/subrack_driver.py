@@ -27,7 +27,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import time
 import logging
-from typing import Callable, cast, Optional
+from typing import Callable, cast, List, Optional
 
 from ska_tango_base.control_model import PowerMode
 
@@ -77,7 +77,9 @@ class SubrackDriver(MessageQueueComponentManager):
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_tpm_power_changed_callback: Optional[Callable[[list[bool]], None]],
+        component_tpm_power_changed_callback: Optional[
+            Callable[[Optional[list[bool]]], None]
+        ],
         tpm_present: Optional[list[bool]] = None,
     ) -> None:
         """
@@ -138,7 +140,7 @@ class SubrackDriver(MessageQueueComponentManager):
         super().start_communicating()
         self.enqueue(self._connect_to_subrack)
 
-    def _connect_to_subrack(self):
+    def _connect_to_subrack(self: SubrackDriver) -> None:
         connected = self._client.connect()
         if connected:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
@@ -171,7 +173,7 @@ class SubrackDriver(MessageQueueComponentManager):
 
         response = self._client.get_attribute("backplane_temperatures")
         if response["status"] == "OK":
-            self._backplane_temperatures = cast(list[float], response["value"])
+            self._backplane_temperatures = cast(List[float], response["value"])
         return self._backplane_temperatures
 
     @property
@@ -184,7 +186,7 @@ class SubrackDriver(MessageQueueComponentManager):
         self.logger.debug("Reading board temperature")
         response = self._client.get_attribute("board_temperatures")
         if response["status"] == "OK":
-            self._board_temperatures = cast(list[float], response["value"])
+            self._board_temperatures = cast(List[float], response["value"])
         return self._board_temperatures
 
     @property
@@ -210,7 +212,7 @@ class SubrackDriver(MessageQueueComponentManager):
         self.logger.debug("Reading backplane fan speed")
         response = self._client.get_attribute("subrack_fan_speeds")
         if response["status"] == "OK":
-            self._subrack_fan_speeds = cast(list[float], response["value"])
+            self._subrack_fan_speeds = cast(List[float], response["value"])
         return self._subrack_fan_speeds
 
     @property
@@ -223,7 +225,7 @@ class SubrackDriver(MessageQueueComponentManager):
         self.logger.debug("Reading backplane fan speed percent")
         response = self._client.get_attribute("subrack_fan_speeds_percent")
         if response["status"] == "OK":
-            self._subrack_fan_speeds_percent = cast(list[float], response["value"])
+            self._subrack_fan_speeds_percent = cast(List[float], response["value"])
         return self._subrack_fan_speeds_percent
 
     @property
@@ -236,7 +238,7 @@ class SubrackDriver(MessageQueueComponentManager):
         self.logger.debug("Reading backplane fan modes")
         response = self._client.get_attribute("subrack_fan_modes")
         if response["status"] == "OK":
-            self._subrack_fan_modes = response["value"]
+            self._subrack_fan_modes = cast(List[ControlMode], response["value"])
         return self._subrack_fan_modes
 
     @property
@@ -250,7 +252,7 @@ class SubrackDriver(MessageQueueComponentManager):
         self.logger.debug("Reading number of TPMs")
         response = self._client.get_attribute("tpm_present")
         if response["status"] == "OK":
-            self._tpm_count = sum(cast(list[int], response["value"]))
+            self._tpm_count = sum(cast(List[int], response["value"]))
         return self._tpm_count
 
     @property
@@ -300,7 +302,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("tpm_currents")
         if response["status"] == "OK":
-            self._tpm_currents = cast(list[float], response["value"])
+            self._tpm_currents = cast(List[float], response["value"])
         return self._tpm_currents
 
     @property
@@ -312,7 +314,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("tpm_powers")
         if response["status"] == "OK":
-            self._tpm_powers = cast(list[float], response["value"])
+            self._tpm_powers = cast(List[float], response["value"])
         return self._tpm_powers
 
     @property
@@ -324,7 +326,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("tpm_voltages")
         if response["status"] == "OK":
-            self._tpm_voltages = cast(list[float], response["value"])
+            self._tpm_voltages = cast(List[float], response["value"])
         return self._tpm_voltages
 
     @property
@@ -336,7 +338,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("power_supply_fan_speeds")
         if response["status"] == "OK":
-            self._power_supply_fan_speeds = cast(list[float], response["value"])
+            self._power_supply_fan_speeds = cast(List[float], response["value"])
         return self._power_supply_fan_speeds
 
     @property
@@ -348,7 +350,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("power_supply_currents")
         if response["status"] == "OK":
-            self._power_supply_currents = cast(list[float], response["value"])
+            self._power_supply_currents = cast(List[float], response["value"])
         return self._power_supply_currents
 
     @property
@@ -360,7 +362,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("power_supply_powers")
         if response["status"] == "OK":
-            self._power_supply_powers = cast(list[float], response["value"])
+            self._power_supply_powers = cast(List[float], response["value"])
         return self._power_supply_powers
 
     @property
@@ -372,7 +374,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("power_supply_voltages")
         if response["status"] == "OK":
-            self._power_supply_voltages = cast(list[float], response["value"])
+            self._power_supply_voltages = cast(List[float], response["value"])
         return self._power_supply_voltages
 
     @property
@@ -384,7 +386,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("tpm_present")
         if response["status"] == "OK":
-            self._tpm_present = cast(list[bool], response["value"])
+            self._tpm_present = cast(List[bool], response["value"])
         return self._tpm_present
 
     @property
@@ -396,7 +398,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("tpm_supply_fault")
         if response["status"] == "OK":
-            self._tpm_supply_fault = cast(list[int], response["value"])
+            self._tpm_supply_fault = cast(List[int], response["value"])
         return self._tpm_supply_fault
 
     def are_tpms_on(self: SubrackDriver) -> Optional[list[bool]]:
@@ -409,7 +411,7 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("tpm_on_off")
         if response["status"] == "OK":
-            self._are_tpms_on = cast(list[bool], response["value"])
+            self._are_tpms_on = cast(List[bool], response["value"])
         return self._are_tpms_on
 
     def is_tpm_on(self: SubrackDriver, logical_tpm_id: int) -> Optional[bool]:

@@ -243,7 +243,7 @@ def subrack_driver(
             """
             self.status_code = requests.codes.ok
 
-            self._json: dict[str, str] = {}
+            self._json: dict[str, Any] = {}
 
             if params is not None:
                 if params["type"] == "command":

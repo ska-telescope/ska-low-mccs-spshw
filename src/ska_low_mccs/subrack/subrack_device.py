@@ -356,7 +356,7 @@ class MccsSubrack(SKABaseDevice):
         return self.component_manager.subrack_fan_speeds_percent
 
     @attribute(dtype=("DevUShort",), max_dim_x=4, label="Subrack Fan Mode")
-    def subrackFanMode(self: MccsSubrack) -> tuple[int]:
+    def subrackFanMode(self: MccsSubrack) -> list[int]:
         """
         Return the subrackFanMode.
 
@@ -367,7 +367,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the subrack fan mode, 1 AUTO 0 MANUAL
         """
-        return tuple(self.component_manager.subrack_fan_modes)
+        return self.component_manager.subrack_fan_modes
 
     @attribute(dtype=("DevBoolean",), max_dim_x=8, label="TPM present")
     def tpmPresent(self: MccsSubrack) -> tuple[bool]:

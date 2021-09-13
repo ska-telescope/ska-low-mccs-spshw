@@ -102,13 +102,13 @@ class SubrackSimulator(ObjectComponent):
 
     def __init__(
         self: SubrackSimulator,
-        backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURE,
-        board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURE,
+        backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURES,
+        board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
         board_current: float = DEFAULT_BOARD_CURRENT,
         subrack_fan_speeds: list[float] = DEFAULT_SUBRACK_FAN_SPEEDS,
-        subrack_fan_modes: list[ControlMode] = DEFAULT_SUBRACK_FAN_MODE,
-        power_supply_currents: list[float] = DEFAULT_POWER_SUPPLY_CURRENT,
-        power_supply_voltages: list[float] = DEFAULT_POWER_SUPPLY_VOLTAGE,
+        subrack_fan_modes: list[ControlMode] = DEFAULT_SUBRACK_FAN_MODES,
+        power_supply_currents: list[float] = DEFAULT_POWER_SUPPLY_CURRENTS,
+        power_supply_voltages: list[float] = DEFAULT_POWER_SUPPLY_VOLTAGES,
         power_supply_fan_speeds: list[float] = DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
         tpm_power_modes: list[PowerMode] = DEFAULT_TPM_POWER_MODES,
         tpm_present: list[bool] = DEFAULT_TPM_PRESENT,

@@ -513,15 +513,15 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
     @enqueue
     def _power_off_tpm(self: _SubrackProxy) -> ResultCode | None:
         try:
-            ([result_code], [message]) = self._proxy.PowerOffTpm(  # type: ignore[union-attr]
-                self._tpm_bay
-            )
+            assert self._proxy is not None  # for the type checker
+            ([result_code], [message]) = self._proxy.PowerOffTpm(self._tpm_bay)
         except tango.DevFailed:
             # HACK: If an upstream device Off command is turning off subracks and tiles
             # all at once, the subrack might have been turned off since we last received
             # an event notifying us that it is ON. Let's consume the exception in that
             # case.
-            if self._proxy.state() == tango.DevState.OFF:  # type: ignore[union-attr]
+            assert self._proxy is not None  # for the type checker
+            if self._proxy.state() == tango.DevState.OFF:
                 return None
             raise
         return result_code
@@ -539,9 +539,8 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
     @enqueue
     def _power_on_tpm(self: _SubrackProxy) -> ResultCode:
-        ([result_code], [message]) = self._proxy.PowerOnTpm(  # type: ignore[union-attr]
-            self._tpm_bay
-        )
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.PowerOnTpm(self._tpm_bay)
         return result_code
 
     def _device_state_changed(

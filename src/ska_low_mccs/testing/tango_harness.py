@@ -478,7 +478,6 @@ class TestContextTangoHarness(BaseTangoHarness):
             might already have been taken by another process.
 
             :return: An open port
-            :rtype: int
             """
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind(("", 0))

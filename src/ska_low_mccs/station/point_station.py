@@ -51,7 +51,7 @@ class AntennaInformation(object):
         By default it will have 256 elements but no displacements, &c.
         """
         self.nof_elements = 256
-        self.xyz = None
+        self.xyz: Optional[np.ndarray] = None
         self.elementid = None
         self.tpmid = None
 
@@ -270,7 +270,7 @@ class Pointing(object):
             )
             # TODO: This code need investigation
             self._delay_rates = (
-                self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays  # type: ignore[operator]
+                self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
             )
 
         # Set above horizon flag
@@ -334,7 +334,8 @@ class Pointing(object):
         )
 
         # Apply to antenna displacements
-        path_length = np.dot(scale, self._antennas.xyz.T)  # type: ignore[attr-defined]
+        assert self._antennas.xyz is not None  # for the type checker
+        path_length = np.dot(scale, self._antennas.xyz.T)
 
         # Return frequency-independent geometric delays
         return np.multiply(1.0 / constants.c.value, path_length)
@@ -445,7 +446,8 @@ class PointingDriver:  # pragma: no cover
         :return: self - ready for another command
         """
         self.pointing.station.load_displacements(file)
-        print(f"xyz array shape: {self.pointing.station.antennas.xyz.shape}")  # type: ignore[attr-defined]
+        assert self.pointing.station.antennas.xyz is not None  # for the type checker
+        print(f"xyz array shape: {self.pointing.station.antennas.xyz.shape}")
         return self
 
     def azel(self: PointingDriver, az: str, el: str) -> PointingDriver:

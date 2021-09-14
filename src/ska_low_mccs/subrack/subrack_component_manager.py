@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast
+from typing import Any, Callable, cast, Optional
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode
@@ -41,7 +41,9 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_tpm_power_changed_callback: Callable[[list[bool]], None],
+        component_tpm_power_changed_callback: Optional[
+            Callable[[Optional[list[bool]]], None]
+        ],
     ) -> None:
         """
         Initialise a new instance.
@@ -195,7 +197,9 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_tpm_power_changed_callback: Callable[[list[bool]], None],
+        component_tpm_power_changed_callback: Optional[
+            Callable[[Optional[list[bool]]], None]
+        ],
     ) -> None:
         """
         Initialise a new instance.
@@ -248,7 +252,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
-        component_tpm_power_changed_callback: Callable[[list[bool]], None],
+        component_tpm_power_changed_callback: Optional[
+            Callable[[Optional[list[bool]]], None]
+        ],
         _initial_power_mode: PowerMode = PowerMode.OFF,
     ) -> None:
         """
@@ -335,7 +341,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._hardware_component_manager.turn_off_tpms()  # type: ignore[attr-defined]
+        cast(
+            SwitchingSubrackComponentManager, self._hardware_component_manager
+        ).turn_off_tpms()
         return super().off()
 
     def __getattr__(

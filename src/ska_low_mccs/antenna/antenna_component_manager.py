@@ -114,7 +114,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
     @enqueue
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
-        ([result_code], [message]) = self._proxy.PowerUpAntenna(  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.PowerUpAntenna(
             self._logical_antenna_id
         )
         return result_code
@@ -132,7 +133,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
     @enqueue
     def _power_down_antenna(self: _ApiuProxy) -> ResultCode:
-        ([result_code], [message]) = self._proxy.PowerDownAntenna(  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.PowerDownAntenna(
             self._logical_antenna_id
         )
         return result_code
@@ -145,11 +147,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         Return the antenna's current.
 
         :return: the current of this antenna
-        :rtype: float
         """
-        return self._proxy.get_antenna_current(  # type: ignore[union-attr]
-            self._logical_antenna_id
-        )
+        assert self._proxy is not None  # for the type checker
+        return self._proxy.get_antenna_current(self._logical_antenna_id)
 
     @property  # type: ignore[misc]
     @check_communicating
@@ -159,11 +159,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         Return the antenna's voltage.
 
         :return: the voltage of this antenna
-        :rtype: float
         """
-        return self._proxy.get_antenna_voltage(  # type: ignore[union-attr]
-            self._logical_antenna_id
-        )
+        assert self._proxy is not None  # for the type checker
+        return self._proxy.get_antenna_voltage(self._logical_antenna_id)
 
     @property  # type: ignore[misc]
     @check_communicating
@@ -173,11 +171,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         Return the antenna's temperature.
 
         :return: the temperature of this antenna
-        :rtype: float
         """
-        return self._proxy.get_antenna_temperature(  # type: ignore[union-attr]
-            self._logical_antenna_id
-        )
+        assert self._proxy is not None  # for the type checker
+        return self._proxy.get_antenna_temperature(self._logical_antenna_id)
 
     def _device_state_changed(
         self: _ApiuProxy,
@@ -220,11 +216,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :param event_name: name of the event; will always be
             "areAntennasOn" for this callback
-        :type event_name: str
         :param event_value: the new attribute value
-        :type event_value: list(bool)
         :param event_quality: the quality of the change event
-        :type event_quality: :py:class:`tango.AttrQuality`
         """
         assert event_name.lower() == "areAntennasOn".lower(), (
             "APIU 'areAntennasOn' attribute changed callback called but "
@@ -608,7 +601,6 @@ class AntennaComponentManager(MccsComponentManager):
         Return the antenna's current.
 
         :return: the current of this antenna
-        :rtype: float
         """
         return self._apiu_proxy.current
 
@@ -618,7 +610,6 @@ class AntennaComponentManager(MccsComponentManager):
         Return the antenna's voltage.
 
         :return: the voltage of this antenna
-        :rtype: float
         """
         return self._apiu_proxy.voltage
 
@@ -628,6 +619,5 @@ class AntennaComponentManager(MccsComponentManager):
         Return the antenna's temperature.
 
         :return: the temperature of this antenna
-        :rtype: float
         """
         return self._apiu_proxy.temperature

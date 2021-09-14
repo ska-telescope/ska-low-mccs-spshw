@@ -89,13 +89,23 @@ class TestMccsTile:
             "adminMode",
             device_admin_mode_changed_callback,
         )
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
-        assert tile_device.adminMode == AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
             "healthState",
             device_health_state_changed_callback,
         )
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
+        assert tile_device.healthState == HealthState.UNKNOWN
+
+        tile_device.adminMode = AdminMode.ONLINE
+
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        assert tile_device.adminMode == AdminMode.ONLINE
+
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
 
@@ -149,12 +159,21 @@ class TestMccsTile:
             "adminMode",
             device_admin_mode_changed_callback,
         )
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
             "state",
             device_state_changed_callback,
         )
+        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = getattr(tile_device, attribute)
+
+        tile_device.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
         device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
 
         tile_device.MockSubrackOn()
@@ -358,13 +377,22 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        args = [] if arg is None else [arg]
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = getattr(tile_device, device_command)(*args)
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
 
-        args = [] if arg is None else [arg]
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = getattr(tile_device, device_command)(*args)
 
@@ -397,8 +425,21 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        assert tile_device.state() == tango.DevState.DISABLE
+        with pytest.raises(
+            tango.DevFailed,
+            match="Command On not allowed when the device is in DISABLE state",
+        ):
+            _ = tile_device.On()
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -432,8 +473,17 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = tile_device.Initialise()
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -470,8 +520,17 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = tile_device.GetFirmwareAvailable()
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -512,8 +571,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -547,8 +612,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -582,8 +653,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -612,8 +689,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -657,8 +740,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -703,8 +792,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -742,8 +837,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -779,8 +880,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -858,8 +965,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -895,8 +1008,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -938,8 +1057,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
@@ -994,8 +1119,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)

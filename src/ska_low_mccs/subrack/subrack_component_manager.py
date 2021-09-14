@@ -341,7 +341,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._hardware_component_manager.turn_off_tpms()  # type: ignore[attr-defined]
+        cast(
+            SwitchingSubrackComponentManager, self._hardware_component_manager
+        ).turn_off_tpms()
         return super().off()
 
     def __getattr__(

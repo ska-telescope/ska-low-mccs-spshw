@@ -117,7 +117,9 @@ class SubrackDriver(MessageQueueComponentManager):
             self._tpm_present = self.DEFAULT_TPM_PRESENT
         else:
             self._tpm_present = tpm_present
-        self._are_tpms_on = self.DEFAULT_TPM_POWER_MODES
+        self._are_tpms_on = [
+            mode == PowerMode.ON for mode in self.DEFAULT_TPM_POWER_MODES
+        ]
         self._tpm_count = self.DEFAULT_TPM_COUNT
         self._bay_count = self.DEFAULT_TPM_COUNT
 

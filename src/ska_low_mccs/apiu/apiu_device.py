@@ -264,7 +264,6 @@ class MccsAPIU(SKABaseDevice):
         Report the simulation mode of the device.
 
         :return: the current simulation mode
-        :rtype: int
         """
         return self.component_manager.simulation_mode
 

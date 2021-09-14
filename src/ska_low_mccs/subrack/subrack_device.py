@@ -332,10 +332,9 @@ class MccsSubrack(SKABaseDevice):
     @attribute(dtype=("DevFloat",), max_dim_x=4, label="Subrack fans speeds (RPM)")
     def subrackFanSpeeds(self: MccsSubrack) -> tuple[float]:
         """
-        Return the subrack fan speeds.
+        Return the subrack fan speeds, in RPM.
 
-        In RPM Four fans are present in the subrack back
-        side.
+        Four fans are present in the subrack back side.
 
         :return: the subrack fan speeds
         """

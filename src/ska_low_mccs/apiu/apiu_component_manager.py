@@ -289,7 +289,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._hardware_component_manager.turn_off_antennas()  # type: ignore[attr-defined]
+        cast(
+            SwitchingApiuComponentManager, self._hardware_component_manager
+        ).turn_off_antennas()
         return super().off()
 
     def __getattr__(

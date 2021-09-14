@@ -138,7 +138,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         return self.enqueue(self._off)
 
     def _off(self: DeviceComponentManager) -> ResultCode:
-        ([result_code], [message]) = self._proxy.Off()  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.Off()
         return result_code
 
     @check_communicating
@@ -153,7 +154,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         return self.enqueue(self._standby)
 
     def _standby(self: DeviceComponentManager) -> ResultCode:
-        ([result_code], [message]) = self._proxy.Standby()  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.Standby()
         return result_code
 
     @check_communicating
@@ -169,7 +171,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
 
     def _on(self: DeviceComponentManager) -> ResultCode:
         try:
-            ([result_code], [message]) = self._proxy.On()  # type: ignore[union-attr]
+            assert self._proxy is not None  # for the type checker
+            ([result_code], [message]) = self._proxy.On()
         except TypeError as te:
             raise TypeError(f"FQDN is {self._fqdn}") from te
         return result_code
@@ -186,7 +189,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         return self.enqueue(self._reset)
 
     def _reset(self: DeviceComponentManager) -> ResultCode:
-        ([result_code], [message]) = self._proxy.Reset()  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.Reset()
         return result_code
 
     @property

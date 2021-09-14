@@ -44,7 +44,8 @@ class TestPointStation:
         # Set station reference position to array centre
         station.set_location(stat_lat, stat_lon, stat_height)
         # We have 256 elements and therefore expect a 256 x 3 array
-        assert station.antennas.xyz.shape == (256, 3)  # type: ignore[attr-defined]
+        assert station.antennas.xyz is not None  # for the type checker
+        assert station.antennas.xyz.shape == (256, 3)
         # Check location data
         assert station.latitude == stat_lat
         assert station.longitude == stat_lon

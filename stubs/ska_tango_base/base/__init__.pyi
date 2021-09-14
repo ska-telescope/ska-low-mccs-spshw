@@ -1,7 +1,6 @@
 import logging
-from typing import Any, Callable, Hashable, Optional, Type, Union, cast
+from typing import Any, Optional
 
-from tango import DevState
 from tango.server import Device
 
 from ska_tango_base.base.op_state_model import OpStateModel

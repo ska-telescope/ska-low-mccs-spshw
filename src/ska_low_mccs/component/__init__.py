@@ -56,7 +56,7 @@ from .upstream_component_manager import (
     ComponentManagerWithUpstreamPowerSupply,
 )
 
-from .hardware_client import (  # type: ignore[attr-defined]
+from .hardware_client import (
     HardwareClient,
     WebHardwareClient,
 )

@@ -52,7 +52,7 @@ from typing_extensions import TypedDict
 
 CommandResponseType = TypedDict(
     "CommandResponseType",
-    {"status": str, "info": str, "command": str, "retvalue": Optional[str]},
+    {"status": str, "info": str, "command": str, "retvalue": str},
 )
 AttributeResponseType = TypedDict(
     "AttributeResponseType",

@@ -128,7 +128,6 @@ class MccsStation(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
             device = self.target

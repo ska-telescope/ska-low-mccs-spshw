@@ -695,31 +695,31 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         """
         assert tile.get_40g_configuration(-1, 0) == []
-        assert tile.get_40g_configuration("mock_core_id") is None
+        assert tile.get_40g_configuration(9) is None
 
         tile.configure_40g_core(
-            "mock_core_id",
-            "mock_arp_table_entry",
+            2,
+            1,
             "mock_src_mac",
             "mock_src_ip",
-            "mock_src_port",
+            8888,
             "mock_dst_ip",
-            "mock_dst_port",
+            3333,
         )
 
         expected = {
-            "CoreID": "mock_core_id",
-            "ArpTableEntry": "mock_arp_table_entry",
+            "CoreID": 2,
+            "ArpTableEntry": 1,
             "SrcMac": "mock_src_mac",
             "SrcIP": "mock_src_ip",
-            "SrcPort": "mock_src_port",
+            "SrcPort": 8888,
             "DstIP": "mock_dst_ip",
-            "DstPort": "mock_dst_port",
+            "DstPort": 3333,
         }
 
         assert tile.get_40g_configuration(-1, 0) == [expected]
-        assert tile.get_40g_configuration("mock_core_id") == expected
-        assert tile.get_40g_configuration("another_core_id") is None
+        assert tile.get_40g_configuration(2) == expected
+        assert tile.get_40g_configuration(10) is None
 
 
 class TestDynamicSimulatorCommon:

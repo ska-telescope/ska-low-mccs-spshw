@@ -27,7 +27,6 @@ def get_release_info(clsname: Optional[str] = None) -> str:
     Return a formatted release info string.
 
     :param clsname: optional name of class to add to the info
-    :type clsname: str
 
     :return: str
     """

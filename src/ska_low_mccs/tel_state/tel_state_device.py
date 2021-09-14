@@ -14,7 +14,7 @@ import tango
 from tango.server import attribute
 
 
-from ska_tango_base import SKATelState  # type: ignore[attr-defined]
+from ska_tango_base import SKATelState
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
@@ -67,7 +67,9 @@ class MccsTelState(SKATelState):
     class InitCommand(SKATelState.InitCommand):
         """Class that implements device initialisation for this device."""
 
-        def do(self: MccsTelState.InitCommand) -> tuple[ResultCode, str]:
+        def do(  # type:ignore[override]
+            self: MccsTelState.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Initialise TelState device.
 

@@ -1,12 +1,10 @@
 import logging
-from typing import Any, Callable, Hashable, Optional
+from typing import Any, Hashable, Optional
 
 from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.control_model import ObsState
-from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, StateModelCommand, ObservationCommand
+from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, ObservationCommand
 from ska_tango_base.obs import SKAObsDevice
-from ska_tango_base.obs.obs_state_model import ObsStateModel
 from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 
 

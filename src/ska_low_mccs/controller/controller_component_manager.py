@@ -571,8 +571,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        for subrack in self._subracks:
-            subrack.adminMode = AdminMode.ONLINE
-        for subarray in self._subarrays:
-            subarray.adminMode = AdminMode.ONLINE
+        for subrack_proxy in self._subracks.values():
+            subrack_proxy._device_admin_mode = AdminMode.ONLINE
+        for subarray_proxy in self._subarrays.values():
+            subarray_proxy._device_admin_mode = AdminMode.ONLINE
         return ResultCode.OK

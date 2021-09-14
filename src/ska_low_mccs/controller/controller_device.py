@@ -513,7 +513,7 @@ class MccsController(SKABaseDevice):
         FAILED_MESSAGE = "Startup command failed"
 
         def do(  # type: ignore[override]
-            self: MccsController.ReleaseCommand
+            self: MccsController.ReleaseCommand,
         ) -> tuple[ResultCode, str]:
             """
             Stateless do hook for the :py:meth:`.MccsController.Startup` command.
@@ -527,6 +527,7 @@ class MccsController(SKABaseDevice):
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
 
 # ----------
 # Run server

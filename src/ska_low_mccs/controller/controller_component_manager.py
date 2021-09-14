@@ -563,9 +563,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._resource_manager.deallocate_from(subarray_fqdn)
         return self._subarrays[subarray_fqdn].restart()
 
-    def startup(
-        self: ControllerComponentManager
-    ) -> ResultCode:
+    def startup(self: ControllerComponentManager) -> ResultCode:
         """
         Transition controller components to ONLINE.
 

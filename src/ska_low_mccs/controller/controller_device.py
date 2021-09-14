@@ -110,12 +110,6 @@ class MccsController(SKABaseDevice):
                 self.component_manager, self.op_state_model, self.logger
             ),
         )
-        self.register_command_object(
-            "Startup",
-            self.StartupCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
-        )
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
@@ -493,40 +487,6 @@ class MccsController(SKABaseDevice):
                 return (ResultCode.QUEUED, self.QUEUED_MESSAGE)
             return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
-    @command(dtype_out="DevVarLongStringArray")
-    def Startup(self: MccsController) -> DevVarLongStringArrayType:
-        """
-        Place all devices online.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("Startup")
-        (result_code, status) = handler()
-        return ([result_code], [status])
-
-    class StartupCommand(ResponseCommand):
-        """Place all devices online."""
-
-        SUCCEEDED_MESSAGE = "Startup command completed OK"
-        FAILED_MESSAGE = "Startup command failed"
-
-        def do(  # type: ignore[override]
-            self: MccsController.ReleaseCommand
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless do hook for the :py:meth:`.MccsController.Startup` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.startup()
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
 # ----------
 # Run server

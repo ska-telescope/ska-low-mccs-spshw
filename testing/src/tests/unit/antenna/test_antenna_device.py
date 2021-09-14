@@ -147,6 +147,13 @@ class TestMccsAntenna:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = device_under_test.voltage
+
+        device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
@@ -182,6 +189,13 @@ class TestMccsAntenna:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = device_under_test.current
+
+        device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
@@ -217,6 +231,13 @@ class TestMccsAntenna:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = device_under_test.temperature
+
+        device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
@@ -334,8 +355,10 @@ class TestMccsAntenna:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
-        assert device_under_test.healthState == HealthState.OK
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
+        assert device_under_test.healthState == HealthState.UNKNOWN
 
     def test_controlMode(
         self: TestMccsAntenna,
@@ -548,8 +571,20 @@ class TestMccsAntenna:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        assert device_under_test.state() == tango.DevState.DISABLE
+        with pytest.raises(
+            tango.DevFailed,
+            match="Command On not allowed when the device is in DISABLE state",
+        ):
+            _ = device_under_test.On()
+
+        device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
+        time.sleep(0.1)
 
         device_under_test.MockApiuOn()
         time.sleep(0.1)

@@ -126,8 +126,7 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 
     :return: a factory for device proxy mocks
     """
-    mdb = MockDeviceBuilder()
-    return mdb
+    return MockDeviceBuilder()
 
 
 @pytest.fixture(scope="session")
@@ -209,7 +208,9 @@ def tango_harness_factory(
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
         else:
             tango_harness = ClientProxyTangoHarness(device_info, logger)
+
         starting_state_harness = StartingStateTangoHarness(tango_harness)
+
         mocking_harness = MockingTangoHarness(
             starting_state_harness, mock_factory, initial_mocks
         )

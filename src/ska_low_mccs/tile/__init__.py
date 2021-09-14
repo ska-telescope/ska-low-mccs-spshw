@@ -32,13 +32,13 @@ __all__ = [
     "plugins",
 ]
 
-from .tile_1_2 import Tile12  # type: ignore[attr-defined]
-from .tile_1_6 import Tile16  # type: ignore[attr-defined]
-from .tile_wrapper import HwTile  # type: ignore[attr-defined]
-from .base_tpm_simulator import BaseTpmSimulator  # type: ignore[attr-defined]
-from .dynamic_tpm_simulator import DynamicTpmSimulator  # type: ignore[attr-defined]
-from .static_tpm_simulator import StaticTpmSimulator  # type: ignore[attr-defined]
-from .tpm_driver import TpmDriver  # type: ignore[attr-defined]
+from .tile_1_2 import Tile12
+from .tile_1_6 import Tile16
+from .tile_wrapper import HwTile
+from .base_tpm_simulator import BaseTpmSimulator
+from .dynamic_tpm_simulator import DynamicTpmSimulator
+from .static_tpm_simulator import StaticTpmSimulator
+from .tpm_driver import TpmDriver
 from .tile_component_manager import (
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulatorComponentManager,
@@ -46,5 +46,6 @@ from .tile_component_manager import (
     TileComponentManager,
 )
 from .tile_health_model import TileHealthModel
-from .tile_device import MccsTile  # type: ignore[attr-defined]
+from .tile_device import MccsTile
 from .demo_tile_device import DemoTile
+

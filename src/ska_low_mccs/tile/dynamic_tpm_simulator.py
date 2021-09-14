@@ -1,14 +1,21 @@
-# type: ignore
 # -*- coding: utf-8 -*-
-"""An implementation of a dynamic TPM simulator."""
-from __future__ import annotations
+# This file is part of the SKA Low MCCS project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
 
+"""An implementation of a dynamic TPM simulator."""
+
+from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import math
 import random
 import threading
 import time
+from typing import Any, Callable, cast, Iterable, Optional
 
 import scipy.stats
 import tango
@@ -34,27 +41,23 @@ class _DynamicValuesGenerator:
       should exceed that range and thus start alarming.
     """
 
-    def __init__(self, soft_min, soft_max, window_size=20, in_range_rate=0.95):
+    def __init__(self: _DynamicValuesGenerator, soft_min: float, soft_max: float, window_size: int=20, in_range_rate: float=0.95):
         """
         Create a new instance.
 
         :param soft_min: a "soft" minimum value. For TANGO device
             attributes, this should be the alarm minimum.
-        :type soft_min: float
         :param soft_max: a "soft" maximum value. For TANGO device
             attributes, this should be the alarm maximum.
-        :type soft_max: float
         :param window_size: the size of the sliding window to sum over.
             A value of 1 will give uncorrelated values. Increasing the
             value increases correlation -- a graph of how the value
             changes over time will be smoother. The default is 20.
-        :type window_size: int
         :param in_range_rate: the proportion of time during which the
             value should remain within the [soft_min, soft_max] range.
             The default is 0.95. Don't change this to 1.0 unless you
             want the variance to collapse: you'll get the mean of the
             range every time.
-        :type in_range_rate: float
         """
         # For a window size of n, our output values will be the sum of
         # n independent uniformly distributed values. We need to
@@ -88,58 +91,55 @@ class _DynamicValuesGenerator:
         # Generate our initial window of values
         self._values = [None] + [self._uniform() for i in range(window_size - 1)]
 
-    def __next__(self):
+    def __next__(self: _DynamicValuesGenerator) -> float:
         """
         Get the next value from this generator.
 
         :return: the next value from this generator
-        :rtype: float
         """
         self._values = self._values[1:] + [self._uniform()]
-        return sum(self._values)
+        return sum(cast(Iterable[float], self._values))
 
 
 class _DynamicValuesUpdater:
     """An dynamic updater of values, for use in a dynamic simulator."""
 
-    def __init__(self, update_rate=1.0):
+    def __init__(self: _DynamicValuesUpdater, update_rate: float=1.0) -> None:
         """
         Create a new instance.
 
         :param update_rate: how often, in seconds, the target values
             should be updated. Defaults to 1 second.
-        :type update_rate: float
         """
-        self._targets = []
+        self._targets: list[tuple] = []
 
         self._update_rate = update_rate
         self._thread_is_running = False
         self._thread = threading.Thread(target=self._update, args=(), daemon=True)
 
-    def start(self):
+    def start(self: _DynamicValuesUpdater) -> None:
         """Start the updater thread."""
         if not self._thread_is_running:
             self._thread.start()
 
-    def stop(self):
+    def stop(self: _DynamicValuesUpdater) -> None:
         """Stop the updater thread."""
         self._thread_is_running = False
 
-    def add_target(self, generator, callback):
+    def add_target(self: _DynamicValuesUpdater, generator, callback: Callable) -> None:
         """
         Add a new target to be updated.
 
         :param generator: the generator of values to be used as updates
         :type generator: :py:class:`.DynamicValuesGenerator`
         :param callback: the callback to be called with updates
-        :type callback: callable
         """
         # call it immediately, in case attribute initialisation depends on the callback
         callback(next(generator))
 
         self._targets.append((generator, callback))
 
-    def _update(self):
+    def _update(self: _DynamicValuesUpdater) -> None:
         """Thread target that loops over the update targets, pushing new values."""
         with tango.EnsureOmniThread():
             self._thread_is_running = True
@@ -148,7 +148,7 @@ class _DynamicValuesUpdater:
                     callback(next(generator))
                 time.sleep(self._update_rate)
 
-    def __del__(self):
+    def __del__(self: _DynamicValuesUpdater) -> None:
         """Things to do before this object is garbage collected."""
         self.stop()
 
@@ -161,19 +161,18 @@ class DynamicTpmSimulator(BaseTpmSimulator):
     """
 
     def __init__(
-        self: DynamicTpmSimulator,
-        logger: logging.Logger,
+        self: DynamicTpmSimulator, logger: logging.Logger
     ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
         """
-        self._voltage = None
-        self._current = None
-        self._board_temperature = None
-        self._fpga1_temperature = None
-        self._fpga2_temperature = None
+        self._voltage: Optional[float] = None
+        self._current: Optional[float] = None
+        self._board_temperature: Optional[float] = None
+        self._fpga1_temperature: Optional[float] = None
+        self._fpga2_temperature: Optional[float] = None
 
         self._updater = _DynamicValuesUpdater(1.0)
         self._updater.add_target(
@@ -195,101 +194,97 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         super().__init__(logger)
 
-    def __del__(self):
+    def __del__(self: DynamicTpmSimulator) -> None:
         """Garbage-collection hook."""
         self._updater.stop()
 
     @property
-    def board_temperature(self):
+    def board_temperature(self: DynamicTpmSimulator) -> float:
         """
         Return the temperature of the TPM.
 
         :return: the temperature of the TPM
-        :rtype: float
         """
         return self._board_temperature
 
-    def _board_temperature_changed(self, board_temperature):
+    def _board_temperature_changed(
+        self: DynamicTpmSimulator, board_temperature: float
+    ) -> None:
         """
         Callback called when the board temperature changes.
 
         :param board_temperature: the new board temperature
-        :type board_temperature: float
         """
         self._board_temperature = board_temperature
 
     @property
-    def voltage(self):
+    def voltage(self: DynamicTpmSimulator) -> float:
         """
         Return the voltage of the TPM.
 
         :return: the voltage of the TPM
-        :rtype: float
         """
         return self._voltage
 
-    def _voltage_changed(self, voltage):
+    def _voltage_changed(self: DynamicTpmSimulator, voltage: float) -> None:
         """
         Callback called when the voltage changes.
 
         :param voltage: the new voltage
-        :type voltage: float
         """
         self._voltage = voltage
 
     @property
-    def current(self):
+    def current(self: DynamicTpmSimulator) -> float:
         """
         Return the current of the TPM.
 
         :return: the current of the TPM
-        :rtype: float
         """
         return self._current
 
-    def _current_changed(self, current):
+    def _current_changed(self: DynamicTpmSimulator, current: float) -> None:
         """
         Callback called when the current changes.
 
         :param current: the new current
-        :type current: float
         """
         self._current = current
 
     @property
-    def fpga1_temperature(self):
+    def fpga1_temperature(self: DynamicTpmSimulator) -> float:
         """
         Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
-        :rtype: float
         """
         return self._fpga1_temperature
 
-    def _fpga1_temperature_changed(self, fpga1_temperature):
+    def _fpga1_temperature_changed(
+        self: DynamicTpmSimulator, fpga1_temperature: float
+    ) -> None:
         """
         Callback called when the FPGA1 temperature changes.
 
         :param fpga1_temperature: the new FPGA1 temperature
-        :type fpga1_temperature: float
         """
         self._fpga1_temperature = fpga1_temperature
 
     @property
-    def fpga2_temperature(self):
+    def fpga2_temperature(self: DynamicTpmSimulator) -> float:
         """
         Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
-        :rtype: float
         """
         return self._fpga2_temperature
 
-    def _fpga2_temperature_changed(self, fpga2_temperature):
+    def _fpga2_temperature_changed(
+        self: DynamicTpmSimulator, fpga2_temperature: float
+    ) -> None:
         """
         Callback called when the FPGA2 temperature changes.
 
         :param fpga2_temperature: the new FPGA2 temperature
-        :type fpga2_temperature: float
         """
         self._fpga2_temperature = fpga2_temperature

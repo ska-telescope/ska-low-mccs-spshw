@@ -243,7 +243,7 @@ class MccsDeviceProxy:
             :return: whether the device has completed initialisation
             """
             try:
-                return device.state() in [DevState.OFF, DevState.STANDBY, DevState.ON]
+                return device.state() != DevState.INIT
             except DevFailed:
                 self._logger.debug(
                     "Caught a DevFailed exception while checking that the device has "

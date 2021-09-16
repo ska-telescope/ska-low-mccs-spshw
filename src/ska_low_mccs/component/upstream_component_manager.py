@@ -352,7 +352,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         else:
             self.update_communication_status(self._power_supply_communication_status)
 
-    def update_component_progress(self: ComponentManagerWithUpstreamPowerSupply, progress: float) -> None:
+    def update_component_progress(
+        self: ComponentManagerWithUpstreamPowerSupply, progress: float
+    ) -> None:
         """
         Update the component progress value, calling callbacks as required.
 
@@ -363,7 +365,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         if self._component_progress_changed_callback is not None:
             self._component_progress_changed_callback(progress)
 
-    def component_progress_changed(self: ComponentManagerWithUpstreamPowerSupply, progress: float) -> None:
+    def component_progress_changed(
+        self: ComponentManagerWithUpstreamPowerSupply, progress: float
+    ) -> None:
         """
         Handle notification that the component's progress value has changed.
 

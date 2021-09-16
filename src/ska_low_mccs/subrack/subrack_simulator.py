@@ -33,7 +33,8 @@ from typing import Any, Callable, Optional
 
 from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import ControlMode, ObjectComponent
-
+from time import sleep
+import sys
 
 __all__ = ["SubrackSimulator"]
 
@@ -102,6 +103,7 @@ class SubrackSimulator(ObjectComponent):
 
     def __init__(
         self: SubrackSimulator,
+        component_progress_changed_callback: Callable[[float], None],
         backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURES,
         board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
         board_current: float = DEFAULT_BOARD_CURRENT,
@@ -117,6 +119,8 @@ class SubrackSimulator(ObjectComponent):
         """
         Initialise a new instance.
 
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
         :param backplane_temperatures: the initial temperature of the subrack
             backplane from sensor 1 and 2
         :param board_temperatures: the initial temperature of the subrack management
@@ -138,6 +142,7 @@ class SubrackSimulator(ObjectComponent):
             inject our own bays instead of letting this simulator create
             them.
         """
+        self._component_progress_changed_callback = component_progress_changed_callback
         self._backplane_temperatures = list(backplane_temperatures)
         self._board_temperatures = list(board_temperatures)
         self._board_current = board_current
@@ -583,6 +588,15 @@ class SubrackSimulator(ObjectComponent):
         self._check_tpm_id(logical_tpm_id)
         tpm_data = self._tpm_data[logical_tpm_id - 1]
         if tpm_data["power_mode"] == PowerMode.OFF:
+
+            # If in a real deployment but using simulators, simulate the time
+            # it might take for a TPM to actually turn on
+            if "pytest" not in sys.modules:
+                for i in range(6):
+                    if self._component_progress_changed_callback:
+                        self._component_progress_changed_callback(i * 20.0)
+                    sleep(1)
+
             tpm_data["power_mode"] = PowerMode.ON
             self._tpm_power_changed()
             return True

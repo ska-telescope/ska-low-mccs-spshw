@@ -83,13 +83,18 @@ def initial_power_mode() -> PowerMode:
 
 
 @pytest.fixture()
-def subrack_simulator() -> SubrackSimulator:
+def subrack_simulator(
+    component_progress_changed_callback: MockCallable,
+) -> SubrackSimulator:
     """
     Fixture that returns a TPM simulator.
 
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
+
     :return: a subrack simulator
     """
-    return SubrackSimulator()
+    return SubrackSimulator(component_progress_changed_callback)
 
 
 @pytest.fixture()

@@ -63,14 +63,13 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
             called when the power mode of an tpm changes
         """
         super().__init__(
-            SubrackSimulator(),
+            SubrackSimulator(component_progress_changed_callback),
             message_queue,
             logger,
             communication_status_changed_callback,
             None,
             component_fault_callback,
         )
-        self._component_progress_changed_callback = component_progress_changed_callback
         self._component_tpm_power_changed_callback = (
             component_tpm_power_changed_callback
         )
@@ -153,11 +152,9 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
             "temperature",
             "voltage",
             "tpm_count",
-            "are_tpms_on",
             "get_tpm_current",
             "get_tpm_temperature",
             "get_tpm_voltage",
-            "is_tpm_on",
             "simulate_tpm_current",
             "simulate_tpm_temperature",
             "simulate_tpm_voltage",
@@ -165,10 +162,6 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
             "simulate_humidity",
             "simulate_temperature",
             "simulate_voltage",
-            "turn_off_tpm",
-            "turn_on_tpm",
-            "turn_off_tpms",
-            "turn_on_tpms",
         ]:
             return self._get_from_component(name)
         return default_value
@@ -426,11 +419,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "temperature",
             "voltage",
             "tpm_count",
-            "are_tpms_on",
             "get_tpm_current",
             "get_tpm_temperature",
             "get_tpm_voltage",
-            "is_tpm_on",
             "simulate_tpm_current",
             "simulate_tpm_temperature",
             "simulate_tpm_voltage",
@@ -438,10 +429,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "simulate_humidity",
             "simulate_temperature",
             "simulate_voltage",
-            "turn_off_tpm",
-            "turn_on_tpm",
-            "turn_off_tpms",
-            "turn_on_tpms",
         ]:
             return self._get_from_hardware(name)
         return default_value

@@ -96,6 +96,8 @@ class SubrackDriver(MessageQueueComponentManager):
             the component manager and its component changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of one of the TPMs in the subrack
             changes
@@ -129,9 +131,7 @@ class SubrackDriver(MessageQueueComponentManager):
         self._component_tpm_power_changed_callback = (
             component_tpm_power_changed_callback
         )
-        self._component_progress_changed_callback = (
-            component_progress_changed_callback
-        )
+        self._component_progress_changed_callback = component_progress_changed_callback
         super().__init__(
             message_queue,
             logger,

@@ -28,7 +28,7 @@
     // Add the IDs of extensions you want installed when the container is created.
     "extensions": [
         "ms-python.python",
-        "lextudio.restructuredtext",
+        trond-snekvik.simple-rst,
         "davidanson.vscode-markdownlint",
         "alexkrechik.cucumberautocomplete",
         "ryanluker.vscode-coverage-gutters"

@@ -273,6 +273,7 @@ class TestPowerManagement:
         time.sleep(0.1)
         assert controller.state() == tango.DevState.OFF
 
+    @pytest.mark.flaky(reruns=5)
     def test_power_on_off(
         self: TestPowerManagement,
         tango_harness: TangoHarness,
@@ -312,24 +313,29 @@ class TestPowerManagement:
             tango.DevState.DISABLE
         )
 
-        controller.adminMode = AdminMode.ONLINE
-        subrack.adminMode = AdminMode.ONLINE
-        station_1.adminMode = AdminMode.ONLINE
-        station_2.adminMode = AdminMode.ONLINE
-        tile_1.adminMode = AdminMode.ONLINE
-        tile_2.adminMode = AdminMode.ONLINE
-        tile_3.adminMode = AdminMode.ONLINE
-        tile_4.adminMode = AdminMode.ONLINE
-        apiu_1.adminMode = AdminMode.ONLINE
-        apiu_2.adminMode = AdminMode.ONLINE
-        antenna_1.adminMode = AdminMode.ONLINE
-        antenna_2.adminMode = AdminMode.ONLINE
-        antenna_3.adminMode = AdminMode.ONLINE
-        antenna_4.adminMode = AdminMode.ONLINE
-        antenna_5.adminMode = AdminMode.ONLINE
-        antenna_6.adminMode = AdminMode.ONLINE
-        antenna_7.adminMode = AdminMode.ONLINE
-        antenna_8.adminMode = AdminMode.ONLINE
+        devices = [
+            controller,
+            subrack,
+            station_1,
+            station_2,
+            tile_1,
+            tile_2,
+            tile_3,
+            tile_4,
+            apiu_1,
+            apiu_2,
+            antenna_1,
+            antenna_2,
+            antenna_3,
+            antenna_4,
+            antenna_5,
+            antenna_6,
+            antenna_7,
+            antenna_8,
+        ]
+        for device in devices:
+            device.adminMode = AdminMode.ONLINE
+            time.sleep(0.01)
 
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
@@ -338,71 +344,26 @@ class TestPowerManagement:
             tango.DevState.OFF
         )
 
-        assert antenna_1.state() == tango.DevState.OFF
-        assert antenna_2.state() == tango.DevState.OFF
-        assert antenna_3.state() == tango.DevState.OFF
-        assert antenna_4.state() == tango.DevState.OFF
-        assert antenna_5.state() == tango.DevState.OFF
-        assert antenna_6.state() == tango.DevState.OFF
-        assert antenna_7.state() == tango.DevState.OFF
-        assert antenna_8.state() == tango.DevState.OFF
-        assert apiu_1.state() == tango.DevState.OFF
-        assert apiu_2.state() == tango.DevState.OFF
-        assert tile_1.state() == tango.DevState.OFF
-        assert tile_2.state() == tango.DevState.OFF
-        assert tile_3.state() == tango.DevState.OFF
-        assert tile_4.state() == tango.DevState.OFF
-        assert station_1.state() == tango.DevState.OFF
-        assert station_2.state() == tango.DevState.OFF
-        assert subrack.state() == tango.DevState.OFF
-        assert controller.state() == tango.DevState.OFF
+        for device in devices:
+            assert device.state() == tango.DevState.OFF
+            time.sleep(0.01)
 
         controller.On()
+        time.sleep(0.5)
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
         )
 
-        assert antenna_1.state() == tango.DevState.ON
-        assert antenna_2.state() == tango.DevState.ON
-        assert antenna_3.state() == tango.DevState.ON
-        assert antenna_4.state() == tango.DevState.ON
-        assert antenna_5.state() == tango.DevState.ON
-        assert antenna_6.state() == tango.DevState.ON
-        assert antenna_7.state() == tango.DevState.ON
-        assert antenna_8.state() == tango.DevState.ON
-        assert apiu_1.state() == tango.DevState.ON
-        assert apiu_2.state() == tango.DevState.ON
-        assert tile_1.state() == tango.DevState.ON
-        assert tile_2.state() == tango.DevState.ON
-        assert tile_3.state() == tango.DevState.ON
-        assert tile_4.state() == tango.DevState.ON
-        assert station_1.state() == tango.DevState.ON
-        assert station_2.state() == tango.DevState.ON
-        assert subrack.state() == tango.DevState.ON
-        assert controller.state() == tango.DevState.ON
+        for device in devices:
+            assert device.state() == tango.DevState.ON
+            time.sleep(0.01)
 
-        time.sleep(0.5)
         controller.Off()
-
+        time.sleep(0.5)
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.OFF
         )
-        time.sleep(0.5)
-        assert antenna_1.state() == tango.DevState.OFF
-        assert antenna_2.state() == tango.DevState.OFF
-        assert antenna_3.state() == tango.DevState.OFF
-        assert antenna_4.state() == tango.DevState.OFF
-        assert antenna_5.state() == tango.DevState.OFF
-        assert antenna_6.state() == tango.DevState.OFF
-        assert antenna_7.state() == tango.DevState.OFF
-        assert antenna_8.state() == tango.DevState.OFF
-        assert apiu_1.state() == tango.DevState.OFF
-        assert apiu_2.state() == tango.DevState.OFF
-        assert tile_1.state() == tango.DevState.OFF
-        assert tile_2.state() == tango.DevState.OFF
-        assert tile_3.state() == tango.DevState.OFF
-        assert tile_4.state() == tango.DevState.OFF
-        assert station_1.state() == tango.DevState.OFF
-        assert station_2.state() == tango.DevState.OFF
-        assert subrack.state() == tango.DevState.OFF
-        assert controller.state() == tango.DevState.OFF
+
+        for device in devices:
+            assert device.state() == tango.DevState.OFF
+            time.sleep(0.01)

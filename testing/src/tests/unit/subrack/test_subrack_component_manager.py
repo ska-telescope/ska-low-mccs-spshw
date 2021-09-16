@@ -280,7 +280,7 @@ class TestSubrackSimulatorCommon:
             ("simulate_power_supply_fan_speeds", [1.7, 1.8]),
             ("simulate_power_supply_currents", [1.9, 2.0]),
             ("simulate_power_supply_powers", [2.1, 2.2]),
-        )
+        ),
     )
     def test_commands_with_lists(
         self: TestSubrackSimulatorCommon,
@@ -304,6 +304,7 @@ class TestSubrackSimulatorCommon:
         :param args: the args the command takes
         """
         _ = getattr(subrack, command_name)(args)
+
 
 class TestSubrackDriverCommon:
     """

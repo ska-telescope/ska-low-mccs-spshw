@@ -592,7 +592,7 @@ class SubrackSimulator(ObjectComponent):
 
             # If in a real deployment but using simulators, simulate the time
             # it might take for a TPM to actually turn on
-            if "pytest" not in sys.modules: # pragma: no cover
+            if "pytest" not in sys.modules:  # pragma: no cover
                 for i in range(1, 5):
                     if self._component_progress_changed_callback:
                         self._component_progress_changed_callback(i * 20)

@@ -106,6 +106,7 @@ class MccsSubrack(SKABaseDevice):
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
+            self._component_progress_changed,
             self.are_tpms_on_changed,
         )
 
@@ -229,6 +230,24 @@ class MccsSubrack(SKABaseDevice):
         else:
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
+
+    def _component_progress_changed(
+        self: MccsSubrack,
+        progress: float,
+        result: ResultCode,
+    ) -> None:
+        """
+        Handle change in the progress of a long-running command.
+
+        This is a callback hook, called by the component manager when
+        the component progress value changes.
+
+        :param progress: the process percentage of a long-running command.
+        :param result: the result of the long-running command.
+        """
+        self._progress = progress
+        self._result = result
+        self.logger.debug(f"Subrack progress value = {progress}, result = {result}")
 
     def health_changed(self: MccsSubrack, health: HealthState) -> None:
         """

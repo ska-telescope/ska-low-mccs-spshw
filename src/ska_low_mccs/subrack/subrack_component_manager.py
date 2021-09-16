@@ -41,6 +41,7 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
+        component_progress_changed_callback: Callable[[float], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -56,6 +57,8 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
             the component manager and its component changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of an tpm changes
         """
@@ -67,6 +70,7 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
             None,
             component_fault_callback,
         )
+        self._component_progress_changed_callback = component_progress_changed_callback
         self._component_tpm_power_changed_callback = (
             component_tpm_power_changed_callback
         )
@@ -197,6 +201,7 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
+        component_progress_changed_callback: Callable[[float], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -218,6 +223,8 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
             the component manager and its component changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of an tpm changes
         """
@@ -228,6 +235,7 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
             subrack_port,
             communication_status_changed_callback,
             component_fault_callback,
+            component_progress_changed_callback,
             component_tpm_power_changed_callback,
         )
         subrack_simulator = SubrackSimulatorComponentManager(
@@ -235,6 +243,7 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
             logger,
             communication_status_changed_callback,
             component_fault_callback,
+            component_progress_changed_callback,
             component_tpm_power_changed_callback,
         )
         super().__init__(subrack_driver, subrack_simulator, initial_simulation_mode)
@@ -252,6 +261,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
+        component_progress_changed_callback: Callable[[float], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -272,6 +282,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of an tpm changes
         :param _initial_power_mode: the initial power mode of the power
@@ -289,6 +301,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             subrack_port,
             self._hardware_communication_status_changed,
             self.component_fault_changed,
+            self.component_progress_changed,
             component_tpm_power_changed_callback,
         )
 
@@ -306,6 +319,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
+            component_progress_changed_callback,
         )
 
     @property

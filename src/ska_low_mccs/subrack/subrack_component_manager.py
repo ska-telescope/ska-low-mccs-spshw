@@ -41,7 +41,7 @@ class SubrackSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[float], None],
+        component_progress_changed_callback: Callable[[int], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -194,7 +194,7 @@ class SwitchingSubrackComponentManager(DriverSimulatorSwitchingComponentManager)
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[float], None],
+        component_progress_changed_callback: Callable[[int], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -254,7 +254,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[float], None],
+        component_progress_changed_callback: Callable[[int], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],

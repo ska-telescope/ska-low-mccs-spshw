@@ -258,7 +258,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
-        component_progress_changed_callback: Optional[Callable[[float], None]],
+        component_progress_changed_callback: Optional[Callable[[int], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -287,7 +287,6 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._power_supply_component_manager = power_supply_component_manager
         self._hardware_component_manager = hardware_component_manager
 
-        self._progress: Optional[float] = None
         self._component_progress_changed_callback = component_progress_changed_callback
 
         super().__init__(
@@ -353,7 +352,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             self.update_communication_status(self._power_supply_communication_status)
 
     def component_progress_changed(
-        self: ComponentManagerWithUpstreamPowerSupply, progress: float
+        self: ComponentManagerWithUpstreamPowerSupply, progress: int
     ) -> None:
         """
         Handle notification that the component's progress value has changed.

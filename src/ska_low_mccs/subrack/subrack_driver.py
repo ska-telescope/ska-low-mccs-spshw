@@ -77,7 +77,7 @@ class SubrackDriver(MessageQueueComponentManager):
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[float], None],
+        component_progress_changed_callback: Callable[[int], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],

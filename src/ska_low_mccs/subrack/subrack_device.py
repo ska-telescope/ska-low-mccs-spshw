@@ -231,7 +231,7 @@ class MccsSubrack(SKABaseDevice):
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
 
-    def _component_progress_changed(self: MccsSubrack, progress: float) -> None:
+    def _component_progress_changed(self: MccsSubrack, progress: int) -> None:
         """
         Handle change in the progress of a long-running command.
 

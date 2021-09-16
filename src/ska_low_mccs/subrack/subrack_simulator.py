@@ -103,7 +103,7 @@ class SubrackSimulator(ObjectComponent):
 
     def __init__(
         self: SubrackSimulator,
-        component_progress_changed_callback: Callable[[float], None],
+        component_progress_changed_callback: Callable[[int], None],
         backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURES,
         board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
         board_current: float = DEFAULT_BOARD_CURRENT,
@@ -588,16 +588,17 @@ class SubrackSimulator(ObjectComponent):
         self._check_tpm_id(logical_tpm_id)
         tpm_data = self._tpm_data[logical_tpm_id - 1]
         if tpm_data["power_mode"] == PowerMode.OFF:
+            self._component_progress_changed_callback(0)
 
             # If in a real deployment but using simulators, simulate the time
             # it might take for a TPM to actually turn on
-            if "pytest" not in sys.modules:
-                for i in range(5):
+            if "pytest" not in sys.modules: # pragma: no cover
+                for i in range(1, 5):
                     if self._component_progress_changed_callback:
-                        self._component_progress_changed_callback(i * 20.0)
-                    sleep(1)
+                        self._component_progress_changed_callback(i * 20)
+                    sleep(1.0)
 
-            self._component_progress_changed_callback(100.0)
+            self._component_progress_changed_callback(100)
             tpm_data["power_mode"] = PowerMode.ON
             self._tpm_power_changed()
             return True

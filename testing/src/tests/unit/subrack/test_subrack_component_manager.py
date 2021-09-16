@@ -265,6 +265,45 @@ class TestSubrackSimulatorCommon:
         elif num_args == 2:
             _ = getattr(subrack, command_name)(1, 1)
 
+    @pytest.mark.parametrize(
+        ("command_name", "args"),
+        (
+            ("simulate_power_supply_voltages", [0.1, 0.2]),
+            ("simulate_backplane_temperatures", [0.3, 0.4]),
+            ("simulate_board_temperatures", [0.5, 0.6]),
+            ("simulate_board_current", [0.7, 0.8]),
+            ("simulate_subrack_fan_speeds", [0.9, 1.0]),
+            ("simulate_tpm_temperatures", [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8]),
+            ("simulate_tpm_currents", [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8]),
+            ("simulate_tpm_powers", [3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8]),
+            ("simulate_tpm_voltages", [4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8]),
+            ("simulate_power_supply_fan_speeds", [1.7, 1.8]),
+            ("simulate_power_supply_currents", [1.9, 2.0]),
+            ("simulate_power_supply_powers", [2.1, 2.2]),
+        )
+    )
+    def test_commands_with_lists(
+        self: TestSubrackSimulatorCommon,
+        subrack: Union[
+            SubrackSimulator,
+            SubrackSimulatorComponentManager,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        command_name: str,
+        args: Any,
+    ) -> None:
+        """
+        Test of commands that require list parameters.
+
+        These tests don't really do anything, they simply check that the
+        command can be called.
+
+        :param subrack: the subrack class object under test.
+        :param command_name: the name of the command under test
+        :param args: the args the command takes
+        """
+        _ = getattr(subrack, command_name)(args)
 
 class TestSubrackDriverCommon:
     """
@@ -553,4 +592,5 @@ class TestSubrackComponentManager:
         time.sleep(0.1)
 
         subrack_component_manager.turn_on_tpm(1)
-        component_progress_changed_callback.assert_next_call(100.0)
+        component_progress_changed_callback.assert_next_call(0)
+        component_progress_changed_callback.assert_next_call(100)

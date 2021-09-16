@@ -187,7 +187,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         self._faulty: Optional[bool] = None
         self._component_fault_callback = component_fault_callback
-
         super().__init__(None, *args, **kwargs)
 
     def start_communicating(self: MccsComponentManager) -> None:

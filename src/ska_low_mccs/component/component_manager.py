@@ -154,7 +154,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         ],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
-        component_progress_changed_callback: Callable[[float], None],
         *args: Any,
         **kwargs: Any,
     ):
@@ -169,8 +168,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             called when the power mode of the component changes.
         :param component_fault_callback: callback to be called when the
             fault status of the component changes.
-        :param component_progress_changed_callback: callback to be called
-            when the progress value of the component changes.
         :param args: other positional args
         :param kwargs: other keyword args
         """
@@ -191,8 +188,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         self._faulty: Optional[bool] = None
         self._component_fault_callback = component_fault_callback
 
-        self._progress: Optional[float] = None
-        self._component_progress_changed_callback = component_progress_changed_callback
         super().__init__(None, *args, **kwargs)
 
     def start_communicating(self: MccsComponentManager) -> None:
@@ -301,27 +296,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         :return: the power mode of this component manager.
         """
         return self._power_mode
-
-    def update_component_progress(self: MccsComponentManager, progress: float) -> None:
-        """
-        Update the component progress value, calling callbacks as required.
-
-        This is a helper method for use by subclasses.
-
-        :param progress: The progress percentage of the long-running command
-        """
-        if self._component_progress_changed_callback is not None:
-            self._component_progress_changed_callback(progress)
-
-    def component_progress_changed(self: MccsComponentManager, progress: float) -> None:
-        """
-        Handle notification that the component's progress value has changed.
-
-        This is a callback hook, to be passed to the managed component.
-
-        :param progress: The progress percentage of the long-running command
-        """
-        self.update_component_progress(progress)
 
     def update_component_fault(
         self: MccsComponentManager, faulty: Optional[bool]

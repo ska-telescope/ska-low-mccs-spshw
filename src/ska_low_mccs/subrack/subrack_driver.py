@@ -77,6 +77,7 @@ class SubrackDriver(MessageQueueComponentManager):
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
+        component_progress_changed_callback: Callable[[float], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -128,7 +129,9 @@ class SubrackDriver(MessageQueueComponentManager):
         self._component_tpm_power_changed_callback = (
             component_tpm_power_changed_callback
         )
-
+        self._component_progress_changed_callback = (
+            component_progress_changed_callback
+        )
         super().__init__(
             message_queue,
             logger,

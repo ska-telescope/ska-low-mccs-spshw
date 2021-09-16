@@ -258,7 +258,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
-        component_progress_changed_callback: Callable[[float], None],
+        component_progress_changed_callback: Optional[Callable[[float], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -287,12 +287,14 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._power_supply_component_manager = power_supply_component_manager
         self._hardware_component_manager = hardware_component_manager
 
+        self._progress: Optional[float] = None
+        self._component_progress_changed_callback = component_progress_changed_callback
+
         super().__init__(
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
-            component_progress_changed_callback,
         )
 
     def start_communicating(self: ComponentManagerWithUpstreamPowerSupply) -> None:
@@ -349,6 +351,27 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
                 self.update_communication_status(self._hardware_communication_status)
         else:
             self.update_communication_status(self._power_supply_communication_status)
+
+    def update_component_progress(self: ComponentManagerWithUpstreamPowerSupply, progress: float) -> None:
+        """
+        Update the component progress value, calling callbacks as required.
+
+        This is a helper method for use by subclasses.
+
+        :param progress: The progress percentage of the long-running command
+        """
+        if self._component_progress_changed_callback is not None:
+            self._component_progress_changed_callback(progress)
+
+    def component_progress_changed(self: ComponentManagerWithUpstreamPowerSupply, progress: float) -> None:
+        """
+        Handle notification that the component's progress value has changed.
+
+        This is a callback hook, to be passed to the managed component.
+
+        :param progress: The progress percentage of the long-running command
+        """
+        self.update_component_progress(progress)
 
     def component_power_mode_changed(
         self: ComponentManagerWithUpstreamPowerSupply,

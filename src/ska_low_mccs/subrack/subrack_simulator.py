@@ -592,11 +592,12 @@ class SubrackSimulator(ObjectComponent):
             # If in a real deployment but using simulators, simulate the time
             # it might take for a TPM to actually turn on
             if "pytest" not in sys.modules:
-                for i in range(6):
+                for i in range(5):
                     if self._component_progress_changed_callback:
                         self._component_progress_changed_callback(i * 20.0)
                     sleep(1)
 
+            self._component_progress_changed_callback(100.0)
             tpm_data["power_mode"] = PowerMode.ON
             self._tpm_power_changed()
             return True

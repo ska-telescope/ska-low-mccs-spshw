@@ -242,6 +242,7 @@ class MccsSubrack(SKABaseDevice):
         """
         self._progress = progress
         self.logger.debug(f"Subrack progress value = {progress}")
+        # TODO: Link the progress update to an attribute to be exposed to the real world...
 
     def health_changed(self: MccsSubrack, health: HealthState) -> None:
         """

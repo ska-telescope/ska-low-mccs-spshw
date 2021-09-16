@@ -532,3 +532,25 @@ class TestSubrackComponentManager:
 
         subrack_component_manager.turn_off_tpm(tpm_id)
         component_tpm_power_changed_callback.assert_not_called()
+
+    def test_component_progress_changed_callback(
+        self: TestSubrackComponentManager,
+        subrack_component_manager: SubrackComponentManager,
+        component_progress_changed_callback: MockCallable,
+    ) -> None:
+        """
+        Test that the callback is called when we change the progress reported by the
+        subrack simulator. Testing using the 'turn_on_tpm' method.
+
+        :param subrack_component_manager: the subrack component manager under
+            test
+        :param component_progress_changed_callback: callback to be
+            called when the progress value of a tpm command changes
+        """
+        subrack_component_manager.start_communicating()
+        subrack_component_manager.on()
+
+        time.sleep(0.1)
+
+        subrack_component_manager.turn_on_tpm(1)
+        component_progress_changed_callback.assert_next_call(100.0)

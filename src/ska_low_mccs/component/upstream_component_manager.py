@@ -352,19 +352,6 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         else:
             self.update_communication_status(self._power_supply_communication_status)
 
-    def update_component_progress(
-        self: ComponentManagerWithUpstreamPowerSupply, progress: float
-    ) -> None:
-        """
-        Update the component progress value, calling callbacks as required.
-
-        This is a helper method for use by subclasses.
-
-        :param progress: The progress percentage of the long-running command
-        """
-        if self._component_progress_changed_callback is not None:
-            self._component_progress_changed_callback(progress)
-
     def component_progress_changed(
         self: ComponentManagerWithUpstreamPowerSupply, progress: float
     ) -> None:
@@ -375,7 +362,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :param progress: The progress percentage of the long-running command
         """
-        self.update_component_progress(progress)
+        if self._component_progress_changed_callback is not None:
+            self._component_progress_changed_callback(progress)
 
     def component_power_mode_changed(
         self: ComponentManagerWithUpstreamPowerSupply,

@@ -25,7 +25,7 @@ from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 
 class _DynamicValuesGenerator:
     """
-    A generator of dynamic values with the following properties:
+    A generator of dynamic values with the following properties.
 
     * We want the values to gradually walk around their range rather
       than randomly jumping around. i.e. we want values to be temporally
@@ -41,7 +41,13 @@ class _DynamicValuesGenerator:
       should exceed that range and thus start alarming.
     """
 
-    def __init__(self: _DynamicValuesGenerator, soft_min: float, soft_max: float, window_size: int=20, in_range_rate: float=0.95):
+    def __init__(
+        self: _DynamicValuesGenerator,
+        soft_min: float,
+        soft_max: float,
+        window_size: int = 20,
+        in_range_rate: float = 0.95,
+    ):
         """
         Create a new instance.
 
@@ -89,7 +95,7 @@ class _DynamicValuesGenerator:
         self._uniform = lambda: random.uniform(offset - scale, offset + scale)
 
         # Generate our initial window of values
-        self._values = [None] + [self._uniform() for i in range(window_size - 1)]
+        self._values = [self._uniform() for i in range(window_size - 1)]
 
     def __next__(self: _DynamicValuesGenerator) -> float:
         """
@@ -104,7 +110,7 @@ class _DynamicValuesGenerator:
 class _DynamicValuesUpdater:
     """An dynamic updater of values, for use in a dynamic simulator."""
 
-    def __init__(self: _DynamicValuesUpdater, update_rate: float=1.0) -> None:
+    def __init__(self: _DynamicValuesUpdater, update_rate: float = 1.0) -> None:
         """
         Create a new instance.
 
@@ -126,12 +132,15 @@ class _DynamicValuesUpdater:
         """Stop the updater thread."""
         self._thread_is_running = False
 
-    def add_target(self: _DynamicValuesUpdater, generator, callback: Callable) -> None:
+    def add_target(
+        self: _DynamicValuesUpdater,
+        generator: Any,  # type: ignore[no-untyped-def]
+        callback: Callable,
+    ) -> None:
         """
         Add a new target to be updated.
 
         :param generator: the generator of values to be used as updates
-        :type generator: :py:class:`.DynamicValuesGenerator`
         :param callback: the callback to be called with updates
         """
         # call it immediately, in case attribute initialisation depends on the callback
@@ -160,9 +169,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
     This is useful for demoing.
     """
 
-    def __init__(
-        self: DynamicTpmSimulator, logger: logging.Logger
-    ) -> None:
+    def __init__(self: DynamicTpmSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new TPM simulator instance.
 
@@ -205,13 +212,14 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of the TPM
         """
+        assert self._board_temperature is not None  # for the type checker
         return self._board_temperature
 
     def _board_temperature_changed(
         self: DynamicTpmSimulator, board_temperature: float
     ) -> None:
         """
-        Callback called when the board temperature changes.
+        Call this method when the board temperature changes.
 
         :param board_temperature: the new board temperature
         """
@@ -224,11 +232,12 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the voltage of the TPM
         """
+        assert self._voltage is not None  # for the type checker
         return self._voltage
 
     def _voltage_changed(self: DynamicTpmSimulator, voltage: float) -> None:
         """
-        Callback called when the voltage changes.
+        Call this method when the voltage changes.
 
         :param voltage: the new voltage
         """
@@ -241,11 +250,12 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the current of the TPM
         """
+        assert self._current is not None  # for the type checker
         return self._current
 
     def _current_changed(self: DynamicTpmSimulator, current: float) -> None:
         """
-        Callback called when the current changes.
+        Call this method when the current changes.
 
         :param current: the new current
         """
@@ -258,13 +268,14 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 1
         """
+        assert self._fpga1_temperature is not None  # for the type checker
         return self._fpga1_temperature
 
     def _fpga1_temperature_changed(
         self: DynamicTpmSimulator, fpga1_temperature: float
     ) -> None:
         """
-        Callback called when the FPGA1 temperature changes.
+        Call this method when the FPGA1 temperature changes.
 
         :param fpga1_temperature: the new FPGA1 temperature
         """
@@ -277,13 +288,14 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 2
         """
+        assert self._fpga2_temperature is not None  # for the type checker
         return self._fpga2_temperature
 
     def _fpga2_temperature_changed(
         self: DynamicTpmSimulator, fpga2_temperature: float
     ) -> None:
         """
-        Callback called when the FPGA2 temperature changes.
+        Call this method when the FPGA2 temperature changes.
 
         :param fpga2_temperature: the new FPGA2 temperature
         """

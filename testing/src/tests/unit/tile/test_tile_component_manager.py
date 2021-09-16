@@ -554,7 +554,7 @@ class TestStaticSimulatorCommon:
 
     @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
     @pytest.mark.parametrize("device", (0, 1))
-    @pytest.mark.parametrize("register", tuple(f"test-reg{i}" for i in (1, 4)))
+    @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
     @pytest.mark.parametrize("read_offset", (0, 2))
     @pytest.mark.parametrize("read_length", (0, 4))
     @pytest.mark.parametrize("write_offset", (0, 3))
@@ -592,7 +592,7 @@ class TestStaticSimulatorCommon:
         buffer = [0] * buffer_size
         for (index, value) in enumerate(write_values):
             buffer[write_offset + index] = value
-        expected_read = tuple(buffer[read_offset : (read_offset + read_length)])
+        expected_read = buffer[read_offset : (read_offset + read_length)]
         tile.write_register(register, write_values, write_offset, device)
         assert (
             tile.read_register(register, read_length, read_offset, device)
@@ -648,7 +648,7 @@ class TestStaticSimulatorCommon:
             return slice(address - min_address, address - min_address + length)
 
         buffer[buffer_slice(write_address, len(write_values))] = write_values
-        expected_read = tuple(buffer[buffer_slice(read_address, read_length)])
+        expected_read = list(buffer[buffer_slice(read_address, read_length)])
 
         tile.write_address(write_address, write_values)
         assert tile.read_address(read_address, read_length) == expected_read

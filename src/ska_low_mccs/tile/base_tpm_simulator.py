@@ -34,7 +34,7 @@ class BaseTpmSimulator(ObjectComponent):
         callback being called.
     """
 
-    ADC_RMS = tuple(float(i) for i in range(32))
+    ADC_RMS = [float(i) for i in range(32)]
     FPGAS_TIME = [1, 2]
     CURRENT_TILE_BEAMFORMER_FRAME = 23
     PPS_DELAY = 12
@@ -79,15 +79,11 @@ class BaseTpmSimulator(ObjectComponent):
         else:
             return "ff:ff:ff:ff:ff:ff"
 
-    def __init__(
-        self: BaseTpmSimulator, logger: logging.Logger
-    ) -> None:
+    def __init__(self: BaseTpmSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
-        :type logger: an instance of :py:class:`logging.Logger`, or
-            an object that implements the same interface
         """
         self.logger = logger
 
@@ -97,7 +93,7 @@ class BaseTpmSimulator(ObjectComponent):
         self._station_id = 0
         self._tile_id = 0
 
-        self._adc_rms = tuple(self.ADC_RMS)
+        self._adc_rms = self.ADC_RMS
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
@@ -153,7 +149,7 @@ class BaseTpmSimulator(ObjectComponent):
     @property
     def is_programmed(self: BaseTpmSimulator) -> bool:
         """
-        Return whether this TPM is programmed (i.e. firmware has been downloaded to it)
+        Return whether this TPM is programmed (i.e. firmware has been downloaded to it).
 
         :return: whether this TPM is programmed
         """
@@ -304,7 +300,7 @@ class BaseTpmSimulator(ObjectComponent):
     @property
     def adc_rms(
         self: BaseTpmSimulator,
-    ) -> tuple[float]:
+    ) -> list[float]:
         """
         Return the RMS power of the TPM's analog-to-digital converter.
 
@@ -328,7 +324,7 @@ class BaseTpmSimulator(ObjectComponent):
     @property
     def pps_delay(self: BaseTpmSimulator) -> float:
         """
-        Returns the PPS delay of the TPM.
+        Return the PPS delay of the TPM.
 
         :return: PPS delay
         """
@@ -392,7 +388,7 @@ class BaseTpmSimulator(ObjectComponent):
 
     def read_address(self: BaseTpmSimulator, address: int, nvalues: int) -> list[int]:
         """
-        Returns a list of values from a given address.
+        Return a list of values from a given address.
 
         :param address: address of start of read
         :param nvalues: number of values to read
@@ -427,8 +423,9 @@ class BaseTpmSimulator(ObjectComponent):
         dst_port: int,
     ) -> None:
         """
-        Configure the 40G code. The dst_mac parameter is ignored in true 40G core (ARP
-        resolution used instead)
+        Configure the 40G code.
+
+        The dst_mac parameter is ignored in true 40G core (ARP resolution used instead)
 
         :param core_id: id of the core
         :param arp_table_entry: ARP table entry to use
@@ -638,9 +635,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_antenna_tapering")
         raise NotImplementedError
 
-    def switch_calibration_bank(
-        self: BaseTpmSimulator, switch_time: int = 0
-    ) -> None:
+    def switch_calibration_bank(self: BaseTpmSimulator, switch_time: int = 0) -> None:
         """
         Switch the calibration bank.
 
@@ -674,7 +669,7 @@ class BaseTpmSimulator(ObjectComponent):
         self: BaseTpmSimulator, delay_array: list[float], beam_index: int
     ) -> None:
         """
-        Specifies the delay in seconds and the delay rate in seconds/second.
+        Specify the delay in seconds and the delay rate in seconds/second.
 
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
@@ -729,8 +724,7 @@ class BaseTpmSimulator(ObjectComponent):
         last_channel: int = 511,
     ) -> None:
         """
-        Configure the transmission of integrated channel data with the provided
-        integration time.
+        Configure the integrated channel data with the provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
@@ -749,8 +743,7 @@ class BaseTpmSimulator(ObjectComponent):
         last_channel: int = 191,
     ) -> None:
         """
-        Configure the transmission of integrated beam data with the provided integration
-        time.
+        Configure the integrated beam data with the provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
@@ -800,8 +793,7 @@ class BaseTpmSimulator(ObjectComponent):
         seconds: float = 0.2,
     ) -> None:
         """
-        Transmit a snapshot containing channelized data totalling number_of_samples
-        spectra.
+        Transmit a snapshot of channelized data totalling number_of_samples spectra.
 
         :param number_of_samples: number of spectra to send, defaults to 1024
         :param first_channel: first channel to send, defaults to 0

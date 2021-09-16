@@ -13,9 +13,6 @@ support testing and demonstrating the MCCS Tile device.
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Optional
-
-from tango import DevState
 from tango.server import command, Device
 
 from ska_low_mccs.tile import MccsTile
@@ -38,15 +35,12 @@ class _FaultSimulatingDevice(Device):
         Tells the device whether or not to simulate a fault.
 
         :param is_faulty: whether or not to simulate a fault
-7        """
+        """
         self.component_manager.update_component_fault(is_faulty)
 
 
 class DemoTile(MccsTile, _FaultSimulatingDevice):
-    """
-    A version of the MccsTile tango device with extra functionality for
-    testing/demos:
-    """
+    """Version of the MccsTile tango device with extra methods for testing/demos."""
 
     def init_device(self: DemoTile) -> None:
         """

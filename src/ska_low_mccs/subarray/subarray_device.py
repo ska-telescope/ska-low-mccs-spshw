@@ -119,8 +119,6 @@ class MccsSubarray(SKASubarray):
             (result_code, message) = super().do()
 
             device = self.target
-            device.logger.error("bbvvbcb")
-            self.logger.error("wwwwfwfwefwe")
             device.set_change_event("stationFQDNs", True, True)
             device.set_archive_event("stationFQDNs", True, True)
 

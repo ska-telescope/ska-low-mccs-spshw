@@ -48,4 +48,3 @@ from .tile_component_manager import (
 from .tile_health_model import TileHealthModel
 from .tile_device import MccsTile
 from .demo_tile_device import DemoTile
-

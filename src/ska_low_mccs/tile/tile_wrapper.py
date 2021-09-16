@@ -7,7 +7,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-Hardware functions for the TPM hardware. Factory around the Tile_1_2 and Tile_1_6
+Hardware functions for the TPM hardware.
+
+Factory around the Tile_1_2 and Tile_1_6
 modules: Queries the board version and selects the correct object.
 
 This is derived from pyaavs.Tile object and depends heavily on the
@@ -18,7 +20,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import socket
-from typing import Optional, Type
+from typing import cast, Optional, Type
 
 from pyfabil.base.definitions import LibraryError
 from pyfabil.boards.tpm_generic import TPMGeneric
@@ -71,9 +73,13 @@ class HwTile(object):
             _tpm_version = "tpm_v1_6"
 
         if _tpm_version == "tpm_v1_2":
-            return Tile12(ip, port, lmc_ip, lmc_port, sampling_rate, logger)
+            return cast(
+                HwTile, Tile12(ip, port, lmc_ip, lmc_port, sampling_rate, logger)
+            )
         elif _tpm_version == "tpm_v1_6":
-            return Tile16(ip, port, lmc_ip, lmc_port, sampling_rate, logger)
+            return cast(
+                HwTile, Tile16(ip, port, lmc_ip, lmc_port, sampling_rate, logger)
+            )
         else:
             raise LibraryError("TPM version not supported: " + _tpm_version)
 

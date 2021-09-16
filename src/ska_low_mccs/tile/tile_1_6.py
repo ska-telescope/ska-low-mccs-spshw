@@ -29,7 +29,7 @@ from ska_low_mccs.tile import Tile12
 # Helper to disallow certain function calls on unconnected tiles
 def connected(f: Callable) -> Callable:
     """
-    Helper to disallow certain function calls on unconnected tiles.
+    Help to disallow certain function calls on unconnected tiles.
 
     :param f: the method wrapped by this helper
 
@@ -39,8 +39,7 @@ def connected(f: Callable) -> Callable:
     @functools.wraps(f)
     def wrapper(self: Callable, *args: list, **kwargs: dict) -> object:
         """
-        Wrapper that checks the TPM is connected before allowing the wrapped method to
-        proceed.
+        Check the TPM is connected before allowing the wrapped method to proceed.
 
         :param self: the method called
         :param args: positional arguments to the wrapped method
@@ -110,8 +109,8 @@ class Tile16(Tile12):
         """
         Connect to the hardware and loads initial configuration.
 
-        :param initialise: Initialises the TPM object        :type initialise: bool
-        :param load_plugin: loads software plugins        :type load_plugin: bool
+        :param initialise: Initialises the TPM object
+        :param load_plugin: loads software plugins
         :param enable_ada: Enable ADC amplifier (usually not present)
         :param enable_adc: Enable ADC
         :param dsp_core: Enable loading of DSP core plugins

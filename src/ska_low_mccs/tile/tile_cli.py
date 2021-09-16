@@ -25,8 +25,7 @@ from ska_tango_base.commands import ResultCode
 
 class CliMeta(type):
     """
-    Metaclass to catch and dissect :py:class:`tango.DevFailed` and other exceptions for
-    all class methods.
+    Metaclass to catch and dissect exceptions for all class methods.
 
     They get turned into `fire.core.FireError` exceptions.
     """
@@ -51,12 +50,10 @@ class CliMeta(type):
     @classmethod
     def fire_except(cls: Type[CliMeta], method: Callable) -> Callable:
         """
-        Wraps the method to handle exceptions.
+        Wrap the method to handle exceptions.
 
-        Any :py:exc:`tango.DevFailed` exception
-        raised by a method is converted to a
-        :py:exc:`fire.core.FireError`, so that the CLI framework handles
-        it nicely.
+        Any :py:exc:`tango.DevFailed` exception raised by a method is converted to a
+        :py:exc:`fire.core.FireError`, so that the CLI framework handles it nicely.
 
         :param method: the method to be wrapped
 
@@ -66,7 +63,7 @@ class CliMeta(type):
         @functools.wraps(method)
         def _wrapper(*args: tuple, **kwargs: dict) -> Any:
             """
-            Wrapper that catches tango exceptions.
+            Wrap tango exceptions.
 
             Any :py:exc:`tango.DevFailed` exception
             raised by the wrapped method, and converts it to a
@@ -93,7 +90,7 @@ class CliMeta(type):
 
 def command_result_as_string(method: Callable) -> Callable:
     """
-    Wrapper to format device command results as a two-line string.
+    Wrap and format device command results as a two-line string.
 
     :param method: function handle of the method to wrap
 
@@ -102,8 +99,8 @@ def command_result_as_string(method: Callable) -> Callable:
 
     @functools.wraps(method)
     def _wrapper(*args: tuple, **kwargs: dict) -> str:
-        """Wrapper that ensure device command methods return results formatted as a a
-        two- line string.
+        """
+        Wrap and ensure device command methods return formatted two-line strings.
 
         :param args: positional arguments to the wrapped method
         :param kwargs: keyword arguments to the wrapped method
@@ -121,10 +118,7 @@ def command_result_as_string(method: Callable) -> Callable:
 
 
 class MccsTileCli(metaclass=CliMeta):
-    """
-    Command-line interface to the
-    :py:class:`ska_low_mccs.tile.tile_device.MccsTile` tango device.
-    """
+    """Command-line interface to :py:class:`ska_low_mccs.tile.tile_device.MccsTile`."""
 
     def __init__(self: MccsTileCli) -> None:
         """
@@ -201,6 +195,8 @@ class MccsTileCli(metaclass=CliMeta):
         seconds: float = 0.2,
     ) -> Tuple[ResultCode, str]:
         """
+        Transmit channelised data continuously.
+
         :param channel_id: index of channel to send
         :param num_samples: number of spectra to send, defaults to 1024
         :param wait_seconds: wait time before sending data
@@ -236,8 +232,7 @@ class MccsTileCli(metaclass=CliMeta):
         seconds: float = 0.2,
     ) -> Tuple[ResultCode, str]:
         """
-        Transmit a snapshot containing channelized data totalling number_of_samples
-        spectra.
+        Transmit a snapshot 0f channelized data totalling number_of_samples spectra.
 
         :param num_samples: number of spectra to send, defaults to 1024
         :param first_channel: first channel to send, defaults to 0
@@ -290,17 +285,14 @@ class MccsTileCli(metaclass=CliMeta):
         self: MccsTileCli, integration_time: float = 0.5
     ) -> Tuple[ResultCode, str]:
         """
-        Configure the transmission of integrated beam data with the provided integration
-        time.
+        Configure the transmission of integrated beam data with the integration time.
 
         :param integration_time: integration time in seconds, defaults
             to 0.5
-        :type integration_time: float
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
 
@@ -309,17 +301,14 @@ class MccsTileCli(metaclass=CliMeta):
         self: MccsTileCli, integration_time: float = 0.5
     ) -> Tuple[ResultCode, str]:
         """
-        Configure the transmission of integrated channel data with the provided
-        integration time.
+        Configure the transmission of integrated channel data with the integration time.
 
         :param integration_time: integration_time in seconds (defaults
             to 0.5)
-        :type integration_time: float
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout(
             "ConfigureIntegratedChannelData", integration_time
@@ -333,10 +322,8 @@ class MccsTileCli(metaclass=CliMeta):
         Start the beamformer at the specified time delay.
 
         :param start_time: the start time
-        :type start_time: int
         :param duration: how long to run (default is -1, meaning run
             forever)
-        :type duration: int
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -362,7 +349,7 @@ class MccsTileCli(metaclass=CliMeta):
         self: MccsTileCli, load_time: int = 0
     ) -> Tuple[ResultCode, str]:
         """
-        Loads the pointing delays at the specified time delay.
+        Load the pointing delays at the specified time delay.
 
         :param load_time: time delay (default = 0)
 
@@ -373,7 +360,7 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.command_inout("LoadPointingDelay", load_time)
 
 
-def main(*args: tuple, **kwargs: dict) -> int:
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 

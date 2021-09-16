@@ -14,6 +14,7 @@ import logging
 
 from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 
+
 class StaticTpmSimulator(BaseTpmSimulator):
     """A simulator for a TPM."""
 
@@ -23,9 +24,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
 
-    def __init__(
-        self: StaticTpmSimulator, logger: logging.Logger
-    ) -> None:
+    def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new TPM simulator instance.
 

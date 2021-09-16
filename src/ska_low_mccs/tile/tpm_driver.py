@@ -20,7 +20,7 @@ from __future__ import annotations  # allow forward references in type hints
 import copy
 import logging
 import numpy as np
-from typing import Any, Callable, cast, Optional
+from typing import Any, Callable, cast, List, Optional
 
 from pyfabil.base.definitions import Device
 
@@ -122,9 +122,12 @@ class TpmDriver(MessageQueueComponentManager):
         else:
             self._tpm_version = tpm_version
 
-        self.tile = cast(Tile12, HwTile(
-            ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
-        ))
+        self.tile = cast(
+            Tile12,
+            HwTile(
+                ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
+            ),
+        )
 
         super().__init__(
             message_queue,
@@ -155,7 +158,7 @@ class TpmDriver(MessageQueueComponentManager):
         self.tile.tpm = None
 
     @property
-    def firmware_available(self: TpmDriver) -> dict[str, str]:
+    def firmware_available(self: TpmDriver) -> dict[str, dict[str, Any]]:
         """
         Return the list of the firmware loaded in the system.
 
@@ -370,7 +373,7 @@ class TpmDriver(MessageQueueComponentManager):
     @property
     def pps_delay(self: TpmDriver) -> float:
         """
-        Returns the PPS delay of the TPM.
+        Return the PPS delay of the TPM.
 
         :return: PPS delay
         """
@@ -415,13 +418,16 @@ class TpmDriver(MessageQueueComponentManager):
         if len(self.tile.tpm.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
             value = None
+            return []
         else:
             value = self.tile[regname]
         if type(value) != list:
-            value = [value]
-        nmin = min(len(value) - 1, offset)
-        nmax = min(len(value), nmin + nb_read)
-        return value[nmin:nmax]
+            lvalue = [value]
+        else:
+            lvalue = cast(List, value)
+        nmin = min(len(lvalue) - 1, offset)
+        nmax = min(len(lvalue), nmin + nb_read)
+        return lvalue[nmin:nmax]
 
     def write_register(
         self: TpmDriver, register_name: str, values: list[Any], offset: int, device: int
@@ -431,7 +437,7 @@ class TpmDriver(MessageQueueComponentManager):
 
         :param register_name: name of the register
         :param values: values to write
-        :param offset: offset from which to start reading
+        :param offset: offset from which to start reading. Is this redundant???????
         :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
         """
         if device == 1:
@@ -444,11 +450,11 @@ class TpmDriver(MessageQueueComponentManager):
         if len(self.tile.tpm.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
         else:
-            self.tile[regname] = values
+            self.tile[regname] = values  # type: ignore[assignment]
 
     def read_address(self: TpmDriver, address: int, nvalues: int) -> list[int]:
         """
-        Returns a list of values from a given address.
+        Return a list of values from a given address.
 
         :param address: address of start of read
         :param nvalues: number of values to read
@@ -717,7 +723,7 @@ class TpmDriver(MessageQueueComponentManager):
         self: TpmDriver, delay_array: list[float], beam_index: int
     ) -> None:
         """
-        Specifies the delay in seconds and the delay rate in seconds/second.
+        Specify the delay in seconds and the delay rate in seconds/second.
 
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
@@ -840,8 +846,7 @@ class TpmDriver(MessageQueueComponentManager):
         seconds: float = 0.2,
     ) -> None:
         """
-        Transmit a snapshot containing channelized data totalling number_of_samples
-        spectra.
+        Transmit a snapshot of channelized data totalling number_of_samples spectra.
 
         :param number_of_samples: number of spectra to send, defaults to 1024
         :param first_channel: first channel to send, defaults to 0
@@ -864,8 +869,7 @@ class TpmDriver(MessageQueueComponentManager):
         number_of_samples: int = 1024,
         wait_seconds: int = 0,
         timestamp: Optional[str] = None,
-        seconds: 
-        float = 0.2,
+        seconds: float = 0.2,
     ) -> None:
         """
         Transmit data from a channel continuously.
@@ -919,7 +923,6 @@ class TpmDriver(MessageQueueComponentManager):
 
         :param delays: the delay in input streams, specified in nanoseconds.
             A positive delay adds delay to the signal stream
-        :type delays: list(int)
         """
         self.logger.debug("TpmDriver: set_time_delays")
         self.tile.set_time_delays(delays)
@@ -1110,7 +1113,6 @@ class TpmDriver(MessageQueueComponentManager):
         Set the test generator active flag.
 
         :param active: True if the generator has been activated
-        :type active: bool
         """
         self._test_generator_active = active
 
@@ -1169,8 +1171,9 @@ class TpmDriver(MessageQueueComponentManager):
 
     def test_generator_input_select(self: TpmDriver, inputs: int = 0) -> None:
         """
-        Specify ADC inputs which are substitute to test signal. Specified using a 32 bit
-        mask, with LSB for ADC input 0.
+        Specify ADC inputs which are substitute to test signal.
+
+        Specified using a 32 bit mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
         """

@@ -288,7 +288,6 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-
     @attribute(
         dtype=SimulationMode,
         memorized=True,
@@ -310,6 +309,29 @@ class MccsSubrack(SKABaseDevice):
         :param value: The simulation mode, as a SimulationMode value
         """
         self.component_manager.simulation_mode = value
+
+    @attribute(
+        dtype=TestMode,
+        memorized=True,
+        hw_memorized=True,
+    )
+    def testMode(self: MccsSubrack) -> TestMode:
+        """
+        Report the test mode of the device.
+
+        :return: the current test mode
+        :rtype: int
+        """
+        return self.component_manager.test_mode
+
+    @testMode.write  # type: ignore[no-redef]
+    def testMode(self: MccsSubrack, value: TestMode) -> None:
+        """
+        Set the test mode.
+
+        :param value: The test mode, as a TestMode value
+        """
+        self.component_manager.test_mode = TestMode(value)
 
     @attribute(
         dtype=("DevFloat",), max_dim_x=2, label="Backplane temperatures", unit="Celsius"

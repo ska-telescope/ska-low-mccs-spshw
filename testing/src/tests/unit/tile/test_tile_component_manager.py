@@ -558,7 +558,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize("read_length", (0, 4))
     @pytest.mark.parametrize("write_offset", (0, 3))
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
-    def DISABLE_test_read_and_write_register(
+    def disabled_test_read_and_write_register(
         self: TestStaticSimulatorCommon,
         tile: Union[
             StaticTpmSimulator,
@@ -602,7 +602,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
     @pytest.mark.parametrize("read_address", [10])
     @pytest.mark.parametrize("read_length", [0, 4])
-    def DISABLE_test_read_and_write_address(
+    def disabled_test_read_and_write_address(
         self: TestStaticSimulatorCommon,
         tile: Union[
             StaticTpmSimulator,

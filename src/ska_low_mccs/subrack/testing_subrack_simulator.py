@@ -32,4 +32,4 @@ class TestingSubrackSimulator(SubrackSimulator):
         for i in range(1, 5):
             if self._component_progress_changed_callback:
                 self._component_progress_changed_callback(i * 20)
-            #sleep(1.0)
+            sleep(1.0)

@@ -121,7 +121,6 @@ def channel_blocks() -> list[int]:
 def controller_resource_manager(
     subarray_fqdns: Iterable[str],
     subrack_fqdns: Iterable[str],
-    station_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
     station_beam_fqdns: Iterable[str],
     channel_blocks: Iterable[int],
@@ -140,7 +139,6 @@ def controller_resource_manager(
     return ControllerResourceManager(
         subarray_fqdns,
         subrack_fqdns,
-        station_fqdns,
         subarray_beam_fqdns,
         station_beam_fqdns,
         channel_blocks,
@@ -212,6 +210,7 @@ def controller_component_manager(
     subrack_health_changed_callback: MockCallable,
     station_health_changed_callback: MockCallable,
     subarray_beam_health_changed_callback: MockCallable,
+    station_beam_health_changed_callback: MockCallable,
 ) -> ControllerComponentManager:
     """
     Return a controller component manager in simulation mode.
@@ -248,6 +247,7 @@ def controller_component_manager(
         subrack_health_changed_callback,
         station_health_changed_callback,
         subarray_beam_health_changed_callback,
+        station_beam_health_changed_callback,
     )
 
 
@@ -450,6 +450,9 @@ def patched_controller_device_class(
             )
             mock_component_manager._subarray_beam_health_changed_callback = (
                 self._health_model.subarray_beam_health_changed
+            )
+            mock_component_manager._station_beam_health_changed_callback = (
+                self._health_model.station_beam_health_changed
             )
             return mock_component_manager
 

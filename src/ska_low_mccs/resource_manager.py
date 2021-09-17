@@ -263,6 +263,57 @@ class ResourceManager:
 
         return unallocated
 
+    def _add_resources(
+        self: ResourceManager,
+        **resources: Iterable[Hashable],
+    ) -> None:
+        """
+        Add a resource to this resource manager.
+
+        :param resources: keyword args, with each keyword being the name
+            of a resource type, and the value being the set of resources
+            of that type to be added to this resource manager's resources.
+        """
+
+        # self._allocations: dict[str, dict[Hashable, Optional[Hashable]]] = {
+        #     resource_type: {resource: None for resource in resources[resource_type]}
+        #     for resource_type in resources
+        # }
+
+        # check if allocated:
+        already_allocated = []
+        for resource_type in resources:
+            for resource in resources[resource_type]:
+                if self._allocations[resource_type][resource]:
+                    already_allocated.append({resource_type:resource})
+
+        # already_allocated = {
+        #     resource_type: [resource]
+        #     for resource in resources[resource_type]
+        #         for resource_type in resources
+        #         if self._allocations[resource_type][resource]
+        #     }
+
+        if already_allocated:
+            raise ValueError(f"Cannot add already managed redources: {already_allocated}.")
+
+        
+
+        pass
+
+    def _remove_resources(
+        self: ResourceManager,
+        **resources: Iterable[Hashable],
+    ) -> None:
+        """
+        Remove a resource from this resource manager.
+
+        :param resources: keyword args, with each keyword being the name
+            of a resource type, and the value being the set of resources
+            of that type to be removed from this resource manager's resources.
+        """
+        pass
+
 class _HealthfulResourceManager(ResourceManager):
     """A resource manager / tracker for resource types that may have a health state."""
 

@@ -23,7 +23,6 @@ class ControllerResourceManager:
         self: ControllerResourceManager,
         subarrays: Iterable[str],
         subracks: Iterable[str],
-        stations: Iterable[str],
         subarray_beams: Iterable[str],
         station_beams: Iterable[str],
         channel_blocks: Iterable[int],
@@ -35,8 +34,6 @@ class ControllerResourceManager:
             manager
         :param subracks: all subracks to be managed by this resource
             manager
-        :param stations: all stations to be managed by this resource
-            manager
         :param subarray_beams: all subarray beams to be managed by this
             resource manager
         :param station_beams: all station beams to be managed by this
@@ -47,7 +44,6 @@ class ControllerResourceManager:
         self._resource_manager = HealthfulReadyResourceManager(
             subarrays,
             {"station_beams", "subracks", "subarray_beams"},
-            stations=stations,
             subracks=subracks,
             subarray_beams=subarray_beams,
             channel_blocks=channel_blocks,
@@ -109,6 +105,15 @@ class ControllerResourceManager:
                     channel_blocks=[2, 3],
                 )
         """
+        #scrape stations from iterable - these are not a resource
+        #stations can be shared between subarrays - only need station_fqdn to assign other resources to
+        if "stations" in resources:
+            stations = resources.pop("stations", None)
+
+        print("1")
+        print(resources)
+        #one station beam per station per subarray beam
+        #get free station beam for each station
         station_beam = self._resource_pool.getFreeResource("station_beams")
         resources.update({"station_beams": station_beam})
         self._resource_manager.allocate(subarray, **resources)

@@ -155,9 +155,9 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None
         ],
-        # station_beam_health_changed_callback: Callable[
-            # [str, Optional[HealthState]], None
-        # ],
+        station_beam_health_changed_callback: Callable[
+            [str, Optional[HealthState]], None
+        ],
     ) -> None:
         """
         Initialise a new instance.
@@ -184,6 +184,9 @@ class ControllerComponentManager(MccsComponentManager):
         self._station_health_changed_callback = station_health_changed_callback
         self._subarray_beam_health_changed_callback = (
             subarray_beam_health_changed_callback
+        )
+        self._station_beam_health_changed_callback = (
+            station_beam_health_changed_callback
         )
 
         self._communication_status_lock = threading.Lock()
@@ -212,7 +215,6 @@ class ControllerComponentManager(MccsComponentManager):
         self._resource_manager = ControllerResourceManager(
             subarray_fqdns,
             subrack_fqdns,
-            station_fqdns,
             subarray_beam_fqdns,
             station_beam_fqdns,
             range(1, 48),
@@ -262,6 +264,17 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_beam_fqdns
         }
+        self._station_beams: dict[str, DeviceComponentManager] = {
+            fqdn: DeviceComponentManager(
+                fqdn,
+                logger,
+                functools.partial(self._device_communication_status_changed, fqdn),
+                None,
+                None,
+                functools.partial(self._station_beam_health_changed, fqdn),
+            )
+            for fqdn in station_beam_fqdns
+        }
 
         super().__init__(
             logger,
@@ -283,6 +296,8 @@ class ControllerComponentManager(MccsComponentManager):
             station_proxy.start_communicating()
         for subarray_beam_proxy in self._subarray_beams.values():
             subarray_beam_proxy.start_communicating()
+        for station_beam_proxy in self._station_beams.values():
+            station_beam_proxy.start_communicating()
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
@@ -296,6 +311,8 @@ class ControllerComponentManager(MccsComponentManager):
             station_proxy.stop_communicating()
         for subarray_beam_proxy in self._subarray_beams.values():
             subarray_beam_proxy.stop_communicating()
+        for station_beam_proxy in self._station_beams.values():
+            station_beam_proxy.stop_communicating()
 
     def _device_communication_status_changed(
         self: ControllerComponentManager,
@@ -397,9 +414,9 @@ class ControllerComponentManager(MccsComponentManager):
         :param health: the new health state of the station, or None if
             the station's health should not be taken into account.
         """
-        self._resource_manager.set_health(
-            "stations", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
-        )  # False for None
+        # self._resource_manager.set_health(
+            # "stations", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+        # )  # False for None
         if self._station_health_changed_callback is not None:
             self._station_health_changed_callback(fqdn, health)
 
@@ -500,16 +517,16 @@ class ControllerComponentManager(MccsComponentManager):
         :return: a result code
         """
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
+        #station_fqdns...
 
         self._resource_manager.allocate(
             subarray_fqdn,
-            stations=station_fqdns,
             subarray_beams=subarray_beam_fqdns,
             channel_blocks=channel_blocks,
         )
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            station_fqdns, subarray_beam_fqdns, channel_blocks
+            subarray_beam_fqdns, channel_blocks
         )
         if result_code != ResultCode.FAILED:
             for station_fqdn in station_fqdns:

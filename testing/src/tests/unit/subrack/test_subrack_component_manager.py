@@ -571,10 +571,11 @@ class TestSubrackComponentManager:
         subrack_component_manager.turn_on_tpm(tpm_id)
         component_tpm_power_changed_callback.assert_not_called()
 
-        subrack_component_manager.turn_off_tpm(tpm_id)
+        assert subrack_component_manager.turn_off_tpm(tpm_id) == True
         expected_are_tpms_on[tpm_id - 1] = False
         component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
         assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
+        assert subrack_component_manager.turn_off_tpm(tpm_id) == None
 
         subrack_component_manager.turn_off_tpm(tpm_id)
         component_tpm_power_changed_callback.assert_not_called()

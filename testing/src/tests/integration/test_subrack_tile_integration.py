@@ -16,7 +16,7 @@ import time
 import pytest
 from tango import DevState
 
-from ska_tango_base.control_model import AdminMode
+from ska_tango_base.control_model import AdminMode, TestMode
 
 from ska_low_mccs import MccsDeviceProxy
 
@@ -102,6 +102,7 @@ class TestSubrackTileIntegration:
             AdminMode.OFFLINE
         )
 
+        subrack_device.testMode = TestMode.NONE
         subrack_device.adminMode = AdminMode.ONLINE
         subrack_device_admin_mode_changed_callback.assert_next_change_event(
             AdminMode.ONLINE

@@ -9,7 +9,10 @@
 __all__ = [
     "MccsSubrack",
     "SubrackSimulator",
+    "TestingSubrackSimulator",
+    "BaseSubrackSimulatorComponentManager",
     "SubrackSimulatorComponentManager",
+    "TestingSubrackSimulatorComponentManager",
     "SwitchingSubrackComponentManager",
     "SubrackComponentManager",
     "SubrackDriver",
@@ -17,9 +20,12 @@ __all__ = [
 ]
 
 from .subrack_simulator import SubrackSimulator
+from .testing_subrack_simulator import TestingSubrackSimulator
 from .subrack_driver import SubrackDriver
 from .subrack_component_manager import (
+    BaseSubrackSimulatorComponentManager,
     SubrackSimulatorComponentManager,
+    TestingSubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
     SubrackComponentManager,
 )

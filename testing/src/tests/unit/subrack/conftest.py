@@ -20,7 +20,7 @@ import unittest.mock
 import pytest
 import requests
 
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.component import MessageQueue
 from ska_low_mccs.subrack import (
@@ -84,7 +84,7 @@ def initial_power_mode() -> PowerMode:
 
 @pytest.fixture()
 def subrack_simulator(
-    component_progress_changed_callback: MockCallable,
+    component_progress_changed_callback: Callable[[int], None],
 ) -> SubrackSimulator:
     """
     Fixture that returns a TPM simulator.
@@ -94,7 +94,9 @@ def subrack_simulator(
 
     :return: a subrack simulator
     """
-    return SubrackSimulator(component_progress_changed_callback)
+    subrack_simulator = SubrackSimulator()
+    subrack_simulator.set_progress_changed_callback(component_progress_changed_callback)
+    return subrack_simulator
 
 
 @pytest.fixture()
@@ -171,6 +173,7 @@ def switching_subrack_component_manager(
     """
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
+        TestMode.NONE,
         message_queue,
         logger,
         subrack_ip,
@@ -364,6 +367,7 @@ def subrack_component_manager(
     """
     return SubrackComponentManager(
         SimulationMode.TRUE,
+        TestMode.NONE,
         logger,
         subrack_ip,
         subrack_port,

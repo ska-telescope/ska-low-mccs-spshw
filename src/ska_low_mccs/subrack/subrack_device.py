@@ -19,7 +19,12 @@ from tango.server import attribute, command, device_property
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
+from ska_tango_base.control_model import (
+    HealthState,
+    PowerMode,
+    SimulationMode,
+    TestMode,
+)
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subrack import SubrackComponentManager, SubrackHealthModel
@@ -100,6 +105,7 @@ class MccsSubrack(SKABaseDevice):
         """
         return SubrackComponentManager(
             SimulationMode.TRUE,
+            TestMode.NONE,
             self.logger,
             self.SubrackIp,
             self.SubrackPort,

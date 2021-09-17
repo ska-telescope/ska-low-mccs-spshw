@@ -273,6 +273,7 @@ class TestPowerManagement:
         time.sleep(0.1)
         assert controller.state() == tango.DevState.OFF
 
+    # TODO: Understand why this test is flaky and fix it!
     @pytest.mark.flaky(reruns=5)
     def test_power_on_off(
         self: TestPowerManagement,
@@ -335,6 +336,7 @@ class TestPowerManagement:
         ]
         for device in devices:
             device.adminMode = AdminMode.ONLINE
+            # TODO: Understand and fix why this small delay improves test stability
             time.sleep(0.01)
 
         controller_device_state_changed_callback.assert_next_change_event(
@@ -346,9 +348,11 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
+            # TODO: Understand and fix why this small delay improves test stability
             time.sleep(0.01)
 
         controller.On()
+        # TODO: Understand and fix why this small delay improves test stability
         time.sleep(0.5)
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
@@ -356,9 +360,11 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.ON
+            # TODO: Understand and fix why this small delay improves test stability
             time.sleep(0.01)
 
         controller.Off()
+        # TODO: Understand and fix why this small delay improves test stability
         time.sleep(0.5)
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.OFF
@@ -366,4 +372,5 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
+            # TODO: Understand and fix why this small delay improves test stability
             time.sleep(0.01)

@@ -17,7 +17,7 @@ from typing import Any, Union
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -357,7 +357,7 @@ class TestSubrackDriverCommon:
 
         :param subrack_driver: the subrack driver to return
         :param switching_subrack_component_manager:
-            a component manager that switches between subrack simulator
+            a component manager that switches between subrack simulators
             and driver (in driver mode)
         :param subrack_component_manager: the subrack component manager
             to return (in driver mode and powered on)
@@ -372,10 +372,16 @@ class TestSubrackDriverCommon:
             return subrack_driver
         elif request.param == "switching_subrack_component_manager":
             switching_subrack_component_manager.simulation_mode = SimulationMode.FALSE
+            switching_subrack_component_manager.test_mode = TestMode.NONE
             switching_subrack_component_manager.start_communicating()
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":
             subrack_component_manager.simulation_mode = SimulationMode.FALSE
+            assert subrack_component_manager.simulation_mode == SimulationMode.FALSE
+            subrack_component_manager.test_mode = TestMode.TEST
+            assert subrack_component_manager.test_mode == TestMode.TEST
+            subrack_component_manager.test_mode = TestMode.NONE
+            assert subrack_component_manager.test_mode == TestMode.NONE
             subrack_component_manager.start_communicating()
             subrack_component_manager.on()
             time.sleep(0.1)

@@ -320,7 +320,6 @@ class MccsSubrack(SKABaseDevice):
         Report the test mode of the device.
 
         :return: the current test mode
-        :rtype: int
         """
         return self.component_manager.test_mode
 

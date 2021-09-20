@@ -440,6 +440,26 @@ class ControllerComponentManager(MccsComponentManager):
         if self._subarray_beam_health_changed_callback is not None:
             self._subarray_beam_health_changed_callback(fqdn, health)
 
+    def _station_beam_health_changed(
+        self: ControllerComponentManager,
+        fqdn: str,
+        health: HealthState | None,
+    ) -> None:
+        """
+        Handle a change in the health of a station_beam.
+
+        :param fqdn: the FQDN of the station_beam whose health has
+            changed.
+        :param health: the new health state of the station_beam, or
+            None if the station_beam's health should not be taken into
+            account.
+        """
+        self._resource_manager.set_health(
+            "station_beams", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+        )  # False for None
+        if self._station_beam_health_changed_callback is not None:
+            self._station_beam_health_changed_callback(fqdn, health)
+            
     @check_communicating
     def off(
         self: ControllerComponentManager,

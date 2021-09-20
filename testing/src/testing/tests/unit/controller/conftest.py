@@ -195,6 +195,21 @@ def subarray_beam_health_changed_callback(
     """
     return mock_callback_factory()
 
+@pytest.fixture()
+def station_beam_health_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for a change in the health of a station beam.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that health of a station beam has changed.
+    """
+    return mock_callback_factory()
 
 @pytest.fixture()
 def controller_component_manager(

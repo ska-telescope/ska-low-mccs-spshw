@@ -47,6 +47,7 @@ class ControllerResourceManager:
             subracks=subracks,
             subarray_beams=subarray_beams,
             channel_blocks=channel_blocks,
+            station_beams=station_beams,
         )
         self._resource_pool = ResourcePool(
             station_beams=station_beams,
@@ -105,17 +106,18 @@ class ControllerResourceManager:
                     channel_blocks=[2, 3],
                 )
         """
+        station_beams = []        
+
         #scrape stations from iterable - these are not a resource
         #stations can be shared between subarrays - only need station_fqdn to assign other resources to
         if "stations" in resources:
             stations = resources.pop("stations", None)
+            #one station beam per station per subarray beam
+            #get free station beam for each station
+            for station in stations:
+                station_beams.append(self._resource_pool.getFreeResource("station_beams"))
 
-        print("1")
-        print(resources)
-        #one station beam per station per subarray beam
-        #get free station beam for each station
-        station_beam = self._resource_pool.getFreeResource("station_beams")
-        resources.update({"station_beams": station_beam})
+        resources.update({"station_beams": station_beams})
         self._resource_manager.allocate(subarray, **resources)
 
     def deallocate(

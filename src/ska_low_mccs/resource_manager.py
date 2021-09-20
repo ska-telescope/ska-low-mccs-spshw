@@ -274,32 +274,20 @@ class ResourceManager:
             of a resource type, and the value being the set of resources
             of that type to be added to this resource manager's resources.
         """
-
-        # self._allocations: dict[str, dict[Hashable, Optional[Hashable]]] = {
-        #     resource_type: {resource: None for resource in resources[resource_type]}
-        #     for resource_type in resources
-        # }
-
-        # check if allocated:
-        already_allocated = []
+        # check if managed:
+        already_managed = []
         for resource_type in resources:
             for resource in resources[resource_type]:
                 if self._allocations[resource_type][resource]:
-                    already_allocated.append({resource_type:resource})
+                    already_managed.append({resource_type:resource})
 
-        # already_allocated = {
-        #     resource_type: [resource]
-        #     for resource in resources[resource_type]
-        #         for resource_type in resources
-        #         if self._allocations[resource_type][resource]
-        #     }
+        if already_managed:
+            raise ValueError(f"Cannot add already managed resources: {already_managed}.")
 
-        if already_allocated:
-            raise ValueError(f"Cannot add already managed redources: {already_allocated}.")
-
-        
-
-        pass
+        #No existing managed resources: go ahead and add to resource manager
+        for resource_type in resources:
+            for resource in resources[resource_type]:
+                self._allocations[resource_type][resource] = None
 
     def _remove_resources(
         self: ResourceManager,
@@ -403,6 +391,31 @@ class _HealthfulResourceManager(ResourceManager):
         }
         if unhealthy:
             raise ValueError(f"Cannot allocate unhealthy resources: {unhealthy}.")
+
+
+    def _add_resources(
+        self: ResourceManager,
+        **healthful_resources: Iterable[Hashable],
+    ) -> None:
+        """
+        
+        """
+        super()._add_resources(**healthful_resources)
+        # check if allocated:
+        already_allocated = []
+        for resource_type in healthful_resources:
+            for resource in healthful_resources[resource_type]:
+                if self._allocations[resource_type][resource]:
+                    already_allocated.append({resource_type:resource})
+
+        if already_allocated:
+            raise ValueError(f"Cannot add already managed redources: {already_allocated}.")
+
+        self._healthy = {
+                resource_type: {resource: False for resource in healthful_resources[resource_type]}
+                for resource_type in healthful_resources
+            }
+        pass
 
     def set_health(
         self: _HealthfulResourceManager,

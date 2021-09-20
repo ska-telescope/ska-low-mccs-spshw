@@ -7,7 +7,6 @@
 """This module implements message passing functionality for component manager."""
 from __future__ import annotations  # allow forward references in type hints
 
-from dataclasses import dataclass
 import functools
 import logging
 import queue
@@ -22,7 +21,7 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs.component import MccsComponentManager
 
 
-__all__ = ["MessageQueue", "MessageQueueComponentManager", "enqueue"]
+__all__ = ["Message", "MessageQueue", "MessageQueueComponentManager", "enqueue"]
 
 
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
@@ -70,15 +69,29 @@ def enqueue(func: Wrapped) -> Wrapped:
     return cast(Wrapped, _wrapper)
 
 
-@dataclass
-class _Message:
+# TODO: This class wants to be a @dataclass, but Sphinx chokes on the
+# type annotations because https://bugs.python.org/issue34776
+class Message:
     """A task that can be put on the MessageQueue, pulled off, and executed."""
 
-    command: Callable[..., None]
-    args: tuple[Any, ...]
-    kwargs: dict[str, Any]
+    def __init__(
+        self: Message,
+        command: Callable[..., None],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> None:
+        """
+        Initialise a new instance.
 
-    def __call__(self: _Message) -> None:
+        :param command: the command to be run
+        :param args: positional arguments to the command
+        :param kwargs: keyword arguments to the command
+        """
+        self.command = command
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self: Message) -> None:
         """Execute the task."""
         self.command(*self.args, **self.kwargs)
 
@@ -190,10 +203,10 @@ class MessageQueue:
         :param args: positional arguments to the method
         :param kwargs: keyword arguments to the method
         """
-        self._queue.put_nowait(_Message(func, args, kwargs))
+        self._queue.put_nowait(Message(func, args, kwargs))
         self._queue_size_changed()
 
-    def get(self: MessageQueue) -> _Message:
+    def get(self: MessageQueue) -> Message:
         """
         Get the next task from the queue, blocking until one arrives.
 

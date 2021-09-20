@@ -41,6 +41,7 @@ def transient_buffer_component(logger: logging.Logger) -> TransientBuffer:
 def transient_buffer_component_manager(
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    message_queue_size_callback: Callable[[int], None],
 ) -> TransientBufferComponentManager:
     """
     Return a transient buffer component manager.
@@ -49,10 +50,13 @@ def transient_buffer_component_manager(
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
 
     :return: a transient buffer component manager
     """
     return TransientBufferComponentManager(
         logger,
         communication_status_changed_callback,
+        message_queue_size_callback,
     )

@@ -32,6 +32,7 @@ class TelStateComponentManager(ObjectComponentManager):
         self: TelStateComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        message_queue_size_callback: Callable[[int], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -40,8 +41,13 @@ class TelStateComponentManager(ObjectComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         """
-        self._message_queue = MessageQueue(logger)
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         super().__init__(
             TelState(logger),

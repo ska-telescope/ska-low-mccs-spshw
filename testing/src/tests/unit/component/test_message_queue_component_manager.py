@@ -129,7 +129,9 @@ class TestMessageQueue:
             execution of the slow method finishes.
         """
         lock = threading.Lock()
-        message_queue = MessageQueue(logger, max_queue_size, 1, message_queue_size_callback)
+        message_queue = MessageQueue(
+            logger, max_queue_size, 1, message_queue_size_callback
+        )
 
         # check initial conditions
         task_complete_callback.assert_not_called()

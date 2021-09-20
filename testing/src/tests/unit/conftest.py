@@ -227,6 +227,23 @@ def component_fault_callback(
 
 
 @pytest.fixture()
+def message_queue_size_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for message queue size change.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the size of a component
+        manager's message queue changes.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
 def device_to_load() -> Optional[DeviceToLoadType]:
     """
     Fixture that specifies the device to be loaded for testing.

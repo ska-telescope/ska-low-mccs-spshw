@@ -7,12 +7,13 @@
 """This module implements message passing functionality for component manager."""
 from __future__ import annotations  # allow forward references in type hints
 
+from dataclasses import dataclass
 import functools
 import logging
 import queue
 import threading
 import traceback
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, cast
 
 import tango
 
@@ -69,6 +70,56 @@ def enqueue(func: Wrapped) -> Wrapped:
     return cast(Wrapped, _wrapper)
 
 
+@dataclass
+class _Message:
+    """A task that can be put on the MessageQueue, pulled off, and executed."""
+
+    command: Callable[..., None]
+    args: tuple[Any, ...]
+    kwargs: dict[str, Any]
+
+    def __call__(self: _Message) -> None:
+        """Execute the task."""
+        self.command(*self.args, **self.kwargs)
+
+
+class _Worker(threading.Thread):
+    """A worker thread that takes tasks from the queue and performs them."""
+
+    def __init__(
+        self: _Worker,
+        message_queue: MessageQueue,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param message_queue: the queue from which this worker gets
+            its jobs.
+        :param logger: a logger for this worer thread to use.
+        """
+        super().__init__()
+        self._message_queue = message_queue
+        self._logger = logger
+        self.setDaemon(True)
+
+    def run(self: _Worker) -> None:
+        """Run the thread: continually pull tasks from the queue and execute them."""
+        with tango.EnsureOmniThread():
+            while True:
+                task = self._message_queue.get()
+                try:
+                    task()
+                except Exception as e:
+                    trace = traceback.format_exc()
+                    self._logger.error(
+                        f"Worker thread discarded task '{task.command}' as a result of "
+                        f"exception: {e}.\ntraceback: {trace}"
+                    )
+                finally:
+                    self._message_queue.task_done()
+
+
 class MessageQueue:
     """
     A message-passing queue for asynchronous tasking.
@@ -78,45 +129,12 @@ class MessageQueue:
     worker queue will pull the task off the queue and execute it.
     """
 
-    class _Worker(threading.Thread):
-        """A worker thread that takes tasks from the queue and performs them."""
-
-        def __init__(
-            self: MessageQueue._Worker,
-            queue: queue.Queue,
-            logger: logging.Logger,
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param queue: the queue from which this worker gets its jobs.
-            :param logger: a logger for this worer thread to use.
-            """
-            super().__init__()
-            self._queue = queue
-            self._logger = logger
-            self.setDaemon(True)
-
-        def run(self: MessageQueue._Worker) -> None:
-            with tango.EnsureOmniThread():
-                while True:
-                    try:
-                        (command, args, kwargs) = self._queue.get()
-                        command(*args, **kwargs)
-                    except Exception as e:
-                        trace = traceback.format_exc()
-                        self._logger.error(
-                            f"Worker thread discarded task '{command}' as a result of "
-                            f"exception: {e}.\ntraceback: {trace}"
-                        )
-                    finally:
-                        self._queue.task_done()
-
     def __init__(
         self: MessageQueue,
         logger: logging.Logger,
         max_size: int = 0,
         num_workers: int = 1,
+        queue_size_callback: Optional[Callable[[int], None]] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -126,13 +144,21 @@ class MessageQueue:
             default value is 0, which is a special case signifying no
             queue size limit.
         :param num_workers: the number of worker threads servicing
-            the queue. The default value is 1.
+            the queue. The default value is 1. An exception is raised if
+            the value provided is less than 1.
+        :param queue_size_callback: optional callback to be called when
+            the size of the queue changes.
+
+        :raises ValueError: if num_workers argument is not at least 1.
         """
+        if num_workers < 1:
+            raise ValueError("MessageQueue needs at least one worker!")
+
         self._logger = logger
+        self._queue_size_callback = queue_size_callback
         self._queue: queue.Queue = queue.Queue(maxsize=max_size)
-        self._threads = [
-            self._Worker(self._queue, self._logger) for i in range(num_workers)
-        ]
+
+        self._threads = [_Worker(self, self._logger) for i in range(num_workers)]
         for thread in self._threads:
             thread.start()
 
@@ -140,30 +166,56 @@ class MessageQueue:
         """Release resources prior to instance deletion."""
         self._queue.join()
 
+    def __len__(self: MessageQueue) -> int:
+        """
+        Return the length of this queue.
+
+        Note that the underlying queue only offers an approximate
+        length.
+
+        :return: the approximate length of this queue.
+        """
+        return self._queue.qsize()
+
     def enqueue(
         self: MessageQueue,
         func: Callable,
         *args: Any,
         **kwargs: Any,
-    ) -> ResultCode:
+    ) -> None:
         """
         Put a method call onto the queue.
 
         :param func: the method to be called.
         :param args: positional arguments to the method
         :param kwargs: keyword arguments to the method
-
-        :return: a result code
         """
-        try:
-            self._queue.put_nowait((func, args, kwargs))
-        except queue.Full:
-            self._logger.error(
-                f"Could not enqueue '{func}', queue is full. "
-                f"Queue contents: {list(self._queue.queue)}."
-            )
-            return ResultCode.FAILED
-        return ResultCode.QUEUED
+        self._queue.put_nowait(_Message(func, args, kwargs))
+        self._queue_size_changed()
+
+    def get(self: MessageQueue) -> _Message:
+        """
+        Get the next task from the queue, blocking until one arrives.
+
+        :return: a task
+        """
+        task = self._queue.get()
+        self._queue_size_changed()
+        return task
+
+    def task_done(self: MessageQueue) -> None:
+        """
+        Handle notification that a thread has completed a task.
+
+        This is a hook that is called by threads whenever they complete
+        a task.
+        """
+        self._queue.task_done()
+
+    def _queue_size_changed(self: MessageQueue) -> None:
+        """Handle change in queue size, by calling the callback if provided."""
+        if self._queue_size_callback is not None:
+            self._queue_size_callback(len(self))
 
 
 class MessageQueueComponentManager(MccsComponentManager):
@@ -202,4 +254,9 @@ class MessageQueueComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        return self._message_queue.enqueue(func, *args, **kwargs)
+        try:
+            self._message_queue.enqueue(func, *args, **kwargs)
+        except queue.Full:
+            self.logger.error(f"Could not enqueue '{func}', queue is full.")
+            return ResultCode.FAILED
+        return ResultCode.QUEUED

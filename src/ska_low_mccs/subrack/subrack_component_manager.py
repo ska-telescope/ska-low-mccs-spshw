@@ -46,7 +46,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
 
     def __init__(
         self: BaseSubrackSimulatorComponentManager,
-        subrack_simulator: SubrackSimulator | TestingSubrackSimulator,
+        subrack_simulator: SubrackSimulator,
         message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -88,13 +88,13 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
 
     def start_communicating(self: BaseSubrackSimulatorComponentManager) -> None:
         """Establish communication with the subrack simulator."""
+        super().start_communicating()
         cast(SubrackSimulator, self._component).set_tpm_power_changed_callback(
             self._component_tpm_power_changed_callback
         )
         cast(SubrackSimulator, self._component).set_progress_changed_callback(
             self._component_progress_changed_callback
         )
-        super().start_communicating()
 
     def stop_communicating(self: BaseSubrackSimulatorComponentManager) -> None:
         """Break off communication with the subrack simulator."""

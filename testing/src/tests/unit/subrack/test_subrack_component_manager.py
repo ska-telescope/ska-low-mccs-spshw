@@ -377,11 +377,7 @@ class TestSubrackDriverCommon:
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":
             subrack_component_manager.simulation_mode = SimulationMode.FALSE
-            assert subrack_component_manager.simulation_mode == SimulationMode.FALSE
-            subrack_component_manager.test_mode = TestMode.TEST
-            assert subrack_component_manager.test_mode == TestMode.TEST
             subrack_component_manager.test_mode = TestMode.NONE
-            assert subrack_component_manager.test_mode == TestMode.NONE
             subrack_component_manager.start_communicating()
             subrack_component_manager.on()
             time.sleep(0.1)

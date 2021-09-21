@@ -190,25 +190,32 @@ class ExampleMessageQueueComponentManager(MessageQueueComponentManager):
 
     def __init__(
         self: ExampleMessageQueueComponentManager,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         command_complete_callback: MockCallable,
         *args: Any,
         task_duration: float = 0.2,
+        lock: Optional[threading.Lock] = None,
         **kwargs: Any,
     ) -> None:
         """
         Initialise a new instance.
 
+        :param message_queue: the message queue to be used by the
+            message queue component manager
         :param logger: a logger to be used by this component manager
         :param command_complete_callback: a callback to be called when
             the command completes.
         :param args: positional args to pass down to the superclass
         :param task_duration: how long the example task takes to run.
+        :param lock: a lock that the component manager needs to hold
+            when doing its work
         :param kwargs: keyword args to pass down to the superclass.
         """
         self._command_complete_callback = command_complete_callback
         self._task_duration = task_duration
-        super().__init__(MessageQueue(logger), logger, *args, **kwargs)
+        self._lock = lock
+        super().__init__(message_queue, logger, *args, **kwargs)
 
     def run_synchronously(
         self: ExampleMessageQueueComponentManager,
@@ -255,9 +262,10 @@ class ExampleMessageQueueComponentManager(MessageQueueComponentManager):
 
         :return: a result code
         """
-        time.sleep(self._task_duration)
-        self._command_complete_callback()
-        return ResultCode.OK
+        with self._lock or nullcontext():
+            time.sleep(self._task_duration)
+            self._command_complete_callback()
+            return ResultCode.OK
 
 
 class TestMessageQueueComponentManager:
@@ -291,9 +299,42 @@ class TestMessageQueueComponentManager:
         return mock_callback_factory()
 
     @pytest.fixture()
+    def lock(self: TestMessageQueueComponentManager) -> threading.Lock:
+        """
+        Return a lock to be passed to the message queue component manager under test.
+
+        :return: a lock to be passed to the message queue component
+            manager under test.
+        """
+        return threading.Lock()
+
+    @pytest.fixture()
+    def message_queue(
+        self: TestMessageQueueComponentManager,
+        logger: logging.Logger,
+        message_queue_size_callback: MockCallable,
+    ) -> MessageQueue:
+        """
+        Return a message queue for the message queue component manager to use.
+
+        This message queue will have a maximum size of 1, and a single
+        worker thread.
+
+        :param logger: a logger for the message queue to use.
+        :param message_queue_size_callback: a callback to be called when
+            the size of the message queue changes.
+
+        :return: a message queue for the message queue component manager
+            under test to use.
+        """
+        return MessageQueue(logger, 1, 1, message_queue_size_callback)
+
+    @pytest.fixture()
     def message_queue_component_manager(
         self: TestMessageQueueComponentManager,
+        message_queue: MessageQueue,
         task_duration: float,
+        lock: threading.Lock,
         command_complete_callback: MockCallable,
         logger: logging.Logger,
         communication_status_changed_callback: MockCallable,
@@ -307,6 +348,10 @@ class TestMessageQueueComponentManager:
         invoking that slow routine: one runs it directly, the other runs
         it via a message queue.
 
+        :param message_queue: the message queue to be used by the
+            message queue component manager
+        :param lock: a lock that the component manager needs to hold
+            when doing its work
         :param task_duration: how long to wait for the task to complete
         :param command_complete_callback: a callback to be called when
             the command completes.
@@ -322,12 +367,14 @@ class TestMessageQueueComponentManager:
         :return: a message passing component manager for testing.
         """
         return ExampleMessageQueueComponentManager(
+            message_queue,
             logger,
             command_complete_callback,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
             task_duration=task_duration,
+            lock=lock,
         )
 
     def test_run(
@@ -372,3 +419,40 @@ class TestMessageQueueComponentManager:
         assert result_code == ResultCode.QUEUED
         command_complete_callback.assert_not_called(timeout=task_duration * 0.9)
         command_complete_callback.assert_next_call()
+
+    def test_full(
+        self: TestMessageQueueComponentManager,
+        message_queue_component_manager: ExampleMessageQueueComponentManager,
+        lock: threading.Lock,
+        message_queue_size_callback: MockCallable,
+    ) -> None:
+        """
+        Test that the message queue returns failed once it is full.
+
+        :param message_queue_component_manager: the message queue
+            component manager under test
+        :param lock: a lock that the component manager needs to hold
+            when doing its work
+        :param message_queue_size_callback: a callback to be called when
+            the size of the message queue changes.
+        """
+        with lock:
+            result_code = message_queue_component_manager.enqueue_via_method()
+            assert result_code == ResultCode.QUEUED
+            message_queue_size_callback.assert_next_call(1)
+            # this task will be pulled from the queue and commenced, but cannot finish
+            # because we hold the lock.
+            message_queue_size_callback.assert_next_call(0)
+
+            result_code = message_queue_component_manager.enqueue_via_method()
+            assert result_code == ResultCode.QUEUED
+            message_queue_size_callback.assert_next_call(1)
+            # this task won't be pulled from the queue because there's only one worker
+            # thread, and it is busy with the previous task.
+            message_queue_size_callback.assert_not_called()
+
+            # the max queue size is 1, so the queue is now full. If we try to enqueue
+            # another task it will fail
+            result_code = message_queue_component_manager.enqueue_via_method()
+            assert result_code == ResultCode.FAILED
+            message_queue_size_callback.assert_not_called()

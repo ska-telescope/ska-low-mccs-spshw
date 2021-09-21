@@ -89,6 +89,7 @@ class MccsTile(SKABaseDevice):
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
+            self._message_queue_size_changed,
         )
 
     def init_command_objects(self):
@@ -317,6 +318,19 @@ class MccsTile(SKABaseDevice):
             if power_mode is not None:
                 self._component_power_mode_changed(power_mode)
             self._health_model.component_fault(False)
+
+    def _message_queue_size_changed(
+        self: MccsTile,
+        size: int,
+    ) -> None:
+        """
+        Handle change in component manager message queue size.
+
+        :param size: the new size of the component manager's message
+            queue
+        """
+        # TODO: This should push an event but the details have to wait for SP-1827
+        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self, health):
         """

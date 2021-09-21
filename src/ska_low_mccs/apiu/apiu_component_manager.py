@@ -203,6 +203,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
+        message_queue_size_callback: Callable[[int], None],
         component_antenna_power_changed_callback: Callable[[list[bool]], None],
         _initial_power_mode: PowerMode = PowerMode.OFF,
     ) -> None:
@@ -227,8 +228,13 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
             device.
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         """
-        self._message_queue = MessageQueue(logger)
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         hardware_component_manager = SwitchingApiuComponentManager(
             initial_simulation_mode,

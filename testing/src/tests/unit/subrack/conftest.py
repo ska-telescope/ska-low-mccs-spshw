@@ -338,6 +338,7 @@ def subrack_component_manager(
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_progress_changed_callback: MockCallable,
+    message_queue_size_callback: Callable[[int], None],
     component_tpm_power_changed_callback: MockCallable,
     initial_power_mode: PowerMode,
 ) -> SubrackComponentManager:
@@ -356,10 +357,12 @@ def subrack_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
-    :param component_tpm_power_changed_callback: callback to be
-        called when the power mode of an tpm changes
     :param component_progress_changed_callback: callback to be
         called when the progress value changes
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
+    :param component_tpm_power_changed_callback: callback to be
+        called when the power mode of an tpm changes
     :param initial_power_mode: the initial power mode of the simulated
         power supply.
 
@@ -375,6 +378,7 @@ def subrack_component_manager(
         component_power_mode_changed_callback,
         component_fault_callback,
         component_progress_changed_callback,
+        message_queue_size_callback,
         component_tpm_power_changed_callback,
         initial_power_mode,
     )

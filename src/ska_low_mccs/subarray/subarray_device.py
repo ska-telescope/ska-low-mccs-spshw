@@ -74,6 +74,7 @@ class MccsSubarray(SKASubarray):
         return SubarrayComponentManager(
             self.logger,
             self._component_communication_status_changed,
+            self._message_queue_size_changed,
             self._assign_completed,
             self._release_completed,
             self._configure_completed,
@@ -161,6 +162,19 @@ class MccsSubarray(SKASubarray):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
+
+    def _message_queue_size_changed(
+        self: MccsSubarray,
+        size: int,
+    ) -> None:
+        """
+        Handle change in component manager message queue size.
+
+        :param size: the new size of the component manager's message
+            queue
+        """
+        # TODO: This should push an event but the details have to wait for SP-1827
+        self.logger.info(f"Message queue size is now {size}")
 
     def _assign_completed(
         self: MccsSubarray,

@@ -141,6 +141,7 @@ class StationComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
+        message_queue_size_callback: Callable[[int], None],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -162,6 +163,8 @@ class StationComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param apiu_health_changed_callback: callback to be called when
             the health of this station's APIU changes
         :param antenna_health_changed_callback: callback to be called when
@@ -187,7 +190,10 @@ class StationComponentManager(MccsComponentManager):
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
 
-        self._message_queue = MessageQueue(logger)
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,

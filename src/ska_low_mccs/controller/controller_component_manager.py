@@ -150,6 +150,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
+        message_queue_size_callback: Callable[[int], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -169,6 +170,8 @@ class ControllerComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param subrack_health_changed_callback: callback to be called
             when the health of this station's APIU changes
         :param station_health_changed_callback: callback to be called
@@ -210,7 +213,11 @@ class ControllerComponentManager(MccsComponentManager):
             range(1, 48),
         )
 
-        self._message_queue = MessageQueue(logger, num_workers=3)
+        self._message_queue = MessageQueue(
+            logger,
+            num_workers=3,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         self._subarrays: dict[str, _SubarrayProxy] = {
             fqdn: _SubarrayProxy(

@@ -102,6 +102,7 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        message_queue_size_callback: Callable[[int], None],
         assign_completed_callback: Callable[[], None],
         release_completed_callback: Callable[[], None],
         configure_completed_callback: Callable[[], None],
@@ -124,6 +125,8 @@ class SubarrayComponentManager(
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
         :param release_completed_callback: callback to be called when
@@ -175,7 +178,10 @@ class SubarrayComponentManager(
 
         self._scan_id: Optional[int] = None
 
-        self._message_queue = MessageQueue(logger)
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         super().__init__(
             logger,

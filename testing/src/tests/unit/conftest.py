@@ -243,6 +243,7 @@ def component_progress_changed_callback(
     return mock_callback_factory()
 
 
+@pytest.fixture()
 def message_queue_size_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:

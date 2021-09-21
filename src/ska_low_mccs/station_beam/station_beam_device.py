@@ -186,23 +186,23 @@ class MccsStationBeam(SKAObsDevice):
         """
         self.component_manager.station_fqdn = station_fqdn
 
-    @attribute(dtype=("DevLong",), max_dim_x=512, format="%i")
-    def stationIds(self: MccsStationBeam) -> list[int]:
+    @attribute(dtype=("DevLong"))
+    def stationId(self: MccsStationBeam) -> int:
         """
-        Return the station ids.
+        Return the station id.
 
-        :return: the station ids
+        :return: the station id
         """
-        return self.component_manager.station_ids
+        return self.component_manager.station_id
 
-    @stationIds.write
-    def stationIds(self: MccsStationBeam, station_ids: list[int]) -> None:
+    @stationId.write
+    def stationId(self: MccsStationBeam, station_id: int) -> None:
         """
-        Set the station ids.
+        Set the station id.
 
-        :param station_ids: ids of the stations for this beam
+        :param station_id: id of the station for this beam
         """
-        self.component_manager.station_ids = station_ids
+        self.component_manager.station_id = station_id
 
     @attribute(dtype="DevLong", format="%i", max_value=7, min_value=0)
     def logicalBeamId(self: MccsStationBeam) -> int:

@@ -27,6 +27,7 @@ from ska_low_mccs.component import (
     check_on,
     enqueue,
 )
+from ska_low_mccs.subarray.subarray_resource_manager import SubarrayResourceManager
 
 
 __all__ = ["SubarrayComponentManager"]
@@ -90,6 +91,25 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
         (result_code, _) = self._proxy.Scan(scan_arg)
         return result_code
 
+class _StationBeamProxy(ObsDeviceComponentManager):
+    """A subarray's proxy to its station beams."""
+
+    @check_communicating
+    @check_on
+    @enqueue
+    def configure(self: _StationBeamProxy, configuration: dict) -> ResultCode:
+        """
+        Configure the station beam.
+
+        :param configuration: the configuration to be applied to this
+            station beam
+
+        :return: a result code.
+        """
+        assert self._proxy is not None
+        configuration_str = json.dumps(configuration)
+        (result_code, _) = self._proxy.Configure(configuration_str)
+        return result_code
 
 class SubarrayComponentManager(
     MccsComponentManager,
@@ -113,6 +133,9 @@ class SubarrayComponentManager(
         obs_fault_callback: Callable[[bool], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
+            [str, Optional[HealthState]], None
+        ],
+        station_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None
         ],
     ) -> None:
@@ -163,6 +186,9 @@ class SubarrayComponentManager(
         self._subarray_beam_health_changed_callback = (
             subarray_beam_health_changed_callback
         )
+        self._station_beam_health_changed_callback = (
+            station_beam_health_changed_callback
+        )
 
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
         self._station_power_modes: dict[str, Optional[PowerMode]] = {}
@@ -171,8 +197,14 @@ class SubarrayComponentManager(
         self._configuring_resources: set[str] = set()
         self._stations: dict[str, _StationProxy] = dict()
         self._subarray_beams: dict[str, _SubarrayBeamProxy] = dict()
+        self._station_beams: dict[str, _StationBeamProxy] = dict()
 
         self._scan_id: Optional[int] = None
+
+        self._resource_manager = SubarrayResourceManager(
+            self._subarray_beams.keys(),
+            self._station_beams.keys()
+        )
 
         super().__init__(
             logger,
@@ -237,7 +269,8 @@ class SubarrayComponentManager(
 
                 {
                     "subarray_beams": ["low-mccs/subarraybeam/01"],
-                    "stations": ["low-mccs/station/001", "low-mccs/station/002"],
+                    "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
+                    "station_beams": ["low-mccs/stationbeam/01"]
                     "channel_blocks": [3]
                 }
 
@@ -245,24 +278,25 @@ class SubarrayComponentManager(
         """
         station_fqdns: Sequence[str] = resource_spec.get("stations", [])
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
+        station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
+
+        #TODO need to add beams to resource manager first
+        for i in range(len(subarray_beam_fqdns)):
+            self._resource_manager.allocate(
+                subarray_beam_fqdns[i],
+                station_beams=station_beam_fqdns[i]
+            )
 
         station_fqdns_to_add = station_fqdns - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
+        station_beam_fqdns_to_add = station_beam_fqdns - self._station_beams.keys()
 
-        if len(station_fqdns_to_add) != len(subarray_beam_fqdns_to_add):
-            self.logger.error(
-                f"Mismatch: assigning {len(station_fqdns_to_add)} stations, "
-                f"{len(subarray_beam_fqdns_to_add)} subarray beams."
-            )
-            self._assign_completed_callback()
-            return ResultCode.FAILED
-
-        if station_fqdns_to_add or subarray_beam_fqdns_to_add:
+        if station_fqdns_to_add or subarray_beam_fqdns_to_add or station_beam_fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-            for fqdn in station_fqdns_to_add:
-                self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
-                self._station_power_modes[fqdn] = None
-                self._device_obs_states[fqdn] = ObsState.IDLE
+            # for fqdn in station_fqdns_to_add:
+            #     self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
+            #     self._station_power_modes[fqdn] = None
+            #     self._device_obs_states[fqdn] = ObsState.IDLE
             for fqdn in subarray_beam_fqdns_to_add:
                 self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
                 self._device_obs_states[fqdn] = ObsState.IDLE
@@ -290,8 +324,20 @@ class SubarrayComponentManager(
                     ),
                     functools.partial(self._device_obs_state_changed, fqdn),
                 )
+            for fqdn in station_beam_fqdns_to_add:
+                self._station_beams[fqdn] = _StationBeamProxy(
+                    fqdn,
+                    self.logger,
+                    functools.partial(self._device_communication_status_changed, fqdn),
+                    None,
+                    None,
+                    functools.partial(
+                        self._station_beam_health_changed_callback, fqdn
+                    ),
+                    functools.partial(self._device_obs_state_changed, fqdn),
+                )
             self._resources_changed_callback(
-                set(self._stations.keys()), set(self._subarray_beams.keys())
+                set(self._stations.keys()), set(self._subarray_beams.keys()), set(self._station_beams.keys())
             )
 
             self._is_assigning = True
@@ -299,6 +345,8 @@ class SubarrayComponentManager(
                 self._stations[fqdn].start_communicating()
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn].start_communicating()
+            for fqdn in station_beam_fqdns_to_add:
+                self._station_beams[fqdn].start_communicating()
         return ResultCode.OK
 
     @property  # type: ignore[misc]
@@ -311,7 +359,7 @@ class SubarrayComponentManager(
 
         :return: this subarray's resources.
         """
-        return set(self._stations) | set(self._subarray_beams)
+        return set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
 
     @check_communicating
     def release(  # type: ignore[override]

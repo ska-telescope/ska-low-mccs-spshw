@@ -78,7 +78,7 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         self._subarray_id = 0
         self._beam_id = beam_id
-        self._station_ids: list[int] = []
+        self._station_id: int = []
         self._logical_beam_id = 0
         self._update_rate = 0.0
         self._is_beam_locked = False
@@ -226,22 +226,22 @@ class StationBeamComponentManager(MccsComponentManager):
         return self._subarray_id
 
     @property
-    def station_ids(self: StationBeamComponentManager) -> list[int]:
+    def station_id(self: StationBeamComponentManager) -> int:
         """
-        Return the station ids.
+        Return the station id.
 
         :return: the station ids
         """
-        return list(self._station_ids)
+        return self._station_id
 
-    @station_ids.setter
-    def station_ids(self: StationBeamComponentManager, value: list[int]) -> None:
+    @station_id.setter
+    def station_id(self: StationBeamComponentManager, value: int) -> None:
         """
-        Set the station ids.
+        Set the station id.
 
-        :param value: the new station ids
+        :param value: the new station id
         """
-        self._station_ids = value
+        self._station_id = value
 
     @property
     def logical_beam_id(self: StationBeamComponentManager) -> int:
@@ -378,7 +378,7 @@ class StationBeamComponentManager(MccsComponentManager):
     def configure(
         self: StationBeamComponentManager,
         beam_id: int,
-        station_ids: list[int],
+        station_id: int,
         update_rate: float,
         channels: list[list[int]],
         desired_pointing: list[float],
@@ -389,7 +389,7 @@ class StationBeamComponentManager(MccsComponentManager):
         Configure this station beam for scanning.
 
         :param beam_id: the id of this station beam
-        :param station_ids: the ids of participating stations
+        :param station_id: the ids of participating stations
         :param update_rate: the update rate of the scan
         :param channels: ids of channels configured for this station beam
         :param desired_pointing: sky coordinates for this beam to point at
@@ -399,7 +399,7 @@ class StationBeamComponentManager(MccsComponentManager):
         :return: a result code
         """
         self._beam_id = beam_id
-        self._station_ids = list(station_ids)
+        self._station_id = station_id
         self._channels = list(list(i) for i in channels)  # deep copy
         self._update_rate = update_rate
         self._desired_pointing = list(desired_pointing)

@@ -340,20 +340,20 @@ class MccsController(SKABaseDevice):
             kwargs = json.loads(argin)
             subarray_id = kwargs.get("subarray_id")
 
-            station_ids = kwargs.get("station_ids", list())
-            station_fqdns = [
-                f"low-mccs/station/{station_id:03d}"
-                for station_id_list in station_ids
-                for station_id in station_id_list
-            ]
             subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
             subarray_beam_fqdns = [
                 f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
                 for subarray_beam_id in subarray_beam_ids
             ]
+            station_ids = kwargs.get("station_ids", list())
+            # station_fqdns = [
+            #     f"low-mccs/station/{station_id:03d}"
+            #     for station_id_list in station_ids
+            #     for station_id in station_id_list
+            # ]
             channel_blocks = kwargs.get("channel_blocks", list())
             result_code = component_manager.allocate(
-                subarray_id, station_fqdns, subarray_beam_fqdns, channel_blocks
+                subarray_id, station_ids, subarray_beam_fqdns, channel_blocks
             )
 
             if result_code == ResultCode.OK:

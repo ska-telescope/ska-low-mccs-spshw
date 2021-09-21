@@ -565,6 +565,7 @@ class ResourcePool:
         print(self._resources)
         for resource in self._resources[resource_type]:
             if self._resources[resource_type][resource]:
+                self._resources[resource_type][resource] = False
                 return resource
         
         raise ValueError(f"No free resources of type: {resource_type}.")        
@@ -576,10 +577,15 @@ class ResourcePool:
         """
         Mark a resource as unallocated.
         """
-        pass
+        if self._resources[resource]:
+            self._resources[resource] = True
 
     def lockResource(
         self: ResourcePool,
         resource: Hashable,
     ) -> None:
-        pass
+        """
+        Mark a resource as locked
+        """
+        if self._resources[resource]:
+            self._resources[resource] = False

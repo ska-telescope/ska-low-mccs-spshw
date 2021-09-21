@@ -49,7 +49,7 @@ class ControllerResourceManager:
             channel_blocks=channel_blocks,
             station_beams=station_beams,
         )
-        self._resource_pool = ResourcePool(
+        self.resource_pool = ResourcePool(
             station_beams=station_beams,
         )
 

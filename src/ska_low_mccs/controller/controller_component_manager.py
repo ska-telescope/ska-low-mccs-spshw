@@ -459,7 +459,7 @@ class ControllerComponentManager(MccsComponentManager):
         )  # False for None
         if self._station_beam_health_changed_callback is not None:
             self._station_beam_health_changed_callback(fqdn, health)
-            
+
     @check_communicating
     def off(
         self: ControllerComponentManager,
@@ -527,8 +527,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         :param subarray_id: id of the subarray to which resources are to
             be allocated
-        :param station_fqdns: FQDNs of the stations to be allocated to
-            the subarray
+        :param station_fqdns: lists of FQDNs of the stations to be allocated to
+            each subarray beam
         :param subarray_beam_fqdns: FQDNs of the subarray beams to be
             allocated to the subarray
         :param channel_blocks: ordinal numbers of the channel blocks to
@@ -544,13 +544,24 @@ class ControllerComponentManager(MccsComponentManager):
             subarray_beams=subarray_beam_fqdns,
             channel_blocks=channel_blocks,
         )
+        
+        # for subarray_beam_fqdn in subarray_beam_fqdns:
+
+        #for each subarray-beam: get number of stations (n), request n station-beams from pool
+        station_beam_fqdns = []
+        for _ in subarray_beam_fqdns:
+            station_beam_fqdns_per_subarray_beam = []
+            for _ in station_fqdns:
+                station_beam_fqdns_per_subarray_beam.append(self._resource_manager.resource_pool.getFreeResource("station_beams"))
+            station_beam_fqdns.append(station_beam_fqdns_per_subarray_beam.copy())
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            subarray_beam_fqdns, channel_blocks
+            subarray_beam_fqdns, station_fqdns, station_beam_fqdns, channel_blocks
         )
-        if result_code != ResultCode.FAILED:
-            for station_fqdn in station_fqdns:
-                self._stations[station_fqdn].write_subarray_id(subarray_id)
+        # if result_code != ResultCode.FAILED:
+
+            # for station_fqdn in station_fqdns:
+                # self._stations[station_fqdn].write_subarray_id(subarray_id)
         return result_code
 
     @check_communicating

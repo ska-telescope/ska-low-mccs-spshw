@@ -21,41 +21,32 @@ class SubarrayResourceManager:
 
     def __init__(
         self: SubarrayResourceManager,
-        stations: Iterable[str],
         subarray_beams: Iterable[str],
         station_beams: Iterable[str],
-        channel_blocks: Iterable[int],
     ) -> None:
         """
         Initialise a new instance.
 
-        :param stations: all stations to be managed by this resource
-            manager
         :param subarray_beams: all subarray beams to be managed by this
             resource manager
         :param station_beams: all subarray beams to be managed by this
             resource manager
-        :param channel_blocks: all channel blocks to be managed by this
-            resource manager
         """
         self._resource_manager = HealthfulReadyResourceManager(
-            stations,
-            {"subracks", "station_beams", "subarray_beams"},
-            stations=stations,
+            subarray_beams,
+            {"station_beams"},
             station_beams=station_beams,
-            subarray_beams=subarray_beams,
-            channel_blocks=channel_blocks,
         )
 
     def allocate(
         self: SubarrayResourceManager,
-        station: str,
+        subarray_beam: str,
         **resources: Iterable[Hashable],
     ) -> None:
         """
-        Allocate resources to a station.
+        Allocate resources to a subarray beam.
 
-        :param subarray: the subarray to which resources are to be
+        :param subarray_beam: the subarray beam to which resources are to be
             allocated
         :param resources: the resources to allocate. Each keyword
             specifies a resource type, with the value a list of the
@@ -64,21 +55,20 @@ class SubarrayResourceManager:
             .. code-block:: python
 
                 subarray_resource_manager.allocate(
-                    "low-mccs/station/01",
+                    "low-mccs/subarray_beam/01",
                     station_beams=[
                         "low-mccs/beam/001", "low-mccs/beam/002"
                     ],
-                    channel_blocks=[2, 3],
                 )
         """
-        self._resource_manager.allocate(station, **resources)
+        self._resource_manager.allocate(subarray_beam, **resources)
 
     def deallocate(
         self: SubarrayResourceManager,
         **resources: Iterable[Hashable],
     ) -> None:
         """
-        Deallocate resources (regardless of what station they are allocated to.
+        Deallocate resources (regardless of what subarray beam they are allocated to.
 
         :param resources: the resources to deallocate. Each keyword
             specifies a resource type, with the value a list of the
@@ -90,7 +80,6 @@ class SubarrayResourceManager:
                     station_beams=[
                         "low-mccs/beam/001", "low-mccs/beam/002"
                     ],
-                    channel_blocks=[2, 3],
                 )
         """
         self._resource_manager.deallocate(**resources)

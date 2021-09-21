@@ -184,6 +184,7 @@ def apiu_component_manager(
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    message_queue_size_callback: MockCallable,
     component_antenna_power_changed_callback: MockCallable,
     initial_power_mode: PowerMode,
 ) -> ApiuComponentManager:
@@ -201,6 +202,8 @@ def apiu_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
     :param component_antenna_power_changed_callback: callback to be
         called when the power mode of an antenna changes
     :param initial_power_mode: the initial power mode of the simulated
@@ -215,6 +218,7 @@ def apiu_component_manager(
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
+        message_queue_size_callback,
         component_antenna_power_changed_callback,
         initial_power_mode,
     )

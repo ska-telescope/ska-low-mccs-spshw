@@ -365,6 +365,7 @@ class AntennaComponentManager(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
+        message_queue_size_callback: Callable[[int], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -383,6 +384,8 @@ class AntennaComponentManager(MccsComponentManager):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         """
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._target_power_mode: Optional[PowerMode] = None
@@ -396,7 +399,10 @@ class AntennaComponentManager(MccsComponentManager):
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
-        self._message_queue = MessageQueue(logger)
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         self._apiu_proxy = _ApiuProxy(
             apiu_fqdn,

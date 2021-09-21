@@ -192,6 +192,7 @@ def antenna_component_manager(
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
+    message_queue_size_callback: Callable[[int], None],
 ) -> AntennaComponentManager:
     """
     Return an antenna component manager.
@@ -209,6 +210,8 @@ def antenna_component_manager(
         when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
 
     :return: an antenna component manager
     """
@@ -221,6 +224,7 @@ def antenna_component_manager(
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
+        message_queue_size_callback,
     )
 
 

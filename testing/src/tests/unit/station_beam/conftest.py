@@ -93,6 +93,7 @@ def station_beam_component_manager(
     beam_id: int,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
+    message_queue_size_callback: Callable[[int], None],
     component_is_beam_locked_changed_callback: MockCallable,
     component_device_health_changed_callback: MockCallable,
     component_device_fault_changed_callback: MockCallable,
@@ -106,6 +107,8 @@ def station_beam_component_manager(
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
     :param component_is_beam_locked_changed_callback: a callback to be
         called when whether the beam is locked changes.
     :param component_device_health_changed_callback: a callback to be
@@ -121,6 +124,7 @@ def station_beam_component_manager(
         beam_id,
         logger,
         communication_status_changed_callback,
+        message_queue_size_callback,
         component_is_beam_locked_changed_callback,
         component_device_health_changed_callback,
         component_device_fault_changed_callback,

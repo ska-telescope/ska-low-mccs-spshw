@@ -252,6 +252,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
+        message_queue_size_callback: Callable[[int], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -272,6 +273,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of an tpm changes
         :param _initial_power_mode: the initial power mode of the power
@@ -279,7 +282,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             we start connecting to the real upstream power supply
             device.
         """
-        self._message_queue = MessageQueue(logger)
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,

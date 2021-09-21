@@ -79,6 +79,7 @@ def subarray_beam_component_manager(
     message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    message_queue_size_callback: Callable[[int], None],
     component_is_beam_locked_changed_callback: Callable[[bool], None],
     is_configured_changed_callback: Callable[[bool], None],
 ) -> SubarrayBeamComponentManager:
@@ -91,6 +92,8 @@ def subarray_beam_component_manager(
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
     :param component_is_beam_locked_changed_callback: a callback to be
         called when whether the beam is locked changes.
     :param is_configured_changed_callback: a callback to be
@@ -101,6 +104,7 @@ def subarray_beam_component_manager(
     return SubarrayBeamComponentManager(
         logger,
         communication_status_changed_callback,
+        message_queue_size_callback,
         component_is_beam_locked_changed_callback,
         is_configured_changed_callback,
     )

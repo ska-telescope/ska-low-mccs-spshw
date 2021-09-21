@@ -615,6 +615,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
+        message_queue_size_callback: Callable[[int], None],
         _hardware_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """
@@ -638,13 +639,18 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param _hardware_component_manager: a hardware component manager
             to use instead of creating one. This is provided for testing
             purposes only.
         """
         self._subrack_power_mode = PowerMode.UNKNOWN
 
-        self._message_queue = MessageQueue(logger)
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         hardware_component_manager = (
             _hardware_component_manager

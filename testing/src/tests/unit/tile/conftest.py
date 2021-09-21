@@ -468,6 +468,7 @@ def tile_component_manager(
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    message_queue_size_callback: MockCallable,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -492,6 +493,8 @@ def tile_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -507,6 +510,7 @@ def tile_component_manager(
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
+        message_queue_size_callback,
     )
 
 

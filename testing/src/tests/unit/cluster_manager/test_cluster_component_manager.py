@@ -433,6 +433,7 @@ class TestClusterComponentManager:
                 None,
                 None,
                 None,
+                None,
             )
 
     def test_simulation_mode(

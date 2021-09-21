@@ -34,7 +34,6 @@ from typing import Any, Callable, Optional
 from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import ControlMode, ObjectComponent
 
-
 __all__ = ["SubrackSimulator"]
 
 
@@ -173,7 +172,7 @@ class SubrackSimulator(ObjectComponent):
         ] = None,
     ) -> None:
         """
-        Set the callback to be called when the the power mode of a TPM changes.
+        Set the callback to be called when the power mode of a TPM changes.
 
         If a callback is provided (i.e. not None), then this method
         registers it, then calls it immediately.
@@ -185,6 +184,18 @@ class SubrackSimulator(ObjectComponent):
         """
         self._tpm_power_changed_callback = tpm_power_changed_callback
         self._tpm_power_changed()
+
+    def set_progress_changed_callback(
+        self: SubrackSimulator,
+        component_progress_changed_callback: Optional[Callable[[int], None]],
+    ) -> None:
+        """
+        Set the callback to be called when the progress value changes.
+
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
+        """
+        self._component_progress_changed_callback = component_progress_changed_callback
 
     def _tpm_power_changed(self: SubrackSimulator) -> None:
         """
@@ -444,7 +455,7 @@ class SubrackSimulator(ObjectComponent):
         self: SubrackSimulator, power_supply_fan_speeds: list[float]
     ) -> None:
         """
-        Set the the power supply fan_speeds for this subrack.
+        Set the power supply fan_speeds for this subrack.
 
         :param power_supply_fan_speeds: the simulated  power supply fan_speeds
         """
@@ -463,7 +474,7 @@ class SubrackSimulator(ObjectComponent):
         self: SubrackSimulator, power_supply_currents: list[float]
     ) -> None:
         """
-        Set the the power supply current for this subrack.
+        Set the power supply current for this subrack.
 
         :param power_supply_currents: the simulated  power supply current
         """
@@ -486,7 +497,7 @@ class SubrackSimulator(ObjectComponent):
         self: SubrackSimulator, power_supply_powers: list[float]
     ) -> None:
         """
-        Set the the power supply power for this subrack.
+        Set the power supply power for this subrack.
 
         :param power_supply_powers: the simulated  power supply power
         """
@@ -508,7 +519,7 @@ class SubrackSimulator(ObjectComponent):
         self: SubrackSimulator, power_supply_voltages: list[float]
     ) -> None:
         """
-        Set the the power supply voltage for this subrack.
+        Set the power supply voltage for this subrack.
 
         :param power_supply_voltages: the simulated  power supply voltage
         """
@@ -571,6 +582,15 @@ class SubrackSimulator(ObjectComponent):
             return True
         return None
 
+    def _emulate_hardware_delay(self: SubrackSimulator) -> None:
+        """
+        Base implementation to emulate a real hardware delay.
+
+        Specialist classes will override this method for deployment
+        testing purposes.
+        """
+        pass
+
     def turn_on_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
         """
         Turn on a specified TPM.
@@ -583,6 +603,10 @@ class SubrackSimulator(ObjectComponent):
         self._check_tpm_id(logical_tpm_id)
         tpm_data = self._tpm_data[logical_tpm_id - 1]
         if tpm_data["power_mode"] == PowerMode.OFF:
+            if self._component_progress_changed_callback:
+                self._component_progress_changed_callback(0)
+                self._emulate_hardware_delay()
+                self._component_progress_changed_callback(100)
             tpm_data["power_mode"] = PowerMode.ON
             self._tpm_power_changed()
             return True

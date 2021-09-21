@@ -684,6 +684,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
+            None,
         )
 
     def _subrack_power_mode_changed(

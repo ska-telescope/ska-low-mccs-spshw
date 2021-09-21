@@ -17,7 +17,7 @@ from typing import Any, Union
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -265,6 +265,46 @@ class TestSubrackSimulatorCommon:
         elif num_args == 2:
             _ = getattr(subrack, command_name)(1, 1)
 
+    @pytest.mark.parametrize(
+        ("command_name", "args"),
+        (
+            ("simulate_power_supply_voltages", [0.1, 0.2]),
+            ("simulate_backplane_temperatures", [0.3, 0.4]),
+            ("simulate_board_temperatures", [0.5, 0.6]),
+            ("simulate_board_current", [0.7, 0.8]),
+            ("simulate_subrack_fan_speeds", [0.9, 1.0]),
+            ("simulate_tpm_temperatures", [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8]),
+            ("simulate_tpm_currents", [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8]),
+            ("simulate_tpm_powers", [3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8]),
+            ("simulate_tpm_voltages", [4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8]),
+            ("simulate_power_supply_fan_speeds", [1.7, 1.8]),
+            ("simulate_power_supply_currents", [1.9, 2.0]),
+            ("simulate_power_supply_powers", [2.1, 2.2]),
+        ),
+    )
+    def test_commands_with_lists(
+        self: TestSubrackSimulatorCommon,
+        subrack: Union[
+            SubrackSimulator,
+            SubrackSimulatorComponentManager,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        command_name: str,
+        args: Any,
+    ) -> None:
+        """
+        Test of commands that require list parameters.
+
+        These tests don't really do anything, they simply check that the
+        command can be called.
+
+        :param subrack: the subrack class object under test.
+        :param command_name: the name of the command under test
+        :param args: the args the command takes
+        """
+        _ = getattr(subrack, command_name)(args)
+
 
 class TestSubrackDriverCommon:
     """
@@ -317,7 +357,7 @@ class TestSubrackDriverCommon:
 
         :param subrack_driver: the subrack driver to return
         :param switching_subrack_component_manager:
-            a component manager that switches between subrack simulator
+            a component manager that switches between subrack simulators
             and driver (in driver mode)
         :param subrack_component_manager: the subrack component manager
             to return (in driver mode and powered on)
@@ -332,10 +372,12 @@ class TestSubrackDriverCommon:
             return subrack_driver
         elif request.param == "switching_subrack_component_manager":
             switching_subrack_component_manager.simulation_mode = SimulationMode.FALSE
+            switching_subrack_component_manager.test_mode = TestMode.NONE
             switching_subrack_component_manager.start_communicating()
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":
             subrack_component_manager.simulation_mode = SimulationMode.FALSE
+            subrack_component_manager.test_mode = TestMode.NONE
             subrack_component_manager.start_communicating()
             subrack_component_manager.on()
             time.sleep(0.1)
@@ -525,10 +567,34 @@ class TestSubrackComponentManager:
         subrack_component_manager.turn_on_tpm(tpm_id)
         component_tpm_power_changed_callback.assert_not_called()
 
-        subrack_component_manager.turn_off_tpm(tpm_id)
+        assert subrack_component_manager.turn_off_tpm(tpm_id) is True
         expected_are_tpms_on[tpm_id - 1] = False
         component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
         assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
+        assert subrack_component_manager.turn_off_tpm(tpm_id) is None
 
         subrack_component_manager.turn_off_tpm(tpm_id)
         component_tpm_power_changed_callback.assert_not_called()
+
+    def test_component_progress_changed_callback(
+        self: TestSubrackComponentManager,
+        subrack_component_manager: SubrackComponentManager,
+        component_progress_changed_callback: MockCallable,
+    ) -> None:
+        """
+        Test that the callback is called when we change the progress reported by the
+        subrack simulator. Testing using the 'turn_on_tpm' method.
+
+        :param subrack_component_manager: the subrack component manager under
+            test
+        :param component_progress_changed_callback: callback to be
+            called when the progress value of a tpm command changes
+        """
+        subrack_component_manager.start_communicating()
+        subrack_component_manager.on()
+
+        time.sleep(0.1)
+
+        subrack_component_manager.turn_on_tpm(1)
+        component_progress_changed_callback.assert_next_call(0)
+        component_progress_changed_callback.assert_next_call(100)

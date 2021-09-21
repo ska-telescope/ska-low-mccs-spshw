@@ -552,6 +552,7 @@ class TestStaticSimulatorCommon:
         tile.download_firmware(mock_bitfile)
         assert tile.is_programmed
 
+    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
     @pytest.mark.parametrize("device", (0, 1))
     @pytest.mark.parametrize("register", tuple(f"test-reg{i}" for i in (1, 4)))
     @pytest.mark.parametrize("read_offset", (0, 2))
@@ -598,6 +599,7 @@ class TestStaticSimulatorCommon:
             == expected_read
         )
 
+    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
     @pytest.mark.parametrize("write_address", [9, 11])
     @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
     @pytest.mark.parametrize("read_address", [10])

@@ -258,6 +258,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
+        component_progress_changed_callback: Optional[Callable[[int], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -274,6 +275,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
         """
         self.__power_mode_lock = threading.Lock()
         self._target_power_mode: Optional[PowerMode] = None
@@ -283,6 +286,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         self._power_supply_component_manager = power_supply_component_manager
         self._hardware_component_manager = hardware_component_manager
+
+        self._component_progress_changed_callback = component_progress_changed_callback
 
         super().__init__(
             logger,
@@ -345,6 +350,19 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
                 self.update_communication_status(self._hardware_communication_status)
         else:
             self.update_communication_status(self._power_supply_communication_status)
+
+    def component_progress_changed(
+        self: ComponentManagerWithUpstreamPowerSupply, progress: int
+    ) -> None:
+        """
+        Handle notification that the component's progress value has changed.
+
+        This is a callback hook, to be passed to the managed component.
+
+        :param progress: The progress percentage of the long-running command
+        """
+        if self._component_progress_changed_callback is not None:
+            self._component_progress_changed_callback(progress)
 
     def component_power_mode_changed(
         self: ComponentManagerWithUpstreamPowerSupply,

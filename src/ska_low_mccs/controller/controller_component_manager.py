@@ -273,7 +273,6 @@ class ControllerComponentManager(MccsComponentManager):
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
-            None,
         )
 
     def start_communicating(self: ControllerComponentManager) -> None:

@@ -19,7 +19,12 @@ from tango.server import attribute, command, device_property
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
+from ska_tango_base.control_model import (
+    HealthState,
+    PowerMode,
+    SimulationMode,
+    TestMode,
+)
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subrack import SubrackComponentManager, SubrackHealthModel
@@ -100,12 +105,14 @@ class MccsSubrack(SKABaseDevice):
         """
         return SubrackComponentManager(
             SimulationMode.TRUE,
+            TestMode.NONE,
             self.logger,
             self.SubrackIp,
             self.SubrackPort,
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
+            self._component_progress_changed,
             self._message_queue_size_changed,
             self.are_tpms_on_changed,
         )
@@ -231,6 +238,19 @@ class MccsSubrack(SKABaseDevice):
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
 
+    def _component_progress_changed(self: MccsSubrack, progress: int) -> None:
+        """
+        Handle change in the progress of a long-running command.
+
+        This is a callback hook, called by the component manager when
+        the component progress value changes.
+
+        :param progress: the process percentage of a long-running command.
+        """
+        self._progress = progress
+        self.logger.debug(f"Subrack progress value = {progress}")
+        # TODO: Link the progress update to an attribute to be exposed to the real world...
+
     def _message_queue_size_changed(
         self: MccsSubrack,
         size: int,
@@ -282,7 +302,6 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-
     @attribute(
         dtype=SimulationMode,
         memorized=True,
@@ -304,6 +323,28 @@ class MccsSubrack(SKABaseDevice):
         :param value: The simulation mode, as a SimulationMode value
         """
         self.component_manager.simulation_mode = value
+
+    @attribute(
+        dtype=TestMode,
+        memorized=True,
+        hw_memorized=True,
+    )
+    def testMode(self: MccsSubrack) -> TestMode:
+        """
+        Report the test mode of the device.
+
+        :return: the current test mode
+        """
+        return self.component_manager.test_mode
+
+    @testMode.write  # type: ignore[no-redef]
+    def testMode(self: MccsSubrack, value: TestMode) -> None:
+        """
+        Set the test mode.
+
+        :param value: The test mode, as a TestMode value
+        """
+        self.component_manager.test_mode = TestMode(value)
 
     @attribute(
         dtype=("DevFloat",), max_dim_x=2, label="Backplane temperatures", unit="Celsius"

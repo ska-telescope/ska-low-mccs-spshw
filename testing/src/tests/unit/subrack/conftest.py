@@ -20,7 +20,7 @@ import unittest.mock
 import pytest
 import requests
 
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.component import MessageQueue
 from ska_low_mccs.subrack import (
@@ -83,13 +83,20 @@ def initial_power_mode() -> PowerMode:
 
 
 @pytest.fixture()
-def subrack_simulator() -> SubrackSimulator:
+def subrack_simulator(
+    component_progress_changed_callback: Callable[[int], None],
+) -> SubrackSimulator:
     """
     Fixture that returns a TPM simulator.
 
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
+
     :return: a subrack simulator
     """
-    return SubrackSimulator()
+    subrack_simulator = SubrackSimulator()
+    subrack_simulator.set_progress_changed_callback(component_progress_changed_callback)
+    return subrack_simulator
 
 
 @pytest.fixture()
@@ -98,6 +105,7 @@ def subrack_simulator_component_manager(
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
 ) -> SubrackSimulatorComponentManager:
     """
@@ -113,6 +121,8 @@ def subrack_simulator_component_manager(
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param component_tpm_power_changed_callback: callback to be
         called when the power mode of an tpm changes
 
@@ -123,6 +133,7 @@ def subrack_simulator_component_manager(
         logger,
         communication_status_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         component_tpm_power_changed_callback,
     )
 
@@ -135,6 +146,7 @@ def switching_subrack_component_manager(
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
 ) -> SwitchingSubrackComponentManager:
     """
@@ -152,6 +164,8 @@ def switching_subrack_component_manager(
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param component_tpm_power_changed_callback: callback to be
         called when the power mode of an tpm changes
 
@@ -159,12 +173,14 @@ def switching_subrack_component_manager(
     """
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
+        TestMode.NONE,
         message_queue,
         logger,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         component_tpm_power_changed_callback,
     )
 
@@ -178,6 +194,7 @@ def subrack_driver(
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
 ) -> SubrackDriver:
     """
@@ -196,6 +213,8 @@ def subrack_driver(
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param component_tpm_power_changed_callback: callback to be
         called when the power mode of an tpm changes
 
@@ -305,6 +324,7 @@ def subrack_driver(
         subrack_port,
         communication_status_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         component_tpm_power_changed_callback,
     )
 
@@ -317,6 +337,7 @@ def subrack_component_manager(
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     message_queue_size_callback: Callable[[int], None],
     component_tpm_power_changed_callback: MockCallable,
     initial_power_mode: PowerMode,
@@ -336,6 +357,8 @@ def subrack_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param message_queue_size_callback: callback to be called when the
         size of the message queue changes.
     :param component_tpm_power_changed_callback: callback to be
@@ -347,12 +370,14 @@ def subrack_component_manager(
     """
     return SubrackComponentManager(
         SimulationMode.TRUE,
+        TestMode.NONE,
         logger,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         message_queue_size_callback,
         component_tpm_power_changed_callback,
         initial_power_mode,

@@ -552,13 +552,14 @@ class TestStaticSimulatorCommon:
         tile.download_firmware(mock_bitfile)
         assert tile.is_programmed
 
+    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
     @pytest.mark.parametrize("device", (0, 1))
     @pytest.mark.parametrize("register", tuple(f"test-reg{i}" for i in (1, 4)))
     @pytest.mark.parametrize("read_offset", (0, 2))
     @pytest.mark.parametrize("read_length", (0, 4))
     @pytest.mark.parametrize("write_offset", (0, 3))
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
-    def disabled_test_read_and_write_register(
+    def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
         tile: Union[
             StaticTpmSimulator,
@@ -598,11 +599,12 @@ class TestStaticSimulatorCommon:
             == expected_read
         )
 
+    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
     @pytest.mark.parametrize("write_address", [9, 11])
     @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
     @pytest.mark.parametrize("read_address", [10])
     @pytest.mark.parametrize("read_length", [0, 4])
-    def disabled_test_read_and_write_address(
+    def test_read_and_write_address(
         self: TestStaticSimulatorCommon,
         tile: Union[
             StaticTpmSimulator,

@@ -61,7 +61,7 @@ class CliMeta(type):
         """
 
         @functools.wraps(method)
-        def _wrapper(*args: tuple, **kwargs: dict) -> Any:
+        def _wrapper(*args: Any, **kwargs: Any) -> Any:
             """
             Wrap tango exceptions.
 

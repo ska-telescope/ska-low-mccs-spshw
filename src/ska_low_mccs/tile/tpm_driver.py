@@ -240,6 +240,7 @@ class TpmDriver(MessageQueueComponentManager):
     @enqueue
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initializes tile."""
+        assert self.tile.tpm is not None  # for the type checker
         self.logger.debug("TpmDriver: initialise")
         if self.tile.tpm is None or not self.tile.tpm.is_programmed():
             self.tile.program_fpgas(self._firmware_name)
@@ -388,6 +389,7 @@ class TpmDriver(MessageQueueComponentManager):
 
         :return: list of registers
         """
+        assert self.tile.tpm is not None  # for the type checker
         self.logger.warning("TpmDriver: register_list too big to be transmitted")
         regmap = self.tile.tpm.find_register("")
         reglist = []
@@ -408,6 +410,7 @@ class TpmDriver(MessageQueueComponentManager):
 
         :return: values read from the register
         """
+        assert self.tile.tpm is not None  # for the type checker
         if device == 1:
             devname = "fpga1."
         elif device == 2:
@@ -420,7 +423,7 @@ class TpmDriver(MessageQueueComponentManager):
             value = None
             return []
         else:
-            value = self.tile[regname]
+            value = cast(Any, self.tile[regname])
         if type(value) != list:
             lvalue = [value]
         else:
@@ -447,10 +450,11 @@ class TpmDriver(MessageQueueComponentManager):
         else:
             devname = ""
         regname = devname + register_name
+        assert self.tile.tpm is not None  # for the type checker
         if len(self.tile.tpm.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
         else:
-            self.tile[regname] = values  # type: ignore[assignment]
+            self.tile[regname] = values
 
     def read_address(self: TpmDriver, address: int, nvalues: int) -> list[int]:
         """
@@ -473,7 +477,7 @@ class TpmDriver(MessageQueueComponentManager):
                 + "of type "
                 + str(type(current_address))
             )
-            values.append(self.tile[current_address])  # type: ignore[index]
+            values.append(cast(int, self.tile[current_address]))
             current_address = current_address + 4
         return values
 
@@ -489,7 +493,7 @@ class TpmDriver(MessageQueueComponentManager):
         #
         current_address = int(address & 0xFFFFFFFC)
         for value in values:
-            self.tile[current_address] = value  # type: ignore[index]
+            self.tile[current_address] = value
             current_address = current_address + 4
 
     def configure_40g_core(

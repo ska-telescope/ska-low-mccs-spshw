@@ -15,7 +15,7 @@ import math
 import random
 import threading
 import time
-from typing import Any, Callable, cast, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import scipy.stats
 import tango
@@ -95,7 +95,7 @@ class _DynamicValuesGenerator:
         self._uniform = lambda: random.uniform(offset - scale, offset + scale)
 
         # Generate our initial window of values
-        self._values = [self._uniform() for i in range(window_size - 1)]
+        self._values = [0.0] + [self._uniform() for i in range(window_size - 1)]
 
     def __next__(self: _DynamicValuesGenerator) -> float:
         """
@@ -104,7 +104,7 @@ class _DynamicValuesGenerator:
         :return: the next value from this generator
         """
         self._values = self._values[1:] + [self._uniform()]
-        return sum(cast(Iterable[float], self._values))
+        return sum(self._values)
 
 
 class _DynamicValuesUpdater:

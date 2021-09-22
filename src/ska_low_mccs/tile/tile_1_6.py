@@ -37,7 +37,7 @@ def connected(f: Callable) -> Callable:
     """
 
     @functools.wraps(f)
-    def wrapper(self: Callable, *args: list, **kwargs: dict) -> object:
+    def wrapper(self: Tile16, *args: list, **kwargs: dict) -> object:
         """
         Check the TPM is connected before allowing the wrapped method to proceed.
 
@@ -49,7 +49,7 @@ def connected(f: Callable) -> Callable:
 
         :return: whatever the wrapped method returns
         """
-        if self.tpm is None:  # type: ignore[attr-defined]
+        if self.tpm is None:
             logging.warn("Cannot call function " + f.__name__ + " on unconnected TPM")
             raise LibraryError(
                 "Cannot call function " + f.__name__ + " on unconnected TPM"
@@ -168,6 +168,7 @@ class Tile16(Tile12):
         :param enable_test: setup internal test signal generator instead of ADC
         :param enable_adc: Enable ADC
         """
+        assert self.tpm is not None  # for the type checker
         # Connect to board
         self.connect(initialise=True, enable_ada=enable_ada, enable_adc=enable_adc)
 
@@ -233,6 +234,7 @@ class Tile16(Tile12):
 
         This will create a loopback between the two FPGAs
         """
+        assert self.tpm is not None  # for the type checker
         ip_octets = self._ip.split(".")
         for n in range(len(self.tpm.tpm_10g_core)):
             src_ip = "10.10." + str(n + 1) + "." + str(ip_octets[3])
@@ -261,6 +263,7 @@ class Tile16(Tile12):
 
     def f2f_aurora_test_start(self: Tile16) -> None:
         """Start test on Aurora f2f link."""
+        assert self.tpm is not None  # for the type checker
         for f2f in self.tpm.tpm_f2f:
             f2f.start_tx_test()
         for f2f in self.tpm.tpm_f2f:
@@ -268,10 +271,12 @@ class Tile16(Tile12):
 
     def f2f_aurora_test_check(self: Tile16) -> None:
         """Get test results for Aurora f2f link Tests printed on stdout."""
+        assert self.tpm is not None  # for the type checker
         for f2f in self.tpm.tpm_f2f:
             f2f.get_test_result()
 
     def f2f_aurora_test_stop(self: Tile16) -> None:
         """Stop test on Aurora f2f link."""
+        assert self.tpm is not None  # for the type checker
         for f2f in self.tpm.tpm_f2f:
             f2f.stop_test()

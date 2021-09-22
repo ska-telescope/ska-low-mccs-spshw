@@ -14,6 +14,7 @@ from __future__ import annotations  # allow forward references in type hints
 import copy
 import logging
 from typing import Any, Optional
+from typing_extensions import Final
 
 from ska_low_mccs.component import ObjectComponent
 
@@ -34,12 +35,12 @@ class BaseTpmSimulator(ObjectComponent):
         callback being called.
     """
 
-    ADC_RMS = [float(i) for i in range(32)]
+    ADC_RMS = tuple(float(i) for i in range(32))
     FPGAS_TIME = [1, 2]
-    CURRENT_TILE_BEAMFORMER_FRAME = 23
-    PPS_DELAY = 12
-    PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "itpm_v1_6.bit"
+    CURRENT_TILE_BEAMFORMER_FRAME: Final = 23
+    PPS_DELAY: Final = 12
+    PHASE_TERMINAL_COUNT: Final = 0
+    FIRMWARE_NAME: Final = "itpm_v1_6.bit"
     FIRMWARE_AVAILABLE: dict[str, dict[str, str | int]] = {
         "itpm_v1_6.bit": {"design": "model1", "major": 2, "minor": 3},
         "itpm_v1_5.bit": {"design": "model2", "major": 3, "minor": 7},
@@ -93,16 +94,16 @@ class BaseTpmSimulator(ObjectComponent):
         self._station_id = 0
         self._tile_id = 0
 
-        self._adc_rms = self.ADC_RMS
+        self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
         self._arp_table = copy.deepcopy(self.ARP_TABLE)
-        self._fpgas_time = self.FPGAS_TIME
+        self._fpgas_time = copy.deepcopy(self.FPGAS_TIME)
 
-        self._address_map: dict = {}
-        self._forty_gb_core_list: list = []
+        self._address_map: dict[str, int] = {}
+        self._forty_gb_core_list: list[dict[str, Any]] = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._test_generator_active = False
 
@@ -298,9 +299,7 @@ class BaseTpmSimulator(ObjectComponent):
         )
 
     @property
-    def adc_rms(
-        self: BaseTpmSimulator,
-    ) -> list[float]:
+    def adc_rms(self: BaseTpmSimulator) -> tuple[float, ...]:
         """
         Return the RMS power of the TPM's analog-to-digital converter.
 
@@ -1127,18 +1126,18 @@ class BaseTpmSimulator(ObjectComponent):
         )
         raise NotImplementedError
 
-    #     def test_generator_input_select(self: BaseTpmSimulator, bit_mask: int) -> None
-    #         """
-    #         Specify ADC inputs which are substitute to test signal.
-    #
-    #         Specified using a 32 bit mask, with LSB for ADC input 0.
-    #
-    #         :param bit_mask: Bit mask of inputs using test signal
-    #         """
-    #         self.logger.debug(
-    #             "TpmSimulator: test_generator_input_select: " + str(hex(bit_mask))
-    #         )
-    #         # raise NotImplementedError
+    def test_generator_input_select(self: BaseTpmSimulator, bit_mask: int) -> None:
+        """
+        Specify ADC inputs which are substitute to test signal.
+
+        Specified using a 32 bit mask, with LSB for ADC input 0.
+
+        :param bit_mask: Bit mask of inputs using test signal
+        """
+        self.logger.debug(
+            "TpmSimulator: test_generator_input_select: " + str(hex(bit_mask))
+        )
+        # raise NotImplementedError
 
     @property
     def test_generator_active(self) -> bool:

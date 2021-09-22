@@ -18,7 +18,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import time
-from typing import Any, cast
+from typing import Any
 
 from pyfabil.plugins.firmwareblock import FirmwareBlock
 from pyfabil.base.definitions import (
@@ -44,7 +44,7 @@ class TpmTestFirmware(FirmwareBlock):
     @compatibleboards(BoardMake.TpmBoard)
     @friendlyname("tpm_test_firmware")
     @maxinstances(2)
-    def __init__(self: TpmTestFirmware, board: Any, **kwargs: dict[str, str]) -> None:
+    def __init__(self: TpmTestFirmware, board: Any, **kwargs: Any) -> None:
         """
         Initialize a new TpmTestFirmware instance.
 
@@ -62,10 +62,7 @@ class TpmTestFirmware(FirmwareBlock):
 
         if "fsample" not in kwargs:
             logging.info("TpmTestFirmware: Setting default sampling frequency 800 MHz.")
-            self._fsample = 800e6
-        else:
-            self._fsample = cast(float, float(kwargs.get("fsample")))  # type: ignore[arg-type]
-
+        self._fsample = kwargs.get("fsample", 800e6)
         try:
             if self.board["fpga1.regfile.feature.xg_eth_implemented"] == 1:
                 self.xg_eth = True

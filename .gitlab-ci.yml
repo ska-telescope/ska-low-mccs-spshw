@@ -145,7 +145,7 @@ docs:
   stage: docs
   tags:
     - k8srunner
-  image: readthedocs/build:latest
+  image: readthedocs/build:7.0
   before_script:
     - echo "error" > .docs_status
     - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
@@ -167,7 +167,7 @@ testdocs:
   stage: testdocs
   tags:
     - k8srunner
-  image: readthedocs/build:latest
+  image: readthedocs/build:7.0
   before_script:
     - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
   script:

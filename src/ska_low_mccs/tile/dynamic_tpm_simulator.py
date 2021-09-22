@@ -15,7 +15,7 @@ import math
 import random
 import threading
 import time
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional
 
 import scipy.stats
 import tango

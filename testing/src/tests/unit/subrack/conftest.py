@@ -185,9 +185,10 @@ def switching_subrack_component_manager(
     )
 
 
+# TODO: pytest is partially typehinted but does not yet export monkeypatch
 @pytest.fixture()
 def subrack_driver(
-    monkeypatch: pytest.monkeypatch,
+    monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
     message_queue: MessageQueue,
     logger: logging.Logger,
     subrack_ip: str,

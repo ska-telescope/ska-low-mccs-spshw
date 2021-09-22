@@ -18,7 +18,7 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
     :param item: the collected test for which this hook is called
     """
-    if "tango_harness" in item.fixturenames:
+    if "tango_harness" in item.fixturenames:  # type: ignore[attr-defined]
         item.add_marker("forked")
 
 

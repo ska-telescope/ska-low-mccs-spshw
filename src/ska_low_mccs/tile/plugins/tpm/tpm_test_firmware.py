@@ -472,7 +472,7 @@ class TpmTestFirmware(FirmwareBlock):
         logging.info("TpmTestFirmware has been initialised")
         return True
 
-    def status_check(self: TpmTestFirmware) -> Status:
+    def status_check(self: TpmTestFirmware) -> Any:
         """
         Perform status check.
 

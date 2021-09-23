@@ -12,9 +12,10 @@ from ska_low_mccs.component import WebHardwareClient
 class TestWebHardwareClient:
     """Tests of the WebHardwareClient class."""
 
+    # TODO: pytest is partially typehinted but does not yet export monkeypatch
     def test_web_hardware_client_interface(
         self: TestWebHardwareClient,
-        monkeypatch: pytest.monkeypatch,
+        monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
     ) -> None:
         """
         Test the web hardware client.

@@ -102,6 +102,7 @@ nitpick_ignore = [
     ("py:exc", "LibraryError"),
     ("py:exc", "PluginError"),
     ("py:exc", "fire.core.FireError")
+    ("py.exc", "Status")
 ]
 
 extensions = [

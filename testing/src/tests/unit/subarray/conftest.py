@@ -32,8 +32,9 @@ def assign_completed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback to be called when the subarray completes a resource
-    assignment.
+    Return a mock callback.
+
+    To be called when the subarray completes a resource assignment.
 
     :param mock_callback_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
@@ -101,7 +102,9 @@ def obsreset_completed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback to be called when the subarray completes an observation
+    Return a mock callback.
+
+    To be called when the subarray completes an observation
     reset.
 
     :param mock_callback_factory: fixture that provides a mock callback

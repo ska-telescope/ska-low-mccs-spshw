@@ -6,10 +6,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the
-:py:mod:`ska_low_mccs.apiu.demo_apiu_device` module.
-"""
+"""This module contains the tests for ska_low_mccs.apiu.demo_apiu_device module."""
 from __future__ import annotations
 
 import time
@@ -62,7 +59,7 @@ class TestDemoAPIU:
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test:
+        Test.
 
         * the `isAntenna1Powered`, `isAntenna2Powered` etc attributes.
         * the `PowerUpAntenna1`, `PowerDownAntenna2` etc commands.
@@ -74,7 +71,7 @@ class TestDemoAPIU:
 
         def assert_powered(expected: list[bool]) -> None:
             """
-            Helper function to assert the power mode of each TPM.
+            Assert the power mode of each TPM.
 
             :param expected: the expected power mode of each TPM
             """

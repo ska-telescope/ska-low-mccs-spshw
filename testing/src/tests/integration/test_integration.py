@@ -185,8 +185,7 @@ class TestMccsIntegration:
         state_changed_callback_factory: Callable[[], MockChangeEventCallback],
     ) -> None:
         """
-        Test that an MccsController device can allocate resources to an MccsSubarray
-        device.
+        Test that an MccsController can allocate resources to an MccsSubarray.
 
         :param tango_harness: a test harness for tango devices
         :param state_changed_callback_factory: a factory for callbacks
@@ -342,8 +341,7 @@ class TestMccsIntegration:
         state_changed_callback_factory: Callable[[], MockChangeEventCallback],
     ) -> None:
         """
-        Test that an MccsController device can release the resources of an MccsSubarray
-        device.
+        Test that an MccsController can release the resources of an MccsSubarray.
 
         :param tango_harness: a test harness for tango devices
         :param state_changed_callback_factory: a factory for callbacks

@@ -56,6 +56,8 @@ class TestSubrackTileIntegration:
         tile_device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
+        Test the integration of tile within subrack.
+
         Test that:
 
         * when MccsTile is turned on, the subrack supplies power to the

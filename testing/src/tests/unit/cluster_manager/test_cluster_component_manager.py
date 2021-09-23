@@ -30,6 +30,8 @@ from ska_low_mccs.testing.mock import MockCallable
 
 class TestClusterCommon:
     """
+    Common tests.
+
     Because the ClusterComponentManager is designed to pass commands through to the
     ClusterSimulator or ClusterDriver that it is driving, many commands are common to.
 
@@ -254,8 +256,9 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test that resources relate to each other as they should. For
-        example:
+        Test that resources relate to each other as they should.
+
+        For example:
 
         * used + available = total
         * 100 * used / total = percent
@@ -286,7 +289,9 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test the ping master node command. This command has not been implemented, so the
+        Test the ping master node command.
+
+        This command has not been implemented, so the
         test is correspondingly weak.
 
         :param cluster: the simulated cluster
@@ -319,8 +324,9 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test that when we submit a job, we get a job id for it, and the status of the
-        job is STAGING.
+        Test that when we submit a job, we get a job id for it.
+
+        Also, the status of the job is STAGING.
 
         :param cluster: the simulated cluster
         """
@@ -374,8 +380,9 @@ class TestClusterSimulator:
         self: TestClusterSimulator, cluster_simulator: ClusterSimulator
     ) -> None:
         """
-        Test for the master node id is as expected, and that it changes if we simulate
-        node failure.
+        Test for the master node id is as expected.
+
+        Also, that it changes if we simulate node failure.
 
         We're going to repeatedly make the master node fail, and watch
         the cluster choose a new master from the master pool, until

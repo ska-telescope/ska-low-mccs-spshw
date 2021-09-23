@@ -398,9 +398,10 @@ class TestStaticSimulatorCommon:
         expected_value: Any,
     ) -> None:
         """
-        Tests that read-only attributes take certain known initial values. This is a
-        weak test; over time we should find ways to more thoroughly test each of these
-        independently.
+        Tests that read-only attributes take certain known initial values.
+
+        This is a weak test; over time we should find ways to more thoroughly
+        test each of these independently.
 
         :param tile: the tile class object under test.
         :param attribute_name: the name of the attribute under test
@@ -427,7 +428,9 @@ class TestStaticSimulatorCommon:
         values_to_write: list,
     ) -> None:
         """
-        Tests that read-write attributes take certain known initial values, and that
+        Test read-write attributes.
+
+        Take certain known initial values, and that
         their values can be updated.
 
         This is a weak test; over time we should find ways to more
@@ -497,7 +500,9 @@ class TestStaticSimulatorCommon:
         num_args: int,
     ) -> None:
         """
-        Test of commands that aren't implemented yet. Since the comands don't really do
+        Test of commands that aren't implemented yet.
+
+        Since the commands don't really do
         anything, these tests simply check that the command can be called.
 
         :param mocker: fixture that wraps unittest.mock
@@ -539,8 +544,9 @@ class TestStaticSimulatorCommon:
         mocker: pytest_mock.mocker,
     ) -> None:
         """
-        Test of:
+        Test.
 
+        Tests that:
         * the download_firmware command.
         * the is_programmed attribute
 
@@ -575,8 +581,9 @@ class TestStaticSimulatorCommon:
         write_values: list[int],
     ) -> None:
         """
-        Test of.
+        Test read and write registers.
 
+        Test the:
         * read_register command
         * write_register command
 
@@ -618,8 +625,9 @@ class TestStaticSimulatorCommon:
         read_length: int,
     ) -> None:
         """
-        Test of.
+        Test read and write address registers.
 
+        Test the:
         * read_address command
         * write_address command
 
@@ -635,8 +643,7 @@ class TestStaticSimulatorCommon:
 
         def buffer_slice(address: int, length: int) -> slice:
             """
-            Helper function that returns a slice that tells you where to read from or
-            write to the buffer.
+            Return a slice that tells you where to read from or write to the buffer.
 
             :param address: the start address being read from or written
                 to
@@ -663,8 +670,9 @@ class TestStaticSimulatorCommon:
         ],
     ) -> None:
         """
-        Test of:
+        Test start and stop beamformer.
 
+        Test that:
         * the start_beamformer command.
         * the stop_beamformer command.
         * the is_beamformer_running attribute
@@ -687,8 +695,9 @@ class TestStaticSimulatorCommon:
         ],
     ) -> None:
         """
-        Test of:
+        Test 40G configuration.
 
+        Test that:
         * the configure_40g_core command
         * the get_40g_configuration command
 
@@ -855,7 +864,9 @@ class TestDynamicSimulatorCommon:
         attribute_name: str,
     ) -> None:
         """
-        Tests that dynamic attributes can be read, and that the are NOT equal to the
+        Tests that dynamic attributes can be read.
+
+        Check that they are NOT equal to the
         static value assigned in the static dynamic simulator.
 
         :param tile: the tile class object under test.
@@ -924,7 +935,9 @@ class TestDriverCommon:
     @pytest.fixture()
     def simulation_mode(self: TestDriverCommon) -> SimulationMode:
         """
-        Return the simulation mode to be used when initialising the tile class object
+        Return the simulation mode.
+
+        To be used when initialising the tile class object
         under test.
 
         :return: the simulation mode to be used when initialising the

@@ -79,7 +79,7 @@ class MccsStationBeam(SKAObsDevice):
         )
 
     def init_command_objects(self: MccsStationBeam) -> None:
-        """Initialises the command handlers for commands supported by this device."""
+        """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self.component_manager, self.op_state_model, self.logger)
@@ -98,8 +98,7 @@ class MccsStationBeam(SKAObsDevice):
             self: MccsStationBeam.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsStationBeam`.
+            Initialise the attributes and properties of the MccsStationBeam.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -444,8 +443,7 @@ class MccsStationBeam(SKAObsDevice):
             self: MccsStationBeam.ApplyPointingCommand,
         ) -> Tuple[ResultCode, str]:
             """
-            Stateless do-hook for the
-            :py:meth:`.MccsStationBeam.ApplyPointing` command
+            Implement the :py:meth:`.MccsStationBeam.ApplyPointing` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

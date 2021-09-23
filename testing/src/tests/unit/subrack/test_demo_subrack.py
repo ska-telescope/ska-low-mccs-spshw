@@ -6,10 +6,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the
-:py:mod:`ska_low_mccs.subrack.demo_subrack_device` module.
-"""
+"""This module contains the tests for the subrack.demo_subrack_device module."""
 from __future__ import annotations
 
 import time
@@ -57,7 +54,7 @@ class TestDemoSubrack:
 
     def test(self: TestDemoSubrack, device_under_test: MccsDeviceProxy) -> None:
         """
-        Test:
+        Test.
 
         * the `isTpm1Powered`, `isTpm2Powered` etc attributes.
         * the `PowerOnTpm1`, `PowerOffTpm2` etc commands.
@@ -69,7 +66,7 @@ class TestDemoSubrack:
 
         def assert_powered(expected: list[bool]) -> None:
             """
-            Helper function to assert the power mode of each TPM.
+            Assert the power mode of each TPM.
 
             :param expected: the expected power mode of each TPM
             """

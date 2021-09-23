@@ -186,7 +186,9 @@ class TestSubrackSimulatorCommon:
         expected_value: Any,
     ) -> None:
         """
-        Tests that read-only attributes take certain known initial values. This is a
+        Tests that read-only attributes take certain known initial values.
+
+        This is a
         weak test; over time we should find ways to more thoroughly test each of these
         independently.
 
@@ -450,7 +452,9 @@ class TestSubrackDriverCommon:
         expected_value: Any,
     ) -> None:
         """
-        Tests that read-only attributes take certain known initial values. This is a
+        Tests that read-only attributes take certain known initial values.
+
+        This is a
         weak test; over time we should find ways to more thoroughly test each of these
         independently.
 
@@ -539,8 +543,9 @@ class TestSubrackComponentManager:
         tpm_id: int,
     ) -> None:
         """
-        Test that the callback is called when we change the power mode of an tpm (i.e.
-        turn it on or off).
+        Test that the callback is called when we change the power mode of an tpm.
+
+        (i.e. turn it on or off).
 
         :param subrack_component_manager: the subrack component manager under
             test
@@ -582,8 +587,9 @@ class TestSubrackComponentManager:
         component_progress_changed_callback: MockCallable,
     ) -> None:
         """
-        Test that the callback is called when we change the progress reported by the
-        subrack simulator. Testing using the 'turn_on_tpm' method.
+        Test that the callback is called when we change the progress.
+
+        Reported by the subrack simulator when using the 'turn_on_tpm' method.
 
         :param subrack_component_manager: the subrack component manager under
             test

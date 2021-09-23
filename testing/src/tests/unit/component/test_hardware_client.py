@@ -38,7 +38,7 @@ class TestWebHardwareClient:
             @staticmethod
             def json() -> dict[str, str]:
                 """
-                A mock method to replace the patched :py:meth:`request.Response.json`.
+                Replace the patched request.Response.json with mock.
 
                 This implementation always returns the same key-value pair.
 
@@ -48,7 +48,7 @@ class TestWebHardwareClient:
 
         def mock_request(method: str, url: str, **kwargs: Any) -> MockResponse:
             """
-            A mock method to replace requests.request.
+            Replace requests.request with mock method.
 
             :param method: "GET" or "POST"
             :param url: the URL
@@ -70,7 +70,7 @@ class TestWebHardwareClient:
 
         def mock_get(url: str, params: Any = None, **kwargs: Any) -> MockResponse:
             """
-            A mock method to replace requests.get.
+            Replace requests.get with mock method.
 
             :param url: the URL
             :param params: arguments to the GET

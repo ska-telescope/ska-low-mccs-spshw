@@ -23,6 +23,7 @@ class TestStationBeamComponentManager:
     ) -> None:
         """
         Test the component manager's establishment of communication with its component.
+
         (i.e. its station)
 
         :param station_beam_component_manager: the station beam

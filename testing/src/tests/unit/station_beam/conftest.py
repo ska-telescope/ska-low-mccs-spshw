@@ -30,8 +30,9 @@ def component_device_health_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback for a change in the health of the component device (i.e. the
-    station).
+    Return a mock callback for a change in the health of the component device.
+
+    (i.e. the station).
 
     :param mock_callback_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when

@@ -85,6 +85,8 @@ class TestApiuAntennaIntegration:
         self: TestApiuAntennaIntegration, tango_harness: TangoHarness
     ) -> None:
         """
+        Test the integration of antenna within the APIU.
+
         Test that:
 
         * when MccsAntenna is turned on, the APIU supplies power to the

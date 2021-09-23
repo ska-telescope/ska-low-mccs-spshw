@@ -8,8 +8,9 @@
 # See LICENSE.txt for more info.
 
 """
-This module contains an implementation of a simulator for a testing subrack management
-board to be used specifically in a K8s deployment.
+A simulator for a testing subrack management board.
+
+To be used specifically in a K8s deployment.
 
 This class will override certain methods to emulate delays that real
 hardware would introduce, thus providing a way to test the software

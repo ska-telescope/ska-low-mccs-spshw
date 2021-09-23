@@ -135,6 +135,8 @@ class TestPowerManagement:
         self: TestPowerManagement, tango_harness: TangoHarness
     ) -> None:
         """
+        Test rollup.
+
         Test that changes to admin mode in subservient devices result in state changes
         which roll up to the controller.
 

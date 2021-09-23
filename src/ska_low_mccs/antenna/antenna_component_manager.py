@@ -181,7 +181,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        assert self._proxy is not None  # for the type checker
         assert (
             event_name.lower() == "state"
         ), "state changed callback called but event_name is {event_name}."

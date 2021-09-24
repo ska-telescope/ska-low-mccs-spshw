@@ -35,8 +35,20 @@ class BaseComponentManager:
 
 class SKABaseDevice(Device):
     def _init_state_model(self: SKABaseDevice) -> None: ...
+    def _init_logging(self: SKABaseDevice) -> None: ...
+    def init_device(self: SKABaseDevice) -> None: ...
+
 
     class InitCommand(ResponseCommand, CompletionCommand):
+        def __init__(
+            self: SKABaseDevice.InitCommand,
+            target: Any,
+            op_state_model: OpStateModel,
+            logger: Optional[logging.Logger]=None
+        ) -> None:
+            self.logger = logger
+            ...
+
         def do(  # type: ignore[override]
             self: SKABaseDevice.InitCommand
         ) -> tuple[ResultCode, str]: ...

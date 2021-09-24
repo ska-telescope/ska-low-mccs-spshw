@@ -37,9 +37,11 @@ def devices_to_load() -> DevicesToLoadType:
         "devices": [
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy},
-            {"name": "tile_0002", "proxy": MccsDeviceProxy},
-            {"name": "tile_0003", "proxy": MccsDeviceProxy},
-            {"name": "tile_0004", "proxy": MccsDeviceProxy},
+            # commented out as they are not used at present and to
+            # help diagnose the intermittent test failure.
+            # {"name": "tile_0002", "proxy": MccsDeviceProxy},
+            # {"name": "tile_0003", "proxy": MccsDeviceProxy},
+            # {"name": "tile_0004", "proxy": MccsDeviceProxy},
         ],
     }
 

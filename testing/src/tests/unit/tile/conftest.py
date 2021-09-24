@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
+from typing import Type
 
 import pytest
 import tango
@@ -515,7 +516,7 @@ def tile_component_manager(
 
 
 @pytest.fixture()
-def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> MccsTile:
+def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> Type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 

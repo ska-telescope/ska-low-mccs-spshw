@@ -1,9 +1,6 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
-#
-#
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
@@ -13,10 +10,12 @@ Hardware functions for the TPM 1.6 hardware.
 This is derived from pyaavs object and depends heavily on the pyfabil
 low level software and specific hardware module plugins.
 """
-__author__ = "Alessio Magro"
+
+from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import time
+from typing import Any, Optional
 
 from pyfabil.base.definitions import (
     firmware,
@@ -31,6 +30,8 @@ from pyfabil.base.definitions import (
 from ska_low_mccs.tile.plugins.tpm.tpm_test_firmware import TpmTestFirmware
 from time import sleep
 
+__all__ = ["Tpm16TestFirmware"]
+
 
 class Tpm16TestFirmware(TpmTestFirmware):
     """FirmwareBlock tests class."""
@@ -39,13 +40,12 @@ class Tpm16TestFirmware(TpmTestFirmware):
     @compatibleboards(BoardMake.Tpm16Board)
     @friendlyname("tpm_test_firmware")
     @maxinstances(2)
-    def __init__(self, board, **kwargs):
+    def __init__(self: Tpm16TestFirmware, board: Any, **kwargs: Any) -> None:
         """
         Tpm16TestFirmware initializer.
 
         :param board: Pointer to board instance
         :param kwargs: named arguments
-        :type kwargs: dict
 
         :raises PluginError: Device parameter must be specified
         """
@@ -62,16 +62,15 @@ class Tpm16TestFirmware(TpmTestFirmware):
         else:
             self._fsample = float(kwargs["fsample"])
 
-        if kwargs.get("dsp_core") is None:
+        self._dsp_core: Optional[bool] = kwargs.get("dsp_core")
+        if self._dsp_core is None:
             logging.info(
                 "TpmTestFirmware: Setting default value True to dsp_core flag."
             )
             self._dsp_core = True
-        else:
-            self._dsp_core = kwargs.get("dsp_core")
 
         try:
-            if self.board["fpga1.regfile.feature.xg_eth_implemented"] == 1:
+            if self.fpga1.regfile.feature.xg_eth_implemented == 1:
                 self.xg_eth = True
             else:
                 self.xg_eth = False
@@ -86,13 +85,13 @@ class Tpm16TestFirmware(TpmTestFirmware):
         self._jesd1 = None
         self._jesd2 = None
         self._fpga = None
-        self._teng = None
+        self._teng = []
+        self._f2f = []
+        self._spead_gen = []
         self._fortyg = None
-        self._f2f = None
         self._sysmon = None
         self._beamf = None
         self._testgen = None
-        self._spead_gen = None
         self._patterngen = None
         self._power_meter = None
         self._integrator = None
@@ -102,7 +101,7 @@ class Tpm16TestFirmware(TpmTestFirmware):
 
         self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
 
-    def load_plugin(self):
+    def load_plugin(self: Tpm16TestFirmware) -> None:
         """Load required plugin."""
         self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0)
         self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1)
@@ -153,13 +152,13 @@ class Tpm16TestFirmware(TpmTestFirmware):
                 self.board.load_plugin("SpeadTxGen", device=self._device, core=3),
             ]
 
-    def start_ddr_initialisation(self):
+    def start_ddr_initialisation(self: Tpm16TestFirmware) -> None:
         """Start DDR initialisation."""
         logging.debug(self._device_name + " DDR4 reset")
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x1
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x0
 
-    def initialise_ddr(self):
+    def initialise_ddr(self: Tpm16TestFirmware) -> None:
         """Initialise DDR."""
         for _n in range(3):
             logging.debug(self._device_name + " DDR3 reset")
@@ -187,7 +186,7 @@ class Tpm16TestFirmware(TpmTestFirmware):
 
         logging.error("Cannot initilaise DDR3 " + self._device_name)
 
-    def initialise_firmware(self):
+    def initialise_firmware(self: Tpm16TestFirmware) -> None:
         """
         Initialise firmware components.
 

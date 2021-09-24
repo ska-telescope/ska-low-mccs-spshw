@@ -584,11 +584,8 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :param event_name: name of the event; will always be
             "areTpmsOn" for this callback
-        :type event_name: str
         :param event_value: the new attribute value
-        :type event_value: list(bool)
         :param event_quality: the quality of the change event
-        :type event_quality: :py:class:`tango.AttrQuality`
         """
         assert event_name.lower() == "areTpmsOn".lower(), (
             "subrack 'areTpmsOn' attribute changed callback called but "

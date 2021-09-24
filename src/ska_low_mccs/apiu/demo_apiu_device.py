@@ -199,7 +199,7 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
 
     :return: exit code
     """
-    return DemoAPIU.run_server(args=args, **kwargs)
+    return DemoAPIU.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

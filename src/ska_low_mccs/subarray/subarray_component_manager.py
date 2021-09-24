@@ -270,7 +270,7 @@ class SubarrayComponentManager(
                 {
                     "subarray_beams": ["low-mccs/subarraybeam/01"],
                     "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
-                    "station_beams": ["low-mccs/stationbeam/01"]
+                    "station_beams": [["low-mccs/beam/01","low-mccs/beam/02"]]
                     "channel_blocks": [3]
                 }
 
@@ -280,7 +280,9 @@ class SubarrayComponentManager(
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
         station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
 
-        #TODO need to add beams to resource manager first
+        # add station beams into resource manager
+        self._resource_manager.add_resources({"station_beams": [fqdn for beams in station_beam_fqdns for fqdn in beams]})
+
         for i in range(len(subarray_beam_fqdns)):
             self._resource_manager.allocate(
                 subarray_beam_fqdns[i],

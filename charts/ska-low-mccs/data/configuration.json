@@ -23,10 +23,10 @@
                                 "low-mccs/tile/0004"
                             ],
                             "MccsStationBeams": [
-                                "low-mccs/beam/001",
-                                "low-mccs/beam/002",
-                                "low-mccs/beam/003",
-                                "low-mccs/beam/004"
+                                "low-mccs/beam/01",
+                                "low-mccs/beam/02",
+                                "low-mccs/beam/03",
+                                "low-mccs/beam/04"
                             ],
                             "MccsSubarrayBeams": [
                                 "low-mccs/subarraybeam/01",

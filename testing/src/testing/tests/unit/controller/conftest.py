@@ -90,6 +90,7 @@ def subarray_beam_fqdns() -> list[str]:
         "low-mccs/subarraybeam/04",
     ]
 
+
 @pytest.fixture()
 def station_beam_fqdns() -> list[str]:
     """
@@ -106,6 +107,7 @@ def station_beam_fqdns() -> list[str]:
         "low-mccs/beam/03",
         "low-mccs/beam/04",
     ]
+
 
 @pytest.fixture()
 def channel_blocks() -> list[int]:
@@ -195,6 +197,7 @@ def subarray_beam_health_changed_callback(
     """
     return mock_callback_factory()
 
+
 @pytest.fixture()
 def station_beam_health_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
@@ -210,6 +213,7 @@ def station_beam_health_changed_callback(
         detects that health of a station beam has changed.
     """
     return mock_callback_factory()
+
 
 @pytest.fixture()
 def controller_component_manager(

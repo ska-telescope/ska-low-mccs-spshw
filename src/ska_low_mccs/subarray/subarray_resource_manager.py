@@ -16,6 +16,7 @@ from ska_low_mccs.resource_manager import HealthfulReadyResourceManager
 
 __all__ = ["SubarrayResourceManager"]
 
+
 class SubarrayResourceManager:
     """A resource manager for the subarray component manager."""
 
@@ -83,3 +84,16 @@ class SubarrayResourceManager:
                 )
         """
         self._resource_manager.deallocate(**resources)
+
+    def add_resources(
+        self: SubarrayResourceManager,
+        resources: Iterable[Hashable],
+    ) -> None:
+        """
+        Add a resource to this resource manager.
+
+        :param resources: keyword args, with each keyword being the name
+            of a resource type, and the value being the set of resources
+            of that type to be added to this resource manager's resources.
+        """
+        self._resource_manager.add_resources(**resources)

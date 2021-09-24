@@ -415,7 +415,7 @@ class ControllerComponentManager(MccsComponentManager):
             the station's health should not be taken into account.
         """
         # self._resource_manager.set_health(
-            # "stations", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+        # "stations", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
         # )  # False for None
         if self._station_health_changed_callback is not None:
             self._station_health_changed_callback(fqdn, health)
@@ -537,22 +537,24 @@ class ControllerComponentManager(MccsComponentManager):
         :return: a result code
         """
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
-        #station_fqdns...
+        # station_fqdns...
 
         self._resource_manager.allocate(
             subarray_fqdn,
             subarray_beams=subarray_beam_fqdns,
             channel_blocks=channel_blocks,
         )
-        
-        # for subarray_beam_fqdn in subarray_beam_fqdns:
 
-        #for each subarray-beam: get number of stations (n), request n station-beams from pool
+        # for each subarray-beam: get number of stations (n), request n station-beams from pool
         station_beam_fqdns = []
         for _ in subarray_beam_fqdns:
             station_beam_fqdns_per_subarray_beam = []
             for _ in station_fqdns:
-                station_beam_fqdns_per_subarray_beam.append(self._resource_manager.resource_pool.getFreeResource("station_beams"))
+                station_beam_fqdns_per_subarray_beam.append(
+                    self._resource_manager.resource_pool.getFreeResource(
+                        "station_beams"
+                    )
+                )
             station_beam_fqdns.append(station_beam_fqdns_per_subarray_beam.copy())
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
@@ -560,8 +562,8 @@ class ControllerComponentManager(MccsComponentManager):
         )
         # if result_code != ResultCode.FAILED:
 
-            # for station_fqdn in station_fqdns:
-                # self._stations[station_fqdn].write_subarray_id(subarray_id)
+        # for station_fqdn in station_fqdns:
+        # self._stations[station_fqdn].write_subarray_id(subarray_id)
         return result_code
 
     @check_communicating

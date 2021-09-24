@@ -430,6 +430,8 @@ class TestSubarrayComponentManager:
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
         mock_subarray_beam_on: unittest.mock.Mock,
+        station_beam_on_id: int,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
         scan_id: int,
         start_time: float,
@@ -460,8 +462,9 @@ class TestSubarrayComponentManager:
 
         result_code = subarray_component_manager.assign(
             {
-                "stations": [station_on_fqdn],
+                "stations": [[station_on_fqdn]],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [[station_beam_on_fqdn]],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -472,6 +475,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [{"station_id": station_on_id}],
                 "subarray_beams": [{"subarray_beam_id": subarray_beam_on_id}],
+                "station_beams": [{"station_beam_id": station_beam_on_id}],
             }
         )
         assert result_code == ResultCode.QUEUED

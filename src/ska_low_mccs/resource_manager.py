@@ -7,7 +7,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""This module implements infrastructure for resource management in the MCCS subsystem."""
+"""This module implements infrastructure for resource management in the MCCS
+subsystem."""
 from __future__ import annotations
 
 from typing import Any, Hashable, Iterable, Mapping, Optional, cast
@@ -263,7 +264,7 @@ class ResourceManager:
 
         return unallocated
 
-    def _add_resources(
+    def add_resources(
         self: ResourceManager,
         **resources: Iterable[Hashable],
     ) -> None:
@@ -278,18 +279,20 @@ class ResourceManager:
         already_managed = []
         for resource_type in resources:
             for resource in resources[resource_type]:
-                if self._allocations[resource_type][resource]:
-                    already_managed.append({resource_type:resource})
+                if resource in self._allocations[resource_type]:
+                    already_managed.append({resource_type: resource})
 
         if already_managed:
-            raise ValueError(f"Cannot add already managed resources: {already_managed}.")
+            raise ValueError(
+                f"Cannot add already managed resources: {already_managed}."
+            )
 
-        #No existing managed resources: go ahead and add to resource manager
+        # No existing managed resources: go ahead and add to resource manager
         for resource_type in resources:
             for resource in resources[resource_type]:
                 self._allocations[resource_type][resource] = None
 
-    def _remove_resources(
+    def remove_resources(
         self: ResourceManager,
         **resources: Iterable[Hashable],
     ) -> None:
@@ -301,6 +304,7 @@ class ResourceManager:
             of that type to be removed from this resource manager's resources.
         """
         pass
+
 
 class _HealthfulResourceManager(ResourceManager):
     """A resource manager / tracker for resource types that may have a health state."""
@@ -392,29 +396,30 @@ class _HealthfulResourceManager(ResourceManager):
         if unhealthy:
             raise ValueError(f"Cannot allocate unhealthy resources: {unhealthy}.")
 
-
     def _add_resources(
         self: ResourceManager,
         **healthful_resources: Iterable[Hashable],
     ) -> None:
-        """
-        
-        """
+        """"""
         super()._add_resources(**healthful_resources)
         # check if allocated:
         already_allocated = []
         for resource_type in healthful_resources:
             for resource in healthful_resources[resource_type]:
                 if self._allocations[resource_type][resource]:
-                    already_allocated.append({resource_type:resource})
+                    already_allocated.append({resource_type: resource})
 
         if already_allocated:
-            raise ValueError(f"Cannot add already managed redources: {already_allocated}.")
+            raise ValueError(
+                f"Cannot add already managed redources: {already_allocated}."
+            )
 
         self._healthy = {
-                resource_type: {resource: False for resource in healthful_resources[resource_type]}
-                for resource_type in healthful_resources
+            resource_type: {
+                resource: False for resource in healthful_resources[resource_type]
             }
+            for resource_type in healthful_resources
+        }
         pass
 
     def set_health(
@@ -538,7 +543,7 @@ class ResourcePool:
     def __init__(
         self: ResourcePool,
         **resources: Iterable[Hashable],
-        ) -> None:
+    ) -> None:
         """
         Initialise a pool of resources.
 
@@ -547,14 +552,14 @@ class ResourcePool:
         Sets all resources as free (allocatable).
         """
         self._resources: dict[Hashable, dict[Hashable, bool]] = {
-            resource_type: {resource: True for resource in resources[resource_type]} 
+            resource_type: {resource: True for resource in resources[resource_type]}
             for resource_type in resources
         }
 
     def getFreeResource(
         self: ResourcePool,
         resource_type: Hashable,
-        ) -> Hashable:
+    ) -> Hashable:
         """
         Get a free (unallocated) resource from the pool.
 
@@ -567,16 +572,14 @@ class ResourcePool:
             if self._resources[resource_type][resource]:
                 self._resources[resource_type][resource] = False
                 return resource
-        
-        raise ValueError(f"No free resources of type: {resource_type}.")        
+
+        raise ValueError(f"No free resources of type: {resource_type}.")
 
     def freeResource(
         self: ResourcePool,
         resource: Hashable,
     ) -> None:
-        """
-        Mark a resource as unallocated.
-        """
+        """Mark a resource as unallocated."""
         if self._resources[resource]:
             self._resources[resource] = True
 
@@ -584,8 +587,6 @@ class ResourcePool:
         self: ResourcePool,
         resource: Hashable,
     ) -> None:
-        """
-        Mark a resource as locked
-        """
+        """Mark a resource as locked."""
         if self._resources[resource]:
             self._resources[resource] = False

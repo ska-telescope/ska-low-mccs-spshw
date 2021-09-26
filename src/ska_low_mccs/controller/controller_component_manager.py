@@ -537,7 +537,6 @@ class ControllerComponentManager(MccsComponentManager):
         :return: a result code
         """
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
-        # station_fqdns...
 
         self._resource_manager.allocate(
             subarray_fqdn,
@@ -560,10 +559,6 @@ class ControllerComponentManager(MccsComponentManager):
         result_code = self._subarrays[subarray_fqdn].assign_resources(
             subarray_beam_fqdns, station_fqdns, station_beam_fqdns, channel_blocks
         )
-        # if result_code != ResultCode.FAILED:
-
-        # for station_fqdn in station_fqdns:
-        # self._stations[station_fqdn].write_subarray_id(subarray_id)
         return result_code
 
     @check_communicating

@@ -97,3 +97,43 @@ class SubarrayResourceManager:
             of that type to be added to this resource manager's resources.
         """
         self._resource_manager.add_resources(**resources)
+
+    def add_allocatees(
+        self: SubarrayResourceManager,
+        allocatees: Iterable[Hashable],
+    ) -> None:
+        """
+        Add a resource to this resource manager.
+
+        :param allocatees: new targets for allocation of resources.
+        """
+        self._resource_manager.add_allocatees(allocatees)
+
+    def set_ready(
+    self: SubarrayResourceManager,
+    subarray_beam: str,
+    is_ready: bool,
+    ) -> None:
+        """
+        Set the health of a resource.
+
+        :param subarray_beam: the subarray beam to be set as ready
+        :param is_ready: whether the subarray_beam is ready or not
+        """
+        self._resource_manager.set_ready(subarray_beam, is_ready)
+
+    def set_health(
+        self: SubarrayResourceManager,
+        resource_type: str,
+        resource: Hashable,
+        is_healthy: bool,
+    ) -> None:
+        """
+        Set the health of a resource.
+
+        :param resource_type: the resource type of the resource whose
+            health is being set
+        :param resource: the resource whose health is being set
+        :param is_healthy: the new health status of the resource
+        """
+        self._resource_manager.set_health(resource_type, resource, is_healthy)

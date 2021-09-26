@@ -280,18 +280,9 @@ class SubarrayComponentManager(
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
         station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
 
-        # add station beams into resource manager
-        self._resource_manager.add_resources({"station_beams": [fqdn for beams in station_beam_fqdns for fqdn in beams]})
-
-        for i in range(len(subarray_beam_fqdns)):
-            self._resource_manager.allocate(
-                subarray_beam_fqdns[i],
-                station_beams=station_beam_fqdns[i]
-            )
-
-        station_fqdns_to_add = station_fqdns - self._stations.keys()
-        subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
-        station_beam_fqdns_to_add = station_beam_fqdns - self._station_beams.keys()
+        station_fqdns_to_add = [fqdn for stations in station_fqdns for fqdn in stations] - self._stations.keys()
+        subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()        
+        station_beam_fqdns_to_add = [fqdn for beams in station_beam_fqdns for fqdn in beams] - self._station_beams.keys()
 
         if station_fqdns_to_add or subarray_beam_fqdns_to_add or station_beam_fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
@@ -342,13 +333,26 @@ class SubarrayComponentManager(
                 set(self._stations.keys()), set(self._subarray_beams.keys()), set(self._station_beams.keys())
             )
 
+            # add subarray beams and station beams into resource manager
+            self._resource_manager.add_allocatees(subarray_beam_fqdns_to_add)             
+            self._resource_manager.add_resources({"station_beams": station_beam_fqdns_to_add})
+
             self._is_assigning = True
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn].start_communicating()
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn].start_communicating()
+                self._resource_manager.set_ready(fqdn, True)
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn].start_communicating()
+                self._resource_manager.set_health("station_beams", fqdn, True)
+
+            for i in range(len(subarray_beam_fqdns)):
+                self._resource_manager.allocate(
+                    subarray_beam_fqdns[i],
+                    station_beams=station_beam_fqdns[i]
+                )
+
         return ResultCode.OK
 
     @property  # type: ignore[misc]

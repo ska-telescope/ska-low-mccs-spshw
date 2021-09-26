@@ -264,6 +264,17 @@ class ResourceManager:
 
         return unallocated
 
+    def add_allocatees(
+        self: ResourceManager,
+        allocatees: Iterable[Hashable],
+    ) -> None:
+        """
+        Add new allocatee(s) to this resource manager.
+
+        :param allocatees: targets for allocation of resources.
+        """
+        self._allocatees.update(allocatees)
+
     def add_resources(
         self: ResourceManager,
         **resources: Iterable[Hashable],
@@ -396,12 +407,18 @@ class _HealthfulResourceManager(ResourceManager):
         if unhealthy:
             raise ValueError(f"Cannot allocate unhealthy resources: {unhealthy}.")
 
-    def _add_resources(
+    def add_resources(
         self: ResourceManager,
         **healthful_resources: Iterable[Hashable],
     ) -> None:
-        """"""
-        super()._add_resources(**healthful_resources)
+        """
+        Add resources to this resource manager.
+
+        :param healthful_resources: The resources to add
+
+        :raises ValueError: if the resource being added already exists in the resource manager
+        """
+        super().add_resources(**healthful_resources)
         # check if allocated:
         already_allocated = []
         for resource_type in healthful_resources:
@@ -411,16 +428,13 @@ class _HealthfulResourceManager(ResourceManager):
 
         if already_allocated:
             raise ValueError(
-                f"Cannot add already managed redources: {already_allocated}."
+                f"Cannot add already managed resources: {already_allocated}."
             )
-
-        self._healthy = {
-            resource_type: {
-                resource: False for resource in healthful_resources[resource_type]
-            }
-            for resource_type in healthful_resources
-        }
-        pass
+        
+        for resource_type in healthful_resources:
+            for resource in healthful_resources[resource_type]:
+                if not resource in self._healthy[resource_type].keys():
+                    self._healthy[resource_type][resource] = False
 
     def set_health(
         self: _HealthfulResourceManager,
@@ -512,6 +526,21 @@ class _ReadyResourceManager(ResourceManager):
 
         if not self._ready[allocatee]:
             raise ValueError(f"Allocatee is unready: {allocatee}.")
+
+    def add_allocatees(
+        self: _ReadyResourceManager,
+        allocatees: Iterable[Hashable],
+    ) -> None:
+        """
+        Add targets for allocation of resources.
+
+        :param allocatees: targets for allocation
+        """
+        for allocatee in allocatees:
+            if allocatee in self._ready.keys():
+                raise ValueError(f"Allocatee already exists in resource manager: {allocatee}.")
+            self._ready[allocatee] = False
+        super().add_allocatees(allocatees)
 
     def set_ready(
         self: _ReadyResourceManager,

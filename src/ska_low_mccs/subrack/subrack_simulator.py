@@ -323,7 +323,7 @@ class SubrackSimulator(ObjectComponent):
 
     def _check_tpm_id(self: SubrackSimulator, logical_tpm_id: int) -> None:
         """
-        Helper method to check that a TPM id passed as an argument is within range.
+        Check that a TPM id passed as an argument is within range.
 
         :param logical_tpm_id: the id to check
 
@@ -558,8 +558,9 @@ class SubrackSimulator(ObjectComponent):
 
     def are_tpms_on(self: SubrackSimulator) -> Optional[list[bool]]:
         """
-        Returns whether each TPM is powered or not. Or None if the subrack itself is
-        turned off.
+        Return whether each TPM is powered or not.
+
+        Returns None if the subrack itself is turned off.
 
         :return: whether each TPM is powered or not.
         """
@@ -584,7 +585,7 @@ class SubrackSimulator(ObjectComponent):
 
     def _emulate_hardware_delay(self: SubrackSimulator) -> None:
         """
-        Base implementation to emulate a real hardware delay.
+        Emulate a real hardware delay (base implementation).
 
         Specialist classes will override this method for deployment
         testing purposes.

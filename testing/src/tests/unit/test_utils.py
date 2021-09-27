@@ -27,11 +27,14 @@ class TestUtils:
         self: TestUtils, stations: list[str], tiles: list[str]
     ) -> dict[str, list[str]]:
         """
+        Create a json string from positional arguments.
+
         Helper method, takes arguments `stations` and `tiles` but decorated to take them
         as a JSON string encoding of a dictionary containing these keys.
 
         :param stations: value of "stations" key in JSON string
         :param tiles: value of "tiles" key in JSON string
+
         :return: the args extracted from the json input string
         """
         return {"stations": stations, "tiles": tiles}
@@ -39,8 +42,9 @@ class TestUtils:
     @json_input()
     def json_input_kwargs_tester(self: TestUtils, **kwargs: Any) -> dict[str, Any]:
         """
-        Helper method, takes any arguments but decorated to take them as a JSON string
-        encoding of a dictionary.
+        Create a json string from keyword arguments.
+
+        Take Any arguments but decorated to take them as a JSON string encoding of a dictionary.
 
         :param kwargs: a dictionary of named arguments to this method
 
@@ -51,6 +55,8 @@ class TestUtils:
     @json_input("MccsController_Allocate_lax.json")
     def json_input_schema_tester(self: TestUtils, **kwargs: Any) -> dict[str, Any]:
         """
+        Create a json string from keyword arguments and validate.
+
         Helper method, takes any arguments but decorated to take them as a JSON string
         encoding of a dictionary. Additionally, this JSON string must validate against
         the specified schema.
@@ -132,6 +138,8 @@ class TestUtils:
     )
     def test_json_input_schema_raises(self: TestUtils, json_arg_string: str) -> None:
         """
+        Test validation failure.
+
         Test that a method decorated with @json_input with a schema argument will raise
         an exception on input that doesn't validate.
 

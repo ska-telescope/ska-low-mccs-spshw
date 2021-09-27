@@ -152,8 +152,7 @@ class TestMccsIntegration:
         self: TestMccsIntegration, tango_harness: TangoHarness
     ) -> None:
         """
-        Test that a MccsStationBeam device can apply delays to associated MccsTile
-        devices.
+        Test that a MccsStationBeam can apply delays to associated MccsTiles.
 
         :param tango_harness: a test harness for tango devices
         """

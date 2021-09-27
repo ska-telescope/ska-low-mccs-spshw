@@ -42,7 +42,7 @@ class TestMessageQueue:
             lock: Optional[threading.Lock] = None,
         ) -> None:
             """
-            Calling interface for this protocol.
+            Call interface for this protocol.
 
             :param sleep_time: the amount of time this call should
                 sleep, in simulation of a slow task.

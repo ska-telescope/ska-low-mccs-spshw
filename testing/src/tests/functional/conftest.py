@@ -47,8 +47,10 @@ def initial_mocks() -> dict[str, unittest.mock.Mock]:
 @pytest.fixture(scope="module")
 def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
-    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    Fixture that provides a mock factory for device proxy mocks.
+
+    This default factory provides vanilla mocks,
+    but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 
     (Overruled here with the same implementation, just to give the
@@ -62,8 +64,9 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 @pytest.fixture(scope="module")
 def tango_config() -> dict[str, Any]:
     """
-    Fixture that returns basic configuration information for a Tango test harness, such
-    as whether or not to run in a separate process.
+    Fixture that returns basic configuration information for a Tango test harness.
+
+    e.g. such as whether or not to run in a separate process.
 
     :return: a dictionary of configuration key-value pairs
     """
@@ -87,7 +90,7 @@ def tango_harness(
     initial_mocks: dict[str, unittest.mock.Mock],
 ) -> Generator[TangoHarness, None, None]:
     """
-    Creates a test harness for testing Tango devices.
+    Create a test harness for testing Tango devices.
 
     (This overwrites the `tango_harness` fixture, in order to change the
     fixture scope.)

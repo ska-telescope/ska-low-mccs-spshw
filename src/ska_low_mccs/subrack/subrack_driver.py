@@ -249,8 +249,10 @@ class SubrackDriver(MessageQueueComponentManager):
     @property
     def tpm_count(self: SubrackDriver) -> int:
         """
-        Return the number of TPMs housed in this subrack. If powered off return the last
-        value stored, as it should not change often and is meaningless when powered off.
+        Return the number of TPMs housed in this subrack.
+
+        If powered off return the last value stored,
+        as it should not change often and is meaningless when powered off.
 
         :return: the number of TPMs housed in this subrack
         """
@@ -271,7 +273,7 @@ class SubrackDriver(MessageQueueComponentManager):
 
     def _check_tpm_id(self: SubrackDriver, logical_tpm_id: int) -> None:
         """
-        Helper method to check that a TPM id passed as an argument is within range.
+        Check that a TPM id passed as an argument is within range.
 
         :param logical_tpm_id: the id to check
 
@@ -408,7 +410,7 @@ class SubrackDriver(MessageQueueComponentManager):
 
     def are_tpms_on(self: SubrackDriver) -> Optional[list[bool]]:
         """
-        Returns whether each TPM is powered or not.
+        Return whether each TPM is powered or not.
 
         Or None if the subrack itself is turned off.
 

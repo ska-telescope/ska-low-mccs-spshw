@@ -380,8 +380,7 @@ class Pointing(object):
         self: Pointing, right_ascension: float, declination: float, pointing_time: float
     ) -> bool:
         """
-        Determine if the target is above the horizon, given the time for the reference
-        antenna.
+        Check if the target is above the horizon, given time for the reference antenna.
 
         :param right_ascension: The right ascension of the target as a astropy angle
         :param declination: The declination of the target as an astropy angle.

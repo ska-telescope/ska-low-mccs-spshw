@@ -69,7 +69,7 @@ def we_have_mvplow_running_an_instance_of(
     antennas: dict[int, MccsDeviceProxy],
 ) -> None:
     """
-    Asserts the existence/availability of a subsystem.
+    Assert the existence/availability of a subsystem.
 
     :param subsystem_name: name of the subsystem
     :param controller: a proxy to the controller device
@@ -137,7 +137,7 @@ def subsystem_is_ready_to_receive_a_startup_command(
     controller: MccsDeviceProxy,
 ) -> None:
     """
-    Asserts that a subsystem is ready to receive an on command.
+    Assert that a subsystem is ready to receive an on command.
 
     :param controller: a proxy to the controller device
     :param subsystem_name: name of the subsystem
@@ -170,7 +170,7 @@ def check_mccs_controller_state(
     controller_device_state_changed_callback: MockChangeEventCallback,
 ) -> None:
     """
-    Asserts that mccs controller is on/off.
+    Assert that mccs controller is on/off.
 
     :param controller: a proxy to the controller device
     :param controller_device_state_changed_callback: a callback to be
@@ -193,7 +193,7 @@ def all_mccs_station_states_are_onoff(
     stations: dict[int, MccsDeviceProxy],
 ) -> None:
     """
-    Asserts that online or maintenance mccs station devices are on/off.
+    Assert that online or maintenance mccs station devices are on/off.
 
     :param stations: proxies to the station devices, keyed by number
     :param state_name: asserted state of the device -- either "off" or

@@ -20,8 +20,9 @@ def health_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback for a device component manager to call when the health state
-    of its device changes.
+    Return a mock callback for a device component manager.
+
+    To call when the health state of its device changes.
 
     :param mock_callback_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when

@@ -86,7 +86,9 @@ def device_to_load(
 @pytest.fixture()
 def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
+    Fixture that provides a mock factory for device proxy mocks.
+
+    This default factory
     provides vanilla mocks, but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 

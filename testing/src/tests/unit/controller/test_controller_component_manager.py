@@ -149,7 +149,9 @@ class TestControllerComponentManager:
         subarray_proxies: dict[str, MccsDeviceProxy],
     ) -> None:
         """
-        Test that:
+        Test for subarray allocation.
+
+        That:
 
         * If we try to allocate resources to a subarray before we the
           controller component manager has been turned on, the attempt

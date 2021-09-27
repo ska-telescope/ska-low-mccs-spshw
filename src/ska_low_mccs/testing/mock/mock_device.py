@@ -55,8 +55,9 @@ class MockDeviceBuilder:
 
     def add_command(self: MockDeviceBuilder, name: str, return_value: Any) -> None:
         """
-        Tell this builder to build mocks with a specified command that returns the
-        provided value.
+        Tell this builder to build mocks with a specified command.
+
+        And that the command returns the provided value.
 
         :param name: name of the command
         :param return_value: what the command should return
@@ -70,9 +71,10 @@ class MockDeviceBuilder:
         status: str = "Mock information-only message",
     ) -> None:
         """
-        Tell this builder to build mocks with a specified command that returns
-        (ResultCode, [message, message_uid]) or (ResultCode, message) tuples as
-        required.
+        Tell this builder to build mocks with a specified command.
+
+        And that the command  returns (ResultCode, [message, message_uid])
+        or (ResultCode, message) tuples as required.
 
         :param name: the name of the command
         :param result_code: the
@@ -108,8 +110,9 @@ class MockDeviceBuilder:
             name: str, *args: Any, **kwargs: Any
         ) -> tango.DeviceAttribute:
             """
-            Mock side-effect for read_attribute method, which reads the
-            attribute value and packs it into a
+            Mock side-effect for read_attribute method.
+
+            It should read the attribute value and pack it into a
             :py:class:`tango.DeviceAttribute`.
 
             :param name: the name of the attribute

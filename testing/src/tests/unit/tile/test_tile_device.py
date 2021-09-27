@@ -140,8 +140,10 @@ class TestMccsTile:
         write_value: Any,
     ) -> None:
         """
-        Test device attributes that map through to the component, and thus require the
-        component to be connected and turned on before a read / write can be effected.
+        Test device attributes that map through to the component.
+
+        Thus require the component to be connected and turned on before
+        a read / write can be effected.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -503,8 +505,9 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
-        Test for:
+        Test if firmware available.
 
+        Test for:
         * GetFirmwareAvailable command
         * firmwareName attribute
         * firmwareVersion attribute
@@ -557,7 +560,9 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
-        Test for DownloadFirmware. Also functions as the test for the isProgrammed and
+        Test for DownloadFirmware.
+
+        Also functions as the test for the isProgrammed and
         the firmwareName properties.
 
         :param tile_device: fixture that provides a
@@ -598,7 +603,9 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
-        Test for a missing firmware download. Also functions as the test for the
+        Test for a missing firmware download.
+
+        Also functions as the test for the
         isProgrammed and the firmwareName properties.
 
         :param tile_device: fixture that provides a

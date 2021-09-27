@@ -61,7 +61,9 @@ class TestMccsStation:
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test for Initial state. A freshly initialised station device has no assigned
+        Test for Initial state.
+
+        A freshly initialised station device has no assigned
         resources.
 
         :param device_under_test: fixture that provides a
@@ -238,7 +240,9 @@ class TestMccsStation:
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test for delayCentre attribute. This is a messy test because there is some loss
+        Test for delayCentre attribute.
+
+        This is a messy test because there is some loss
         of floating-point precision during transfer, so you have to check approximate
         equality when reading back what you've written.
 

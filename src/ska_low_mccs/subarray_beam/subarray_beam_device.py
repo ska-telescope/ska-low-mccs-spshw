@@ -76,7 +76,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         )
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
-        """Initialises the command handlers for commands supported by this device."""
+        """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self.component_manager, self.op_state_model, self.logger)
@@ -95,8 +95,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             self: MccsSubarrayBeam.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsSubarrayBeam`.
+            Initialise the attributes and properties of the MccsSubarrayBeam.
 
             State is managed under the hood; the basic sequence is:
 
@@ -395,8 +394,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             self: MccsSubarrayBeam.ScanCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
-            Stateless do-hook for the
-            :py:meth:`.MccsSubarrayBeam.Scan` command
+            Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
 
             :param argin: Scan parameters encoded in a json string
                 {

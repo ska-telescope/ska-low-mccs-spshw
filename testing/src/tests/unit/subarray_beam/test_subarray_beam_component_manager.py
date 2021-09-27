@@ -17,8 +17,7 @@ from ska_low_mccs.testing.mock import MockCallable
 
 class TestSubarrayBeam:
     """
-    Class for testing commands common to the subarray beam component and its component
-    manager.
+    Class for testing commands common to the subarray beam package.
 
     Because the subarray beam component manager passes commands down to
     to the subarray beam component, many commands are common. Here we

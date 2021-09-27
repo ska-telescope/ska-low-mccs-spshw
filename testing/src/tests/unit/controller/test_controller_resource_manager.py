@@ -59,8 +59,9 @@ class TestControllerResourceManager:
         self, controller_resource_manager: ControllerResourceManager
     ) -> None:
         """
-        Test that we can't allocate to a subarray that isn't ready, nor allocate
-        unhealthy resources.
+        Test that we can't allocate to a subarray that isn't ready.
+
+        nor allocate unhealthy resources.
 
         :param controller_resource_manager: the controller resource
             manager under test.

@@ -1,6 +1,8 @@
 """
-This module contains pytest fixtures and other test setups common to all ska_low_mccs
-tests: unit, integration and functional (BDD).
+This module contains pytest fixtures other test setups.
+
+These are common to all ska-low-mccs tests: unit, integration and
+functional (BDD).
 """
 from __future__ import annotations
 
@@ -53,8 +55,10 @@ def pytest_addoption(
     parser: pytest.config.ArgumentParser,  # type: ignore[name-defined]
 ) -> None:
     """
-    Pytest hook; implemented to add the `--testbed` option, used to specify the context
-    in which the test is running. This could be used, for example, to skip tests that
+    Implement the add the `--testbed` option.
+
+    Used to specify the context in which the test is running.
+    This could be used, for example, to skip tests that
     have requirements not met by the context.
 
     :param parser: the command line options parser
@@ -125,7 +129,9 @@ def initial_mocks() -> dict[str, unittest.mock.Mock]:
 @pytest.fixture()
 def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
+    Fixture that provides a mock factory for device proxy mocks.
+
+    This default factory
     provides vanilla mocks, but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 
@@ -147,8 +153,9 @@ def tango_harness_factory(
     TangoHarness,
 ]:
     """
-    Returns a factory for creating a test harness for testing Tango devices. The Tango
-    context used depends upon the context in which the tests are being run, as specified
+    Return a factory for creating a test harness for testing Tango devices.
+
+    The Tango context used depends upon the context in which the tests are being run, as specified
     by the `--testbed` option.
 
     If the context is "test", then this harness deploys the specified
@@ -174,7 +181,9 @@ def tango_harness_factory(
 
     class _CPTCTangoHarness(ClientProxyTangoHarness, TestContextTangoHarness):
         """
-        A Tango test harness with the client proxy functionality of
+        A Tango test harness.
+
+        With the client proxy functionality of
         :py:class:`~ska_low_mccs.testing.tango_harness.ClientProxyTangoHarness`
         within the lightweight test context provided by
         :py:class:`~ska_low_mccs.testing.tango_harness.TestContextTangoHarness`.
@@ -191,7 +200,7 @@ def tango_harness_factory(
         initial_mocks: dict[str, unittest.mock.Mock],
     ) -> TangoHarness:
         """
-        Builds the Tango test harness.
+        Build the Tango test harness.
 
         :param tango_config: basic configuration information for a tango
             test harness
@@ -228,8 +237,9 @@ def tango_harness_factory(
 @pytest.fixture()
 def tango_config() -> dict[str, Any]:
     """
-    Fixture that returns basic configuration information for a Tango test harness, such
-    as whether or not to run in a separate process.
+    Fixture that returns basic configuration information for a Tango test harness.
+
+    For example whether or not to run in a separate process.
 
     :return: a dictionary of configuration key-value pairs
     """
@@ -253,7 +263,7 @@ def tango_harness(
     initial_mocks: dict[str, unittest.mock.Mock],
 ) -> Generator[TangoHarness, None, None]:
     """
-    Creates a test harness for testing Tango devices.
+    Create a test harness for testing Tango devices.
 
     :param tango_harness_factory: a factory that provides a test harness
         for testing tango devices

@@ -14,8 +14,7 @@ from ska_low_mccs.tel_state import (
 
 class TestTelState:
     """
-    Class for testing commands common to the tel state component and its component
-    manager.
+    Class for testing commands common to the component and its component manager.
 
     Because the tel state component manager passes commands down to the
     tel state component, many commands are common. Here we test those

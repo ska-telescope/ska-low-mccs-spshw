@@ -179,8 +179,9 @@ class StationBeamComponentManager(MccsComponentManager):
     @property
     def station_fqdn(self: StationBeamComponentManager) -> Optional[str]:
         """
-        Return the station FQDN. If the station FQDN is not set, return the empty
-        string.
+        Return the station FQDN.
+
+        If the station FQDN is not set, return the empty string.
 
         :return: the station FQDN
         """
@@ -189,8 +190,9 @@ class StationBeamComponentManager(MccsComponentManager):
     @station_fqdn.setter
     def station_fqdn(self: StationBeamComponentManager, value: Optional[str]) -> None:
         """
-        Set the station FQDN. The string must be either a valid FQDN for a station, or
-        the empty string.
+        Set the station FQDN.
+
+        The string must be either a valid FQDN for a station, or the empty string.
 
         :param value: the new station FQDN, or the empty string
         """

@@ -59,8 +59,9 @@ class TestDemoAPIU:
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test.
+        Test APIU power up/down.
 
+        Test:
         * the `isAntenna1Powered`, `isAntenna2Powered` etc attributes.
         * the `PowerUpAntenna1`, `PowerDownAntenna2` etc commands.
 

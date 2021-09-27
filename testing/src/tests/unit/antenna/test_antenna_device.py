@@ -73,7 +73,9 @@ class TestMccsAntenna:
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test for Reset. Expected to fail as can't reset in the Off state.
+        Test for Reset.
+
+        Expected to fail as can't reset in the Off state.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

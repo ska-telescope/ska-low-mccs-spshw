@@ -232,6 +232,7 @@ def subarray_beam_health_changed_callback(
     """
     return mock_callback_factory()
 
+
 @pytest.fixture()
 def station_beam_health_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
@@ -416,6 +417,7 @@ def subarray_beam_on_fqdn(subarray_beam_on_id: int) -> str:
     """
     return f"low-mccs/subarraybeam/{subarray_beam_on_id:02d}"
 
+
 @pytest.fixture()
 def station_beam_off_id() -> int:
     """
@@ -460,6 +462,7 @@ def station_beam_on_fqdn(station_beam_on_id: int) -> str:
     :return: the FQDN for a mock station beam that is powered on.
     """
     return f"low-mccs/beam/{station_beam_on_id:02d}"
+
 
 @pytest.fixture()
 def channel_blocks() -> list[int]:
@@ -523,6 +526,7 @@ def mock_subarray_beam_on() -> unittest.mock.Mock:
     builder.add_result_command("Scan", result_code=ResultCode.OK)
     return builder()
 
+
 @pytest.fixture()
 def mock_station_beam_off() -> unittest.mock.Mock:
     """
@@ -547,6 +551,7 @@ def mock_station_beam_on() -> unittest.mock.Mock:
     builder.set_state(tango.DevState.ON)
     builder.add_result_command("Configure", result_code=ResultCode.OK)
     return builder()
+
 
 @pytest.fixture()
 def initial_mocks(

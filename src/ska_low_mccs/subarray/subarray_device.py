@@ -238,11 +238,13 @@ class MccsSubarray(SKASubarray):
         :param station_beam_fqdns: the FQDNs of station beams assigned
             to this subarray
         """
-        if station_fqdns or subarray_beam_fqdns or station_beams:
+        if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
             self.obs_state_model.perform_action("component_resourced")
         else:
             self.obs_state_model.perform_action("component_unresourced")
-        self._health_model.resources_changed(station_fqdns, subarray_beam_fqdns, station_beam_fqdns)
+        self._health_model.resources_changed(
+            station_fqdns, subarray_beam_fqdns, station_beam_fqdns
+        )
 
     def _configured_changed(
         self: MccsSubarray,

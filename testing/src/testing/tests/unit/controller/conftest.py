@@ -132,8 +132,8 @@ def controller_resource_manager(
 
     :param subarray_fqdns: FQDNS of all subarray devices
     :param subrack_fqdns: FQDNS of all subrack devices
-    :param station_fqdns: FQDNS of all station devices
     :param subarray_beam_fqdns: FQDNS of all subarray beam devices
+    :param station_beam_fqdns: FQDNS of all subarray beam devices
     :param channel_blocks: ordinal numbers of all channel blocks
 
     :return: a controller resource manager for testing
@@ -239,6 +239,7 @@ def controller_component_manager(
     :param subrack_fqdns: FQDNS of all subrack devices
     :param station_fqdns: FQDNS of all station devices
     :param subarray_beam_fqdns: FQDNS of all subarray beam devices
+    :param station_beam_fqdns: FQDNS of all station beam devices
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
@@ -251,6 +252,8 @@ def controller_component_manager(
         the health of a station changes
     :param subarray_beam_health_changed_callback: callback to be called
         when the health of a subarray beam changes
+    :param station_beam_health_changed_callback: callback to be called
+        when the health of a station beam changes
 
     :return: a component manager for the MCCS controller device
     """

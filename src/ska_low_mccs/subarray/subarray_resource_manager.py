@@ -10,7 +10,7 @@
 """This module implements resource management for the MCCS subarray."""
 from __future__ import annotations
 
-from typing import Any, Hashable, Iterable, Mapping, Optional, cast
+from typing import Hashable, Iterable
 from ska_low_mccs.resource_manager import HealthfulReadyResourceManager
 
 
@@ -86,7 +86,7 @@ class SubarrayResourceManager:
         self._resource_manager.deallocate(**resources)
 
     def deallocate_from(
-        self: ControllerResourceManager,
+        self: SubarrayResourceManager,
         subarray_beam: str,
     ) -> None:
         """
@@ -146,9 +146,9 @@ class SubarrayResourceManager:
         self._resource_manager.remove_allocatees(allocatees)
 
     def set_ready(
-    self: SubarrayResourceManager,
-    subarray_beam: str,
-    is_ready: bool,
+        self: SubarrayResourceManager,
+        subarray_beam: str,
+        is_ready: bool,
     ) -> None:
         """
         Set the health of a resource.

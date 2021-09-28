@@ -126,12 +126,12 @@ class TestMccsStationBeam(object):
         """
         assert device_under_test.beamId == beam_id
 
-    def test_stationIds(
+    def test_stationId(
         self,
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test stationIds attribute.
+        Test stationId attribute.
 
         This is a very weak test that simply checks that the attribute
         starts as an empty list, and when we write a new value to it,
@@ -141,11 +141,11 @@ class TestMccsStationBeam(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert list(device_under_test.stationIds) == []
+        assert device_under_test.stationId == 0
 
-        value_to_write = [3, 4, 5, 6]
-        device_under_test.stationIds = value_to_write
-        assert list(device_under_test.stationIds) == value_to_write
+        value_to_write = 3
+        device_under_test.stationId = value_to_write
+        assert device_under_test.stationId == value_to_write
 
     @pytest.mark.parametrize(
         "attribute",

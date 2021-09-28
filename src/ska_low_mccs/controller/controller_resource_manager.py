@@ -10,7 +10,7 @@
 """This module implements component management for the MCCS controller."""
 from __future__ import annotations
 
-from typing import Any, Hashable, Iterable, Mapping, Optional, cast
+from typing import Hashable, Iterable, Mapping, cast
 from ska_low_mccs.resource_manager import HealthfulReadyResourceManager, ResourcePool
 
 
@@ -102,25 +102,17 @@ class ControllerResourceManager:
                 controller_resource_manager.allocate(
                     "low-mccs/subarray/01",
                     stations=[
-                        "low-mccs/station/001", "low-mccs/station/002"
+                        ["low-mccs/station/001", "low-mccs/station/002"]
                     ],
+                    station_beams=[["low-mccs/beam/01", "low-mccs/beam/02"]]
                     channel_blocks=[2, 3],
                 )
         """
-        station_beams = []
-
         # scrape stations from iterable - these are not a resource
-        # stations can be shared between subarrays - only need station_fqdn to assign other resources to
+        # stations can be shared between subarrays
         if "stations" in resources:
-            stations = resources.pop("stations", None)
-            # one station beam per station per subarray beam
-            # get free station beam for each station
-            for station in stations:
-                station_beams.append(
-                    self._resource_pool.getFreeResource("station_beams")
-                )
+            resources.pop("stations", None)
 
-        resources.update({"station_beams": station_beams})
         self._resource_manager.allocate(subarray, **resources)
 
     def deallocate(

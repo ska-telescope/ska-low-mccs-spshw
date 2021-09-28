@@ -35,6 +35,7 @@ class SubarrayHealthModel(HealthModel):
         """
         self._station_healths: dict[str, HealthState | None] = {}
         self._subarray_beam_healths: dict[str, HealthState | None] = {}
+        self._station_beam_healths: dict[str, HealthState | None] = {}
         super().__init__(health_changed_callback)
 
     def evaluate_health(
@@ -82,6 +83,8 @@ class SubarrayHealthModel(HealthModel):
         :param station_fqdns: the FQDNs of stations assigned to this
             subarray
         :param subarray_beam_fqdns: the FQDNs of subarray beams assigned
+            to this subarray
+        :param station_beam_fqdns: the FQDNs of station beams assigned
             to this subarray
         """
         self._station_healths = {

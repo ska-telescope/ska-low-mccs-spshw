@@ -171,6 +171,7 @@ class ControllerComponentManager(MccsComponentManager):
         :param subrack_fqdns: FQDNS of all subrack devices
         :param station_fqdns: FQDNS of all station devices
         :param subarray_beam_fqdns: FQDNS of all subarray beam devices
+        :param station_beam_fqdns: FQDNS of all station beam devices
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -538,11 +539,14 @@ class ControllerComponentManager(MccsComponentManager):
         :param channel_blocks: ordinal numbers of the channel blocks to
             be allocated to the subarray
 
+        :raises ValueError: if trying to assign a station not in the controller's Stations
+
         :return: a result code
         """
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
-        #stations are not managed by the resource manager, so we have to explicitely check if they're valid FQDNs here
+        # stations are not managed by the resource manager, so we have to explicitely check if
+        # they're valid FQDNs here
         for station_group in station_fqdns:
             for fqdn in station_group:
                 if fqdn not in self._stations.keys():
@@ -555,7 +559,7 @@ class ControllerComponentManager(MccsComponentManager):
             for station_groups in station_fqdns:
                 for _ in station_groups:
                     station_beam_fqdns_per_subarray_beam.append(
-                        self._resource_manager.resource_pool.getFreeResource(
+                        self._resource_manager.resource_pool.get_free_resource(
                             "station_beams"
                         )
                     )
@@ -571,9 +575,17 @@ class ControllerComponentManager(MccsComponentManager):
             station_fqdns, subarray_beam_fqdns, station_beam_fqdns, channel_blocks
         )
 
-        #don't forget to free Station Beams if allocate was unsuccessful:
+        # don't forget to free Station Beams if allocate was unsuccessful:
         if result_code != ResultCode.OK:
-            self._resource_manager.resource_pool.freeResources({"station_beams": [station_beam_fqdn for station_beam_group in station_beam_fqdns for station_beam_fqdn in station_beam_group]})
+            self._resource_manager.resource_pool.free_resources(
+                {
+                    "station_beams": [
+                        station_beam_fqdn
+                        for station_beam_group in station_beam_fqdns
+                        for station_beam_fqdn in station_beam_group
+                    ]
+                }
+            )
 
         return result_code
 
@@ -605,8 +617,8 @@ class ControllerComponentManager(MccsComponentManager):
         for station_beam_fqdn in station_beams:
             self._station_beams[station_beam_fqdn].write_subarray_id(0)
             self._station_beams[station_beam_fqdn].write_station_fqdn(None)
-            self._station_beams[station_beam_fqdn].write_station_id(0)        
-        self._resource_manager.resource_pool.freeResources(station_beams)
+            self._station_beams[station_beam_fqdn].write_station_id(0)
+        self._resource_manager.resource_pool.free_resources(station_beams)
 
         return self._subarrays[subarray_fqdn].release_all_resources()
 

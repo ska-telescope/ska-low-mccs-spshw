@@ -38,6 +38,8 @@ class ControllerHealthModel(HealthModel):
         :param subrack_fqdns: the FQDNs of this controller's subracks
         :param subarray_beam_fqdns: the FQDNs of this controller's
             subarray beams
+        :param station_beam_fqdns: the FQDNs of this controller's
+            station beams
         :param health_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.

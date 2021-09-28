@@ -44,6 +44,8 @@ class TestSubarrayComponentManager:
             powered on.
         :param subarray_beam_on_fqdn: the FQDN of a mock subarray beam
             that is powered on
+        :param station_beam_on_fqdn: the FQDN of a mock station beam
+            that is powered on
         :param channel_blocks: a mock list of channel blocks
         """
         subarray_component_manager.start_communicating()
@@ -125,6 +127,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_off_fqdn: the FQDN of a subarray beam that is powered
             off.
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
+            on.
+        :param station_beam_off_fqdn: the FQDN of a station beam that is powered
+            off.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
             on.
         :param channel_blocks: a list of channel blocks.
         :param assign_completed_callback: callback to be called when the
@@ -275,6 +281,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
         :param mock_subarray_beam_on: a mock subarray beam that is powered on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
+            on.
+        :param station_beam_off_fqdn: the FQDN of a station beam that is powered
+            off.
         :param channel_blocks: a list of channel blocks.
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
@@ -469,6 +479,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
         :param mock_subarray_beam_on: a mock subarray beam that is powered on.
+        :param station_beam_on_id: the id number of a station beam that is
+            powered on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
+            on.
         :param channel_blocks: a list of channel blocks.
         :param scan_id: a scan id for use in testing
         :param start_time: a scan start time for use in testing

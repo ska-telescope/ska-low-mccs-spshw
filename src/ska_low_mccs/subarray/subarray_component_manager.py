@@ -412,6 +412,26 @@ class SubarrayComponentManager(
             for subarray_beam in subarray_beams
         }
 
+        result_code = self._configure_stations(station_configuration)
+        if result_code != ResultCode.FAILED:
+            result_code = self._configure_subarray_beams(subarray_beam_configuration)
+        self._configured_changed_callback(True)
+
+        if result_code == ResultCode.OK:
+            self._configure_completed_callback()
+        return result_code
+
+    def _configure_stations(
+        self: SubarrayComponentManager,
+        station_configuration: dict[str, Any],
+    ) -> ResultCode:
+        """
+        Configure the station resources for a scan.
+
+        :param station_configuration: the station configuration to be applied
+
+        :return: a result code
+        """
         result_code = ResultCode.OK
         for (station_id, configuration) in station_configuration.items():
             station_fqdn = f"low-mccs/station/{station_id:03d}"
@@ -424,6 +444,20 @@ class SubarrayComponentManager(
                 self._device_obs_states[station_fqdn] = ObsState.CONFIGURING
                 if result_code == ResultCode.OK:
                     result_code = ResultCode.QUEUED
+        return result_code
+
+    def _configure_subarray_beams(
+        self: SubarrayComponentManager,
+        subarray_beam_configuration: dict[str, Any],
+    ) -> ResultCode:
+        """
+        Configure the subarray beam resources for a scan.
+
+        :param subarray_beam_configuration: the subarray beam configuration to be applied
+
+        :return: a result code
+        """
+        result_code = ResultCode.OK
         for (subarray_beam_id, configuration) in subarray_beam_configuration.items():
             subarray_beam_fqdn = f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
             subarray_beam_proxy = self._subarray_beams[subarray_beam_fqdn]
@@ -434,10 +468,6 @@ class SubarrayComponentManager(
                 self._configuring_resources.add(subarray_beam_fqdn)
                 if result_code == ResultCode.OK:
                     result_code = ResultCode.QUEUED
-        self._configured_changed_callback(True)
-
-        if result_code == ResultCode.OK:
-            self._configure_completed_callback()
         return result_code
 
     @check_communicating

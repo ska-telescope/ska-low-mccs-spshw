@@ -131,7 +131,7 @@ class TestPowerManagement:
         tests to use real subarray beam devices.
     """
 
-    def test_controller_state_rollup(
+    def test_controller_state_rollup(  # noqa: C901
         self: TestPowerManagement, tango_harness: TangoHarness
     ) -> None:
         """

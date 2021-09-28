@@ -275,6 +275,18 @@ class ResourceManager:
         """
         self._allocatees.update(allocatees)
 
+    def remove_allocatees(
+         self: ResourceManager,
+        allocatees: Iterable[Hashable],
+    ) -> None:
+        """
+        Remove allocatees from this Resource Manager.
+
+        :param allocatees: targets for allocation of resources to be removed.
+        """
+        for allocatee in allocatees:
+            self._allocatees.remove(allocatee)
+
     def add_resources(
         self: ResourceManager,
         **resources: Iterable[Hashable],
@@ -314,7 +326,21 @@ class ResourceManager:
             of a resource type, and the value being the set of resources
             of that type to be removed from this resource manager's resources.
         """
-        pass
+        # check exists:
+        not_managed = []
+        for resource_type in resources:
+            for resource in resources[resource_type]:
+                if resource not in self._allocations[resource_type]:
+                    not_managed.append({resource_type: resource})
+
+        if not_managed:
+            raise ValueError(
+                f"Cannot remove non-managed resources: {not_managed}."
+            )
+
+        for resource_type in resources:
+            for resource in resources[resource_type]:
+                self._allocations[resource_type].pop(resource)
 
 
 class _HealthfulResourceManager(ResourceManager):
@@ -419,22 +445,49 @@ class _HealthfulResourceManager(ResourceManager):
         :raises ValueError: if the resource being added already exists in the resource manager
         """
         super().add_resources(**healthful_resources)
-        # check if allocated:
-        already_allocated = []
+        # check if managed:
+        already_managed = []
         for resource_type in healthful_resources:
             for resource in healthful_resources[resource_type]:
                 if self._allocations[resource_type][resource]:
-                    already_allocated.append({resource_type: resource})
+                    already_managed.append({resource_type: resource})
 
-        if already_allocated:
+        if already_managed:
             raise ValueError(
-                f"Cannot add already managed resources: {already_allocated}."
+                f"Cannot add already managed resources: {already_managed}."
             )
         
         for resource_type in healthful_resources:
             for resource in healthful_resources[resource_type]:
-                if not resource in self._healthy[resource_type].keys():
-                    self._healthy[resource_type][resource] = False
+                self._healthy[resource_type][resource] = False
+
+    def remove_resources(
+         self: ResourceManager,
+        **healthful_resources: Iterable[Hashable],
+    ) -> None:
+        """
+        Remove resources to this resource manager.
+
+        :param healthful_resources: The resources to remove
+
+        :raises ValueError: if the resource being removed does not exist in the resource manager
+        """
+        # check if not managed:
+        not_managed = []
+        for resource_type in healthful_resources:
+            for resource in healthful_resources[resource_type]:
+                if resource not in self._allocations[resource_type]:
+                    not_managed.append({resource_type: resource})
+
+        if not_managed:
+            raise ValueError(
+                f"Cannot remove non-managed resources: {not_managed}."
+            )
+        super().remove_resources(**healthful_resources)
+        
+        for resource_type in healthful_resources:
+            for resource in healthful_resources[resource_type]:
+                    self._healthy[resource_type].pop(resource)
 
     def set_health(
         self: _HealthfulResourceManager,
@@ -542,6 +595,21 @@ class _ReadyResourceManager(ResourceManager):
             self._ready[allocatee] = False
         super().add_allocatees(allocatees)
 
+    def remove_allocatees(
+        self: _ReadyResourceManager,
+        allocatees: Iterable[Hashable],
+    ) -> None:
+        """
+        Remove targets for allocation of resources.
+
+        :param allocatees: targets for allocation to remove
+        """
+        for allocatee in allocatees:
+            if allocatee not in self._ready.keys():
+                raise ValueError(f"Allocatee does not exist in resource manager: {allocatee}.")
+            self._ready.pop(allocatee)
+        super().remove_allocatees(allocatees)        
+
     def set_ready(
         self: _ReadyResourceManager,
         allocatee: Hashable,
@@ -596,26 +664,49 @@ class ResourcePool:
 
         :raises ValueError: if there a no free resources.
         """
-        print(self._resources)
         for resource in self._resources[resource_type]:
             if self._resources[resource_type][resource]:
                 self._resources[resource_type][resource] = False
                 return resource
 
-        raise ValueError(f"No free resources of type: {resource_type}.")
+        raise ValueError(f"No free resources of type: {resource_type}. {self._resources}")
 
-    def freeResource(
+    def freeResources(
+        self: ResourcePool,
+        resources: Iterable[Hashable],
+    ) -> None:
+        """
+        Mark a resource as unallocated.
+
+        :param resource: the resource to free.
+
+        :raises ValueError: if resource does not exist in the pool.
+        """
+        for resource_type in resources:
+            for resource in resources[resource_type]:            
+                if resource not in self._resources[resource_type]:
+                    raise ValueError(f"Resource {resource} not in pool.")
+
+        for resource_type in resources:
+            for resource in resources[resource_type]:
+                self._resources[resource_type][resource] = True
+
+    def lockResources(
         self: ResourcePool,
         resource: Hashable,
     ) -> None:
-        """Mark a resource as unallocated."""
-        if self._resources[resource]:
-            self._resources[resource] = True
+        """
+        Mark a resource as locked.
 
-    def lockResource(
-        self: ResourcePool,
-        resource: Hashable,
-    ) -> None:
-        """Mark a resource as locked."""
-        if self._resources[resource]:
-            self._resources[resource] = False
+        :param resource: the resource to lock.
+        
+        :raises ValueError: if resource does not exist in the pool.
+        """
+        for resource_type in resources:
+            for resource in resources[resource_type]:            
+                if resource not in self._resources[resource_type]:
+                    raise ValueError(f"Resource {resource} not in pool.")
+
+        for resource_type in resources:
+            for resource in resources[resource_type]:
+                self._resources[resource_type][resource] = False

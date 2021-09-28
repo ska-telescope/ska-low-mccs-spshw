@@ -78,7 +78,7 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         self._subarray_id = 0
         self._beam_id = beam_id
-        self._station_id: int = []
+        self._station_id: int = 0
         self._logical_beam_id = 0
         self._update_rate = 0.0
         self._is_beam_locked = False
@@ -224,6 +224,15 @@ class StationBeamComponentManager(MccsComponentManager):
         :return: the subarray id
         """
         return self._subarray_id
+
+    @subarray_id.setter
+    def subarray_id(self: StationBeamComponentManager, value: int) -> None:
+        """
+        Set the Subarray ID.
+
+        :param value: the new subarray id
+        """
+        self._subarray_id = value
 
     @property
     def station_id(self: StationBeamComponentManager) -> int:

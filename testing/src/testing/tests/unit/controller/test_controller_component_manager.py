@@ -197,7 +197,7 @@ class TestControllerComponentManager:
         with pytest.raises(ConnectionError, match="Component is not turned on"):
             controller_component_manager.allocate(
                 99,  # unknown subarray id
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -216,7 +216,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Unsupported resources"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/unknown"],
+                [["low-mccs/station/unknown"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -224,7 +224,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Allocatee is unready"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -241,7 +241,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -254,7 +254,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -266,7 +266,7 @@ class TestControllerComponentManager:
 
         controller_component_manager.allocate(
             1,
-            ["low-mccs/station/001"],
+            [["low-mccs/station/001"]],
             ["low-mccs/subarraybeam/02"],
             [3, 4],
         )
@@ -277,8 +277,9 @@ class TestControllerComponentManager:
         ].AssignResources.assert_called_once_with(
             json.dumps(
                 {
-                    "stations": ["low-mccs/station/001"],
+                    "stations": [["low-mccs/station/001"]],
                     "subarray_beams": ["low-mccs/subarraybeam/02"],
+                    "station_beams": [["low-mccs/beam/04"]],
                     "channel_blocks": [3, 4],
                 }
             )
@@ -292,7 +293,7 @@ class TestControllerComponentManager:
 
         controller_component_manager.allocate(
             2,
-            ["low-mccs/station/001"],
+            [["low-mccs/station/001"]],
             ["low-mccs/subarraybeam/02"],
             [3, 4],
         )
@@ -303,8 +304,9 @@ class TestControllerComponentManager:
         ].AssignResources.assert_called_once_with(
             json.dumps(
                 {
-                    "stations": ["low-mccs/station/001"],
+                    "stations": [["low-mccs/station/001"]],
                     "subarray_beams": ["low-mccs/subarraybeam/02"],
+                    "station_beams": [["low-mccs/beam/04"]],
                     "channel_blocks": [3, 4],
                 }
             )

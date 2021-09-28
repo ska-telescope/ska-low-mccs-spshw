@@ -85,6 +85,18 @@ class SubarrayResourceManager:
         """
         self._resource_manager.deallocate(**resources)
 
+    def deallocate_from(
+        self: ControllerResourceManager,
+        subarray_beam: str,
+    ) -> None:
+        """
+        Deallocate all resources from a subarray beam.
+
+        :param subarray_beam: the subarray beam to which resources are to be
+            allocated
+        """
+        self._resource_manager.deallocate_from(subarray_beam)
+
     def add_resources(
         self: SubarrayResourceManager,
         resources: Iterable[Hashable],
@@ -98,6 +110,19 @@ class SubarrayResourceManager:
         """
         self._resource_manager.add_resources(**resources)
 
+    def remove_resources(
+        self: SubarrayResourceManager,
+        resources: Iterable[Hashable],
+    ) -> None:
+        """
+        Remove a resource from this resource manager.
+
+        :param resources: keyword args, with each keyword being the name
+            of a resource type, and the value being the set of resources
+            of that type to be removed from this resource manager's resources.
+        """
+        self._resource_manager.remove_resources(**resources)
+
     def add_allocatees(
         self: SubarrayResourceManager,
         allocatees: Iterable[Hashable],
@@ -108,6 +133,17 @@ class SubarrayResourceManager:
         :param allocatees: new targets for allocation of resources.
         """
         self._resource_manager.add_allocatees(allocatees)
+
+    def remove_allocatees(
+        self: SubarrayResourceManager,
+        allocatees: Iterable[Hashable],
+    ) -> None:
+        """
+        Remove a resource to this resource manager.
+
+        :param allocatees: new targets for allocation to remove.
+        """
+        self._resource_manager.remove_allocatees(allocatees)
 
     def set_ready(
     self: SubarrayResourceManager,

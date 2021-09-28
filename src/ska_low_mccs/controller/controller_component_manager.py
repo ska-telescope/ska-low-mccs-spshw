@@ -71,6 +71,7 @@ class _SubarrayProxy(DeviceComponentManager):
         self: _SubarrayProxy,
         station_fqdns: Iterable[str],
         subarray_beam_fqdns: Iterable[str],
+        station_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
     ) -> ResultCode:
         """
@@ -78,6 +79,8 @@ class _SubarrayProxy(DeviceComponentManager):
 
         :param station_fqdns: FQDNs of stations assigned to the subarray
         :param subarray_beam_fqdns: FQDNs of subarray beams assigned to
+            the subarray
+        :param station_beam_fqdns: FQDNs of station beams assigned to
             the subarray
         :param channel_blocks: the channel block numbers assigned to the
             subarray
@@ -90,6 +93,7 @@ class _SubarrayProxy(DeviceComponentManager):
                 {
                     "stations": sorted(station_fqdns),
                     "subarray_beams": sorted(subarray_beam_fqdns),
+                    "station_beams": sorted(station_beam_fqdns),
                     "channel_blocks": sorted(channel_blocks),
                 }
             )
@@ -538,27 +542,39 @@ class ControllerComponentManager(MccsComponentManager):
         """
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
+        #stations are not managed by the resource manager, so we have to explicitely check if they're valid FQDNs here
+        for station_group in station_fqdns:
+            for fqdn in station_group:
+                if fqdn not in self._stations.keys():
+                    raise ValueError(f"Unsupported resources: {fqdn}.")
+
+        # for each subarray-beam: get number of stations (n), request n station-beams from pool
+        station_beam_fqdns = []
+        for _ in subarray_beam_fqdns:
+            station_beam_fqdns_per_subarray_beam = []
+            for station_groups in station_fqdns:
+                for _ in station_groups:
+                    station_beam_fqdns_per_subarray_beam.append(
+                        self._resource_manager.resource_pool.getFreeResource(
+                            "station_beams"
+                        )
+                    )
+                station_beam_fqdns.append(station_beam_fqdns_per_subarray_beam.copy())
+
         self._resource_manager.allocate(
             subarray_fqdn,
             subarray_beams=subarray_beam_fqdns,
             channel_blocks=channel_blocks,
         )
 
-        # for each subarray-beam: get number of stations (n), request n station-beams from pool
-        station_beam_fqdns = []
-        for _ in subarray_beam_fqdns:
-            station_beam_fqdns_per_subarray_beam = []
-            for _ in station_fqdns:
-                station_beam_fqdns_per_subarray_beam.append(
-                    self._resource_manager.resource_pool.getFreeResource(
-                        "station_beams"
-                    )
-                )
-            station_beam_fqdns.append(station_beam_fqdns_per_subarray_beam.copy())
-
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            subarray_beam_fqdns, station_fqdns, station_beam_fqdns, channel_blocks
+            station_fqdns, subarray_beam_fqdns, station_beam_fqdns, channel_blocks
         )
+
+        #don't forget to free Station Beams if allocate was unsuccessful:
+        if result_code != ResultCode.OK:
+            self._resource_manager.resource_pool.freeResources({"station_beams": [station_beam_fqdn for station_beam_group in station_beam_fqdns for station_beam_fqdn in station_beam_group]})
+
         return result_code
 
     @check_communicating
@@ -585,6 +601,12 @@ class ControllerComponentManager(MccsComponentManager):
 
         for station_fqdn in allocated.get("stations", []):
             self._stations[station_fqdn].write_subarray_id(0)
+        station_beams = allocated.get("station_beams", [])
+        for station_beam_fqdn in station_beams:
+            self._station_beams[station_beam_fqdn].write_subarray_id(0)
+            self._station_beams[station_beam_fqdn].write_station_fqdn(None)
+            self._station_beams[station_beam_fqdn].write_station_id(0)        
+        self._resource_manager.resource_pool.freeResources(station_beams)
 
         return self._subarrays[subarray_fqdn].release_all_resources()
 

@@ -76,6 +76,7 @@ class MccsSubarray(SKASubarray):
             self._obs_fault_occurred,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
+            self._health_model.station_beam_health_changed,
         )
 
     def init_command_objects(self):
@@ -222,6 +223,7 @@ class MccsSubarray(SKASubarray):
         self: MccsSubarray,
         station_fqdns: set[str],
         subarray_beam_fqdns: set[str],
+        station_beam_fqdns: set[str],
     ) -> None:
         """
         Handle change in subarray resources.
@@ -233,12 +235,14 @@ class MccsSubarray(SKASubarray):
             subarray
         :param subarray_beam_fqdns: the FQDNs of subarray beams assigned
             to this subarray
+        :param station_beam_fqdns: the FQDNs of station beams assigned
+            to this subarray
         """
-        if station_fqdns or subarray_beam_fqdns:
+        if station_fqdns or subarray_beam_fqdns or station_beams:
             self.obs_state_model.perform_action("component_resourced")
         else:
             self.obs_state_model.perform_action("component_unresourced")
-        self._health_model.resources_changed(station_fqdns, subarray_beam_fqdns)
+        self._health_model.resources_changed(station_fqdns, subarray_beam_fqdns, station_beam_fqdns)
 
     def _configured_changed(
         self: MccsSubarray,

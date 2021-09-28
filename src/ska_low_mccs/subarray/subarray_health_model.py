@@ -71,6 +71,7 @@ class SubarrayHealthModel(HealthModel):
         self: SubarrayHealthModel,
         station_fqdns: set[str],
         subarray_beam_fqdns: set[str],
+        station_beam_fqdns: set[str],
     ) -> None:
         """
         Handle change in subarray resources.
@@ -90,6 +91,10 @@ class SubarrayHealthModel(HealthModel):
         self._subarray_beam_fqdns = {
             fqdn: self._subarray_beam_healths.get(fqdn, HealthState.UNKNOWN)
             for fqdn in subarray_beam_fqdns
+        }
+        self._station_beam_fqdns = {
+            fqdn: self._station_beam_healths.get(fqdn, HealthState.UNKNOWN)
+            for fqdn in station_beam_fqdns
         }
         self.update_health()
 
@@ -131,4 +136,24 @@ class SubarrayHealthModel(HealthModel):
             into account.
         """
         self._subarray_beam_healths[fqdn] = health_state
+        self.update_health()
+
+    def station_beam_health_changed(
+        self: SubarrayHealthModel,
+        fqdn: str,
+        health_state: HealthState | None,
+    ) -> None:
+        """
+        Handle change in station beam health.
+
+        This is a callback hook, called by the component manager when
+        the health of a station beam changes.
+
+        :param fqdn: the FQDN of the station beam whose health has
+            changed
+        :param health_state: the new health state of the station beam,
+            or None if the station beam's health should not be taken
+            into account.
+        """
+        self._station_beam_healths[fqdn] = health_state
         self.update_health()

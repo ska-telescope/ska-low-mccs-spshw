@@ -28,6 +28,7 @@ class TestSubarrayComponentManager:
         communication_status_changed_callback: MockCallable,
         station_on_fqdn: str,
         subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
     ) -> None:
         """
@@ -61,6 +62,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [[station_beam_on_fqdn]],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -201,9 +203,9 @@ class TestSubarrayComponentManager:
         # Release
         result_code = subarray_component_manager.release(
             {
-                "stations": [[station_off_fqdn]],
+                "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [[station_beam_on_fqdn]],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -216,7 +218,7 @@ class TestSubarrayComponentManager:
             station_beam_on_fqdn,
         }
         resources_changed_callback.assert_next_call(
-            {station_on_fqdn}, {subarray_beam_on_fqdn}
+            {station_on_fqdn}, {subarray_beam_on_fqdn}, {station_beam_on_fqdn}
         )
 
         # Release all
@@ -224,7 +226,7 @@ class TestSubarrayComponentManager:
         assert result_code == ResultCode.OK
         release_completed_callback.assert_next_call()
         assert subarray_component_manager.assigned_resources == set()
-        resources_changed_callback.assert_next_call(set(), set())
+        resources_changed_callback.assert_next_call(set(), set(), set())
 
     def test_configure(
         self: TestSubarrayComponentManager,
@@ -241,6 +243,8 @@ class TestSubarrayComponentManager:
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
         mock_subarray_beam_on: unittest.mock.Mock,
+        station_beam_on_fqdn: str,
+        station_beam_off_fqdn: str,
         channel_blocks: list[int],
         assign_completed_callback: MockCallable,
         configure_completed_callback: MockCallable,
@@ -285,8 +289,9 @@ class TestSubarrayComponentManager:
         # can't configure when resources are OFF
         result_code = subarray_component_manager.assign(
             {
-                "stations": [station_off_fqdn],
+                "stations": [[station_off_fqdn]],
                 "subarray_beams": [subarray_beam_off_fqdn],
+                "station_beams": [[station_beam_off_fqdn]],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -314,8 +319,9 @@ class TestSubarrayComponentManager:
 
         result_code = subarray_component_manager.assign(
             {
-                "stations": [station_on_fqdn],
+                "stations": [[station_on_fqdn]],
                 "subarray_beams": [subarray_beam_off_fqdn],
+                "station_beams": [[station_beam_off_fqdn]],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -346,8 +352,9 @@ class TestSubarrayComponentManager:
         assert result_code == ResultCode.OK
         result_code = subarray_component_manager.assign(
             {
-                "stations": [station_off_fqdn],
+                "stations": [[station_off_fqdn]],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [[station_beam_on_fqdn]],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -379,8 +386,9 @@ class TestSubarrayComponentManager:
         # CAN configure when resources are ON
         result_code = subarray_component_manager.assign(
             {
-                "stations": [station_on_fqdn],
+                "stations": [[station_on_fqdn]],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [[station_beam_on_fqdn]],
                 "channel_blocks": channel_blocks,
             }
         )

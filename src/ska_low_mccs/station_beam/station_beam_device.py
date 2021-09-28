@@ -159,6 +159,15 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self.component_manager.subarray_id
 
+    @subarrayId.write
+    def subarrayId(self: MccsStationBeam, subarray_id: int) -> None:
+        """
+        Set the subarray ID.
+
+        :param subarray_id: The ID of the subarray this beam is assigned to
+        """
+        self.omponent_manager.subarray_id = subarray_id
+
     @attribute(dtype="DevLong", format="%i", max_value=47, min_value=0)
     def beamId(self: MccsStationBeam) -> int:
         """

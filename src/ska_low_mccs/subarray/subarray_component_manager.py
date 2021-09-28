@@ -127,7 +127,7 @@ class SubarrayComponentManager(
         abort_completed_callback: Callable[[], None],
         obsreset_completed_callback: Callable[[], None],
         restart_completed_callback: Callable[[], None],
-        resources_changed_callback: Callable[[set[str], set[str]], None],
+        resources_changed_callback: Callable[[set[str], set[str], set[str]], None],
         configured_changed_callback: Callable[[bool], None],
         scanning_changed_callback: Callable[[bool], None],
         obs_fault_callback: Callable[[bool], None],
@@ -170,6 +170,9 @@ class SubarrayComponentManager(
             when the health of this station's APIU changes
         :param subarray_beam_health_changed_callback: callback to be
             called when the health of one of this station's antennas
+            changes
+        :param station_beam_health_changed_callback: callback to be
+            called when the health of one of this subarray's station beams
             changes
         """
         self._assign_completed_callback = assign_completed_callback
@@ -286,11 +289,13 @@ class SubarrayComponentManager(
 
         if station_fqdns_to_add or subarray_beam_fqdns_to_add or station_beam_fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-            # for fqdn in station_fqdns_to_add:
-            #     self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
-            #     self._station_power_modes[fqdn] = None
-            #     self._device_obs_states[fqdn] = ObsState.IDLE
             for fqdn in subarray_beam_fqdns_to_add:
+                self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
+                self._device_obs_states[fqdn] = ObsState.IDLE
+            for fqdn in station_beam_fqdns_to_add:
+                self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
+                self._device_obs_states[fqdn] = ObsState.IDLE
+            for fqdn in station_fqdns_to_add:
                 self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
                 self._device_obs_states[fqdn] = ObsState.IDLE
             self._evaluate_communication_status()
@@ -382,6 +387,7 @@ class SubarrayComponentManager(
                 {
                     "subarray_beams": ["low-mccs/subarraybeam/01"],
                     "stations": ["low-mccs/station/001", "low-mccs/station/002"],
+                    "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"],
                     "channel_blocks": [3]
                 }
 
@@ -389,10 +395,14 @@ class SubarrayComponentManager(
         """
         station_fqdns: Sequence[str] = resource_spec.get("stations", [])
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
+        station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
 
         station_fqdns_to_remove = self._stations.keys() & station_fqdns
         subarray_beam_fqdns_to_remove = (
             self._subarray_beams.keys() & subarray_beam_fqdns
+        )
+        station_beam_fqdns_to_remove = (
+            self._station_beams.keys() & station_beam_fqdns
         )
 
         if len(station_fqdns_to_remove) != len(subarray_beam_fqdns_to_remove):
@@ -403,18 +413,24 @@ class SubarrayComponentManager(
             self._release_completed_callback()
             return ResultCode.FAILED
 
-        if station_fqdns_to_remove or subarray_beam_fqdns_to_remove:
+        if station_fqdns_to_remove or subarray_beam_fqdns_to_remove or station_beam_fqdns_to_remove:
             for fqdn in station_fqdns_to_remove:
                 del self._stations[fqdn]
                 del self._device_communication_statuses[fqdn]
                 del self._device_obs_states[fqdn]
-            for fqdn in subarray_beam_fqdns_to_remove:
+            self._resource_manager.remove_allocatees(subarray_beam_fqdns_to_remove)
+            for fqdn in subarray_beam_fqdns_to_remove:                
                 del self._subarray_beams[fqdn]
                 del self._device_communication_statuses[fqdn]
                 del self._device_obs_states[fqdn]
+            for fqdn in station_beam_fqdns_to_remove:
+                del self._station_beams[fqdn]
+                del self._device_communication_statuses[fqdn]
+                del self._device_obs_states[fqdn]
+                
 
             self._resources_changed_callback(
-                set(self._stations.keys()), set(self._subarray_beams.keys())
+                set(self._stations.keys()), set(self._subarray_beams.keys()), set(self._station_beams.keys())
             )
             self._evaluate_communication_status()
 
@@ -430,14 +446,19 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        if self._stations or self._subarray_beams:
+        if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
+            for subarray_beam in self._subarray_beams:
+                self._resource_manager.deallocate_from(subarray_beam)
+            self._resource_manager.remove_allocatees(set(self._subarray_beams.keys()))
             self._subarray_beams.clear()
+            self._resource_manager.remove_resources({"station_beams": set(self._station_beams.keys())})
+            self._station_beams.clear()
             self._device_communication_statuses.clear()
             self._device_obs_states.clear()
 
             self._resources_changed_callback(
-                set(self._stations.keys()), set(self._subarray_beams.keys())
+                set(self._stations.keys()), set(self._subarray_beams.keys()) , set(self._station_beams.keys())
             )
             self._evaluate_communication_status()
         self._release_completed_callback()

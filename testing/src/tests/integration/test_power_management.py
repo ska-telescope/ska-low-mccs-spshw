@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable
+from typing import Any, Callable, List
 import unittest.mock
 
 import pytest
@@ -131,7 +131,21 @@ class TestPowerManagement:
         tests to use real subarray beam devices.
     """
 
-    def test_controller_state_rollup(  # noqa: C901
+    def _check_states(
+        self: TestPowerManagement,
+        devices: List[MccsDeviceProxy],
+        expected_state: tango.DevState,
+    ) -> None:
+        """
+        Check each of the devices has the expected state.
+
+        :param devices: a list of MccsDeviceProxy devices
+        :param expected_state: the expected state of each of the devices
+        """
+        for device in devices:
+            assert device.state() == expected_state, f"device = {device.name}"
+
+    def test_controller_state_rollup(
         self: TestPowerManagement, tango_harness: TangoHarness
     ) -> None:
         """
@@ -175,18 +189,17 @@ class TestPowerManagement:
 
         # putting a station online makes it transition to UNKNOWN because it doesn't yet
         # know the state of its apiu, antennas and tiles.
-        for station in [station_1, station_2]:
+        stations = [station_1, station_2]
+        for station in stations:
             assert station.adminMode == AdminMode.OFFLINE
             assert station.state() == tango.DevState.DISABLE
             station.adminMode = AdminMode.ONLINE
-            time.sleep(0.1)
-            assert station.state() == tango.DevState.UNKNOWN
-
-        assert controller.state() == tango.DevState.UNKNOWN
+        time.sleep(0.1)
+        self._check_states(stations + [controller], tango.DevState.UNKNOWN)
 
         # putting an antenna online makes it transition to UNKNOWN because it needs its
         # APIU and tile to be online in order to determine its state
-        for antenna in [
+        antennas = [
             antenna_1,
             antenna_2,
             antenna_3,
@@ -195,64 +208,35 @@ class TestPowerManagement:
             antenna_6,
             antenna_7,
             antenna_8,
-        ]:
+        ]
+        for antenna in antennas:
             assert antenna.adminMode == AdminMode.OFFLINE
             assert antenna.state() == tango.DevState.DISABLE
             antenna.adminMode = AdminMode.ONLINE
-            time.sleep(0.1)
-            assert antenna.state() == tango.DevState.UNKNOWN
-
         time.sleep(0.1)
-        for station in [station_1, station_2]:
-            assert station.state() == tango.DevState.UNKNOWN
-
-        time.sleep(0.1)
-        assert controller.state() == tango.DevState.UNKNOWN
+        self._check_states(antennas + stations + [controller], tango.DevState.UNKNOWN)
 
         # putting the APIU online makes it transition to OFF because it knows it is off.
         # And the antennas transition to OFF too, because they infer from the APIU being
         # off that they must be off too.
-        for apiu in [apiu_1, apiu_2]:
+        apius = [apiu_1, apiu_2]
+        for apiu in apius:
             assert apiu.adminMode == AdminMode.OFFLINE
             assert apiu.state() == tango.DevState.DISABLE
             apiu.adminMode = AdminMode.ONLINE
-            time.sleep(0.1)
-            assert apiu.state() == tango.DevState.OFF
-
-        for antenna in [
-            antenna_1,
-            antenna_2,
-            antenna_3,
-            antenna_4,
-            antenna_5,
-            antenna_6,
-            antenna_7,
-            antenna_8,
-        ]:
-            assert antenna.state() == tango.DevState.OFF
-
         time.sleep(0.1)
-        for station in [station_1, station_2]:
-            assert station.state() == tango.DevState.UNKNOWN
-
-        time.sleep(0.1)
-        assert controller.state() == tango.DevState.UNKNOWN
+        self._check_states(apius + antennas, tango.DevState.OFF)
+        self._check_states(stations + [controller], tango.DevState.UNKNOWN)
 
         # putting a tile online makes it transition to UNKNOWN because it needs the
         # subrack to be on in order to determine its state
-        for tile in [tile_1, tile_2, tile_3, tile_4]:
+        tiles = [tile_1, tile_2, tile_3, tile_4]
+        for tile in tiles:
             assert tile.adminMode == AdminMode.OFFLINE
             assert tile.state() == tango.DevState.DISABLE
             tile.adminMode = AdminMode.ONLINE
-            time.sleep(0.1)
-            assert tile.state() == tango.DevState.UNKNOWN
-
         time.sleep(0.1)
-        for station in [station_1, station_2]:
-            assert station.state() == tango.DevState.UNKNOWN
-
-        time.sleep(0.1)
-        assert controller.state() == tango.DevState.UNKNOWN
+        self._check_states(tiles + stations + [controller], tango.DevState.UNKNOWN)
 
         # putting the subrack online will make it transition to OFF (having detected
         # that the subrack hardware is turned off. Tile infers that its TPM is off, so
@@ -262,18 +246,9 @@ class TestPowerManagement:
         assert subrack.state() == tango.DevState.DISABLE
         subrack.adminMode = AdminMode.ONLINE
         time.sleep(0.1)
-        assert subrack.state() == tango.DevState.OFF
-
-        time.sleep(0.1)
-        for tile in [tile_1, tile_2, tile_3, tile_4]:
-            assert tile.state() == tango.DevState.OFF
-
-        time.sleep(0.1)
-        for station in [station_1, station_2]:
-            assert station.state() == tango.DevState.OFF
-
-        time.sleep(0.1)
-        assert controller.state() == tango.DevState.OFF
+        self._check_states(
+            tiles + stations + [controller] + [subrack], tango.DevState.OFF
+        )
 
     # TODO: Understand why this test is flaky and fix it!
     @pytest.mark.flaky(reruns=5)

@@ -193,6 +193,42 @@ class TestControllerComponentManager:
         ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/01"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/02"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/03"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/04"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/01",
+            HealthState.OK,
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/02",
+            HealthState.OK,
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/03",
+            HealthState.OK,
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/04",
+            HealthState.OK,
+        )
 
         with pytest.raises(ConnectionError, match="Component is not turned on"):
             controller_component_manager.allocate(

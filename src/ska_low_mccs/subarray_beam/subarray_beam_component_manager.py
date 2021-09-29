@@ -60,6 +60,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     __PASSTHROUGH = [
         "subarray_id",
         "subarray_beam_id",
+        "station_beam_ids",
         "station_ids",
         "logical_beam_id",
         "update_rate",

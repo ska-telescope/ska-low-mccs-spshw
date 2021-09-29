@@ -27,7 +27,6 @@ from ska_low_mccs.component import (
     check_on,
     enqueue,
 )
-from ska_low_mccs.subarray.subarray_resource_manager import SubarrayResourceManager
 
 
 __all__ = ["SubarrayComponentManager"]
@@ -206,10 +205,6 @@ class SubarrayComponentManager(
 
         self._scan_id: Optional[int] = None
 
-        self._resource_manager = SubarrayResourceManager(
-            self._subarray_beams.keys(), self._station_beams.keys()
-        )
-
         super().__init__(
             logger,
             communication_status_changed_callback,
@@ -267,14 +262,16 @@ class SubarrayComponentManager(
         """
         Assign resources to this subarray.
 
+        This is just for communication and health roll-up, resource management is done by controller.
+
         :param resource_spec: a resource specification; for example
 
             .. code-block:: python
 
                 {
                     "subarray_beams": ["low-mccs/subarraybeam/01"],
-                    "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
-                    "station_beams": [["low-mccs/beam/01","low-mccs/beam/02"]]
+                    "stations": ["low-mccs/station/001", "low-mccs/station/002"],
+                    "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"]
                     "channel_blocks": [3]
                 }
 
@@ -284,13 +281,9 @@ class SubarrayComponentManager(
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
         station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
 
-        station_fqdns_list = [fqdn for stations in station_fqdns for fqdn in stations]
-        station_fqdns_to_add = station_fqdns_list - self._stations.keys()
+        station_fqdns_to_add = station_fqdns - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
-        station_beam_fqdn_list = [
-            fqdn for beams in station_beam_fqdns for fqdn in beams
-        ]
-        station_beam_fqdns_to_add = station_beam_fqdn_list - self._station_beams.keys()
+        station_beam_fqdns_to_add = station_beam_fqdns - self._station_beams.keys()
 
         if (
             station_fqdns_to_add
@@ -347,26 +340,13 @@ class SubarrayComponentManager(
                 set(self._station_beams.keys()),
             )
 
-            # add subarray beams and station beams into resource manager
-            self._resource_manager.add_allocatees(subarray_beam_fqdns_to_add)
-            self._resource_manager.add_resources(
-                {"station_beams": station_beam_fqdns_to_add}
-            )
-
             self._is_assigning = True
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn].start_communicating()
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn].start_communicating()
-                self._resource_manager.set_ready(fqdn, True)
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn].start_communicating()
-                self._resource_manager.set_health("station_beams", fqdn, True)
-
-            for i in range(len(subarray_beam_fqdns)):
-                self._resource_manager.allocate(
-                    subarray_beam_fqdns[i], station_beams=station_beam_fqdns[i]
-                )
 
         return ResultCode.OK
 
@@ -432,7 +412,6 @@ class SubarrayComponentManager(
                 del self._stations[fqdn]
                 del self._device_communication_statuses[fqdn]
                 del self._device_obs_states[fqdn]
-            self._resource_manager.remove_allocatees(subarray_beam_fqdns_to_remove)
             for fqdn in subarray_beam_fqdns_to_remove:
                 del self._subarray_beams[fqdn]
                 del self._device_communication_statuses[fqdn]
@@ -463,13 +442,7 @@ class SubarrayComponentManager(
         """
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
-            for subarray_beam in self._subarray_beams:
-                self._resource_manager.deallocate_from(subarray_beam)
-            self._resource_manager.remove_allocatees(set(self._subarray_beams.keys()))
             self._subarray_beams.clear()
-            self._resource_manager.remove_resources(
-                {"station_beams": set(self._station_beams.keys())}
-            )
             self._station_beams.clear()
             self._device_communication_statuses.clear()
             self._device_obs_states.clear()

@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, List
+from typing import Any, Callable
 import unittest.mock
 
 import pytest
@@ -133,7 +133,7 @@ class TestPowerManagement:
 
     def _check_states(
         self: TestPowerManagement,
-        devices: List[MccsDeviceProxy],
+        devices: list[MccsDeviceProxy],
         expected_state: tango.DevState,
     ) -> None:
         """

@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -13,12 +12,15 @@ Hardware functions for the TPM 1.2 hardware.
 This is derived from pyaavs.Tile object and depends heavily on the
 pyfabil low level software and specific hardware module plugins.
 """
+
+from __future__ import annotations  # allow forward references in type hints
+
 import functools
 import socket
 import os
 import logging
 import struct
-
+from typing import Any, Callable, cast, List, Optional
 import numpy as np
 import time
 
@@ -27,34 +29,27 @@ from pyfabil.base.utils import ip2long
 from pyfabil.boards.tpm import TPM
 
 
-def connected(f):
+def connected(f: Callable) -> Callable:
     """
-    Helper to disallow certain function calls on unconnected tiles.
+    Help disallow certain function calls on unconnected tiles.
 
     :param f: the method wrapped by this helper
-    :type f: callable
 
     :return: the wrapped method
-    :rtype: callable
     """
 
     @functools.wraps(f)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Tile12, *args: list, **kwargs: dict) -> object:
         """
-        Wrapper that checks the TPM is connected before allowing the wrapped method to
-        proceed.
+        Check the TPM is connected before allowing the wrapped method to proceed.
 
         :param self: the method called
-        :type self: object
         :param args: positional arguments to the wrapped method
-        :type args: list
         :param kwargs: keyword arguments to the wrapped method
-        :type kwargs: dict
 
         :raises LibraryError: if the TPM is not connected
 
         :return: whatever the wrapped method returns
-        :rtype: object
         """
         if self.tpm is None:
             self.logger.warning(
@@ -77,30 +72,24 @@ class Tile12(object):
     """
 
     def __init__(
-        self,
-        ip,
-        port=10000,
-        lmc_ip="0.0.0.0",
-        lmc_port=4660,
-        sampling_rate=800e6,
-        logger=None,
-    ):
+        self: Tile12,
+        ip: str,
+        port: int = 10000,
+        lmc_ip: str = "0.0.0.0",
+        lmc_port: int = 4660,
+        sampling_rate: float = 800e6,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
         """
         Iniitalise a new Tile12 instance.
 
+        :param ip: IP address of the hardware
+        :param port: UCP Port address of the hardware port
+        :param lmc_ip: IP address of the MCCS DAQ recevier
+        :param lmc_port: UCP Port address of the MCCS DAQ receiver
+        :param sampling_rate: ADC sampling rate
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-        :type logger: :py:class:`logging.Logger`
-        :param ip: IP address of the hardware
-        :type ip: str
-        :param port: UCP Port address of the hardware port
-        :type port: int
-        :param lmc_ip: IP address of the MCCS DAQ recevier
-        :type lmc_ip: str
-        :param lmc_port: UCP Port address of the MCCS DAQ receiver
-        :type lmc_port: int
-        :param sampling_rate: ADC sampling rate
-        :type sampling_rate: float
         """
         if logger is None:
             self.logger = logging.getLogger("")
@@ -109,17 +98,16 @@ class Tile12(object):
         self._lmc_port = lmc_port
         self._lmc_ip = socket.gethostbyname(lmc_ip)
         self._lmc_use_10g = False
-        self._arp_table = {}
-        self._40g_configuration = {}
+        self._arp_table: dict[int, list[int]] = {}
+        self._40g_configuration: dict[str, Any] = {}
         self._port = port
         self._ip = socket.gethostbyname(ip)
-        self.tpm = None
+        self.tpm: Optional[TPM] = None
 
         self._channeliser_truncation = 4
         self.subarray_id = 0
         self.station_id = 0
         self.tile_id = 0
-
         self._sampling_rate = sampling_rate
 
         # Mapping between preadu and TPM inputs
@@ -143,31 +131,33 @@ class Tile12(object):
         }
 
     # ---------------------------- Main functions ------------------------------------
-    def tpm_version(self):
+    def tpm_version(self: Tile12) -> str:
         """
-        Determine whether this is a TPM V1.2 or TPM V1.6
+        Determine whether this is a TPM V1.2 or TPM V1.6.
+
         :return: TPM hardware version
-        :rtype: string
         """
         return "tpm_v1_2"
 
-    def connect(self, initialise=False, load_plugin=True, enable_ada=False):
+    def connect(
+        self: Tile12,
+        initialise: bool = False,
+        load_plugin: bool = True,
+        enable_ada: bool = False,
+    ) -> None:
         """
         Connect to the hardware and loads initial configuration.
 
         :param initialise: Initialises the TPM object
-        :type initialise: bool
         :param load_plugin: loads software plugins
-        :type load_plugin: bool
         :param enable_ada: Enable ADC amplifier (usually not present)
-        :type enable_ada: bool
         """
         # Try to connect to board, if it fails then set tpm to None
         self.tpm = TPM()
 
         # Add plugin directory (load module locally)
         tf = __import__(
-            "ska_low_mccs.tile.plugins.tpm.tpm_test_firmware", fromlist=[None]
+            "ska_low_mccs.tile.plugins.tpm.tpm_test_firmware", fromlist=["Dummy"]
         )
         self.tpm.add_plugin_directory(os.path.dirname(tf.__file__))
         # Connect using tpm object.
@@ -198,32 +188,34 @@ class Tile12(object):
         elif not self.tpm.is_programmed():
             self.logger.warning("TPM is not programmed! No plugins loaded")
 
-    def is_programmed(self):
+    def is_programmed(self: Tile12) -> bool:
         """
         Check whether the TPM is connected and programmed.
 
         :return: If the TPM is programmed
-        :rtype: bool
         """
         if self.tpm is None:
             return False
         return self.tpm.is_programmed()
 
-    def initialise(self, enable_ada=False, enable_test=False):
+    def initialise(
+        self: Tile12,
+        enable_ada: bool = False,
+        enable_test: bool = False,
+    ) -> None:
         """
         Connect and initialise.
 
         :param enable_ada: enable adc amplifier, Not present in most TPM
             versions
-        :type enable_ada: bool
         :param enable_test: setup internal test signal generator instead
             of ADC
-        :type enable_test: bool
         """
         # Connect to board
         self.connect(initialise=True, enable_ada=enable_ada)
 
         # Before initialing, check if TPM is programmed
+        assert self.tpm is not None  # for the type checker
         if not self.tpm.is_programmed():
             self.logger.error("Cannot initialise board which is not programmed")
             return
@@ -306,13 +298,14 @@ class Tile12(object):
         # Perform synchronisation
         self.post_synchronisation()
 
-    def fortyg_cores_destination(self):
+    def fortyg_cores_destination(self: Tile12) -> None:
         """
         Set destination and source IP/MAC/ports for 40G cores.
 
         This will create a loopback between the two FPGAs
         """
         ip_octets = self._ip.split(".")
+        assert self.tpm is not None  # for the type checker
         for n in range(len(self.tpm.tpm_10g_core)):
             if self["fpga1.regfile.feature.xg_eth_implemented"] == 1:
                 src_ip = "10.10." + str(n + 1) + "." + str(ip_octets[3])
@@ -347,12 +340,11 @@ class Tile12(object):
                     dst_port=4660,
                 )
 
-    def program_fpgas(self, bitfile):
+    def program_fpgas(self: Tile12, bitfile: str) -> None:
         """
         Program both FPGAs with specified firmware.
 
         :param bitfile: Bitfile to load
-        :type bitfile: str
         """
         self.connect(load_plugin=False)
         if self.tpm is not None:
@@ -366,13 +358,16 @@ class Tile12(object):
             )
 
     @connected
-    def erase_fpga(self):
+    def erase_fpga(self: Tile12) -> None:
         """Erase FPGA configuration memory."""
+        assert self.tpm is not None  # for the type checker
         self.tpm.erase_fpga()
 
-    def program_cpld(self, bitfile):
+    def program_cpld(self: Tile12, bitfile: str) -> None:
         """
-        Program CPLD with specified bitfile. Use with VERY GREAT care, this might leave
+        Program CPLD with specified bitfile.
+
+        Use with VERY GREAT care, this might leave
         the FPGA in an unreachable state. TODO Wiser to leave the method out altogether
         and use a dedicated utility instead?
 
@@ -386,61 +381,64 @@ class Tile12(object):
             return self.tpm.tpm_cpld.cpld_flash_write(bitfile)
 
     @connected
-    def read_cpld(self, bitfile="cpld_dump.bit"):
+    def read_cpld(self: Tile12, bitfile: str = "cpld_dump.bit") -> None:
         """
         Read bitfile in CPLD FLASH.
 
         :param bitfile: Bitfile where to dump CPLD firmware
-        :type bitfile: str
         """
         self.logger.info("Reading bitstream from CPLD FLASH")
+        assert self.tpm is not None  # for the type checker
         self.tpm.tpm_cpld.cpld_flash_read(bitfile)
 
-    def get_ip(self):
+    def get_ip(self: Tile12) -> str:
         """
-        Get tile IP
+        Get tile IP.
+
         :return: tile IP address
-        :rtype: str
         """
         return self._ip
 
     @connected
-    def get_temperature(self):
+    def get_temperature(self: Tile12) -> float:
         """
-        Read board temperature
+        Read board temperature.
+
         :return: board temperature
-        :rtype: float
         """
+        assert self.tpm is not None  # for the type checker
         return self.tpm.temperature()
 
     @connected
-    def get_voltage(self):
+    def get_voltage(self: Tile12) -> float:
         """
-        Read board voltage
+        Read board voltage.
+
         :return: board supply voltage
-        :rtype: float
         """
+        assert self.tpm is not None  # for the type checker
         return self.tpm.voltage()
 
     @connected
-    def get_current(self):
+    def get_current(self: Tile12) -> float:
         """
-        Read board current
+        Read board current.
+
         :return: board supply current
-        :rtype: float
         """
         # not implemented
         # return self.tpm.current()
         return 0.0
 
     @connected
-    def get_adc_rms(self):
+    def get_adc_rms(self: Tile12) -> list[float] | None:
         """
-        Get ADC power
+        Get ADC power.
+
         :return: ADC RMS power
-        :rtype: list(float)
         """
         # If board is not programmed, return None
+        assert self.tpm is not None  # for the type checker
         if not self.tpm.is_programmed():
             return None
 
@@ -453,40 +451,42 @@ class Tile12(object):
         return rms
 
     @connected
-    def get_fpga0_temperature(self):
+    def get_fpga0_temperature(self: Tile12) -> float:
         """
-        Get FPGA0 temperature
+        Get FPGA0 temperature.
+
         :return: FPGA0 temperature
-        :rtype: float
         """
         if self.is_programmed():
+            assert self.tpm is not None  # for the type checker
             return self.tpm.tpm_sysmon[0].get_fpga_temperature()
         else:
-            return 0
+            return 0.0
 
     @connected
-    def get_fpga1_temperature(self):
+    def get_fpga1_temperature(self: Tile12) -> float:
         """
-        Get FPGA1 temperature
+        Get FPGA1 temperature.
+
         :return: FPGA0 temperature
-        :rtype: float
         """
         if self.is_programmed():
+            assert self.tpm is not None  # for the type checker
             return self.tpm.tpm_sysmon[1].get_fpga_temperature()
         else:
-            return 0
+            return 0.0
 
     @connected
     def configure_10g_core(
-        self,
-        core_id,
-        src_mac=None,
-        src_ip=None,
-        dst_mac=None,
-        dst_ip=None,
-        src_port=None,
-        dst_port=None,
-    ):
+        self: Tile12,
+        core_id: int,
+        src_mac: Optional[str] = None,
+        src_ip: Optional[str] = None,
+        dst_mac: Optional[str] = None,
+        dst_ip: Optional[str] = None,
+        src_port: Optional[int] = None,
+        dst_port: Optional[int] = None,
+    ) -> None:
         """
         Configure a 10G core.
 
@@ -501,6 +501,7 @@ class Tile12(object):
         :param dst_port: Destination port
         """
         # Configure core
+        assert self.tpm is not None  # for the type checker
         if src_mac is not None:
             self.tpm.tpm_10g_core[core_id].set_src_mac(src_mac)
         if src_ip is not None:
@@ -516,15 +517,15 @@ class Tile12(object):
 
     @connected
     def configure_40g_core(
-        self,
-        core_id,
-        arp_table_entry=0,
-        src_mac=None,
-        src_ip=None,
-        src_port=None,
-        dst_ip=None,
-        dst_port=None,
-    ):
+        self: Tile12,
+        core_id: int,
+        arp_table_entry: int = 0,
+        src_mac: Optional[str] = None,
+        src_ip: Optional[str] = None,
+        src_port: Optional[int] = None,
+        dst_ip: Optional[str] = None,
+        dst_port: Optional[int] = None,
+    ) -> None:
         """
         Configure a 40G core.
 
@@ -537,6 +538,7 @@ class Tile12(object):
         :param dst_port: Destination port
         """
         # Configure core
+        assert self.tpm is not None  # for the type checker
         if src_mac is not None:
             self.tpm.tpm_10g_core[core_id].set_src_mac(src_mac)
         if src_ip is not None:
@@ -550,18 +552,17 @@ class Tile12(object):
             self.tpm.tpm_10g_core[core_id].set_rx_port_filter(dst_port)
 
     @connected
-    def get_10g_core_configuration(self, core_id):
+    def get_10g_core_configuration(self: Tile12, core_id: int) -> dict[str, int]:
         """
         Get the configuration for a 10g core.
 
         :param core_id: Core ID (0-7)
-        :type core_id: int
 
         :return: core configuration
-        :rtype: dict
 
         :todo: Check whether to be deleted.
         """
+        assert self.tpm is not None  # for the type checker
         return {
             "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
             "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
@@ -572,19 +573,19 @@ class Tile12(object):
         }
 
     @connected
-    def get_40g_core_configuration(self, core_id, arp_table_entry=0):
+    def get_40g_core_configuration(
+        self: Tile12, core_id: int, arp_table_entry: int = 0
+    ) -> Optional[dict[str, int]]:
         """
         Get the configuration for a 40g core.
 
         :param core_id: Core ID
-        :type core_id: int
         :param arp_table_entry: ARP table entry to use
-        :type arp_table_entry: int
 
         :return: core configuration
-        :rtype: dict
         """
         try:
+            assert self.tpm is not None  # for the type checker
             self._40g_configuration = {
                 "core_id": core_id,
                 "arp_table_entry": arp_table_entry,
@@ -601,20 +602,20 @@ class Tile12(object):
                 ),
             }
         except IndexError:
-            self._40g_configuration = None
+            self._40g_configuration = {}
 
         return self._40g_configuration
 
     @connected
     def set_lmc_download(
-        self,
-        mode,
-        payload_length=1024,
-        dst_ip=None,
-        src_port=0xF0D0,
-        dst_port=4660,
-        lmc_mac=None,
-    ):
+        self: Tile12,
+        mode: str,
+        payload_length: int = 1024,
+        dst_ip: Optional[str] = None,
+        src_port: int = 0xF0D0,
+        dst_port: int = 4660,
+        lmc_mac: Optional[str] = None,
+    ) -> None:
         """
         Configure link and size of control data.
 
@@ -625,6 +626,7 @@ class Tile12(object):
         :param dst_port: Destination port for integrated data streams
         :param lmc_mac: LMC Mac address is required for 10G lane configuration
         """
+        assert self.tpm is not None  # for the type checker
         # Using 10G lane
         if mode.upper() == "10G":
             if payload_length >= 8193:
@@ -687,15 +689,15 @@ class Tile12(object):
 
     @connected
     def set_lmc_integrated_download(
-        self,
-        mode,
-        channel_payload_length,
-        beam_payload_length,
-        dst_ip=None,
-        src_port=0xF0D0,
-        dst_port=4660,
-        lmc_mac=None,
-    ):
+        self: Tile12,
+        mode: str,
+        channel_payload_length: int,
+        beam_payload_length: int,
+        dst_ip: Optional[str] = None,
+        src_port: int = 0xF0D0,
+        dst_port: int = 4660,
+        lmc_mac: Optional[str] = None,
+    ) -> None:
         """
         Configure link and size of control data.
 
@@ -707,6 +709,7 @@ class Tile12(object):
         :param dst_port: Destination port for integrated data streams
         :param lmc_mac: LMC Mac address is required for 10G lane configuration
         """
+        assert self.tpm is not None  # for the type checker
         # Using 10G lane
         if mode.upper() == "10G":
 
@@ -758,16 +761,17 @@ class Tile12(object):
             )
 
     @connected
-    def get_arp_table(self):
+    def get_arp_table(self: Tile12) -> dict[int, list[int]]:
         """
-        Check that ARP table has been populated in for all used cores. 40G interfaces
-        use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC. 10G
-        interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
+        Check that ARP table has been populated in for all used cores.
+
+        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer,1 for LMC.
+        10G interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
         LMC with only one ARP.
 
         :return: list of core id and arp table populated
-        :rtype: dict(list)
         """
+        assert self.tpm is not None  # for the type checker
         # wait UDP link up
         if self["fpga1.regfile.feature.xg_eth_implemented"] == 1:
             self.logger.info("Checking ARP table...")
@@ -810,7 +814,7 @@ class Tile12(object):
         return self._arp_table
 
     @connected
-    def set_station_id(self, station_id, tile_id):
+    def set_station_id(self: Tile12, station_id: int, tile_id: int) -> None:
         """
         Set station ID.
 
@@ -818,6 +822,7 @@ class Tile12(object):
         :param tile_id: Tile ID within station
         """
         fpgas = ["fpga1", "fpga2"]
+        assert self.tpm is not None  # for the type checker
         if len(self.tpm.find_register("fpga1.regfile.station_id")) > 0:
             self["fpga1.regfile.station_id"] = station_id
             self["fpga2.regfile.station_id"] = station_id
@@ -829,41 +834,43 @@ class Tile12(object):
                 self[f + ".dsp_regfile.config_id.tpm_id"] = tile_id
 
     @connected
-    def get_station_id(self):
+    def get_station_id(self: Tile12) -> int:
         """
-        Get station ID
+        Get station ID.
+
         :return: station ID programmed in HW
-        :rtype: int
         """
+        assert self.tpm is not None  # for the type checker
         if not self.tpm.is_programmed():
             return -1
         else:
             if len(self.tpm.find_register("fpga1.regfile.station_id")) > 0:
-                tile_id = self["fpga1.regfile.station_id"]
+                station_id = cast(int, self["fpga1.regfile.station_id"])
             else:
-                tile_id = self["fpga1.dsp_regfile.config_id.station_id"]
-            return tile_id
+                station_id = cast(int, self["fpga1.dsp_regfile.config_id.station_id"])
+            return station_id
 
     @connected
-    def get_tile_id(self):
+    def get_tile_id(self: Tile12) -> int:
         """
         Get tile ID.
 
         :return: programmed tile id
-        :rtype: int
         """
+        assert self.tpm is not None  # for the type checker
         if not self.tpm.is_programmed():
             return -1
         else:
             if len(self.tpm.find_register("fpga1.regfile.tpm_id")) > 0:
-                tile_id = self["fpga1.regfile.tpm_id"]
+                tile_id = cast(int, self["fpga1.regfile.tpm_id"])
             else:
-                tile_id = self["fpga1.dsp_regfile.config_id.tpm_id"]
+                tile_id = cast(int, self["fpga1.dsp_regfile.config_id.tpm_id"])
             return tile_id
 
     @connected
-    def tweak_transceivers(self):
+    def tweak_transceivers(self: Tile12) -> None:
         """Tweak transceivers."""
+        assert self.tpm is not None  # for the type checker
         for f in ["fpga1", "fpga2"]:
             for n in range(4):
                 if len(self.tpm.find_register("fpga1.eth_10g_drp.gth_channel_0")) > 0:
@@ -890,32 +897,30 @@ class Tile12(object):
     # Time related methods
     ###########################################
     @connected
-    def get_fpga_time(self, device):
+    def get_fpga_time(self: Tile12, device: int) -> int:
         """
         Return time from FPGA.
 
         :param device: FPGA to get time from
-        :type device: int
+
         :return: Internal time for FPGA
-        :rtype: int
         :raises LibraryError: Invalid value for device
         """
         if device == Device.FPGA_1:
-            return self["fpga1.pps_manager.curr_time_read_val"]
+            return cast(int, self["fpga1.pps_manager.curr_time_read_val"])
         elif device == Device.FPGA_2:
-            return self["fpga2.pps_manager.curr_time_read_val"]
+            return cast(int, self["fpga2.pps_manager.curr_time_read_val"])
         else:
             raise LibraryError("Invalid device specified")
 
     @connected
-    def set_fpga_time(self, device, device_time):
+    def set_fpga_time(self: Tile12, device: int, device_time: int) -> None:
         """
         Set Unix time in FPGA.
 
         :param device: FPGA to get time from
-        :type device: int
         :param device_time: Internal time for FPGA
-        :type device_time: int
+
         :raises LibraryError: Invalid value for device
         """
         if device == Device.FPGA_1:
@@ -928,34 +933,34 @@ class Tile12(object):
             raise LibraryError("Invalid device specified")
 
     @connected
-    def get_fpga_timestamp(self, device=Device.FPGA_1):
+    def get_fpga_timestamp(self: Tile12, device: int = Device.FPGA_1) -> int:
         """
         Get timestamp from FPGA.
 
         :param device: FPGA to read timestamp from
-        :type device: int
+
         :return: PPS time
-        :rtype: int
+
         :raises LibraryError: Invalid value for device
         """
         if device == Device.FPGA_1:
-            return self["fpga1.pps_manager.timestamp_read_val"]
+            return cast(int, self["fpga1.pps_manager.timestamp_read_val"])
         elif device == Device.FPGA_2:
-            return self["fpga2.pps_manager.timestamp_read_val"]
+            return cast(int, self["fpga2.pps_manager.timestamp_read_val"])
         else:
             raise LibraryError("Invalid device specified")
 
     @connected
-    def get_phase_terminal_count(self):
+    def get_phase_terminal_count(self: Tile12) -> int:
         """
-        Get PPS phase terminal count
+        Get PPS phase terminal count.
+
         :return: PPS phase terminal count
-        :rtype: int
         """
-        return self["fpga1.pps_manager.sync_tc.cnt_1_pulse"]
+        return cast(int, self["fpga1.pps_manager.sync_tc.cnt_1_pulse"])
 
     @connected
-    def set_phase_terminal_count(self, value):
+    def set_phase_terminal_count(self: Tile12, value: int) -> None:
         """
         Set phase terminal count.
 
@@ -965,16 +970,16 @@ class Tile12(object):
         self["fpga2.pps_manager.sync_tc.cnt_1_pulse"] = value
 
     @connected
-    def get_pps_delay(self):
+    def get_pps_delay(self: Tile12) -> int:
         """
-        Get delay between PPS and 10 MHz clock
+        Get delay between PPS and 10 MHz clock.
+
         :return: delay between PPS and 10 MHz clock in 200 MHz cycles
-        :rtype: int
         """
-        return self["fpga1.pps_manager.sync_phase.cnt_hf_pps"]
+        return cast(int, self["fpga1.pps_manager.sync_phase.cnt_hf_pps"])
 
     @connected
-    def wait_pps_event(self):
+    def wait_pps_event(self: Tile12) -> None:
         """
         Wait for a PPS edge. Added timeout feture to avoid method to stuck.
 
@@ -991,26 +996,30 @@ class Tile12(object):
                 raise BoardError("TPM PPS counter does not advance")
 
     @connected
-    def check_pending_data_requests(self):
+    def check_pending_data_requests(self: Tile12) -> bool:
         """
-        Checks whether there are any pending data requests
+        Check whether there are any pending data requests.
+
         :return: true if pending requests are present
-        :rtype: bool
         """
-        return (self["fpga1.lmc_gen.request"] + self["fpga2.lmc_gen.request"]) > 0
+        return (
+            cast(int, self["fpga1.lmc_gen.request"])
+            + cast(int, self["fpga2.lmc_gen.request"])
+            > 0
+        )
 
     ########################################################
     # channeliser
     ########################################################
     @connected
-    def set_channeliser_truncation(self, trunc, signal=None):
+    def set_channeliser_truncation(
+        self: Tile12, trunc: int | list[int], signal: Optional[int] = None
+    ) -> None:
         """
         Set channeliser truncation scale for the whole tile.
 
-        :param trunc: Truncted bits, channeliser output scaled down
-        :type trunc: int
+        :param trunc: Truncated bits, channeliser output scaled down
         :param signal: Input signal, 0 to 31. If None, apply to all
-        :type signal: int
         """
         # if trunc is a single value, apply to all channels
         if type(trunc) == int:
@@ -1023,13 +1032,13 @@ class Tile12(object):
             trunc_vec1 = 256 * [trunc]
             trunc_vec2 = 256 * [trunc]
         else:
-            trunc_vec1 = trunc[0:256]
-            trunc_vec2 = trunc[256:512]
+            trunc_vec1 = cast(list[int], trunc)[0:256]
+            trunc_vec2 = cast(list[int], trunc)[256:512]
             trunc_vec2.reverse()
         #
         # If signal is not specified, apply to all signals
         if signal is None:
-            siglist = range(32)
+            siglist = cast(List[int], range(32))
         else:
             siglist = [signal]
 
@@ -1049,16 +1058,15 @@ class Tile12(object):
                 self.logger.warning("Signal " + str(i) + " is outside range (0:31)")
 
     @connected
-    def set_time_delays(self, delays):
+    def set_time_delays(self: Tile12, delays: list[float]) -> bool:
         """
-        Set coarse zenith delay for input ADC streams Delay specified in nanoseconds,
+        Set coarse zenith delay for input ADC streams Delay specified in nanoseconds.
+
         nominal is 0.
 
         :param delays: Delay in samples, positive delay adds delay to the signal stream
-        :type delays: list(float)
 
         :return: Parameters in range
-        :rtype: bool
         """
         # Compute maximum and minimum delay
         frame_length = (1.0 / self._sampling_rate) * 1e9
@@ -1075,7 +1083,7 @@ class Tile12(object):
         )
 
         # Check that we have the correct numnber of delays (one or 16)
-        if type(delays) in [float, int]:
+        if isinstance(delays, float):
             # Check that we have a valid delay
             if min_delay <= delays <= max_delay:
                 # possible problem to fix here :
@@ -1094,12 +1102,12 @@ class Tile12(object):
                 )
                 return False
 
-        elif type(delays) is list and len(delays) == 32:
+        elif isinstance(delays, list) and len(delays) == 32:
             # Check that all delays are valid
             delays = np.array(delays, dtype=np.float)
-            if np.all(min_delay <= delays) and np.all(delays <= max_delay):
+            if np.all(min_delay <= delays) and np.all(delays <= max_delay):  # type: ignore[operator]
                 delays_hw = np.clip(
-                    (np.round(delays / frame_length) + 128).astype(np.int), 4, 255
+                    (np.round(delays / frame_length) + 128).astype(np.int), 4, 255  # type: ignore[operator]
                 ).tolist()
             else:
                 self.logger.warning(
@@ -1127,19 +1135,22 @@ class Tile12(object):
 
     # ---------------------------- Pointing and calibration routines ---------------------------
     @connected
-    def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
+    def initialise_beamformer(
+        self: Tile12,
+        start_channel: int,
+        nof_channels: int,
+        is_first: bool,
+        is_last: bool,
+    ) -> None:
         """
         Initialise tile and station beamformers for a simple single beam configuration.
 
         :param start_channel: Initial channel, must be even
-        :type start_channel: int
         :param nof_channels: Number of beamformed spectral channels
-        :type nof_channels: int
         :param is_first: True for first tile in beamforming chain
-        :type is_first: bool
         :param is_last: True for last tile in beamforming chain
-        :type is_last: bool
         """
+        assert self.tpm is not None  # for the type checker
         self.tpm.beamf_fd[0].initialise_beamf()
         self.tpm.beamf_fd[1].initialise_beamf()
         self.tpm.beamf_fd[0].set_regions([[start_channel, nof_channels, 0]])
@@ -1157,7 +1168,7 @@ class Tile12(object):
         self.tpm.station_beamf[1].defineChannelTable([[start_channel, nof_channels, 0]])
 
     @connected
-    def set_beamformer_regions(self, region_array):
+    def set_beamformer_regions(self: Tile12, region_array: list[list[int]]) -> None:
         """
         Set frequency regions.
 
@@ -1174,47 +1185,54 @@ class Tile12(object):
         The routine computes the arrays beam_index, region_off, region_sel,
         and the total number of channels nof_chans, and programs it in the HW
         :param region_array: list of region array descriptors
-        :type region_array: list(list(int))
         """
+        assert self.tpm is not None  # for the type checker
         self.tpm.beamf_fd[0].set_regions(region_array)
         self.tpm.beamf_fd[1].set_regions(region_array)
         self.tpm.station_beamf[0].defineChannelTable(region_array)
         self.tpm.station_beamf[1].defineChannelTable(region_array)
 
     @connected
-    def set_pointing_delay(self, delay_array, beam_index):
+    def set_pointing_delay(
+        self: Tile12, delay_array: list[list[float]], beam_index: int
+    ) -> None:
         """
-        The method specifies the delay in seconds and the delay rate in seconds/seconds.
+        Specify the delay in seconds and the delay rate in seconds/seconds.
+
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is described (range 0:7). Delay is updated inside the delay
         engine at the time specified by method load_delay.
 
         :param delay_array: delay and delay rate for each antenna
-        :type delay_array: list(list(float))
         :param beam_index: specifies which beam is described (range 0:7)
-        :type beam_index: int
         """
+        assert self.tpm is not None  # for the type checker
         self.tpm.beamf_fd[0].set_delay(delay_array[0:8], beam_index)
         self.tpm.beamf_fd[1].set_delay(delay_array[8:], beam_index)
 
     @connected
-    def load_pointing_delay(self, load_time=0):
+    def load_pointing_delay(self: Tile12, load_time: int = 0) -> None:
         """
-        Delay is updated inside the delay engine at the time specified
-        If time = 0 load immediately
+        Update the delay inside the delay engine at the time specified.
+
+         If time = 0 load immediately
+
         :param load_time: time (in ADC frames/256) for delay update
-        :type load_time: int
         """
         if load_time == 0:
             load_time = self.current_tile_beamformer_frame() + 64
 
+        assert self.tpm is not None  # for the type checker
         self.tpm.beamf_fd[0].load_delay(load_time)
         self.tpm.beamf_fd[1].load_delay(load_time)
 
     @connected
-    def load_calibration_coefficients(self, antenna, calibration_coefficients):
+    def load_calibration_coefficients(
+        self: Tile12, antenna: int, calibration_coefficients: list[float]
+    ) -> None:
         """
-        Loads calibration coefficients.
+        Load the calibration coefficients.
+
         calibration_coefficients is a bi-dimensional complex array of the form
         calibration_coefficients[channel, polarization], with each element representing
         a normalized coefficient, with (1.0, 0.0) the normal, expected response for
@@ -1230,34 +1248,38 @@ class Tile12(object):
         the parallitic angle), but do not include the geometric delay.
 
         :param antenna: Antenna number (0-15)
-        :type antenna: int
         :param calibration_coefficients: Calibration coefficient array
-        :type calibration_coefficients: list(float)
         """
+        assert self.tpm is not None  # for the type checker
         if antenna < 8:
             self.tpm.beamf_fd[0].load_calibration(antenna, calibration_coefficients)
         else:
             self.tpm.beamf_fd[1].load_calibration(antenna - 8, calibration_coefficients)
 
     @connected
-    def load_antenna_tapering(self, beam, tapering_coefficients):
+    def load_antenna_tapering(
+        self: Tile12, beam: int, tapering_coefficients: list[int]
+    ) -> None:
         """
-        tapering_coefficients is a vector of 16 values, one per antenna. Default (at
+        Tapering_coefficients is a vector of 16 values, one per antenna.
+
+        Default (at
         initialization) is 1.0. TODO modify plugin to allow for different beams.
 
         :param beam: Beam index in range 0:47
-        :type beam: int
         :param tapering_coefficients: Coefficients for each antenna
-        :type tapering_coefficients: list(int)
         """
+        assert self.tpm is not None  # for the type checker
         if beam > 0:
             self.logger.warning("Tapering implemented only for beam 0")
         self.tpm.beamf_fd[0].load_antenna_tapering(tapering_coefficients[0:8])
         self.tpm.beamf_fd[1].load_antenna_tapering(tapering_coefficients[8:])
 
     @connected
-    def load_beam_angle(self, angle_coefficients):
+    def load_beam_angle(self: Tile12, angle_coefficients: list[float]) -> None:
         """
+        Load beam angle coefficients.
+
         Angle_coefficients is an array of one element per beam, specifying a rotation
         angle, in radians, for the specified beam.
 
@@ -1267,90 +1289,101 @@ class Tile12(object):
         calibration.
 
         :param angle_coefficients: Rotation angle, per beam, in radians
-        :type angle_coefficients: list(float)
         """
+        assert self.tpm is not None  # for the type checker
         self.tpm.beamf_fd[0].load_beam_angle(angle_coefficients)
         self.tpm.beamf_fd[1].load_beam_angle(angle_coefficients)
 
-    def compute_calibration_coefficients(self):
+    def compute_calibration_coefficients(self: Tile12) -> None:
         """Compute the calibration coefficients and load them in the hardware."""
+        assert self.tpm is not None  # for the type checker
         self.tpm.beamf_fd[0].compute_calibration_coefs()
         self.tpm.beamf_fd[1].compute_calibration_coefs()
 
-    def switch_calibration_bank(self, switch_time=0):
+    def switch_calibration_bank(self: Tile12, switch_time: int = 0) -> None:
         """
-        Switches the loaded calibration coefficients at prescribed time
+        Switches the loaded calibration coefficients at a prescribed time.
+
         If time = 0 switch immediately
+
         :param switch_time: time (in ADC frames/256) for delay update
-        :type switch_time: int
         """
         if switch_time == 0:
             switch_time = self.current_tile_beamformer_frame() + 64
 
+        assert self.tpm is not None  # for the type checker
         self.tpm.beamf_fd[0].switch_calibration_bank(switch_time)
         self.tpm.beamf_fd[1].switch_calibration_bank(switch_time)
 
-    def set_beamformer_epoch(self, epoch):
+    def set_beamformer_epoch(self: Tile12, epoch: int) -> bool:
         """
         Set the Unix epoch in seconds since Unix reference time.
 
         :param epoch: Unix epoch for the reference time
+
         :return: Success status
-        :rtype: bool
         """
+        assert self.tpm is not None  # for the type checker
         ret1 = self.tpm.station_beamf[0].set_epoch(epoch)
         ret2 = self.tpm.station_beamf[1].set_epoch(epoch)
         return ret1 and ret2
 
-    def set_csp_rounding(self, rounding):
+    def set_csp_rounding(self: Tile12, rounding: int) -> bool:
         """
         Set output rounding for CSP.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+
         :return: success status
-        :rtype: bool
         """
+        assert self.tpm is not None  # for the type checker
         ret1 = self.tpm.station_beamf[0].set_csp_rounding(rounding)
         ret2 = self.tpm.station_beamf[1].set_csp_rounding(rounding)
         return ret1 and ret2
 
-    def current_station_beamformer_frame(self):
+    def current_station_beamformer_frame(self: Tile12) -> int:
         """
-        Query time of packets at station beamformer input
+        Query time of packets at station beamformer input.
+
         :return: current frame, in units of 256 ADC frames (276,48 us)
-        :rtype: int
         """
+        assert self.tpm is not None  # for the type checker
         return self.tpm.station_beamf[0].current_frame()
 
-    def current_tile_beamformer_frame(self):
+    def current_tile_beamformer_frame(self: Tile12) -> int:
         """
-        Query time of packets at tile beamformer input
+        Query time of packets at tile beamformer input.
+
         :return: current frame, in units of 256 ADC frames (276,48 us)
-        :rtype: int
         """
+        assert self.tpm is not None  # for the type checker
         return self.tpm.beamf_fd[0].current_frame()
 
-    def set_first_last_tile(self, is_first, is_last):
+    def set_first_last_tile(self: Tile12, is_first: bool, is_last: bool) -> bool:
         """
-        Defines if a tile is first, last, both or intermediate.
+        Define if a tile is first, last, both or intermediate.
 
         One, and only one tile must be first, and last, in a chain. A
         tile can be both (one tile chain), or none.
 
         :param is_first: True for first tile in beamforming chain
-        :type is_first: bool
         :param is_last: True for last tile in beamforming chain
-        :type is_last: bool
+
         :return: success status
-        :rtype: bool
         """
+        assert self.tpm is not None  # for the type checker
         ret1 = self.tpm.station_beamf[0].set_first_last_tile(is_first, is_last)
         ret2 = self.tpm.station_beamf[1].set_first_last_tile(is_first, is_last)
         return ret1 and ret2
 
     def define_spead_header(
-        self, station_id, subarray_id, nof_antennas, ref_epoch=-1, start_time=0
-    ):
+        self: Tile12,
+        station_id: int,
+        subarray_id: int,
+        nof_antennas: int,
+        ref_epoch: int = -1,
+        start_time: int = 0,
+    ) -> bool:
         """
         Define SPEAD header for last tile.
 
@@ -1359,13 +1392,12 @@ class Tile12(object):
         :param station_id: Station ID
         :param subarray_id: Subarray ID
         :param nof_antennas: Number of antenns in the station
-        :type nof_antennas: int
         :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
-        :type ref_epoch: int
         :param start_time: start time (TODO describe better)
+
         :return: True if parameters OK, False for error
-        :rtype: bool
         """
+        assert self.tpm is not None  # for the type checker
         ret1 = self.tpm.station_beamf[0].define_spead_header(
             station_id, subarray_id, nof_antennas, ref_epoch, start_time
         )
@@ -1374,15 +1406,16 @@ class Tile12(object):
         )
         return ret1 and ret2
 
-    def beamformer_is_running(self):
+    def beamformer_is_running(self: Tile12) -> bool:
         """
-        Check if station beamformer is running
+        Check if station beamformer is running.
+
         :return: beamformer running status
-        :rtype: bool
         """
+        assert self.tpm is not None  # for the type checker
         return self.tpm.station_beamf[0].is_running()
 
-    def start_beamformer(self, start_time=0, duration=-1):
+    def start_beamformer(self: Tile12, start_time: int = 0, duration: int = -1) -> bool:
         """
         Start the beamformer.
 
@@ -1390,11 +1423,9 @@ class Tile12(object):
         if == -1 run forever
 
         :param start_time: time (in ADC frames/256) for first frame sent
-        :type start_time: int
         :param duration: duration in ADC frames/256. Multiple of 8
-        :type duration: int
+
         :return: False for error (e.g. beamformer already running)
-        :rtype bool:
         """
         mask = 0xFFFFFFF8  # Impose a time multiple of 8 frames
         if self.beamformer_is_running():
@@ -1408,6 +1439,7 @@ class Tile12(object):
         if duration != -1:
             duration = duration & mask
 
+        assert self.tpm is not None  # for the type checker
         ret1 = self.tpm.station_beamf[0].start(start_time, duration)
         ret2 = self.tpm.station_beamf[1].start(start_time, duration)
 
@@ -1417,15 +1449,16 @@ class Tile12(object):
             self.abort()
             return False
 
-    def stop_beamformer(self):
+    def stop_beamformer(self: Tile12) -> None:
         """Stop beamformer."""
+        assert self.tpm is not None  # for the type checker
         self.tpm.station_beamf[0].abort()
         self.tpm.station_beamf[1].abort()
         return
 
     # Synchronisation routines ------------------------------------
     @connected
-    def post_synchronisation(self):
+    def post_synchronisation(self: Tile12) -> None:
         """Post tile configuration synchronization."""
         self.wait_pps_event()
 
@@ -1440,11 +1473,12 @@ class Tile12(object):
         self.logger.info("Finished tile post synchronisation (" + str(delay) + ")")
 
     @connected
-    def sync_fpgas(self):
+    def sync_fpgas(self: Tile12) -> None:
         """Syncronises the two FPGAs in the tile Returns when these are synchronised."""
         devices = ["fpga1", "fpga2"]
 
         # Setting internal PPS generator
+        assert self.tpm is not None  # for the type checker
         for f in devices:
             self.tpm[f + ".pps_manager.pps_gen_tc"] = int(self._sampling_rate / 4) - 1
 
@@ -1459,10 +1493,11 @@ class Tile12(object):
         self.check_synchronization()
 
     @connected
-    def check_synchronization(self):
-        """Checks FPGA synchronisation, returns when these are synchronised."""
+    def check_synchronization(self: Tile12) -> None:
+        """Check FPGA synchronisation, returns when these are synchronised."""
         devices = ["fpga1", "fpga2"]
 
+        assert self.tpm is not None  # for the type checker
         for _n in range(5):
             self.logger.info("Synchronising FPGA UTC time.")
             self.wait_pps_event()
@@ -1485,15 +1520,15 @@ class Tile12(object):
         self.logger.error("Not possible to synchronise FPGA UTC time!")
 
     @connected
-    def check_fpga_synchronization(self):
+    def check_fpga_synchronization(self: Tile12) -> bool:
         """
-        Checks various synchronization parameters.
+        Check various synchronization parameters.
 
         Output in the log
 
         :return: OK status
-        :rtype: bool
         """
+        assert self.tpm is not None  # for the type checker
         result = True
         # check PLL status
         pll_status = self.tpm["pll", 0x508]
@@ -1507,6 +1542,7 @@ class Tile12(object):
             )
             result = False
 
+        assert self.tpm is not None  # for the type checker
         # check PPS detection
         if self.tpm["fpga1.pps_manager.pps_detected"] == 0x1:
             self.logger.debug("FPGA1 is locked to external PPS")
@@ -1548,8 +1584,9 @@ class Tile12(object):
         return result
 
     @connected
-    def set_c2c_burst(self):
-        """Setting C2C burst when supported by FPGAs and CPLD."""
+    def set_c2c_burst(self: Tile12) -> None:
+        """Set C2C burst when supported by FPGAs and CPLD."""
+        assert self.tpm is not None  # for the type checker
         self.tpm["fpga1.regfile.c2c_stream_ctrl.idle_val"] = 0
         self.tpm["fpga2.regfile.c2c_stream_ctrl.idle_val"] = 0
         if len(self.tpm.find_register("fpga1.regfile.feature.c2c_linear_burst")) > 0:
@@ -1572,13 +1609,16 @@ class Tile12(object):
             self.logger.debug("C2C burst is not supported by CPLD.")
 
     @connected
-    def synchronised_data_operation(self, seconds=0.2, timestamp=None):
+    def synchronised_data_operation(
+        self: Tile12, seconds: float = 0.2, timestamp: Optional[str] = None
+    ) -> None:
         """
         Synchronise data operations between FPGAs.
 
         :param seconds: Number of seconds to delay operation
         :param timestamp: Timestamp at which tile will be synchronised
         """
+        assert self.tpm is not None  # for the type checker
         # Wait while previous data requests are processed
         while (
             self.tpm["fpga1.lmc_gen.request"] != 0
@@ -1591,7 +1631,7 @@ class Tile12(object):
 
         # Read timestamp
         if timestamp is not None:
-            t0 = timestamp
+            t0 = int(timestamp)
         else:
             t0 = max(
                 self.tpm["fpga1.pps_manager.timestamp_read_val"],
@@ -1600,7 +1640,7 @@ class Tile12(object):
 
         # Set arm timestamp
         # delay = number of frames to delay * frame time (shift by 8)
-        delay = seconds * (1 / (1080 * 1e-9) / 256)
+        delay = seconds * (1.0 / (1080.0 * 1e-9) / 256.0)
         t1 = t0 + int(delay)
         for fpga in self.tpm.tpm_fpga:
             fpga.fpga_apply_sync_delay(t1)
@@ -1611,7 +1651,9 @@ class Tile12(object):
             self.logger.error("Synchronised operation failed!")
 
     @connected
-    def synchronised_beamformer_coefficients(self, timestamp=None, seconds=0.2):
+    def synchronised_beamformer_coefficients(
+        self: Tile12, timestamp: Optional[str] = None, seconds: float = 0.2
+    ) -> None:
         """
         Synchronise beamformer coefficients download.
 
@@ -1619,6 +1661,7 @@ class Tile12(object):
         :param seconds: Number of seconds to delay operation
         """
         # Read timestamp
+        assert self.tpm is not None  # for the type checker
         if timestamp is None:
             t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
         else:
@@ -1631,13 +1674,16 @@ class Tile12(object):
             self.tpm[f + ".beamf.timestamp_req"] = t0 + int(delay)
 
     @connected
-    def start_acquisition(self, start_time=None, delay=2):
+    def start_acquisition(
+        self: Tile12, start_time: Optional[int] = None, delay: int = 2
+    ) -> None:
         """
         Start data acquisition.
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
         """
+        assert self.tpm is not None  # for the type checker
         devices = ["fpga1", "fpga2"]
         for f in devices:
             self.tpm[f + ".regfile.eth10g_ctrl"] = 0x0
@@ -1673,20 +1719,18 @@ class Tile12(object):
             self.tpm[f + ".pps_manager.sync_time_val"] = sync_time
 
     @staticmethod
-    def calculate_delay(current_delay, current_tc, ref_low, ref_hi):
+    def calculate_delay(
+        current_delay: int, current_tc: int, ref_low: int, ref_hi: int
+    ) -> int:
         """
         Calculate delay for PPS pulse.
 
         :param current_delay: Current delay
-        :type current_delay: int
         :param current_tc: Current phase register terminal count
-        :type current_tc: int
         :param ref_low: Low reference
-        :type ref_low: int
         :param ref_hi: High reference
-        :type ref_hi: int
+
         :return: Modified phase register terminal count
-        :rtype: int
         """
         for n in range(5):
             if current_delay <= ref_low:
@@ -1703,26 +1747,25 @@ class Tile12(object):
                     return new_tc
             else:
                 return current_tc
+        return current_tc
 
     # --------------- Wrapper for data acquisition: ------------------------------------
 
     @connected
     def configure_integrated_channel_data(
-        self,
-        integration_time=0.5,
-        first_channel=0,
-        last_channel=511,
-    ):
+        self: Tile12,
+        integration_time: float = 0.5,
+        first_channel: int = 0,
+        last_channel: int = 511,
+    ) -> None:
         """
         Configure and start continuous integrated channel data.
 
         :param integration_time: integration time in seconds, defaults to 0.5
-        :type integration_time: float, optional
         :param first_channel: first channel
-        :type first_channel: int, optional
         :param last_channel: last channel
-        :type last_channel: int, optional
         """
+        assert self.tpm is not None  # for the type checker
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].configure_parameters(
                 "channel",
@@ -1735,21 +1778,19 @@ class Tile12(object):
 
     @connected
     def configure_integrated_beam_data(
-        self,
-        integration_time=0.5,
-        first_channel=0,
-        last_channel=191,
-    ):
+        self: Tile12,
+        integration_time: float = 0.5,
+        first_channel: int = 0,
+        last_channel: int = 191,
+    ) -> None:
         """
         Configure and start continuous integrated beam data.
 
         :param integration_time: integration time in seconds, defaults to 0.5
-        :type integration_time: float, optional
         :param first_channel: first channel
-        :type first_channel: int, optional
         :param last_channel: last channel
-        :type last_channel: int, optional
         """
+        assert self.tpm is not None  # for the type checker
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].configure_parameters(
                 "beamf",
@@ -1761,23 +1802,27 @@ class Tile12(object):
             )
 
     @connected
-    def stop_integrated_data(self):
+    def stop_integrated_data(self: Tile12) -> None:
         """Stop transmission of integrated data."""
+        assert self.tpm is not None  # for the type checker
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].stop_integrated_data()
 
     @connected
-    def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
+    def send_raw_data(
+        self: Tile12,
+        sync: bool = False,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> None:
         """
         Send raw data from the TPM.
 
-        :param timestamp: When to start. Default now.
-        :type timestamp: int, optional
-        :param seconds: delay with respect to timestamp, in seconds
-        :type seconds: float, optional
         :param sync: Get synchronised
-        :type sync: bool, optional
+        :param timestamp: When to start. Default now.
+        :param seconds: delay with respect to timestamp, in seconds
         """
+        assert self.tpm is not None  # for the type checker
         # Data transmission should be synchronised across FPGAs
         self.synchronised_data_operation(seconds=seconds, timestamp=timestamp)
         # Send data from all FPGAs
@@ -1789,27 +1834,23 @@ class Tile12(object):
 
     @connected
     def send_channelised_data(
-        self,
-        number_of_samples=1024,
-        first_channel=0,
-        last_channel=511,
-        timestamp=None,
-        seconds=0.2,
-    ):
+        self: Tile12,
+        number_of_samples: int = 1024,
+        first_channel: int = 0,
+        last_channel: int = 511,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> None:
         """
         Send channelised data from the TPM.
 
         :param number_of_samples: number of spectra to send
-        :type number_of_samples: int, optional
         :param first_channel: first channel to send
-        :type first_channel: int, optional
         :param last_channel: last channel to send
-        :type last_channel: int, optional
         :param timestamp: when to start(?)
-        :type timestamp: int, optional
         :param seconds: when to synchronise
-        :type seconds: float, optional
         """
+        assert self.tpm is not None  # for the type checker
         # Data transmission should be synchronised across FPGAs
         self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
         # Send data from all FPGAs
@@ -1819,15 +1860,16 @@ class Tile12(object):
             )
 
     @connected
-    def send_beam_data(self, timestamp=None, seconds=0.2):
+    def send_beam_data(
+        self: Tile12, timestamp: Optional[str] = None, seconds: float = 0.2
+    ) -> None:
         """
         Transmit a snapshot containing beamformed data.
 
         :param timestamp: when to start(?)
-        :type timestamp: int, optional
         :param seconds: when to synchronise
-        :type seconds: float, optional
         """
+        assert self.tpm is not None  # for the type checker
         # Data transmission should be synchronised across FPGAs
         self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
         # Send data from all FPGAs
@@ -1836,28 +1878,25 @@ class Tile12(object):
 
     @connected
     def send_channelised_data_continuous(
-        self,
-        channel_id,
-        number_of_samples=128,
-        wait_seconds=0,
-        timestamp=None,
-        seconds=0.2,
-    ):
+        self: Tile12,
+        channel_id: int,
+        number_of_samples: int = 128,
+        wait_seconds: float = 0.0,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> None:
         """
-        Transmit data from a channel continuously. It can be stopped with
-        stop_data_transmission.
+        Transmit data from a channel continuously.
+
+        It can be stopped with stop_data_transmission.
 
         :param channel_id: index of channel to send
-        :type channel_id: int
         :param number_of_samples: number of spectra to send
-        :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data
-        :type wait_seconds: float
         :param timestamp: when to start(?)
-        :type timestamp: int, optional
         :param seconds: when to synchronise
-        :type seconds: float, optional
         """
+        assert self.tpm is not None  # for the type checker
         time.sleep(wait_seconds)
         # Data transmission should be synchronised across FPGAs
         self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
@@ -1868,7 +1907,7 @@ class Tile12(object):
             )
 
     @connected
-    def stop_data_transmission(self):
+    def stop_data_transmission(self: Tile12) -> None:
         """Stop all data transmission from TPM."""
         for k, v in self._daq_threads.items():
             if v == self._RUNNING:
@@ -1877,30 +1916,25 @@ class Tile12(object):
 
     @connected
     def send_channelised_data_narrowband(
-        self,
-        frequency,
-        round_bits,
-        number_of_samples=128,
-        wait_seconds=0,
-        timestamp=None,
-        seconds=0.2,
-    ):
+        self: Tile12,
+        frequency: int,
+        round_bits: int,
+        number_of_samples: int = 128,
+        wait_seconds: int = 0,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> None:
         """
         Send channelised data from a single channel.
 
         :param frequency: sky frequency to transmit
-        :type frequency: int
         :param round_bits: which bits to round
-        :type round_bits: int
         :param number_of_samples: number of spectra to send
-        :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data
-        :type wait_seconds: int, optional
         :param timestamp: when to start
-        :type timestamp: int, optional
         :param seconds: when to synchronise
-        :type seconds: float, optional
         """
+        assert self.tpm is not None  # for the type checker
         time.sleep(wait_seconds)
         # Data transmission should be synchronised across FPGAs
         self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
@@ -1913,22 +1947,23 @@ class Tile12(object):
     # ---------------------------- Wrapper for test generator ----------------------------
     @connected
     def set_test_generator_tone(
-        self, generator, frequency=100e6, amplitude=0.0, phase=0.0, load_time=0
-    ):
+        self: Tile12,
+        generator: int,
+        frequency: float = 100e6,
+        amplitude: float = 0.0,
+        phase: float = 0.0,
+        load_time: int = 0,
+    ) -> None:
         """
         Test generator tone setting.
 
         :param generator: generator select. 0 or 1
-        :type generator: int
         :param frequency: Tone frequency in Hz
-        :type frequency: float
         :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
-        :type amplitude: float
         :param phase: Initial tone phase, in turns
-        :type phase: float
         :param load_time: Time to start the tone.
-        :type load_time: int
         """
+        assert self.tpm is not None  # for the type checker
         delay = 128
         if load_time == 0:
             t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
@@ -1941,15 +1976,16 @@ class Tile12(object):
         )
 
     @connected
-    def set_test_generator_noise(self, amplitude=0.0, load_time=0):
+    def set_test_generator_noise(
+        self: Tile12, amplitude: float = 0.0, load_time: int = 0
+    ) -> None:
         """
         Test generator Gaussian white noise setting.
 
         :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
-        :type amplitude: float
         :param load_time: Time to start the tone.
-        :type load_time: int
         """
+        assert self.tpm is not None  # for the type checker
         if load_time == 0:
             t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
             load_time = t0 + 128
@@ -1957,75 +1993,78 @@ class Tile12(object):
         self.tpm.test_generator[1].enable_prdg(amplitude, load_time)
 
     @connected
-    def set_test_generator_pulse(self, freq_code, amplitude=0.0):
+    def set_test_generator_pulse(
+        self: Tile12, freq_code: int, amplitude: float = 0.0
+    ) -> None:
         """
         Test generator Gaussian white noise setting.
 
         :param freq_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
-        :type freq_code: int
         :param amplitude: Tone peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU
-        :type amplitude: float
         """
+        assert self.tpm is not None  # for the type checker
         self.tpm.test_generator[0].set_pulse_frequency(freq_code, amplitude)
         self.tpm.test_generator[1].set_pulse_frequency(freq_code, amplitude)
 
     @connected
-    def test_generator_input_select(self, inputs):
+    def test_generator_input_select(self: Tile12, inputs: int) -> None:
         """
-        Specify ADC inputs which are substitute to test signal. Specified using a 32 bit
+        Specify ADC inputs which are substitute to test signal.
+
+        Specified using a 32 bit
         mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
-        :type inputs: int
         """
+        assert self.tpm is not None  # for the type checker
         self.tpm.test_generator[0].channel_select(inputs & 0xFFFF)
         self.tpm.test_generator[1].channel_select((inputs >> 16) & 0xFFFF)
 
     # ------------------------ Wrapper for index and attribute methods ---------------
-    def __str__(self):
+    def __str__(self: Tile12) -> str:
         """
-        Produces list of tile information
+        Produce a list of tile information.
+
         :return: Information string
-        :rtype: str
         """
+        assert self.tpm is not None  # for the type checker
         return str(self.tpm)
 
-    def __getitem__(self, key):
+    def __getitem__(self: Tile12, key: str | int) -> int | list[int]:
         """
-        Read a register using indexing syntax: value=tile['registername']
+        Read a register using indexing syntax: value=tile['registername'].
 
         :param key: register address, symbolic or numeric
-        :type key: str
+
         :return: indexed register content
-        :rtype: int
         """
+        assert self.tpm is not None  # for the type checker
         return self.tpm[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self: Tile12, key: str | int, value: int | list[int]) -> None:
         """
         Set a register to a value.
 
         :param key: register address, symbolic or numeric
-        :type key: str
         :param value: value to be written into register
-        :type value: int
         """
+        assert self.tpm is not None  # for the type checker
         self.tpm[key] = value
 
-    def __getattr__(self, name):
+    def __getattr__(self: Tile12, name: str) -> Any:
         """
-        Handler for any requested attribute not found in the usual way; tries to return
-        the corresponding attribute of the connected TPM.
+        Handle any requested attribute not found in the usual way.
+
+        Tries to return the corresponding attribute of the connected TPM.
 
         :param name: name of the requested attribute
-        :type name: str
 
         :raises AttributeError: if neither this class nor the TPM has
             the named attribute.
 
         :return: the requested attribute
-        :rtype: object
         """
+        assert self.tpm is not None  # for the type checker
         if name in dir(self.tpm):
             return getattr(self.tpm, name)
         else:
@@ -2033,12 +2072,11 @@ class Tile12(object):
 
     # ------------------- Test methods
     @connected
-    def check_jesd_lanes(self):
+    def check_jesd_lanes(self: Tile12) -> bool:
         """
         Check if JESD204 lanes are error free.
 
         :return: true if all OK
-        :rtype: bool
         """
         rd = np.zeros(4, dtype=int)
         rd[0] = self["fpga1.jesd204_if.core_id_0_link_error_status_0"]
@@ -2058,7 +2096,7 @@ class Tile12(object):
                 rd[n] = rd[n] >> 3
         return lane_ok
 
-    def reset_jesd_error_counter(self):
+    def reset_jesd_error_counter(self: Tile12) -> None:
         """Reset errors in JESD lanes."""
         self["fpga1.jesd204_if.core_id_0_error_reporting"] = 1
         self["fpga1.jesd204_if.core_id_1_error_reporting"] = 1
@@ -2075,30 +2113,32 @@ class Tile12(object):
         self["fpga2.jesd204_if.core_id_0_error_reporting"] = 1
         self["fpga2.jesd204_if.core_id_1_error_reporting"] = 1
 
-    def check_jesd_error_counter(self, show_result=True):
+    def check_jesd_error_counter(self: Tile12, show_result: bool = True) -> list[int]:
         """
         Check JESD204 lanes errors.
 
         :param show_result: prints error counts on logger
-        :type show_result: bool
+
         :return: error count vector
-        :rtype: list(int)
         """
         errors = []
         for lane in range(32):
             fpga_id = lane / 16
             core_id = (lane % 16) / 8
             lane_id = lane % 8
-            reg = self[
-                "fpga%d.jesd204_if.core_id_%d_lane_%d_link_error_count"
-                % (fpga_id + 1, core_id, lane_id)
-            ]
+            reg = cast(
+                int,
+                self[
+                    "fpga%d.jesd204_if.core_id_%d_lane_%d_link_error_count"
+                    % (fpga_id + 1, core_id, lane_id)
+                ],
+            )
             errors.append(reg)
             if show_result:
                 self.logger.info("Lane " + str(lane) + " error count " + str(reg))
         return errors
 
-    def download_firmware(self, device, bitfile):
+    def download_firmware(self: Tile12, device: int, bitfile: str) -> None:
         """
         Download bitfile to FPGA.
 
@@ -2107,12 +2147,13 @@ class Tile12(object):
 
         :raises LibraryError: if the TPM is not connected
         """
+        assert self.tpm is not None  # for the type checker
         # Check if connected
-        if self.tpm.status[Device.Board] != Status.OK:
+        if cast(int, self.tpm.status[Device.Board]) != Status.OK:
             raise LibraryError("TPM needs to be connected in order to program FPGAs")
 
         required_cpld_version = 0x17041801
-        cpld_version = self[0x30000000]
+        cpld_version = cast(int, self[0x30000000])
         if cpld_version < required_cpld_version or cpld_version & 0xF0 == 0xB0:
             self.logger.error(
                 "CPLD firmware version is too old. Required version is "
@@ -2146,7 +2187,7 @@ class Tile12(object):
 
         # Check if ucp_smap_write is supported
         start = time.time()
-        if self[0x30000000] >= 0x18050200:
+        if cast(int, self[0x30000000]) >= 0x18050200:
             self.logger.info("FPGA programming using fast SelectMap write")
             packet_size = 65536
             num = int(np.floor(bitfile_length / float(packet_size)))
@@ -2191,7 +2232,7 @@ class Tile12(object):
         # Wait for operation to complete
         status_read = 0
         for xil_register in self.tpm._xil_registers:
-            while self[xil_register] & 0x2 != 0x2:  # DONE high
+            while cast(int, self[xil_register]) & 0x2 != 0x2:  # DONE high
                 time.sleep(0.01)
                 status_read += 1
                 if status_read == 100:
@@ -2207,13 +2248,14 @@ class Tile12(object):
         self[self._global_register] = 0x3
         self.tpm_communication_check()
 
-    def tpm_communication_check(self):
+    def tpm_communication_check(self: Tile12) -> None:
         """Brute force check to make sure we can communicate with programmed TPM."""
+        assert self.tpm is not None  # for the type checker
         for _n in range(4):
             try:
                 self.tpm.calibrate_fpga_to_cpld()
-                magic0 = self[0x4]
-                magic1 = self[0x10000004]
+                magic0 = cast(int, self[0x4])
+                magic1 = cast(int, self[0x10000004])
                 if magic0 == magic1 == 0xA1CE55AD:
                     return
                 else:
@@ -2232,11 +2274,11 @@ class Tile12(object):
             self.tpm.write_address(0x30000008, 0x8000, retry=False)  # Global Reset CPLD
             time.sleep(0.2)
 
-    def get_firmware_list(self):
+    def get_firmware_list(self: Tile12) -> list[dict[str, Any]]:
         """
-        Get information for loaded firmware
+        Get information for loaded firmware.
+
         :return: Firmware information dictionary for each loaded firmware
-        :rtype: list(dict)
         """
         # Got through all firmware information plugins and extract information
         # If firmware is not yet loaded, fill in some dummy information
@@ -2255,6 +2297,7 @@ class Tile12(object):
                     }
                 )
         else:
+            assert self.tpm is not None  # for the type checker
             for plugin in self.tpm.tpm_firmware_information:
                 # Update information
                 plugin.update_information()

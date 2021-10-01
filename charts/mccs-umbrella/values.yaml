@@ -28,13 +28,13 @@ ska-tango-base:
     enabled: true
 
 webjive:
-    enabled: true
+    enabled: false
 
 webjive-dashboard:
-    enabled: true
+    enabled: false
 
 webjive-auth:
-    enabled: true
+    enabled: false
 
 # example overrides
 # ska-low-mccs:

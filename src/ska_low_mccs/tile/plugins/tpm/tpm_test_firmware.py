@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -14,10 +13,12 @@ This is a transcript of the corresponding class from the pyaavs library,
 with code style modified for SKA coding conventions. It depends heavily
 on the pyfabil low level software and specific hardware module plugins.
 """
-__author__ = "Alessio Magro"
+
+from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import time
+from typing import Any
 
 from pyfabil.plugins.firmwareblock import FirmwareBlock
 from pyfabil.base.definitions import (
@@ -33,6 +34,8 @@ from pyfabil.base.definitions import (
 )
 from time import sleep
 
+__all__ = ["TpmTestFirmware"]
+
 
 class TpmTestFirmware(FirmwareBlock):
     """FirmwareBlock tests class."""
@@ -41,13 +44,12 @@ class TpmTestFirmware(FirmwareBlock):
     @compatibleboards(BoardMake.TpmBoard)
     @friendlyname("tpm_test_firmware")
     @maxinstances(2)
-    def __init__(self, board, **kwargs):
+    def __init__(self: TpmTestFirmware, board: Any, **kwargs: Any) -> None:
         """
         Initialize a new TpmTestFirmware instance.
 
         :param board: Pointer to board instance
         :param kwargs: named arguments
-        :type kwargs: dict
 
         :raises PluginError: device argument must be specified
         """
@@ -60,10 +62,7 @@ class TpmTestFirmware(FirmwareBlock):
 
         if "fsample" not in kwargs:
             logging.info("TpmTestFirmware: Setting default sampling frequency 800 MHz.")
-            self._fsample = 800e6
-        else:
-            self._fsample = float(kwargs["fsample"])
-
+        self._fsample = kwargs.get("fsample", 800e6)
         try:
             if self.board["fpga1.regfile.feature.xg_eth_implemented"] == 1:
                 self.xg_eth = True
@@ -81,7 +80,7 @@ class TpmTestFirmware(FirmwareBlock):
 
         self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
 
-    def load_plugin(self):
+    def load_plugin(self: TpmTestFirmware) -> None:
         """Load required plugin."""
         self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0)
         self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1)
@@ -130,7 +129,7 @@ class TpmTestFirmware(FirmwareBlock):
             self.board.load_plugin("SpeadTxGen", device=self._device, core=3),
         ]
 
-    def fpga_clk_sync(self):
+    def fpga_clk_sync(self: TpmTestFirmware) -> None:
         """FPGA synchronise clock."""
         if self._device_name == "fpga1":
 
@@ -175,7 +174,7 @@ class TpmTestFirmware(FirmwareBlock):
                 + hex(self.board["fpga2.pps_manager.sync_phase"])
             )
 
-    def start_ddr_initialisation(self):
+    def start_ddr_initialisation(self: TpmTestFirmware) -> None:
         """Start DDR initialisation."""
         if self.board["board.regfile.ctrl.en_ddr_vdd"] == 0:
             self.board["board.regfile.ctrl.en_ddr_vdd"] = 1
@@ -184,7 +183,7 @@ class TpmTestFirmware(FirmwareBlock):
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x1
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x0
 
-    def check_ddr_initialisation(self):
+    def check_ddr_initialisation(self: TpmTestFirmware) -> None:
         """Check whether DDR has initialised."""
         if self.board.memory_map.has_register(
             self._device_name + ".regfile.stream_status.ddr_init_done"
@@ -202,7 +201,7 @@ class TpmTestFirmware(FirmwareBlock):
             logging.debug("DDR3 " + self._device_name + " initialised!")
             return
 
-    def initialise_ddr(self):
+    def initialise_ddr(self: TpmTestFirmware) -> None:
         """Initialise DDR."""
         if self.board["board.regfile.ctrl.en_ddr_vdd"] == 0:
             self.board["board.regfile.ctrl.en_ddr_vdd"] = 1
@@ -234,7 +233,7 @@ class TpmTestFirmware(FirmwareBlock):
 
         logging.error("Cannot initilaise DDR3 " + self._device_name)
 
-    def initialise_firmware(self):
+    def initialise_firmware(self: TpmTestFirmware) -> None:
         """
         Initialise firmware components.
 
@@ -286,23 +285,26 @@ class TpmTestFirmware(FirmwareBlock):
 
     #######################################################################################
 
-    def initialize_spead(self):
+    def initialize_spead(self: TpmTestFirmware) -> None:
         """Initialize SPEAD."""
         self.board[self._device_name + ".lmc_spead_tx.control"] = 0x0400100C
 
-    def send_raw_data(self):
+    def send_raw_data(self: TpmTestFirmware) -> None:
         """Send raw data from the TPM."""
         self.board[self._device_name + ".lmc_gen.raw_all_channel_mode_enable"] = 0x0
         self.board[self._device_name + ".lmc_gen.request.raw_data"] = 0x1
 
-    def send_raw_data_synchronised(self):
+    def send_raw_data_synchronised(self: TpmTestFirmware) -> None:
         """Send raw data from the TPM."""
         self.board[self._device_name + ".lmc_gen.raw_all_channel_mode_enable"] = 0x1
         self.board[self._device_name + ".lmc_gen.request.raw_data"] = 0x1
 
     def send_channelised_data(
-        self, number_of_samples=128, first_channel=0, last_channel=511
-    ):
+        self: TpmTestFirmware,
+        number_of_samples: int = 128,
+        first_channel: int = 0,
+        last_channel: int = 511,
+    ) -> None:
         """
         Send channelized data from the TPM.
 
@@ -343,7 +345,9 @@ class TpmTestFirmware(FirmwareBlock):
             self.board[self._device_name + ".lmc_gen.channelized_ddc_mode"] = 0x0
         self.board[self._device_name + ".lmc_gen.request.channelized_data"] = 0x1
 
-    def send_channelised_data_continuous(self, channel_id, number_of_samples=128):
+    def send_channelised_data_continuous(
+        self: TpmTestFirmware, channel_id: int, number_of_samples: int = 128
+    ) -> None:
         """
         Continuously send channelised data from a single channel.
 
@@ -368,8 +372,11 @@ class TpmTestFirmware(FirmwareBlock):
             self.board[self._device_name + ".lmc_gen.channelized_ddc_mode"] = 0x0
 
     def send_channelised_data_narrowband(
-        self, band_frequency, round_bits, number_of_samples=128
-    ):
+        self: TpmTestFirmware,
+        band_frequency: int,
+        round_bits: int,
+        number_of_samples: int = 128,
+    ) -> None:
         """
         Continuously send channelised data from a single channel in narrowband mode.
 
@@ -410,39 +417,41 @@ class TpmTestFirmware(FirmwareBlock):
             )
         self.board[self._device_name + ".lmc_gen.request.channelized_data"] = 0x1
 
-    def stop_channelised_data_narrowband(self):
+    def stop_channelised_data_narrowband(self: TpmTestFirmware) -> None:
         """Stop transmission of narrowband channel data."""
         self.stop_channelised_data_continuous()
 
-    def stop_channelised_data_continuous(self):
+    def stop_channelised_data_continuous(self: TpmTestFirmware) -> None:
         """Stop transmission of continuous channel data."""
         self.board[
             self._device_name + ".lmc_gen.channelized_single_channel_mode.enable"
         ] = 0x0
 
-    def stop_channelised_data(self):
+    def stop_channelised_data(self: TpmTestFirmware) -> None:
         """Stop sending channelised data."""
         self.board[
             self._device_name + ".lmc_gen.channelized_single_channel_mode.enable"
         ] = 0x0
 
-    def send_beam_data(self):
+    def send_beam_data(self: TpmTestFirmware) -> None:
         """Send beam data from the TPM."""
         self.board[self._device_name + ".lmc_gen.request.beamformed_data"] = 0x1
 
-    def stop_integrated_channel_data(self):
+    def stop_integrated_channel_data(self: TpmTestFirmware) -> None:
         """Stop receiving integrated beam data from the board."""
         self._integrator.stop_integrated_channel_data()
 
-    def stop_integrated_beam_data(self):
+    def stop_integrated_beam_data(self: TpmTestFirmware) -> None:
         """Stop receiving integrated beam data from the board."""
         self._integrator.stop_integrated_beam_data()
 
-    def stop_integrated_data(self):
+    def stop_integrated_data(self) -> None:
         """Stop transmission of integrated data."""
         self._integrator.stop_integrated_data()
 
-    def download_beamforming_weights(self, weights, antenna):
+    def download_beamforming_weights(
+        self: TpmTestFirmware, weights: list[float], antenna: int
+    ) -> None:
         """
         Apply beamforming weights.
 
@@ -454,7 +463,7 @@ class TpmTestFirmware(FirmwareBlock):
 
     # Superclass method implementations
 
-    def initialise(self):
+    def initialise(self: TpmTestFirmware) -> bool:
         """
         Initialise TpmTestFirmware.
 
@@ -463,15 +472,19 @@ class TpmTestFirmware(FirmwareBlock):
         logging.info("TpmTestFirmware has been initialised")
         return True
 
-    def status_check(self):
-        """Perform status check
+    def status_check(self: TpmTestFirmware) -> Any:
+        """
+        Perform status check.
+
         :return: Status
         """
         logging.info("TpmTestFirmware : Checking status")
         return Status.OK
 
-    def clean_up(self):
-        """Perform cleanup
+    def clean_up(self: TpmTestFirmware) -> bool:
+        """
+        Perform cleanup.
+
         :return: Success
         """
         logging.info("TpmTestFirmware : Cleaning up")

@@ -22,6 +22,7 @@ from ska_tango_base.control_model import HealthState, PowerMode
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
+    MessageQueue,
     DeviceComponentManager,
     check_communicating,
     check_on,
@@ -233,6 +234,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
+        message_queue_size_callback: Callable[[int], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -256,6 +258,8 @@ class ControllerComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param subrack_health_changed_callback: callback to be called
             when the health of this station's APIU changes
         :param station_health_changed_callback: callback to be called
@@ -273,9 +277,10 @@ class ControllerComponentManager(MccsComponentManager):
             station_beam_health_changed_callback
         )
 
-        self._communication_status_lock = threading.Lock()
+        self.__communication_status_lock = threading.Lock()
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
 
+        self.__power_mode_lock = threading.Lock()
         self._station_power_modes: dict[str, PowerMode] = {}
         self._subrack_power_modes: dict[str, PowerMode] = {}
 
@@ -304,9 +309,16 @@ class ControllerComponentManager(MccsComponentManager):
             range(1, 48),
         )
 
+        self._message_queue = MessageQueue(
+            logger,
+            num_workers=3,
+            queue_size_callback=message_queue_size_callback,
+        )
+
         self._subarrays: dict[str, _SubarrayProxy] = {
             fqdn: _SubarrayProxy(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
@@ -318,6 +330,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._subracks: dict[str, DeviceComponentManager] = {
             fqdn: DeviceComponentManager(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._subrack_power_mode_changed, fqdn),
@@ -329,6 +342,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._stations: dict[str, _StationProxy] = {
             fqdn: _StationProxy(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._station_power_mode_changed, fqdn),
@@ -340,6 +354,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._subarray_beams: dict[str, DeviceComponentManager] = {
             fqdn: DeviceComponentManager(
                 fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
@@ -364,7 +379,6 @@ class ControllerComponentManager(MccsComponentManager):
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
-            None,
             None,
         )
 
@@ -422,7 +436,7 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self._communication_status_lock:
+        with self.__communication_status_lock:
             if (
                 CommunicationStatus.DISABLED
                 in self._device_communication_statuses.values()
@@ -454,18 +468,23 @@ class ControllerComponentManager(MccsComponentManager):
         self._evaluate_power_mode()
 
     def _evaluate_power_mode(self: ControllerComponentManager) -> None:
-        for power_mode in [
-            PowerMode.UNKNOWN,
-            PowerMode.OFF,
-            PowerMode.STANDBY,
-            PowerMode.ON,
-        ]:
-            if (
-                power_mode in self._subrack_power_modes.values()
-                or power_mode in self._station_power_modes.values()
-            ):
-                break
-        self.update_component_power_mode(power_mode)
+        # Many callback threads could be hitting this method at the same time, so it's
+        # possible (likely) that the GIL will suspend a thread between checking if it
+        # need to update, and actually updating. This leads to callbacks appearing out
+        # of order, which breaks tests. Therefore we need to serialise access.
+        with self.__power_mode_lock:
+            for power_mode in [
+                PowerMode.UNKNOWN,
+                PowerMode.OFF,
+                PowerMode.STANDBY,
+                PowerMode.ON,
+            ]:
+                if (
+                    power_mode in self._subrack_power_modes.values()
+                    or power_mode in self._station_power_modes.values()
+                ):
+                    break
+            self.update_component_power_mode(power_mode)
 
     def _subarray_health_changed(
         self: ControllerComponentManager,

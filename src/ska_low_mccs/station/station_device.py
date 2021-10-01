@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -7,15 +6,18 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
+
 """This module implements the MCCS station device."""
+
 from __future__ import annotations
 
 import json
+from typing import List, Optional, Tuple
 
 import tango
 from tango.server import attribute, command, device_property
 
-from ska_tango_base import SKAObsDevice
+from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
 
@@ -27,6 +29,7 @@ from ska_low_mccs.station import (
     StationObsStateModel,
 )
 
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 __all__ = ["MccsStation", "main"]
 
@@ -45,6 +48,16 @@ class MccsStation(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsStation) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsStation) -> None:
         super()._init_state_model()
         self._obs_state_model = StationObsStateModel(
@@ -75,13 +88,14 @@ class MccsStation(SKAObsDevice):
             self.logger,
             self._communication_status_changed,
             self._component_power_mode_changed,
+            self._message_queue_size_changed,
             self._health_model.apiu_health_changed,
             self._health_model.antenna_health_changed,
             self._health_model.tile_health_changed,
             self._obs_state_model.is_configured_changed,
         )
 
-    def init_command_objects(self):
+    def init_command_objects(self: MccsStation) -> None:
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
@@ -106,15 +120,15 @@ class MccsStation(SKAObsDevice):
         called upon :py:class:`~.MccsStation`'s initialisation.
         """
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsStation.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsStation`.
+            Initialise the :py:class:`.MccsStation`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
             device = self.target
@@ -157,7 +171,9 @@ class MccsStation(SKAObsDevice):
         when in OFF state.
         """
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsStation.OnCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for Off() command functionality.
 
@@ -170,12 +186,11 @@ class MccsStation(SKAObsDevice):
             message = "On command completed OK"
             return (ResultCode.OK, message)
 
-    def is_On_allowed(self):
+    def is_On_allowed(self: MccsStation) -> bool:
         """
         Check if command `Off` is allowed in the current device state.
 
         :return: ``True`` if the command is allowed
-        :rtype: bool
         """
         return self.get_state() in [
             tango.DevState.OFF,
@@ -238,7 +253,20 @@ class MccsStation(SKAObsDevice):
 
         self.op_state_model.perform_action(action_map[power_mode])
 
-    def health_changed(self, health):
+    def _message_queue_size_changed(
+        self: MccsStation,
+        size: int,
+    ) -> None:
+        """
+        Handle change in component manager message queue size.
+
+        :param size: the new size of the component manager's message
+            queue
+        """
+        # TODO: This should push an event but the details have to wait for SP-1827
+        self.logger.info(f"Message queue size is now {size}")
+
+    def health_changed(self: MccsStation, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -248,7 +276,6 @@ class MccsStation(SKAObsDevice):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -256,7 +283,7 @@ class MccsStation(SKAObsDevice):
         self.push_change_event("healthState", health)
 
     # Reimplementation for debugging purposes
-    def _update_state(self, state):
+    def _update_state(self: MccsStation, state: tango.DevState) -> None:
         """
         Update the device state.
 
@@ -301,7 +328,7 @@ class MccsStation(SKAObsDevice):
         max_value=16,
         min_value=0,
     )
-    def subarrayId(self):
+    def subarrayId(self: MccsStation) -> int:
         """
         Return the subarray id.
 
@@ -309,17 +336,15 @@ class MccsStation(SKAObsDevice):
             it has been removed from tile device.
 
         :return: the subarray id
-        :rtype: int
         """
         return self._subarray_id
 
-    @subarrayId.write
-    def subarrayId(self, subarray_id):
+    @subarrayId.write  # type: ignore[no-redef]
+    def subarrayId(self: MccsStation, subarray_id: int) -> None:
         """
         Set the ID of the Subarray to which this Station is allocated.
 
         :param subarray_id: the new subarray id for this station
-        :type subarray_id: int
         """
         self._subarray_id = subarray_id
         self._obs_state_model.is_resourced_changed(subarray_id != 0)
@@ -328,12 +353,11 @@ class MccsStation(SKAObsDevice):
         dtype="float",
         label="refLongitude",
     )
-    def refLongitude(self):
+    def refLongitude(self: MccsStation) -> float:
         """
         Return the refLongitude attribute.
 
         :return: the WGS84 Longitude of the station reference position
-        :rtype: float
         """
         return self._refLongitude
 
@@ -341,12 +365,11 @@ class MccsStation(SKAObsDevice):
         dtype="float",
         label="refLatitude",
     )
-    def refLatitude(self):
+    def refLatitude(self: MccsStation) -> float:
         """
         Return the refLatitude attribute.
 
         :return: the WGS84 Latitude of the station reference position
-        :rtype: float
         """
         return self._refLatitude
 
@@ -355,12 +378,11 @@ class MccsStation(SKAObsDevice):
         label="refHeight",
         unit="meters",
     )
-    def refHeight(self):
+    def refHeight(self: MccsStation) -> float:
         """
         Return the refHeight attribute.
 
         :return: the ellipsoidal height of the station reference position
-        :rtype: float
         """
         return self._refHeight
 
@@ -368,35 +390,32 @@ class MccsStation(SKAObsDevice):
         dtype="DevString",
         format="%s",
     )
-    def transientBufferFQDN(self):
+    def transientBufferFQDN(self: MccsStation) -> str:
         """
         Return the FQDN of the TANGO device that managers the transient buffer.
 
         :return: the FQDN of the TANGO device that managers the
             transient buffer
-        :rtype: str
         """
         return self._transient_buffer_fqdn
 
     @attribute(dtype="DevBoolean")
-    def isCalibrated(self):
+    def isCalibrated(self: MccsStation) -> bool:
         """
         Return a flag indicating whether this station is currently calibrated or not.
 
         :return: a flag indicating whether this station is currently
             calibrated or not.
-        :rtype: bool
         """
         return self._is_calibrated
 
     @attribute(dtype="DevBoolean")
-    def isConfigured(self):
+    def isConfigured(self: MccsStation) -> bool:
         """
         Return a flag indicating whether this station is currently configured or not.
 
         :return: a flag indicating whether this station is currently
             configured or not.
-        :rtype: bool
         """
         return self.component_manager._is_configured
 
@@ -404,12 +423,11 @@ class MccsStation(SKAObsDevice):
         dtype="DevLong",
         format="%i",
     )
-    def calibrationJobId(self):
+    def calibrationJobId(self: MccsStation) -> int:
         """
         Return the calibration job id.
 
         :return: the calibration job id
-        :rtype: int
         """
         return self._calibration_job_id
 
@@ -417,12 +435,11 @@ class MccsStation(SKAObsDevice):
         dtype="DevLong",
         format="%i",
     )
-    def daqJobId(self):
+    def daqJobId(self: MccsStation) -> int:
         """
         Return the DAQ job id.
 
         :return: the DAQ job id
-        :rtype: int
         """
         return self._daq_job_id
 
@@ -430,13 +447,13 @@ class MccsStation(SKAObsDevice):
         dtype="DevString",
         format="%s",
     )
-    def dataDirectory(self):
+    def dataDirectory(self: MccsStation) -> str:
         """
-        Return the data directory (the parent directory for all files generated by this
-        station)
+        Return the data directory.
+
+        (the parent directory for all files generated by this station)
 
         :return: the data directory
-        :rtype: str
         """
         return self._data_directory
 
@@ -445,12 +462,11 @@ class MccsStation(SKAObsDevice):
         max_dim_x=8,
         format="%s",
     )
-    def beamFQDNs(self):
+    def beamFQDNs(self: MccsStation) -> list[str]:
         """
         Return the FQDNs of station beams associated with this station.
 
         :return: the FQDNs of station beams associated with this station
-        :rtype: list(str)
         """
         return self._beam_fqdns
 
@@ -458,7 +474,7 @@ class MccsStation(SKAObsDevice):
         dtype=("DevFloat",),
         max_dim_x=2,
     )
-    def delayCentre(self):
+    def delayCentre(self: MccsStation) -> list[float]:
         """
         Return the WGS84 position of the delay centre of the station.
 
@@ -468,17 +484,15 @@ class MccsStation(SKAObsDevice):
             too?
 
         :return: the WGS84 position of the delay centre of the station
-        :rtype: list(float)
         """
         return self._delay_centre
 
-    @delayCentre.write
-    def delayCentre(self, value):
+    @delayCentre.write  # type: ignore[no-redef]
+    def delayCentre(self: MccsStation, value: list[float]) -> None:
         """
         Set the delay centre of the station.
 
         :param value: WGS84 position
-        :type value: list(float)
         """
         self._delay_centre = value
 
@@ -486,7 +500,7 @@ class MccsStation(SKAObsDevice):
         dtype=("DevFloat",),
         max_dim_x=512,
     )
-    def calibrationCoefficients(self):
+    def calibrationCoefficients(self: MccsStation) -> list[float]:
         """
         Return the calibration coefficients for the station.
 
@@ -496,7 +510,6 @@ class MccsStation(SKAObsDevice):
             channel. But how many channels?
 
         :return: the calibration coefficients
-        :rtype: list(float)
         """
         return self._calibration_coefficients
 
@@ -509,19 +522,17 @@ class MccsStation(SKAObsDevice):
         SUCCEEDED_MESSAGE = "Configure command completed OK"
         FAILED_MESSAGE = "Configure command failed"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsStation.ConfigureCommand, argin: str
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the
-            :py:meth:`.MccsStation.Configure` command
+            Implement Configure() command functionality.
 
             :param argin: Configuration specification dict as a json string
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             configuration = json.loads(argin)
             station_id = configuration.get("station_id")
@@ -540,17 +551,15 @@ class MccsStation(SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def Configure(self, argin):
+    def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the station with all relevant parameters.
 
         :param argin: Configuration parameters encoded in a json string
-        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -559,7 +568,7 @@ class MccsStation(SKAObsDevice):
         """
         handler = self.get_command_object("Configure")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ApplyPointingCommand(ResponseCommand):
         """Class for handling the ApplyPointing(argin) command."""
@@ -567,20 +576,18 @@ class MccsStation(SKAObsDevice):
         SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
         FAILED_MESSAGE = "ApplyPointing command failed: ValueError in Tile"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsStation.ApplyPointingCommand, argin: list[float]
+        ) -> tuple[ResultCode, str]:
             """
-            Implementation of :py:meth:`.MccsStation.ApplyPointing` command
-            functionality.
+            Implement ApplyPointing command functionality.
 
             :param argin: an array containing a beam index and antenna
                 delays
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             result_code = component_manager.apply_pointing(argin)
@@ -593,17 +600,17 @@ class MccsStation(SKAObsDevice):
         dtype_in="DevVarDoubleArray",
         dtype_out="DevVarLongStringArray",
     )
-    def ApplyPointing(self, argin):
+    def ApplyPointing(
+        self: MccsStation, argin: list[float]
+    ) -> DevVarLongStringArrayType:
         """
         Set the pointing delay parameters of this Station's Tiles.
 
         :param argin: an array containing a beam index followed by antenna delays
-        :type argin: list(float)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -612,25 +619,22 @@ class MccsStation(SKAObsDevice):
         """
         handler = self.get_command_object("ApplyPointing")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
 
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return MccsStation.run_server(args=args, **kwargs)
+    return MccsStation.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

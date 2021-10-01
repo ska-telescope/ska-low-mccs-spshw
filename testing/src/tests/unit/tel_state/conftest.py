@@ -1,0 +1,62 @@
+#########################################################################
+# !/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+#########################################################################
+"""This module defined a pytest harness for testing the MCCS tel state module."""
+from __future__ import annotations
+
+import logging
+from typing import Callable
+
+import pytest
+
+from ska_low_mccs.tel_state import (
+    TelState,
+    TelStateComponentManager,
+)
+
+from ska_low_mccs.component import CommunicationStatus
+
+
+@pytest.fixture()
+def tel_state_component(logger: logging.Logger) -> TelState:
+    """
+    Fixture that returns a tel state component.
+
+    :param logger: a logger for the tel state component to use.
+
+    :return: a tel state component
+    """
+    return TelState(logger)
+
+
+@pytest.fixture()
+def tel_state_component_manager(
+    logger: logging.Logger,
+    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    message_queue_size_callback: Callable[[int], None],
+) -> TelStateComponentManager:
+    """
+    Return a tel state component manager.
+
+    :param logger: the logger to be used by this object.
+    :param communication_status_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param message_queue_size_callback: callback to be called when the
+        size of the message queue changes.
+
+    :return: a tel state component manager
+    """
+    return TelStateComponentManager(
+        logger,
+        communication_status_changed_callback,
+        message_queue_size_callback,
+    )

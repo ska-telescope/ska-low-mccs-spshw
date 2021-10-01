@@ -12,15 +12,17 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 import json
 import pkg_resources
-from typing import Callable, Optional
+import threading
+from types import FunctionType
+from typing import Any, Callable, Optional
 
 import jsonschema
 
-from ska_tango_base.commands import ResultCode
 
-
-def call_with_json(func: Callable, **kwargs: dict[str, str]) -> tuple[ResultCode, str]:
+def call_with_json(func: Callable, **kwargs: Any) -> Any:
     """
+    Call a command with a json string.
+
     Allows the calling of a command that accepts a JSON string as input, with the actual
     unserialised parameters.
 
@@ -51,6 +53,8 @@ def call_with_json(func: Callable, **kwargs: dict[str, str]) -> tuple[ResultCode
 
 class json_input:  # noqa: N801
     """
+    Parse and validate json string input.
+
     Method decorator that parses and validates JSON input into a python dictionary,
     which is then passed to the method as kwargs. The wrapped method is thus called with
     a JSON string, but can be implemented as if it had been passed a sequence of named
@@ -75,8 +79,9 @@ class json_input:  # noqa: N801
 
     def __init__(self: json_input, schema_path: Optional[str] = None):
         """
-        Initialises a callable json_input object, to function as a device method
-        generator.
+        Initialise a callable json_input object.
+
+        To function as a device method generator.
 
         :param schema_path: an optional path to a schema against which
             the JSON should be validated. Not working at the moment, so
@@ -92,6 +97,8 @@ class json_input:  # noqa: N801
 
     def __call__(self: json_input, func: Callable) -> Callable:
         """
+        Make a class callable.
+
         The decorator method. Makes this class callable, and ensures that when called on
         a device method, a wrapped method is returned.
 
@@ -103,7 +110,7 @@ class json_input:  # noqa: N801
         @functools.wraps(func)
         def wrapped(obj: object, json_string: str) -> object:
             """
-            The wrapped function.
+            Wrap a function.
 
             :param obj: the object that owns the method to be wrapped
                 i.e. the value passed into the method as "self"
@@ -119,7 +126,7 @@ class json_input:  # noqa: N801
 
     def _parse(self: json_input, json_string: str) -> dict[str, str]:
         """
-        Parses and validates the JSON string input.
+        Parse and validate the JSON string input.
 
         :param json_string: a string, purportedly a JSON-encoded object
 
@@ -131,3 +138,111 @@ class json_input:  # noqa: N801
             jsonschema.validate(json_object, self.schema)
 
         return json_object
+
+
+CHECK_THREAD_SAFETY = False
+
+
+class ThreadsafeCheckingMeta(type):  # pragma: no cover
+    """Metaclass that checks for methods being run by multiple concurrent threads."""
+
+    @staticmethod
+    def _init_wrap(func: Callable) -> Callable:
+        """
+        Wrap ``__init__`` to add thread safety checking stuff.
+
+        :param func: the ``__init__`` method being wrapped
+
+        :return: a wrapped ``__init__`` method
+        """
+
+        @functools.wraps(func)
+        def _wrapper(self: ThreadsafeCheckingMeta, *args: Any, **kwargs: Any) -> None:
+            self._thread_id = {}  # type: ignore[attr-defined]
+            func(self, *args, **kwargs)
+
+        return _wrapper
+
+    @staticmethod
+    def _check_wrap(func: Callable) -> Callable:
+        """
+        Wrap the class methods that injects thread safety checks.
+
+        :param func: the method being wrapped
+
+        :return: the wrapped method
+        """
+
+        @functools.wraps(func)
+        def _wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+            thread_id = threading.current_thread().ident
+
+            try:
+                if func in self._thread_id:
+                    assert (
+                        self._thread_id[func] != thread_id
+                    ), f"Method {func} has been re-entered by thread {thread_id}"
+
+                    is_threadsafe = getattr(func, "_is_threadsafe", False)
+                    assert (
+                        is_threadsafe
+                    ), f"Method {func} is already being run by thread {self._thread_id[func]}."
+            except AssertionError:
+                raise
+            except Exception as exception:
+                raise ValueError(
+                    f"Exception when trying to run method {func}"
+                ) from exception
+
+            self._thread_id[func] = thread_id
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                # thread-safey way to delete this key, without caring if it has already
+                # been deleted by another thread (because we might be multithreading
+                # through this wrapper if the wrapped method is marked threadsafe).
+                self._thread_id.pop(func, None)
+
+        return _wrapper
+
+    def __new__(
+        cls: type[ThreadsafeCheckingMeta], name: str, bases: tuple[type], attrs: dict
+    ) -> ThreadsafeCheckingMeta:
+        """
+        Construct Class.
+
+        :param name: name of the new class
+        :param bases: parent classes of the new class
+        :param attrs: class attributes
+
+        :return: new class
+        """
+        if CHECK_THREAD_SAFETY:
+            methods = [attr for attr in attrs if isinstance(attrs[attr], FunctionType)]
+            for attr_name in methods:
+                if attr_name == "__init__":
+                    attrs[attr_name] = cls._init_wrap(attrs[attr_name])
+                elif attr_name in ["__getattr__", "__setattr__"]:
+                    pass
+                else:
+                    attrs[attr_name] = cls._check_wrap(attrs[attr_name])
+
+        return super(ThreadsafeCheckingMeta, cls).__new__(cls, name, bases, attrs)
+
+
+def threadsafe(func: Callable) -> Callable:  # pragma: no cover
+    """
+    Use this method as a decorator for marking a method as threadsafe.
+
+    This tells the ``ThreadsafeCheckingMeta`` metaclass that it is okay
+    for the decorated method to have more than one thread in it at a
+    time. The metaclass will still raise an exception if the *same*
+    thread enters the method multiple times, because re-entry is a
+    common cause of deadlock.
+
+    :param func: the method to be marked as threadsafe
+
+    :return: the method, marked as threadsafe
+    """
+    func._is_threadsafe = True  # type: ignore[attr-defined]
+    return func

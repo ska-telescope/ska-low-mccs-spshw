@@ -18,6 +18,7 @@ from ska_tango_base.control_model import AdminMode, HealthState, ObsState, Power
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
     CommunicationStatus,
+    MessageQueue,
     MessageQueueComponentManager,
     check_communicating,
 )
@@ -32,6 +33,7 @@ class DeviceComponentManager(MessageQueueComponentManager):
     def __init__(
         self: DeviceComponentManager,
         fqdn: str,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
@@ -44,6 +46,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -68,6 +72,7 @@ class DeviceComponentManager(MessageQueueComponentManager):
         self._health_changed_callback = health_changed_callback
 
         super().__init__(
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
@@ -133,7 +138,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         return self.enqueue(self._off)
 
     def _off(self: DeviceComponentManager) -> ResultCode:
-        ([result_code], [message]) = self._proxy.Off()  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.Off()
         return result_code
 
     @check_communicating
@@ -148,7 +154,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         return self.enqueue(self._standby)
 
     def _standby(self: DeviceComponentManager) -> ResultCode:
-        ([result_code], [message]) = self._proxy.Standby()  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.Standby()
         return result_code
 
     @check_communicating
@@ -164,7 +171,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
 
     def _on(self: DeviceComponentManager) -> ResultCode:
         try:
-            ([result_code], [message]) = self._proxy.On()  # type: ignore[union-attr]
+            assert self._proxy is not None  # for the type checker
+            ([result_code], [message]) = self._proxy.On()
         except TypeError as te:
             raise TypeError(f"FQDN is {self._fqdn}") from te
         return result_code
@@ -181,7 +189,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         return self.enqueue(self._reset)
 
     def _reset(self: DeviceComponentManager) -> ResultCode:
-        ([result_code], [message]) = self._proxy.Reset()  # type: ignore[union-attr]
+        assert self._proxy is not None  # for the type checker
+        ([result_code], [message]) = self._proxy.Reset()
         return result_code
 
     @property
@@ -291,6 +300,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
     def __init__(
         self: ObsDeviceComponentManager,
         fqdn: str,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
@@ -304,6 +314,8 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -323,6 +335,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         self._obs_state_changed_callback = obs_state_changed_callback
         super().__init__(
             fqdn,
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,

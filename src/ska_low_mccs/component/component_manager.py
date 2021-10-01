@@ -17,6 +17,8 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 from ska_tango_base.base import BaseComponentManager
 
+from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
+
 __all__ = [
     "CommunicationStatus",
     "ControlMode",
@@ -125,11 +127,11 @@ class MccsComponentManagerProtocol(Protocol):
         ...
 
 
-class MccsComponentManager(BaseComponentManager):
+class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMeta):
     """
     A base component manager for MCCS.
 
-    This class exists to motify the interface of the
+    This class exists to modify the interface of the
     :py:class:`ska_tango_base.base.component_manager.BaseComponentManager`.
     The ``BaseComponentManager`` accepts an ``op_state_model` argument,
     and is expected to interact directly with it. This is not a very
@@ -147,7 +149,9 @@ class MccsComponentManager(BaseComponentManager):
     def __init__(
         self: MccsComponentManager,
         logger: logging.Logger,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,
@@ -169,12 +173,13 @@ class MccsComponentManager(BaseComponentManager):
         """
         self.logger = logger
 
-        self._communication_lock = threading.Lock()
+        self.__communication_lock = threading.Lock()
         self._communication_status = CommunicationStatus.DISABLED
         self._communication_status_changed_callback = (
             communication_status_changed_callback
         )
 
+        self.__power_mode_lock = threading.Lock()
         self._power_mode: Optional[PowerMode] = None
         self._component_power_mode_changed_callback = (
             component_power_mode_changed_callback
@@ -202,6 +207,7 @@ class MccsComponentManager(BaseComponentManager):
         self.update_component_power_mode(None)
         self.update_component_fault(None)
 
+    @threadsafe
     def update_communication_status(
         self: MccsComponentManager,
         communication_status: CommunicationStatus,
@@ -215,9 +221,10 @@ class MccsComponentManager(BaseComponentManager):
             component manager.
         """
         if self._communication_status != communication_status:
-            with self._communication_lock:
+            with self.__communication_lock:
                 self._communication_status = communication_status
-                self._communication_status_changed_callback(communication_status)
+                if self._communication_status_changed_callback is not None:
+                    self._communication_status_changed_callback(communication_status)
 
     @property
     def is_communicating(self: MccsComponentManager) -> bool:
@@ -244,6 +251,7 @@ class MccsComponentManager(BaseComponentManager):
         """
         return self._communication_status
 
+    @threadsafe
     def update_component_power_mode(
         self: MccsComponentManager, power_mode: Optional[PowerMode]
     ) -> None:
@@ -258,12 +266,14 @@ class MccsComponentManager(BaseComponentManager):
             callback is called next time a real value is pushed.
         """
         if self._power_mode != power_mode:
-            self._power_mode = power_mode
-            if (
-                self._component_power_mode_changed_callback is not None
-                and power_mode is not None
-            ):
-                self._component_power_mode_changed_callback(power_mode)
+            with self.__power_mode_lock:
+                if self._power_mode != power_mode:
+                    self._power_mode = power_mode
+                    if (
+                        self._component_power_mode_changed_callback is not None
+                        and power_mode is not None
+                    ):
+                        self._component_power_mode_changed_callback(power_mode)
 
     def component_power_mode_changed(
         self: MccsComponentManager, power_mode: PowerMode

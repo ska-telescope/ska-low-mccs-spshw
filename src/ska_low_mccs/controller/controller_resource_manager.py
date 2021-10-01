@@ -107,7 +107,7 @@ class ControllerResourceManager:
                     station_beams=[["low-mccs/beam/01", "low-mccs/beam/02"]]
                     channel_blocks=[2, 3],
                 )
-        """
+        """ 
         # scrape stations from iterable - these are not a resource
         # stations can be shared between subarrays
         if "stations" in resources:

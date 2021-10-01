@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -13,9 +12,10 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 from typing import Any, List, Optional, Tuple
 
+import tango
 from tango.server import attribute, command
 
-from ska_tango_base import SKASubarray
+from ska_tango_base.subarray import SKASubarray
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import (
     ObservationCommand,
@@ -47,6 +47,16 @@ class MccsSubarray(SKASubarray):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsSubarray) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsSubarray) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
@@ -64,6 +74,7 @@ class MccsSubarray(SKASubarray):
         return SubarrayComponentManager(
             self.logger,
             self._component_communication_status_changed,
+            self._message_queue_size_changed,
             self._assign_completed,
             self._release_completed,
             self._configure_completed,
@@ -79,7 +90,7 @@ class MccsSubarray(SKASubarray):
             self._health_model.station_beam_health_changed,
         )
 
-    def init_command_objects(self):
+    def init_command_objects(self: MccsSubarray) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
@@ -96,15 +107,15 @@ class MccsSubarray(SKASubarray):
     class InitCommand(SKASubarray.InitCommand):
         """Command class for device initialisation."""
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsSubarray.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for initialisation of the attributes and properties of the
-            :py:class:`.MccsSubarray`.
+            Initialise the attributes and properties of MccsSubarray.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -152,6 +163,19 @@ class MccsSubarray(SKASubarray):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
+
+    def _message_queue_size_changed(
+        self: MccsSubarray,
+        size: int,
+    ) -> None:
+        """
+        Handle change in component manager message queue size.
+
+        :param size: the new size of the component manager's message
+            queue
+        """
+        # TODO: This should push an event but the details have to wait for SP-1827
+        self.logger.info(f"Message queue size is now {size}")
 
     def _assign_completed(
         self: MccsSubarray,
@@ -291,14 +315,14 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("component_obsfault")
 
-    def health_changed(self, health):
+    def health_changed(self: MccsSubarray, health: HealthState) -> None:
         """
-        Callback to be called whenever the HealthModel's health state changes;
-        responsible for updating the tango side of things i.e. making sure the attribute
+        Handle the HealthModel's health state changes.
+
+        Responsible for updating the tango side of things i.e. making sure the attribute
         is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -309,38 +333,35 @@ class MccsSubarray(SKASubarray):
     # Attribute methods
     # ------------------
     @attribute(dtype="DevLong", format="%i")
-    def scanId(self):
+    def scanId(self: MccsSubarray) -> int:
         """
         Return the scan id.
 
         :return: the scan id
-        :rtype: int
         """
         scan_id = self.component_manager.scan_id
         return scan_id if scan_id is not None else -1
 
-    @scanId.write
-    def scanId(self, scan_id):
+    @scanId.write  # type: ignore[no-redef]
+    def scanId(self: MccsSubarray, scan_id) -> None:
         """
         Set the scanId attribute.
 
         :param scan_id: the new scanId
-        :type scan_id: int
         """
         self.component_manager.scan_id = scan_id
 
     @attribute(dtype=("DevString",), max_dim_x=512, format="%s")
-    def stationFQDNs(self):
+    def stationFQDNs(self: MccsSubarray) -> list[str]:
         """
         Return the FQDNs of stations assigned to this subarray.
 
         :return: FQDNs of stations assigned to this subarray
-        :rtype: list(str)
         """
         return sorted(self.component_manager.station_fqdns)
 
     @attribute(dtype=("str",), max_dim_x=100)
-    def assignedResources(self):
+    def assignedResources(self: MccsSubarray) -> list[str]:
         """
         Return this subarray's assigned resources.
 
@@ -369,12 +390,12 @@ class MccsSubarray(SKASubarray):
         }
 
         def __init__(
-            self,
+            self: MccsSubarray.AssignResourcesCommand,
             target: Any,
             op_state_model: OpStateModel,
             obs_state_model: SubarrayObsStateModel,
             logger: Optional[logging.Logger] = None,
-        ):
+        ) -> None:
             """
             Initialise a new instance.
 
@@ -392,7 +413,9 @@ class MccsSubarray(SKASubarray):
                 target, obs_state_model, "assign", op_state_model, logger=logger
             )
 
-        def do(self, argin) -> (ResultCode, str):
+        def do(  # type: ignore[override]
+            self: MccsSubarray.AssignResourcesCommand, argin: str
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for AssignResources() command functionality.
 
@@ -424,12 +447,12 @@ class MccsSubarray(SKASubarray):
         }
 
         def __init__(
-            self,
+            self: MccsSubarray.ReleaseResourcesCommand,
             target: Any,
             op_state_model: OpStateModel,
             obs_state_model: SubarrayObsStateModel,
             logger: Optional[logging.Logger] = None,
-        ):
+        ) -> None:
             """
             Initialise a new ReleaseResourcesCommand instance.
 
@@ -447,7 +470,9 @@ class MccsSubarray(SKASubarray):
                 target, obs_state_model, "release", op_state_model, logger=logger
             )
 
-        def do(self, argin) -> (ResultCode, str):
+        def do(  # type: ignore[override]
+            self: MccsSubarray.ReleaseResourcesCommand, argin: str
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for ReleaseResources() command functionality.
 
@@ -479,12 +504,12 @@ class MccsSubarray(SKASubarray):
         }
 
         def __init__(
-            self,
+            self: MccsSubarray.ReleaseAllResourcesCommand,
             target: Any,
             op_state_model: OpStateModel,
             obs_state_model: SubarrayObsStateModel,
             logger: Optional[logging.Logger] = None,
-        ):
+        ) -> None:
             """
             Initialise a new ReleaseAllResourcesCommand instance.
 
@@ -502,7 +527,9 @@ class MccsSubarray(SKASubarray):
                 target, obs_state_model, "release", op_state_model, logger=logger
             )
 
-        def do(self) -> (ResultCode, str):
+        def do(  # type: ignore[override]
+            self: MccsSubarray.ReleaseAllResourcesCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for ReleaseAllResources() command functionality.
 
@@ -530,12 +557,12 @@ class MccsSubarray(SKASubarray):
         }
 
         def __init__(
-            self,
+            self: MccsSubarray.ConfigureCommand,
             target: Any,
             op_state_model: OpStateModel,
             obs_state_model: SubarrayObsStateModel,
             logger: Optional[logging.Logger] = None,
-        ):
+        ) -> None:
             """
             Initialise a new ConfigureCommand instance.
 
@@ -553,9 +580,12 @@ class MccsSubarray(SKASubarray):
                 target, obs_state_model, "configure", op_state_model, logger=logger
             )
 
-        def do(self, argin: dict) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.ConfigureCommand, argin: dict
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the configure command.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Configure` command for this
             :py:class:`.MccsSubarray` device.
 
@@ -590,9 +620,12 @@ class MccsSubarray(SKASubarray):
             ResultCode.FAILED: "Scan command failed",
         }
 
-        def do(self, argin: str) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.ScanCommand, argin: dict[str, Any]
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the scan command.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Scan`
             command for this :py:class:`.MccsSubarray` device.
 
@@ -622,9 +655,12 @@ class MccsSubarray(SKASubarray):
             ResultCode.FAILED: "Scan command failed",
         }
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.EndScanCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of EndScanCommand.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.EndScan` command for this
             :py:class:`.MccsSubarray` device.
 
@@ -644,9 +680,12 @@ class MccsSubarray(SKASubarray):
             ResultCode.FAILED: "End command failed",
         }
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.EndCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the end command.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.End` command for this
             :py:class:`.MccsSubarray` device.
 
@@ -666,9 +705,12 @@ class MccsSubarray(SKASubarray):
             ResultCode.FAILED: "Scan command failed",
         }
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.AbortCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the AbortCommand.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Abort` command for this
             :py:class:`.MccsSubarray` device.
 
@@ -694,9 +736,12 @@ class MccsSubarray(SKASubarray):
             ResultCode.FAILED: "ObsReset command failed",
         }
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.ObsResetCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the ObsResetCommand.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.ObsReset` command for this
             :py:class:`.MccsSubarray` device.
 
@@ -716,9 +761,12 @@ class MccsSubarray(SKASubarray):
             ResultCode.FAILED: "RestartCommand command failed",
         }
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.RestartCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the (inherited)
+            Implement the functionality of the RestartComand.
+
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Restart` command for this
             :py:class:`.MccsSubarray` device.
 
@@ -739,11 +787,11 @@ class MccsSubarray(SKASubarray):
             ResultCode.FAILED: "SendTransientBuffer command failed",
         }
 
-        def do(self, argin) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarray.SendTransientBufferCommand, argin: list[int]
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless do-hook for the
-            :py:meth:`.MccsSubarray.SendTransientBuffer`
-            command
+            Implement the SendTransientBuffer command.
 
             :param argin: specification of the segment of the transient
                 buffer to send, comprising:
@@ -753,7 +801,6 @@ class MccsSubarray(SKASubarray):
                 Together, these parameters narrow the selection of
                 transient buffer data to the period of time and
                 frequencies that are of interest.
-            :type argin: list(int)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -764,9 +811,12 @@ class MccsSubarray(SKASubarray):
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SendTransientBuffer(self, argin):
+    def SendTransientBuffer(
+        self: MccsSubarray, argin: list[int]
+    ) -> DevVarLongStringArrayType:
         """
         Cause the subarray to send the requested segment of the transient buffer to SDP.
+
         The requested segment is specified by:
 
         1. Start time (timestamp: milliseconds since UNIX epoch)
@@ -786,33 +836,28 @@ class MccsSubarray(SKASubarray):
 
         :param argin: Specification of the segment of the transient
             buffer to send
-        :type argin: list(int)
 
         :return: ASCII String that indicates status, for information
             purposes only
-        :rtype: str
         """
         handler = self.get_command_object("SendTransientBuffer")
         (result_code, status) = handler(argin)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
 
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return MccsSubarray.run_server(args=args, **kwargs)
+    return MccsSubarray.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

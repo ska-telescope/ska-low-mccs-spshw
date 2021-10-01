@@ -24,10 +24,12 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
+    MessageQueue,
     check_communicating,
     check_on,
     enqueue,
 )
+from ska_low_mccs.utils import threadsafe
 
 
 __all__ = ["StationComponentManager"]
@@ -41,6 +43,7 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logical_tile_id: int,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -56,6 +59,8 @@ class _TileProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -76,6 +81,7 @@ class _TileProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
@@ -135,6 +141,7 @@ class StationComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
+        message_queue_size_callback: Callable[[int], None],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -156,6 +163,8 @@ class StationComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param apiu_health_changed_callback: callback to be called when
             the health of this station's APIU changes
         :param antenna_health_changed_callback: callback to be called when
@@ -176,13 +185,19 @@ class StationComponentManager(MccsComponentManager):
             for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
         }
 
-        self._power_mode_lock = threading.Lock()
+        self.__power_mode_lock = threading.Lock()
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
 
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
+
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
+            self._message_queue,
             logger,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
             self._apiu_power_mode_changed,
@@ -192,6 +207,7 @@ class StationComponentManager(MccsComponentManager):
         self._antenna_proxies = [
             DeviceComponentManager(
                 antenna_fqdn,
+                self._message_queue,
                 logger,
                 functools.partial(
                     self._device_communication_status_changed, antenna_fqdn
@@ -207,6 +223,7 @@ class StationComponentManager(MccsComponentManager):
                 tile_fqdn,
                 station_id,
                 logical_tile_id,
+                self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
                 functools.partial(self._tile_power_mode_changed, tile_fqdn),
@@ -286,29 +303,32 @@ class StationComponentManager(MccsComponentManager):
         if communication_status == CommunicationStatus.ESTABLISHED:
             self._is_configured_changed_callback(self._is_configured)
 
+    @threadsafe
     def _antenna_power_mode_changed(
         self: StationComponentManager,
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        with self._power_mode_lock:
+        with self.__power_mode_lock:
             self._antenna_power_modes[fqdn] = power_mode
             self._evaluate_power_mode()
 
+    @threadsafe
     def _tile_power_mode_changed(
         self: StationComponentManager,
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        with self._power_mode_lock:
+        with self.__power_mode_lock:
             self._tile_power_modes[fqdn] = power_mode
             self._evaluate_power_mode()
 
+    @threadsafe
     def _apiu_power_mode_changed(
         self: StationComponentManager,
         power_mode: PowerMode,
     ) -> None:
-        with self._power_mode_lock:
+        with self.__power_mode_lock:
             self._apiu_power_mode = power_mode
             self._evaluate_power_mode()
 

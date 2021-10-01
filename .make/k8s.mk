@@ -1,11 +1,11 @@
 HELM_HOST ?= $(CAR_HELM_REPOSITORY_URL)## helm host url https
 # use values-<deployment>.yaml files instead as --set overrides
-#MINIKUBE ?= true## Minikube or not 
+#MINIKUBE ?= true## Minikube or not
 MARK ?= all
 TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_HOST is an input!
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
-MAX_WAIT ?= 180s
+MAX_WAIT ?= 300s
 
 EXTERNAL_IP ?= $(shell kubectl config view | gawk 'match($$0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 
@@ -106,7 +106,7 @@ uninstall-chart: ## delete the helm chart release
 
 reinstall-chart: uninstall-chart install-chart
 
-upgrade-chart: ## upgrade the  helm chart
+upgrade-chart: ## upgrade the helm chart
 	@sed -e 's/CI_PROJECT_PATH_SLUG/$(CI_PROJECT_PATH_SLUG)/' $(UMBRELLA_CHART_PATH)values.yaml > generated_values.yaml; \
 		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > tmp_values.yaml; \
 		helm upgrade $(RELEASE_NAME) \
@@ -141,11 +141,11 @@ logs: ## show Helm chart POD logs
 	echo ""; \
 	done
 
-tail:  ## provide pod=pod-name
+tail: ## provide pod=pod-name
 	@if [ -z "$$pod" ]; \
 	then echo "usage:";echo "  make tail pod=<pod-name>"; \
 	echo "deviceserver pods are: ";` echo kubectl -n $(KUBE_NAMESPACE) get pod -o name -l 'domain=$(PROJECT)'`;exit 0; fi; \
-	echo "kubectl -n $(KUBE_NAMESPACE) logs -f  $${pod};" && \
+	echo "kubectl -n $(KUBE_NAMESPACE) logs -f $${pod};" && \
 	kubectl -n $(KUBE_NAMESPACE) logs -f $${pod};
 
 kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
@@ -154,20 +154,22 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 	echo "appended to: PrivateRules.mak"; \
 	echo -e "\n\n# base64 encoded from: kubectl config view --flatten\nKUBE_CONFIG_BASE64 = $${KUBE_CONFIG_BASE64}" >> PrivateRules.mak
 
-# run helm  test 
+# run helm test
 functional-test helm-test test: ## test the application on K8s
-	@helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
+	@rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
+	helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
 	test_retcode=$$?; \
+	$(MAKE) logs > $(TEST_RESULTS_DIR)/device-logs.txt; \
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
 	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_WAIT} -f $$yaml; \
-	rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
 	kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR); \
 	python3 .wait_for_report_file.py; \
 	report_retcode=$$?; \
-	echo "test report:"; \
-	cat $(TEST_RESULTS_DIR)/*; echo; \
+	echo "Test artefacts are in $(TEST_RESULTS_DIR)"; \
+	echo "Test output:"; \
+	cat $(TEST_RESULTS_DIR)/functional-test-output.txt; echo; \
 	kubectl -n $(KUBE_NAMESPACE) delete pod -l transient; \
 	kubectl -n $(KUBE_NAMESPACE) delete -f $$yaml --now; rm $$yaml; \
 	exit $$test_retcode || $$report_retcode
@@ -177,7 +179,7 @@ wait:
 	@date
 	@kubectl -n $(KUBE_NAMESPACE) get pods
 	@jobs=$$(kubectl get job --output=jsonpath={.items..metadata.name} -n $(KUBE_NAMESPACE)); \
-	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=${MAX_WAIT} $$jobs 
+	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=${MAX_WAIT} $$jobs
 	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_WAIT} -l 'app=$(PROJECT)' pods || exit 1
 	@date
 
@@ -188,7 +190,7 @@ bounce:
 	kubectl -n $(KUBE_NAMESPACE) scale --replicas=1 statefulset.apps -l 'domain=$(PROJECT)'; \
 	echo "WARN: 'make wait' for terminating pods not possible. Use 'make watch'"
 
-help:  ## show this help.
+help: ## show this help.
 	@echo "make targets:"
 	@grep -hE '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ""; echo "make vars (+defaults):"
@@ -219,10 +221,10 @@ smoketest: ## check that the number of waiting containers is zero (10 attempts, 
 	done
 
 itango:
-	kubectl exec -it -n $(KUBE_NAMESPACE) ska-tango-base-itango-console  -- itango3
+	kubectl exec -it -n $(KUBE_NAMESPACE) ska-tango-base-itango-console -- itango3
 
 cli:
-	kubectl exec -it -n $(KUBE_NAMESPACE)  mccs-mccs-cli -- bash
+	kubectl exec -it -n $(KUBE_NAMESPACE) mccs-mccs-cli -- bash
 
 watch:
 	watch kubectl get all,pv,pvc,ingress -n $(KUBE_NAMESPACE)

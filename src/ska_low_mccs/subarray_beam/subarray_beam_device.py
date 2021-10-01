@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -12,10 +11,12 @@
 from __future__ import annotations
 
 import json
+from typing import List, Optional, Tuple
 
+import tango
 from tango.server import attribute, command
 
-from ska_tango_base import SKAObsDevice
+from ska_tango_base.obs import SKAObsDevice
 
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState
@@ -28,6 +29,8 @@ from ska_low_mccs.subarray_beam import (
     SubarrayBeamObsStateModel,
 )
 
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+
 __all__ = ["MccsSubarrayBeam", "main"]
 
 
@@ -37,6 +40,16 @@ class MccsSubarrayBeam(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsSubarrayBeam) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
         self._obs_state_model = SubarrayBeamObsStateModel(
@@ -57,12 +70,13 @@ class MccsSubarrayBeam(SKAObsDevice):
         return SubarrayBeamComponentManager(
             self.logger,
             self._component_communication_status_changed,
+            self._message_queue_size_changed,
             self._health_model.is_beam_locked_changed,
             self._obs_state_model.is_configured_changed,
         )
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
-        """Initialises the command handlers for commands supported by this device."""
+        """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self.component_manager, self.op_state_model, self.logger)
@@ -77,10 +91,11 @@ class MccsSubarrayBeam(SKAObsDevice):
         called upon :py:class:`~.MccsSubarrayBeam`'s initialisation.
         """
 
-        def do(self: MccsSubarrayBeam.InitCommand) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsSubarrayBeam.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsSubarrayBeam`.
+            Initialise the attributes and properties of the MccsSubarrayBeam.
 
             State is managed under the hood; the basic sequence is:
 
@@ -136,7 +151,20 @@ class MccsSubarrayBeam(SKAObsDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def health_changed(self, health):
+    def _message_queue_size_changed(
+        self: MccsSubarrayBeam,
+        size: int,
+    ) -> None:
+        """
+        Handle change in component manager message queue size.
+
+        :param size: the new size of the component manager's message
+            queue
+        """
+        # TODO: This should push an event but the details have to wait for SP-1827
+        self.logger.info(f"Message queue size is now {size}")
+
+    def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -146,7 +174,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -201,7 +228,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self.component_manager.station_ids
 
-    @stationIds.write
+    @stationIds.write  # type: ignore[no-redef]
     def stationIds(self: MccsSubarrayBeam, station_ids: list[int]) -> None:
         """
         Set the station ids.
@@ -222,7 +249,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self.component_manager.logical_beam_id
 
-    @logicalBeamId.write
+    @logicalBeamId.write  # type: ignore[no-redef]
     def logicalBeamId(self: MccsSubarrayBeam, logical_beam_id: int) -> None:
         """
         Set the logical beam id.
@@ -251,13 +278,12 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self.component_manager.is_beam_locked
 
-    @isBeamLocked.write
+    @isBeamLocked.write  # type: ignore[no-redef]
     def isBeamLocked(self: MccsSubarrayBeam, value: bool) -> None:
         """
         Set a flag indicating whether the beam is locked or not.
 
         :param value: whether the beam is locked or not
-        :type value: bool
         """
         self.component_manager.is_beam_locked = value
 
@@ -280,7 +306,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         return self.component_manager.antenna_weights
 
     @attribute(dtype=("DevDouble",), max_dim_x=5)
-    def desiredPointing(self: MccsSubarrayBeam) -> list(float):
+    def desiredPointing(self: MccsSubarrayBeam) -> list[float]:
         """
         Return the desired pointing of this beam.
 
@@ -288,7 +314,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self.component_manager.desired_pointing
 
-    @desiredPointing.write
+    @desiredPointing.write  # type:ignore[no-redef]
     def desiredPointing(self: MccsSubarrayBeam, values: list[float]) -> None:
         """
         Set the desired pointing of this beam.
@@ -305,7 +331,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         self.component_manager.desired_pointing = values
 
     @attribute(dtype=("DevDouble",), max_dim_x=5)
-    def phaseCentre(self: MccsSubarrayBeam) -> list(float):
+    def phaseCentre(self: MccsSubarrayBeam) -> list[float]:
         """
         Return the phase centre.
 
@@ -321,7 +347,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsSubarrayBeam.ConfigureCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
@@ -363,7 +389,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                 return (result_code, "")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Configure(self: MccsSubarrayBeam, argin: str) -> tuple[ResultCode, str]:
+    def Configure(self: MccsSubarrayBeam, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the subarray_beam with all relevant parameters.
 
@@ -375,19 +401,18 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         handler = self.get_command_object("Configure")
         (result_code, status) = handler(argin)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class ScanCommand(ResponseCommand):
         """Class for handling the Scan(argin) command."""
 
         SUCCEEDED_MESSAGE = "Scan command completed OK"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsSubarrayBeam.ScanCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
-            Stateless do-hook for the
-            :py:meth:`.MccsSubarrayBeam.Scan` command
+            Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
 
             :param argin: Scan parameters encoded in a json string
                 {
@@ -411,7 +436,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                 return (result_code, "")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Scan(self: MccsSubarrayBeam, argin: str) -> tuple[ResultCode, str]:
+    def Scan(self: MccsSubarrayBeam, argin: str) -> DevVarLongStringArrayType:
         """
         Start a scan on the subarray_beam.
 
@@ -423,13 +448,13 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         handler = self.get_command_object("Scan")
         (result_code, status) = handler(argin)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
 
 # ----------
 # Run server
 # ----------
-def main(args: str = None, **kwargs: str) -> int:
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 
@@ -438,7 +463,7 @@ def main(args: str = None, **kwargs: str) -> int:
 
     :return: exit code
     """
-    return MccsSubarrayBeam.run_server(args=args, **kwargs)
+    return MccsSubarrayBeam.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

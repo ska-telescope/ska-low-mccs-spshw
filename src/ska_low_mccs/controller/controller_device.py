@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -15,11 +14,10 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 from typing import List, Optional, Tuple
 
-# PyTango imports
+import tango
 from tango.server import attribute, command, device_property
 
-# Additional import
-from ska_tango_base import SKABaseDevice
+from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
@@ -47,7 +45,18 @@ class MccsController(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsController) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsController) -> None:
+        """Initialise the state model."""
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = ControllerHealthModel(
@@ -75,12 +84,13 @@ class MccsController(SKABaseDevice):
             self.logger,
             self._communication_status_changed,
             self._component_power_mode_changed,
+            self._message_queue_size_changed,
             self._health_model.subrack_health_changed,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
         )
 
-    def init_command_objects(self):
+    def init_command_objects(self: MccsController) -> None:
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
@@ -107,14 +117,15 @@ class MccsController(SKABaseDevice):
         """
         A class for :py:class:`~.MccsController`'s Init command.
 
-        The
-        :py:meth:`~.MccsController.InitCommand.do` method below is
+        The :py:meth:`~.MccsController.InitCommand.do` method below is
         called during :py:class:`~.MccsController`'s initialisation.
         """
 
-        def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsController.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the `MccsController`.
+            Initialise the attributes and properties of the `MccsController`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -186,16 +197,28 @@ class MccsController(SKABaseDevice):
 
         self.op_state_model.perform_action(action_map[power_mode])
 
+    def _message_queue_size_changed(
+        self: MccsController,
+        size: int,
+    ) -> None:
+        """
+        Handle change in component manager message queue size.
+
+        :param size: the new size of the component manager's message
+            queue
+        """
+        # TODO: This should push an event but the details have to wait for SP-1827
+        self.logger.info(f"Message queue size is now {size}")
+
     def health_changed(self: MccsController, health: HealthState) -> None:
         """
-        Callback to be called whenever the HealthModel's health state changes;
-        responsible for updating the tango side of things i.e. making sure the attribute
+        Call this method whenever the HealthModel's health state changes.
+
+        Responsible for updating the tango side of things i.e. making sure the attribute
         is up to date, and events are pushed.
 
         :param health: the new health value
         """
-        self._health_state: Optional[HealthState]  # type hint only
-
         if self._health_state == health:
             return
         self._health_state = health
@@ -227,9 +250,13 @@ class MccsController(SKABaseDevice):
         SUCCEEDED_MESSAGE = "StandbyFull command completed OK"
         FAILED_MESSAGE = "StandbyFull command failed"
 
-        def do(self: MccsController.StandbyFullCommand) -> Tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsController.StandbyFullCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless do-hook for implementing the functionality of the
+            Stateless hook to execute the StandbyFull command.
+
+            Implements the functionality of the
             :py:meth:`.MccsController.StandbyFull` command.
 
             :todo: For now, StandbyLow and StandbyHigh simply implement
@@ -266,7 +293,9 @@ class MccsController(SKABaseDevice):
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Allocate(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
-        Allocate a set of unallocated MCCS resources to a sub-array. The JSON argument
+        Allocate a set of unallocated MCCS resources to a sub-array.
+
+        The JSON argument
         specifies the overall sub-array composition in terms of which stations should be
         allocated to the specified Sub-Array.
 
@@ -286,7 +315,7 @@ class MccsController(SKABaseDevice):
         >>> proxy.Allocate(
                 json.dumps(
                 {
-                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
+                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
                     "subarray_id": 1,
                     "subarray_beam_ids": [1],
                     "station_ids": [[1,2]],
@@ -312,11 +341,13 @@ class MccsController(SKABaseDevice):
         QUEUED_MESSAGE = "Allocate command queued"
         FAILED_MESSAGE = "Allocate command failed"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsController.AllocateCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the
+            Stateless hook to execute the Allocate command.
+
+            Implements the functionality of the
             :py:meth:`.MccsController.Allocate` command
 
             Allocate a set of unallocated MCCS resources to a sub-array.
@@ -325,7 +356,7 @@ class MccsController(SKABaseDevice):
 
             :param argin: JSON-formatted string
                 {
-                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
                 "subarray_id": int,
                 "subarray_beam_ids": list[int],
                 "station_ids": list[list[int]],
@@ -386,9 +417,9 @@ class MccsController(SKABaseDevice):
         QUEUED_MESSAGE = "Allocate command queued"
         FAILED_MESSAGE = "Allocate command failed"
 
-        def do(
-            self: MccsController.RestartCommand, subarray_id: int
-        ) -> Tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsController.RestartSubarrayCommand, subarray_id: int
+        ) -> tuple[ResultCode, str]:
             """
             Do hook for the :py:meth:`.MccsController.RestartSubarray` command.
 
@@ -439,9 +470,9 @@ class MccsController(SKABaseDevice):
         QUEUED_MESSAGE = "Release command queued"
         FAILED_MESSAGE = "Release command failed"
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsController.ReleaseCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless do hook for the :py:meth:`.MccsController.Release` command.
 
@@ -477,7 +508,7 @@ class MccsController(SKABaseDevice):
 # ----------
 
 
-def main(*args: str, **kwargs: str) -> int:
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 

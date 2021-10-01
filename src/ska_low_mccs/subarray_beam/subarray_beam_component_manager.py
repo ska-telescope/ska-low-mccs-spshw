@@ -17,6 +17,7 @@ from ska_low_mccs.subarray_beam import SubarrayBeam
 from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
+    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -31,6 +32,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        message_queue_size_callback: Callable[[int], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         is_configured_changed_callback: Callable[[bool], None],
     ) -> None:
@@ -41,6 +43,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param is_beam_locked_changed_callback: a callback to be called
             when whether the beam is locked changes
         :param is_configured_changed_callback: callback to be called
@@ -49,8 +53,13 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
         self._is_configured_changed_callback = is_configured_changed_callback
 
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
         super().__init__(
             SubarrayBeam(logger),
+            self._message_queue,
             logger,
             communication_status_changed_callback,
             None,

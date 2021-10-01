@@ -22,6 +22,7 @@ import ska_tango_base.subarray
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
+    MessageQueue,
     ObsDeviceComponentManager,
     check_communicating,
     check_on,
@@ -122,6 +123,7 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        message_queue_size_callback: Callable[[int], None],
         assign_completed_callback: Callable[[], None],
         release_completed_callback: Callable[[], None],
         configure_completed_callback: Callable[[], None],
@@ -131,7 +133,7 @@ class SubarrayComponentManager(
         resources_changed_callback: Callable[[set[str], set[str], set[str]], None],
         configured_changed_callback: Callable[[bool], None],
         scanning_changed_callback: Callable[[bool], None],
-        obs_fault_callback: Callable[[bool], None],
+        obs_fault_callback: Callable[[], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None
@@ -147,6 +149,8 @@ class SubarrayComponentManager(
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param message_queue_size_callback: callback to be called when
+            the size of the message queue changes
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
         :param release_completed_callback: callback to be called when
@@ -204,6 +208,11 @@ class SubarrayComponentManager(
         self._station_beams: dict[str, _StationBeamProxy] = dict()
 
         self._scan_id: Optional[int] = None
+
+        self._message_queue = MessageQueue(
+            logger,
+            queue_size_callback=message_queue_size_callback,
+        )
 
         super().__init__(
             logger,
@@ -305,6 +314,7 @@ class SubarrayComponentManager(
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn] = _StationProxy(
                     fqdn,
+                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     functools.partial(self._station_power_mode_changed, fqdn),
@@ -315,6 +325,7 @@ class SubarrayComponentManager(
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn] = _SubarrayBeamProxy(
                     fqdn,
+                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,
@@ -476,6 +487,26 @@ class SubarrayComponentManager(
             for subarray_beam in subarray_beams
         }
 
+        result_code = self._configure_stations(station_configuration)
+        if result_code != ResultCode.FAILED:
+            result_code = self._configure_subarray_beams(subarray_beam_configuration)
+        self._configured_changed_callback(True)
+
+        if result_code == ResultCode.OK:
+            self._configure_completed_callback()
+        return result_code
+
+    def _configure_stations(
+        self: SubarrayComponentManager,
+        station_configuration: dict[str, Any],
+    ) -> ResultCode:
+        """
+        Configure the station resources for a scan.
+
+        :param station_configuration: the station configuration to be applied
+
+        :return: a result code
+        """
         result_code = ResultCode.OK
         for (station_id, configuration) in station_configuration.items():
             station_fqdn = f"low-mccs/station/{station_id:03d}"
@@ -488,6 +519,20 @@ class SubarrayComponentManager(
                 self._device_obs_states[station_fqdn] = ObsState.CONFIGURING
                 if result_code == ResultCode.OK:
                     result_code = ResultCode.QUEUED
+        return result_code
+
+    def _configure_subarray_beams(
+        self: SubarrayComponentManager,
+        subarray_beam_configuration: dict[str, Any],
+    ) -> ResultCode:
+        """
+        Configure the subarray beam resources for a scan.
+
+        :param subarray_beam_configuration: the subarray beam configuration to be applied
+
+        :return: a result code
+        """
+        result_code = ResultCode.OK
         for (subarray_beam_id, configuration) in subarray_beam_configuration.items():
             subarray_beam_fqdn = f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
             subarray_beam_proxy = self._subarray_beams[subarray_beam_fqdn]
@@ -498,10 +543,6 @@ class SubarrayComponentManager(
                 self._configuring_resources.add(subarray_beam_fqdn)
                 if result_code == ResultCode.OK:
                     result_code = ResultCode.QUEUED
-        self._configured_changed_callback(True)
-
-        if result_code == ResultCode.OK:
-            self._configure_completed_callback()
         return result_code
 
     @check_communicating

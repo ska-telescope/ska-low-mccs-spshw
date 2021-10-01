@@ -20,9 +20,9 @@ __all__ = [
 ]
 
 from .cluster_health_model import ClusterHealthModel
-from .cluster_simulator import ClusterSimulator  # type: ignore[attr-defined]
+from .cluster_simulator import ClusterSimulator
 from .cluster_component_manager import (
     ClusterSimulatorComponentManager,
     ClusterComponentManager,
 )
-from .cluster_manager_device import MccsClusterManagerDevice  # type: ignore[attr-defined]
+from .cluster_manager_device import MccsClusterManagerDevice

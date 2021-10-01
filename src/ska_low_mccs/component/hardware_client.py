@@ -52,7 +52,7 @@ from typing_extensions import TypedDict
 
 CommandResponseType = TypedDict(
     "CommandResponseType",
-    {"status": str, "info": str, "command": str, "retvalue": Optional[str]},
+    {"status": str, "info": str, "command": str, "retvalue": str},
 )
 AttributeResponseType = TypedDict(
     "AttributeResponseType",
@@ -80,8 +80,9 @@ class HardwareClient:
 
     def connect(self: HardwareClient) -> Optional[bool]:
         """
-        Check if connected and establish a connection with the client. If this is not
-        possible, returns None.
+        Check if connected and establish a connection with the client.
+
+        If this is not possible, returns None.
 
         None if no connection available, True if connection OK
         """
@@ -146,8 +147,9 @@ class WebHardwareClient(HardwareClient):
 
     def __init__(self: WebHardwareClient, ip_address: str, port: int = 80) -> None:
         """
-        Create a new instance of the HardwareClient protocol to a html based
-        HardwareServer device.
+        Create a new instance of the HardwareClient protocol.
+
+        To a html based HardwareServer device.
 
         :param ip_address: IP address of server
         :param port: Port of server

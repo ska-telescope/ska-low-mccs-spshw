@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -11,10 +12,13 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
     MccsComponentManagerProtocol,
+    MessageQueue,
     ObjectComponent,
     ObjectComponentManager,
     check_communicating,
+    enqueue,
 )
+from ska_low_mccs.utils import threadsafe
 
 
 __all__ = ["PowerSupplyProxySimulator"]
@@ -161,6 +165,7 @@ class PowerSupplyProxySimulator(
 
     def __init__(
         self: PowerSupplyProxySimulator,
+        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         supplied_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -169,6 +174,8 @@ class PowerSupplyProxySimulator(
         """
         Initialise a new instance.
 
+        :param message_queue: the message queue to be used by this
+            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -180,6 +187,7 @@ class PowerSupplyProxySimulator(
         """
         super().__init__(
             self._Component(initial_supplied_power_mode),
+            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -203,6 +211,7 @@ class PowerSupplyProxySimulator(
         self.update_supplied_power_mode(None)
 
     @check_communicating
+    @enqueue
     def power_off(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn off supply of power to the downstream device.
@@ -212,6 +221,7 @@ class PowerSupplyProxySimulator(
         return cast(PowerSupplyProxySimulator._Component, self._component).power_off()
 
     @check_communicating
+    @enqueue
     def power_on(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn on supply of power to the downstream device.
@@ -248,6 +258,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
+        component_progress_changed_callback: Optional[Callable[[int], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -264,7 +275,10 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
+        :param component_progress_changed_callback: callback to be called when the
+            component command progress values changes
         """
+        self.__power_mode_lock = threading.Lock()
         self._target_power_mode: Optional[PowerMode] = None
 
         self._power_supply_communication_status = CommunicationStatus.DISABLED
@@ -272,6 +286,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         self._power_supply_component_manager = power_supply_component_manager
         self._hardware_component_manager = hardware_component_manager
+
+        self._component_progress_changed_callback = component_progress_changed_callback
 
         super().__init__(
             logger,
@@ -335,6 +351,19 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         else:
             self.update_communication_status(self._power_supply_communication_status)
 
+    def component_progress_changed(
+        self: ComponentManagerWithUpstreamPowerSupply, progress: int
+    ) -> None:
+        """
+        Handle notification that the component's progress value has changed.
+
+        This is a callback hook, to be passed to the managed component.
+
+        :param progress: The progress percentage of the long-running command
+        """
+        if self._component_progress_changed_callback is not None:
+            self._component_progress_changed_callback(progress)
+
     def component_power_mode_changed(
         self: ComponentManagerWithUpstreamPowerSupply,
         power_mode: PowerMode,
@@ -380,20 +409,28 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._target_power_mode = PowerMode.ON
         return self._review_power()
 
+    @threadsafe
     def _review_power(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> ResultCode | None:
-        if self._target_power_mode is None:
-            return None
-        if self.power_mode == self._target_power_mode:
-            self._target_power_mode = None  # attained without any action needed
-            return None
-        if self.power_mode == PowerMode.OFF and self._target_power_mode == PowerMode.ON:
-            result_code = self._power_supply_component_manager.power_on()
-            self._target_power_mode = None
-            return result_code
-        if self.power_mode == PowerMode.ON and self._target_power_mode == PowerMode.OFF:
-            result_code = self._power_supply_component_manager.power_off()
-            self._target_power_mode = None
-            return result_code
-        return ResultCode.QUEUED
+        with self.__power_mode_lock:
+            if self._target_power_mode is None:
+                return None
+            if self.power_mode == self._target_power_mode:
+                self._target_power_mode = None  # attained without any action needed
+                return None
+            if (
+                self.power_mode == PowerMode.OFF
+                and self._target_power_mode == PowerMode.ON
+            ):
+                result_code = self._power_supply_component_manager.power_on()
+                self._target_power_mode = None
+                return result_code
+            if (
+                self.power_mode == PowerMode.ON
+                and self._target_power_mode == PowerMode.OFF
+            ):
+                result_code = self._power_supply_component_manager.power_off()
+                self._target_power_mode = None
+                return result_code
+            return ResultCode.QUEUED

@@ -231,6 +231,8 @@ class SubarrayComponentManager(
                 station_proxy.start_communicating()
             for subarray_beam_proxy in self._subarray_beams.values():
                 subarray_beam_proxy.start_communicating()
+            for station_beam_proxy in self._station_beams.values():
+                station_beam_proxy.start_communicating()
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
             self.update_component_power_mode(PowerMode.ON)
@@ -244,6 +246,9 @@ class SubarrayComponentManager(
 
         for fqdn in self._subarray_beams:
             self._subarray_beams[fqdn].stop_communicating()
+
+        for fqdn in self._station_beams:
+            self._station_beams[fqdn].stop_communicating()
 
     @property
     def scan_id(self: SubarrayComponentManager) -> Optional[int]:

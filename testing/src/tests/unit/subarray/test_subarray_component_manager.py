@@ -64,7 +64,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [[station_beam_on_fqdn]],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -148,9 +148,9 @@ class TestSubarrayComponentManager:
         # Assignment from empty
         result_code = subarray_component_manager.assign(
             {
-                "stations": [[station_off_fqdn]],
+                "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [[station_beam_off_fqdn]],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -176,9 +176,9 @@ class TestSubarrayComponentManager:
         # Further assign
         result_code = subarray_component_manager.assign(
             {
-                "stations": [[station_on_fqdn]],
+                "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [[station_beam_on_fqdn]],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -299,9 +299,9 @@ class TestSubarrayComponentManager:
         # can't configure when resources are OFF
         result_code = subarray_component_manager.assign(
             {
-                "stations": [[station_off_fqdn]],
+                "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [[station_beam_off_fqdn]],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -329,9 +329,9 @@ class TestSubarrayComponentManager:
 
         result_code = subarray_component_manager.assign(
             {
-                "stations": [[station_on_fqdn]],
+                "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [[station_beam_off_fqdn]],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -362,9 +362,9 @@ class TestSubarrayComponentManager:
         assert result_code == ResultCode.OK
         result_code = subarray_component_manager.assign(
             {
-                "stations": [[station_off_fqdn]],
+                "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [[station_beam_on_fqdn]],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -396,9 +396,9 @@ class TestSubarrayComponentManager:
         # CAN configure when resources are ON
         result_code = subarray_component_manager.assign(
             {
-                "stations": [[station_on_fqdn]],
+                "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [[station_beam_on_fqdn]],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -494,9 +494,9 @@ class TestSubarrayComponentManager:
 
         result_code = subarray_component_manager.assign(
             {
-                "stations": [[station_on_fqdn]],
+                "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [[station_beam_on_fqdn]],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )

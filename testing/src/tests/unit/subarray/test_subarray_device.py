@@ -273,9 +273,9 @@ class TestMccsSubarray:
         ([result_code], [message]) = device_under_test.AssignResources(
             json.dumps(
                 {
-                    "stations": [[station_on_fqdn]],
+                    "stations": [station_on_fqdn],
                     "subarray_beams": [subarray_beam_on_fqdn],
-                    "station_beams": [[station_beam_on_fqdn]],
+                    "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,
                 }
             )
@@ -341,9 +341,9 @@ class TestMccsSubarray:
         ([result_code], [message]) = device_under_test.AssignResources(
             json.dumps(
                 {
-                    "stations": [[station_on_fqdn]],
+                    "stations": [station_on_fqdn],
                     "subarray_beams": [subarray_beam_on_fqdn],
-                    "station_beams": [[station_beam_on_fqdn]],
+                    "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,
                 }
             )

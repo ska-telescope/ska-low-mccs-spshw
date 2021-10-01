@@ -585,7 +585,7 @@ class ControllerComponentManager(MccsComponentManager):
         self: ControllerComponentManager,
     ) -> ResultCode:
         """
-        Put the MCCS subsystem into low power standby more.
+        Put the MCCS subsystem into low power standby mode.
 
         :return: a result code
         """

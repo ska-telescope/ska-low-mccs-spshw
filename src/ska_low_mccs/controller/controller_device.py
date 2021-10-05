@@ -81,6 +81,7 @@ class MccsController(SKABaseDevice):
             self.MccsSubracks,
             self.MccsStations,
             self.MccsSubarrayBeams,
+            self.MccsStationBeams,
             self.logger,
             self._communication_status_changed,
             self._component_power_mode_changed,
@@ -88,6 +89,7 @@ class MccsController(SKABaseDevice):
             self._health_model.subrack_health_changed,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
+            self._health_model.station_beam_health_changed,
         )
 
     def init_command_objects(self: MccsController) -> None:
@@ -378,11 +380,16 @@ class MccsController(SKABaseDevice):
                 for subarray_beam_id in subarray_beam_ids
             ]
             station_ids = kwargs.get("station_ids", list())
-            station_fqdns = [
-                f"low-mccs/station/{station_id:03d}"
-                for station_id_list in station_ids
-                for station_id in station_id_list
-            ]
+
+            station_fqdns = []
+            for station_id_list in station_ids:
+                station_fqdns.append(
+                    [
+                        f"low-mccs/station/{station_id:03d}"
+                        for station_id in station_id_list
+                    ]
+                )
+
             channel_blocks = kwargs.get("channel_blocks", list())
             result_code = component_manager.allocate(
                 subarray_id, station_fqdns, subarray_beam_fqdns, channel_blocks

@@ -153,7 +153,7 @@ class ResourceManager:
         }
         if unallocatable:
             raise ValueError(
-                f"Cannot allocate resources: {unallocatable} to allocatee {allocatee}"
+                f"Cannot allocate resources: {unallocatable} to allocatee {allocatee}."
             )
 
     def allocate(
@@ -686,7 +686,7 @@ class ResourcePool:
         :return: A free resource of the requested type
         """
         for resource in self._resources[resource_type]:
-            if self._resources[resource_type][resource]:
+            if self._resources[resource_type][resource] is True:
                 self._resources[resource_type][resource] = False
                 return resource
 

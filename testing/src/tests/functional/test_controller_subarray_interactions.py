@@ -50,8 +50,6 @@ def test_start_up_low_telescope(
 
     assert stations[1].state() == tango.DevState.OFF
     assert stations[2].state() == tango.DevState.OFF
-    assert stations[1].subarrayId == 0
-    assert stations[2].subarrayId == 0
 
 
 @given(parsers.parse("we have mvplow running an instance of {subsystem_name}"))

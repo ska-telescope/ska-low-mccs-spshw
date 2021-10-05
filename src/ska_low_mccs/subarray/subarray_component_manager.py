@@ -343,6 +343,7 @@ class SubarrayComponentManager(
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn] = _StationBeamProxy(
                     fqdn,
+                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,

@@ -31,7 +31,7 @@ def device_to_load() -> DeviceToLoadType:
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
-        "device": "beam_001",
+        "device": "beam_01",
         "proxy": MccsDeviceProxy,
     }
 
@@ -50,7 +50,7 @@ class TestMccsStationBeam(object):
 
         :return: the device under test
         """
-        return tango_harness.get_device("low-mccs/beam/001")
+        return tango_harness.get_device("low-mccs/beam/01")
 
     def test_healthState(
         self: TestMccsStationBeam,
@@ -130,7 +130,7 @@ class TestMccsStationBeam(object):
         """
         assert device_under_test.beamId == beam_id
 
-    def test_stationIds(
+    def test_stationId(
         self: TestMccsStationBeam,
         device_under_test: MccsDeviceProxy,
     ) -> None:
@@ -138,7 +138,7 @@ class TestMccsStationBeam(object):
         Test stationId attribute.
 
         This is a very weak test that simply checks that the attribute
-        starts as an empty list, and when we write a new value to it,
+        starts as zero, and when we write a new value to it,
         the write sticks.
 
         :param device_under_test: fixture that provides a

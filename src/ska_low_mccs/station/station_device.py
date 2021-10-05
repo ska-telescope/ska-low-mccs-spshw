@@ -148,8 +148,6 @@ class MccsStation(SKAObsDevice):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device.set_change_event("subarrayId", True, True)
-            device.set_archive_event("subarrayId", True, True)
             device.set_change_event("beamFQDNs", True, True)
             device.set_archive_event("beamFQDNs", True, True)
             device.set_change_event("transientBufferFQDN", True, False)
@@ -321,33 +319,6 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
-
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        max_value=16,
-        min_value=0,
-    )
-    def subarrayId(self: MccsStation) -> int:
-        """
-        Return the subarray id.
-
-        :todo: Probably this attribute will have to be removed just as
-            it has been removed from tile device.
-
-        :return: the subarray id
-        """
-        return self._subarray_id
-
-    @subarrayId.write  # type: ignore[no-redef]
-    def subarrayId(self: MccsStation, subarray_id: int) -> None:
-        """
-        Set the ID of the Subarray to which this Station is allocated.
-
-        :param subarray_id: the new subarray id for this station
-        """
-        self._subarray_id = subarray_id
-        self._obs_state_model.is_resourced_changed(subarray_id != 0)
 
     @attribute(
         dtype="float",

@@ -315,9 +315,9 @@ class TestControllerComponentManager:
         ].AssignResources.assert_called_once_with(
             json.dumps(
                 {
-                    "stations": [["low-mccs/station/001"]],
+                    "stations": ["low-mccs/station/001"],
                     "subarray_beams": ["low-mccs/subarraybeam/02"],
-                    "station_beams": [["low-mccs/beam/04"]],
+                    "station_beams": ["low-mccs/beam/04"],
                     "channel_blocks": [3, 4],
                 }
             )
@@ -342,9 +342,9 @@ class TestControllerComponentManager:
         ].AssignResources.assert_called_once_with(
             json.dumps(
                 {
-                    "stations": [["low-mccs/station/001"]],
+                    "stations": ["low-mccs/station/001"],
                     "subarray_beams": ["low-mccs/subarraybeam/02"],
-                    "station_beams": [["low-mccs/beam/04"]],
+                    "station_beams": ["low-mccs/beam/04"],
                     "channel_blocks": [3, 4],
                 }
             )

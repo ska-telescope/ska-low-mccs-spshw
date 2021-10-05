@@ -232,7 +232,7 @@ class MccsStationBeam(SKAObsDevice):
         return self.component_manager.station_id
 
     @stationId.write  # type: ignore[no-redef]
-    def stationId(self: MccsStationBeam, station_ids: int) -> None:
+    def stationId(self: MccsStationBeam, station_id: int) -> None:
         """
         Set the station id.
 

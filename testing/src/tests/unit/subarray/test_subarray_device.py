@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import pytest
 import time
-from typing import Callable, Type
+from typing import Callable, List, Type
 import unittest
 
 from tango import DevState
@@ -231,14 +231,14 @@ class TestMccsSubarray:
         assert device_under_test.stationFQDNs is None
 
     def test_assignResources(
-        self,
-        device_under_test,
-        device_admin_mode_changed_callback,
-        station_on_fqdn,
-        subarray_beam_on_fqdn,
-        station_beam_on_fqdn,
-        channel_blocks,
-    ):
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        station_on_fqdn: str,
+        subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
+        channel_blocks: List[int],
+    ) -> None:
         """
         Test for assignResources.
 

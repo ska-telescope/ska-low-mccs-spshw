@@ -600,7 +600,7 @@ class ControllerComponentManager(MccsComponentManager):
     def allocate(
         self: ControllerComponentManager,
         subarray_id: int,
-        station_fqdns: Iterable[str],
+        station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
     ) -> ResultCode:
@@ -624,21 +624,22 @@ class ControllerComponentManager(MccsComponentManager):
 
         # stations are not managed by the resource manager, so we have to explicitely check if
         # they're valid FQDNs here
-        for station_group in station_fqdns:
-            for fqdn in station_group:
-                if fqdn not in self._stations.keys():
-                    raise ValueError(f"Unsupported resources: {fqdn}.")
+        flattened_station_fqdns = [
+            fqdn for stations in station_fqdns for fqdn in stations
+        ]
+        for fqdn in flattened_station_fqdns:
+            if fqdn not in self._stations.keys():
+                raise ValueError(f"Unsupported resources: {fqdn}.")
 
-        # for each subarray-beam: get number of stations (n), request n station-beams from pool
+        # need (subarray-beams * stations) number of station-beams from pool
         station_beam_fqdns = []
-        for _ in subarray_beam_fqdns:
-            for station_groups in station_fqdns:
-                for _ in station_groups:
-                    station_beam_fqdns.append(
-                        self._resource_manager.resource_pool.get_free_resource(
-                            "station_beams"
-                        )
-                    )
+        station_beams_required = len(list(subarray_beam_fqdns)) * len(
+            flattened_station_fqdns
+        )
+        for _ in range(station_beams_required):
+            station_beam_fqdns.append(
+                self._resource_manager.resource_pool.get_free_resource("station_beams")
+            )
 
         self._resource_manager.allocate(
             subarray_fqdn,
@@ -646,10 +647,6 @@ class ControllerComponentManager(MccsComponentManager):
             station_beams=station_beam_fqdns,
             channel_blocks=channel_blocks,
         )
-
-        flattened_station_fqdns = [
-            fqdn for stations in station_fqdns for fqdn in stations
-        ]
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
             flattened_station_fqdns,
@@ -673,7 +670,7 @@ class ControllerComponentManager(MccsComponentManager):
                             station_beam_fqdns[i]
                         ].stationFqdn = station_fqdn
                         i += 1
-                    self._subarray_beams[subarray_beam_fqdn].stationIds = station_group
+                self._subarray_beams[subarray_beam_fqdn].stationIds = station_group
 
         return result_code
 

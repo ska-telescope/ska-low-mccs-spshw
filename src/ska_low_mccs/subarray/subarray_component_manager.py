@@ -298,20 +298,13 @@ class SubarrayComponentManager(
         station_fqdns_to_add = station_fqdns - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
         station_beam_fqdns_to_add = station_beam_fqdns - self._station_beams.keys()
+        fqdns_to_add = station_fqdns_to_add.union(
+            subarray_beam_fqdns_to_add, station_beam_fqdns_to_add
+        )
 
-        if (
-            station_fqdns_to_add
-            or subarray_beam_fqdns_to_add
-            or station_beam_fqdns_to_add
-        ):
+        if fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-            for fqdn in subarray_beam_fqdns_to_add:
-                self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
-                self._device_obs_states[fqdn] = ObsState.IDLE
-            for fqdn in station_beam_fqdns_to_add:
-                self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
-                self._device_obs_states[fqdn] = ObsState.IDLE
-            for fqdn in station_fqdns_to_add:
+            for fqdn in fqdns_to_add:
                 self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
                 self._device_obs_states[fqdn] = ObsState.IDLE
             self._evaluate_communication_status()

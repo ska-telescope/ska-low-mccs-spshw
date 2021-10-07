@@ -186,7 +186,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self.component_manager.subarray_id
 
-    @subarrayId.write
+    @subarrayId.write  # type: ignore[no-redef]
     def subarrayId(self: MccsStationBeam, subarray_id: int) -> None:
         """
         Set the subarray ID.

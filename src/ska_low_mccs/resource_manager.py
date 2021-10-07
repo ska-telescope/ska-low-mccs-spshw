@@ -446,60 +446,6 @@ class _HealthfulResourceManager(ResourceManager):
         if unhealthy:
             raise ValueError(f"Cannot allocate unhealthy resources: {unhealthy}.")
 
-    def add_resources(
-        self: ResourceManager,
-        **healthful_resources: Iterable[Hashable],
-    ) -> None:
-        """
-        Add resources to this resource manager.
-
-        :param healthful_resources: The resources to add
-
-        :raises ValueError: if the resource being added already exists in the resource manager
-        """
-        super().add_resources(**healthful_resources)
-        # check if managed:
-        already_managed = []
-        for resource_type in healthful_resources:
-            for resource in healthful_resources[resource_type]:
-                if self._allocations[resource_type][resource]:
-                    already_managed.append({resource_type: resource})
-
-        if already_managed:
-            raise ValueError(
-                f"Cannot add already managed resources: {already_managed}."
-            )
-
-        for resource_type in healthful_resources:
-            for resource in healthful_resources[resource_type]:
-                self._healthy[resource_type][resource] = False
-
-    def remove_resources(
-        self: ResourceManager,
-        **healthful_resources: Iterable[Hashable],
-    ) -> None:
-        """
-        Remove resources to this resource manager.
-
-        :param healthful_resources: The resources to remove
-
-        :raises ValueError: if the resource being removed does not exist in the resource manager
-        """
-        # check if not managed:
-        not_managed = []
-        for resource_type in healthful_resources:
-            for resource in healthful_resources[resource_type]:
-                if resource not in self._allocations[resource_type]:
-                    not_managed.append({resource_type: resource})
-
-        if not_managed:
-            raise ValueError(f"Cannot remove non-managed resources: {not_managed}.")
-        super().remove_resources(**healthful_resources)
-
-        for resource_type in healthful_resources:
-            for resource in healthful_resources[resource_type]:
-                self._healthy[resource_type].pop(resource)
-
     def set_health(
         self: _HealthfulResourceManager,
         resource_type: str,
@@ -591,44 +537,6 @@ class _ReadyResourceManager(ResourceManager):
         if not self._ready[allocatee]:
             raise ValueError(f"Allocatee is unready: {allocatee}.")
 
-    def add_allocatees(
-        self: _ReadyResourceManager,
-        allocatees: Iterable[Hashable],
-    ) -> None:
-        """
-        Add targets for allocation of resources.
-
-        :param allocatees: targets for allocation
-
-        :raises ValueError: if allocatee already exists
-        """
-        for allocatee in allocatees:
-            if allocatee in self._ready.keys():
-                raise ValueError(
-                    f"Allocatee already exists in resource manager: {allocatee}."
-                )
-            self._ready[allocatee] = False
-        super().add_allocatees(allocatees)
-
-    def remove_allocatees(
-        self: _ReadyResourceManager,
-        allocatees: Iterable[Hashable],
-    ) -> None:
-        """
-        Remove targets for allocation of resources.
-
-        :param allocatees: targets for allocation to remove
-
-        :raises ValueError: if allocatee does not exist in the resource manager
-        """
-        for allocatee in allocatees:
-            if allocatee not in self._ready.keys():
-                raise ValueError(
-                    f"Allocatee does not exist in resource manager: {allocatee}."
-                )
-            self._ready.pop(allocatee)
-        super().remove_allocatees(allocatees)
-
     def set_ready(
         self: _ReadyResourceManager,
         allocatee: Hashable,
@@ -696,7 +604,7 @@ class ResourcePool:
 
     def free_resources(
         self: ResourcePool,
-        resources: Iterable[Hashable],
+        resources: Mapping[str, Iterable[Hashable]],
     ) -> None:
         """
         Mark a resource as unallocated.

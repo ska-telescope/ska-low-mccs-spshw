@@ -210,7 +210,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self.component_manager.station_beam_ids
 
-    @stationBeamIds.write
+    @stationBeamIds.write  # type: ignore[no-redef]
     def stationBeamIds(self: MccsSubarrayBeam, station_beam_ids: list[int]) -> None:
         """
         Set the station beam ids.

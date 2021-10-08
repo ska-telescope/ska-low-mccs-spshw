@@ -125,7 +125,7 @@ deviceServers:
     function: beam
     domain: ska-low-mccs
     command: "MccsStationBeam"
-    instances: ["beam_001", "beam_002", "beam_003", "beam_004"]
+    instances: ["beam_01", "beam_02", "beam_03", "beam_04"]
     depends_on:
       - device: sys/database/2
   subarray-beams:

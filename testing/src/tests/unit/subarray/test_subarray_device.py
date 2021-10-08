@@ -295,16 +295,16 @@ class TestMccsSubarray:
         assert device_under_test.assignedResources is None
 
     def test_configure(
-        self,
-        device_under_test,
-        device_admin_mode_changed_callback,
-        station_on_id,
-        station_on_fqdn,
-        subarray_beam_on_id,
-        subarray_beam_on_fqdn,
-        station_beam_on_fqdn,
-        channel_blocks,
-    ):
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        station_on_id: int,
+        station_on_fqdn: str,
+        subarray_beam_on_id: int,
+        subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
+        channel_blocks: List[int],
+    ) -> None:
         """
         Test for configure command.
 

@@ -82,7 +82,7 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         self._subarray_id = 0
         self._beam_id = beam_id
-        self._station_id: int = 0
+        self._station_id = 0
         self._logical_beam_id = 0
         self._update_rate = 0.0
         self._is_beam_locked = False

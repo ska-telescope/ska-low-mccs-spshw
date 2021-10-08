@@ -195,6 +195,16 @@ class TestControllerComponentManager:
         ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
+        controller_component_manager._subarray_beams[
+            "low-mccs/subarraybeam/01"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._subarray_beams[
+            "low-mccs/subarraybeam/02"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
         controller_component_manager._station_beams[
             "low-mccs/beam/01"
         ]._device_state_changed(

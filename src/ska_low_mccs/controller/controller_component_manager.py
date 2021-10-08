@@ -14,7 +14,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Optional, Iterable
+from typing import Callable, Hashable, Optional, Iterable, List
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -113,7 +113,29 @@ class _SubarrayProxy(DeviceComponentManager):
 class _SubarrayBeamProxy(DeviceComponentManager):
     """A controller's proxy to a subarray beam."""
 
-    pass
+    @check_communicating
+    @check_on
+    def write_station_ids(
+        self: _SubarrayBeamProxy,
+        new_station_ids: List[int],
+    ) -> ResultCode:
+        """
+        Set the station beam's stationIds attribute.
+
+        :param new_station_ids: the station beam's new station ids.
+
+        :return: a result code
+        """
+        return self._write_station_ids(new_station_ids)
+
+    @enqueue
+    def _write_station_ids(
+        self: _SubarrayBeamProxy,
+        new_station_ids: List[int],
+    ) -> ResultCode:
+        assert self._proxy is not None
+        self._proxy.stationIds = new_station_ids
+        return ResultCode.OK
 
 
 class _StationBeamProxy(DeviceComponentManager):
@@ -171,7 +193,7 @@ class _StationBeamProxy(DeviceComponentManager):
     @check_on
     def write_station_fqdn(
         self: _StationBeamProxy,
-        new_station_fqdn: int,
+        new_station_fqdn: str,
     ) -> ResultCode:
         """
         Set the station beam's stationId attribute.
@@ -185,7 +207,7 @@ class _StationBeamProxy(DeviceComponentManager):
     @enqueue
     def _write_station_fqdn(
         self: _StationBeamProxy,
-        new_station_fqdn: int,
+        new_station_fqdn: str,
     ) -> ResultCode:
         assert self._proxy is not None
         self._proxy.stationFqdn = new_station_fqdn
@@ -320,7 +342,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subrack_fqdns
         }
-        self._stations: dict[str, _StationProxy] = {
+        self._stations: dict[Hashable, _StationProxy] = {
             fqdn: _StationProxy(
                 fqdn,
                 self._message_queue,
@@ -332,8 +354,8 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in station_fqdns
         }
-        self._subarray_beams: dict[str, DeviceComponentManager] = {
-            fqdn: DeviceComponentManager(
+        self._subarray_beams: dict[Hashable, _SubarrayBeamProxy] = {
+            fqdn: _SubarrayBeamProxy(
                 fqdn,
                 self._message_queue,
                 logger,
@@ -344,7 +366,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_beam_fqdns
         }
-        self._station_beams: dict[str, _StationBeamProxy] = {
+        self._station_beams: dict[Hashable, _StationBeamProxy] = {
             fqdn: _StationBeamProxy(
                 fqdn,
                 self._message_queue,
@@ -638,7 +660,11 @@ class ControllerComponentManager(MccsComponentManager):
         )
         for _ in range(station_beams_required):
             station_beam_fqdns.append(
-                self._resource_manager.resource_pool.get_free_resource("station_beams")
+                str(
+                    self._resource_manager.resource_pool.get_free_resource(
+                        "station_beams"
+                    )
+                )
             )
 
         self._resource_manager.allocate(
@@ -666,11 +692,16 @@ class ControllerComponentManager(MccsComponentManager):
             for subarray_beam_fqdn in subarray_beam_fqdns:
                 for station_group in station_fqdns:
                     for station_fqdn in station_group:
-                        self._station_beams[
-                            station_beam_fqdns[i]
-                        ].stationFqdn = station_fqdn
+                        self._station_beams[station_beam_fqdns[i]].write_station_id(
+                            int(station_fqdn.split("/")[2])
+                        )
+                        self._station_beams[station_beam_fqdns[i]].write_subarray_id(
+                            subarray_id
+                        )
                         i += 1
-                self._subarray_beams[subarray_beam_fqdn].stationIds = station_group
+                self._subarray_beams[subarray_beam_fqdn].write_station_ids(
+                    [int(station_fqdn.split("/")[2]) for station_fqdn in station_group]
+                )
 
         return result_code
 
@@ -695,15 +726,12 @@ class ControllerComponentManager(MccsComponentManager):
             return None
 
         self._resource_manager.deallocate_from(subarray_fqdn)
-        # TODO Free station beams
 
-        for station_fqdn in allocated.get("stations", []):
-            self._stations[station_fqdn].write_subarray_id(0)
         station_beams = allocated.get("station_beams", [])
         for station_beam_fqdn in station_beams:
             self._station_beams[station_beam_fqdn].write_subarray_id(0)
-            self._station_beams[station_beam_fqdn].write_station_fqdn(None)
             self._station_beams[station_beam_fqdn].write_station_id(0)
+            self._station_beams[station_beam_fqdn].write_station_fqdn("")
         self._resource_manager.resource_pool.free_resources(
             {"station_beams": station_beams}
         )

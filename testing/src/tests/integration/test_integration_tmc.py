@@ -425,7 +425,7 @@ class TestMccsIntegrationTmc:
         # chance that the controller hasn't yet received all the events telling it so.
         # We need a better way to handle this than taking a short nap with our fingers
         # crossed.
-        time.sleep(1.0)
+        time.sleep(0.5)
 
         # allocate station_1 to subarray_1
         ([result_code], [message]) = call_with_json(
@@ -451,7 +451,7 @@ class TestMccsIntegrationTmc:
         assert subarray_beam_3.state() == tango.DevState.ON
         assert subarray_beam_4.state() == tango.DevState.ON
 
-        time.sleep(0.1)  # TODO: to give subarray beams time to turn on
+        time.sleep(0.2)  # TODO: to give subarray beams time to turn on
 
         # configure subarray
         ([result_code], [message]) = call_with_json(

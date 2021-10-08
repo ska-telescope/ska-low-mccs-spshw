@@ -76,7 +76,7 @@ class TestMccsAPIU:
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE
-        assert device_under_test.testMode == TestMode.TEST
+        assert device_under_test.testMode == TestMode.NONE
 
     def test_healthState(
         self: TestMccsAPIU,

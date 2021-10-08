@@ -366,11 +366,11 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
                 (
                     SimulationMode.TRUE,
                     TestMode.NONE,
-                ): dynamic_tpm_simulator_component_manager,
+                ): static_tpm_simulator_component_manager,
                 (
                     SimulationMode.TRUE,
                     TestMode.TEST,
-                ): static_tpm_simulator_component_manager,
+                ): dynamic_tpm_simulator_component_manager,
             },
             (initial_simulation_mode, initial_test_mode),
         )

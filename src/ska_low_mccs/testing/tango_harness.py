@@ -675,7 +675,7 @@ class StartingStateTangoHarness(WrapperTangoHarness):
         harness: TangoHarness,
         bypass_cache: bool = True,
         check_ready: bool = True,
-        set_test_mode: bool = True,
+        set_test_mode: bool = False,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -723,6 +723,8 @@ class StartingStateTangoHarness(WrapperTangoHarness):
                     assert device.check_initialised()
                 if self._set_test_mode:
                     device.testMode = TestMode.TEST
+                else:
+                    device.testMode = TestMode.NONE
 
 
 class MockingTangoHarness(WrapperTangoHarness):

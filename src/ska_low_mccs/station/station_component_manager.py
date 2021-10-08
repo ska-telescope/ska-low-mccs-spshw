@@ -14,7 +14,7 @@ import functools
 import logging
 import threading
 from typing import Callable, Optional, Sequence
-
+import time
 import tango
 
 from ska_tango_base.commands import ResultCode
@@ -376,11 +376,16 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        results = (
-            [self._apiu_proxy.on()]
-            + [tile_proxy.on() for tile_proxy in self._tile_proxies]
-            + [antenna_proxy.on() for antenna_proxy in self._antenna_proxies]
-        )
+        # TODO: This is a temporary solution to improve test stability!
+        # Let the APIU turn on before turning tiles and antennas on.
+        # MCCS-816 will deal with this mess (planned for sprint 12.3).
+        result_apiu = [self._apiu_proxy.on()]
+        time.sleep(1.0)
+        result_tiles = [tile_proxy.on() for tile_proxy in self._tile_proxies]
+        result_antennas = [
+            antenna_proxy.on() for antenna_proxy in self._antenna_proxies
+        ]
+        results = result_apiu + result_tiles + result_antennas
 
         if ResultCode.FAILED in results:
             return ResultCode.FAILED

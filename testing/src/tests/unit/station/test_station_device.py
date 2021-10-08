@@ -73,7 +73,7 @@ class TestMccsStation:
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
-        assert device_under_test.testMode == TestMode.TEST
+        assert device_under_test.testMode == TestMode.NONE
 
         # The following reads might not be allowed in this state once properly
         # implemented

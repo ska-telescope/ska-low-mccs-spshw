@@ -30,6 +30,12 @@ class TestingSubrackSimulator(SubrackSimulator):
 
     def _emulate_hardware_delay(self: TestingSubrackSimulator) -> None:
         """Specialist implementation to emulate a real hardware delay."""
+        # Safeguard against deployment in unit testing environment
+        import os
+
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            assert False
+
         for i in range(1, 5):
             if self._component_progress_changed_callback:
                 self._component_progress_changed_callback(i * 20)

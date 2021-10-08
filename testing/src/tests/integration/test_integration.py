@@ -274,7 +274,7 @@ class TestMccsIntegration:
         assert station_2.subarrayId == 0
 
         # allocate station_1 to subarray_1
-        ([result_code], [message]) = call_with_json(
+        ([result_code], [_]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
@@ -283,7 +283,9 @@ class TestMccsIntegration:
         )
         assert result_code == ResultCode.QUEUED
 
-        time.sleep(0.1)
+        # TODO: It's a bit rubbish that we can't detect when this
+        # command is complete. For now, just increase the delay.
+        time.sleep(0.3)
 
         # check that station_1 and only station_1 is allocated
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
@@ -315,7 +317,7 @@ class TestMccsIntegration:
         # subarray, BUT we must remember that the subarray cannot reallocate
         # the same subarray_beam.
         # TODO This will change when subarray_beam is not a list.
-        ([result_code], [message]) = call_with_json(
+        ([result_code], [_]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1, 2]],
@@ -324,7 +326,9 @@ class TestMccsIntegration:
         )
         assert result_code == ResultCode.QUEUED
 
-        time.sleep(0.1)
+        # TODO: It's a bit rubbish that we can't detect when this
+        # command is complete. For now, just increase the delay.
+        time.sleep(0.3)
 
         station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
         assert list(station_fqdns) == [
@@ -424,7 +428,7 @@ class TestMccsIntegration:
         time.sleep(1.0)
 
         # allocate station_1 to subarray_1
-        ([result_code], [message]) = call_with_json(
+        ([result_code], [_]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
@@ -434,7 +438,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.QUEUED
 
         # allocate station 2 to subarray 2
-        ([result_code], [message]) = call_with_json(
+        ([result_code], [_]) = call_with_json(
             controller.Allocate,
             subarray_id=2,
             station_ids=[[2]],
@@ -443,7 +447,9 @@ class TestMccsIntegration:
         )
         assert result_code == ResultCode.QUEUED
 
-        time.sleep(0.1)
+        # TODO: It's a bit rubbish that we can't detect when this
+        # command is complete. For now, just increase the delay.
+        time.sleep(0.3)
 
         # check initial state
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
@@ -457,7 +463,9 @@ class TestMccsIntegration:
         )
         assert result_code == ResultCode.QUEUED
 
-        time.sleep(0.1)
+        # TODO: It's a bit rubbish that we can't detect when this
+        # command is complete. For now, just increase the delay.
+        time.sleep(0.3)
 
         # check
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]

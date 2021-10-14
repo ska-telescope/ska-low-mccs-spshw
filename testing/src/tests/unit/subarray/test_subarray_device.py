@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import pytest
 import time
-from typing import Callable, List, Type
+from typing import Callable, Type
 import unittest
 
 from tango import DevState
@@ -237,7 +237,7 @@ class TestMccsSubarray:
         station_on_fqdn: str,
         subarray_beam_on_fqdn: str,
         station_beam_on_fqdn: str,
-        channel_blocks: List[int],
+        channel_blocks: list[int],
     ) -> None:
         """
         Test for assignResources.
@@ -303,7 +303,7 @@ class TestMccsSubarray:
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
         station_beam_on_fqdn: str,
-        channel_blocks: List[int],
+        channel_blocks: list[int],
     ) -> None:
         """
         Test for configure command.

@@ -14,7 +14,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Hashable, Optional, Iterable, List
+from typing import Callable, Hashable, Optional, Iterable
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -117,7 +117,7 @@ class _SubarrayBeamProxy(DeviceComponentManager):
     @check_on
     def write_station_ids(
         self: _SubarrayBeamProxy,
-        new_station_ids: List[int],
+        new_station_ids: list[int],
     ) -> ResultCode:
         """
         Set the station beam's stationIds attribute.
@@ -131,7 +131,7 @@ class _SubarrayBeamProxy(DeviceComponentManager):
     @enqueue
     def _write_station_ids(
         self: _SubarrayBeamProxy,
-        new_station_ids: List[int],
+        new_station_ids: list[int],
     ) -> ResultCode:
         assert self._proxy is not None
         self._proxy.stationIds = new_station_ids
@@ -264,13 +264,13 @@ class ControllerComponentManager(MccsComponentManager):
         :param message_queue_size_callback: callback to be called when
             the size of the message queue changes
         :param subrack_health_changed_callback: callback to be called
-            when the health of this station's APIU changes
+            when the health of one of this controller's subracks changes
         :param station_health_changed_callback: callback to be called
-            when the health of this station's APIU changes
+            when the health of one of this controller's stations changes
         :param subarray_beam_health_changed_callback: callback to be
-            called when the health of this station's APIU changes
+            called when the health of one of this controller's subarray beams changes
         :param station_beam_health_changed_callback: callback to be
-            called when the health of this station's APIU changes
+            called when the health of one of this controller's station beams changes
         """
         self._station_health_changed_callback = station_health_changed_callback
         self._subarray_beam_health_changed_callback = (

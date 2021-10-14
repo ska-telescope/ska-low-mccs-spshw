@@ -222,7 +222,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         self.component_manager.station_fqdn = station_fqdn
 
-    @attribute(dtype=("DevLong"))
+    @attribute(dtype="DevLong")
     def stationId(self: MccsStationBeam) -> int:
         """
         Return the station id.

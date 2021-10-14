@@ -10,7 +10,7 @@ import tango
 from tango.server import command
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, ObsState, PowerMode
+from ska_tango_base.control_model import AdminMode, ObsState, PowerMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.utils import call_with_json
@@ -133,10 +133,25 @@ def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
 
 
 @pytest.fixture()
+def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock station beam devices for use in testing.
+
+    :return: a mock station beam device for use in testing.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
 def initial_mocks(
     mock_apiu_factory: Callable[[], unittest.mock.Mock],
     mock_antenna_factory: Callable[[], unittest.mock.Mock],
     mock_tile_factory: Callable[[], unittest.mock.Mock],
+    mock_station_beam_factory: Callable[[], unittest.mock.Mock],
 ) -> dict[str, unittest.mock.Mock]:
     """
     Return a specification of the mock devices to be set up in the Tango test harness.
@@ -149,6 +164,8 @@ def initial_mocks(
     :param mock_antenna_factory: a factory that returns a mock antenna
         device each time it is called
     :param mock_tile_factory: a factory that returns a mock tile device
+        each time it is called
+    :param mock_station_beam_factory: a factory that returns a mock station beam device
         each time it is called
 
     :return: specification of the mock devices to be set up in the Tango
@@ -169,6 +186,10 @@ def initial_mocks(
         "low-mccs/antenna/000006": mock_antenna_factory(),
         "low-mccs/antenna/000007": mock_antenna_factory(),
         "low-mccs/antenna/000008": mock_antenna_factory(),
+        "low-mccs/beam/01": mock_station_beam_factory(),
+        "low-mccs/beam/02": mock_station_beam_factory(),
+        "low-mccs/beam/03": mock_station_beam_factory(),
+        "low-mccs/beam/04": mock_station_beam_factory(),
     }
 
 
@@ -443,8 +464,6 @@ class TestMccsIntegrationTmc:
         subarray_device_obs_state_changed_callback.assert_next_change_event(
             ObsState.IDLE
         )
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 1
 
         assert subarray_beam_1.state() == tango.DevState.ON
         assert subarray_beam_2.state() == tango.DevState.ON

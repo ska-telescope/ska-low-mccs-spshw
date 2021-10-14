@@ -88,7 +88,7 @@ class TestStationBeamComponentManager:
         ("attribute_name", "expected_value", "write_value"),
         [
             ("subarray_id", 0, None),
-            ("station_ids", [], [3, 4, 5, 6]),
+            ("station_id", 0, None),
             ("logical_beam_id", 0, None),
             ("update_rate", 0.0, None),
             ("is_beam_locked", False, None),
@@ -181,7 +181,7 @@ class TestStationBeamComponentManager:
             test.
         """
         beam_id = 1
-        station_ids = [1, 2]
+        station_id = 1
         update_rate = 3.14
         channels = [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]]
         desired_pointing = [1585619550.0, 192.0, 2.0, 27.0, 1.0]
@@ -190,7 +190,7 @@ class TestStationBeamComponentManager:
 
         station_beam_component_manager.configure(
             beam_id,
-            station_ids,
+            station_id,
             update_rate,
             channels,
             desired_pointing,
@@ -199,7 +199,7 @@ class TestStationBeamComponentManager:
         )
 
         assert station_beam_component_manager.beam_id == beam_id
-        assert station_beam_component_manager.station_ids == station_ids
+        assert station_beam_component_manager.station_id == station_id
         assert station_beam_component_manager.update_rate == pytest.approx(update_rate)
         assert station_beam_component_manager.channels == channels
         assert station_beam_component_manager.desired_pointing == pytest.approx(

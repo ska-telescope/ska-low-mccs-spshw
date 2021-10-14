@@ -48,6 +48,7 @@ __all__ = [
     "release",
     "testing",
     "utils",
+    "resource_manager",
 ]
 
 from .device_proxy import MccsDeviceProxy

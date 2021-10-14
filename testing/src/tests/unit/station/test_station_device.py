@@ -77,7 +77,6 @@ class TestMccsStation:
 
         # The following reads might not be allowed in this state once properly
         # implemented
-        assert device_under_test.subarrayId == 0
         assert device_under_test.transientBufferFQDN == ""
         assert not device_under_test.isCalibrated
         assert not device_under_test.isConfigured
@@ -193,21 +192,6 @@ class TestMccsStation:
             :py:class:`tango.test_context.DeviceTestContext`.
         """
         assert device_under_test.refHeight == 0.0
-
-    def test_subarrayId(
-        self: TestMccsStation,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
-        """
-        Test for subarrayId attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        """
-        assert device_under_test.subarrayId == 0
-        device_under_test.subarrayId = 1
-        assert device_under_test.subarrayId == 1
 
     def test_beamFQDNs(
         self: TestMccsStation,

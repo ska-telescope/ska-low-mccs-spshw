@@ -63,6 +63,7 @@ class MccsController(SKABaseDevice):
             self.MccsStations,
             self.MccsSubracks,
             self.MccsSubarrayBeams,
+            self.MccsStationBeams,
             self.health_changed,
         )
         self.set_change_event("healthState", True, False)
@@ -80,6 +81,7 @@ class MccsController(SKABaseDevice):
             self.MccsSubracks,
             self.MccsStations,
             self.MccsSubarrayBeams,
+            self.MccsStationBeams,
             self.logger,
             self._communication_status_changed,
             self._component_power_mode_changed,
@@ -87,6 +89,7 @@ class MccsController(SKABaseDevice):
             self._health_model.subrack_health_changed,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
+            self._health_model.station_beam_health_changed,
         )
 
     def init_command_objects(self: MccsController) -> None:
@@ -371,17 +374,22 @@ class MccsController(SKABaseDevice):
             kwargs = json.loads(argin)
             subarray_id = kwargs.get("subarray_id")
 
-            station_ids = kwargs.get("station_ids", list())
-            station_fqdns = [
-                f"low-mccs/station/{station_id:03d}"
-                for station_id_list in station_ids
-                for station_id in station_id_list
-            ]
             subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
             subarray_beam_fqdns = [
                 f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
                 for subarray_beam_id in subarray_beam_ids
             ]
+            station_ids = kwargs.get("station_ids", list())
+
+            station_fqdns = []
+            for station_id_list in station_ids:
+                station_fqdns.append(
+                    [
+                        f"low-mccs/station/{station_id:03d}"
+                        for station_id in station_id_list
+                    ]
+                )
+
             channel_blocks = kwargs.get("channel_blocks", list())
             result_code = component_manager.allocate(
                 subarray_id, station_fqdns, subarray_beam_fqdns, channel_blocks

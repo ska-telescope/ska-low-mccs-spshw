@@ -45,14 +45,14 @@ class TestControllerResourceManager:
         :param controller_resource_manager: the controller resource
             manager under test.
         """
-        dodgy_station = "low-mccs/station/dodgy"
+        dodgy_subarray_beam = "low-mccs/subarraybeam/dodgy"
         with pytest.raises(
             ValueError,
-            match=rf"Unsupported resources: {{'stations': \['{dodgy_station}'\]}}.",
+            match=rf"Unsupported resources: {{'subarray_beams': \['{dodgy_subarray_beam}'\]}}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                stations=["low-mccs/station/001", dodgy_station],
+                subarray_beams=["low-mccs/subarraybeam/01", dodgy_subarray_beam],
             )
 
     def test_ready_healthy(
@@ -72,7 +72,7 @@ class TestControllerResourceManager:
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                stations=["low-mccs/station/001", "low-mccs/station/002"],
+                subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
             )
 
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
@@ -80,29 +80,33 @@ class TestControllerResourceManager:
         with pytest.raises(
             ValueError,
             match="Cannot allocate unhealthy resources: "
-            r"{'stations': \['low-mccs/station/001', 'low-mccs/station/002'\]}.",
+            r"{'subarray_beams': \['low-mccs/subarraybeam/01', 'low-mccs/subarraybeam/02'\]}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                stations=["low-mccs/station/001", "low-mccs/station/002"],
+                subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
             )
 
-        controller_resource_manager.set_health("stations", "low-mccs/station/001", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
 
         with pytest.raises(
             ValueError,
-            match=r"Cannot allocate unhealthy resources: {'stations': \['low-mccs/station/002'\]}.",
+            match=r"Cannot allocate unhealthy resources: {'subarray_beams': \['low-mccs/subarraybeam/02'\]}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                stations=["low-mccs/station/001", "low-mccs/station/002"],
+                subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
             )
 
-        controller_resource_manager.set_health("stations", "low-mccs/station/002", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/02", True
+        )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            stations=["low-mccs/station/001", "low-mccs/station/002"],
+            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
         )
 
     def test_resources_cannot_be_overallocated(
@@ -118,30 +122,34 @@ class TestControllerResourceManager:
         :param controller_resource_manager: the controller resource
             manager under test.
         """
-        controller_resource_manager.set_health("stations", "low-mccs/station/001", True)
-        controller_resource_manager.set_health("stations", "low-mccs/station/002", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/02", True
+        )
         controller_resource_manager.set_health("subracks", "low-mccs/subrack/01", True)
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            stations=["low-mccs/station/001", "low-mccs/station/002"],
+            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
         )
 
         with pytest.raises(
             ValueError,
-            match=r"Cannot allocate resources: {'stations': \['low-mccs/station/001'\]} "
+            match=r"Cannot allocate resources: {'subarray_beams': \['low-mccs/subarraybeam/01'\]} "
             "to allocatee low-mccs/subarray/02",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/02",
-                stations=["low-mccs/station/001"],
+                subarray_beams=["low-mccs/subarraybeam/01"],
                 subracks=["low-mccs/subrack/01"],
             )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            stations=["low-mccs/station/001"],
+            subarray_beams=["low-mccs/subarraybeam/01"],
             subracks=["low-mccs/subrack/01"],
         )
 
@@ -154,19 +162,23 @@ class TestControllerResourceManager:
         :param controller_resource_manager: the controller resource
             manager under test.
         """
-        controller_resource_manager.set_health("stations", "low-mccs/station/001", True)
-        controller_resource_manager.set_health("stations", "low-mccs/station/002", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/02", True
+        )
         controller_resource_manager.set_health("subracks", "low-mccs/subrack/01", True)
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
         controller_resource_manager.set_ready("low-mccs/subarray/02", True)
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            stations=["low-mccs/station/001", "low-mccs/station/002"],
+            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
             subracks=["low-mccs/subrack/01"],
         )
         controller_resource_manager.deallocate(
-            stations=["low-mccs/station/001", "low-mccs/station/002"]
+            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"]
         )
 
         with pytest.raises(
@@ -176,20 +188,20 @@ class TestControllerResourceManager:
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/02",
-                stations=["low-mccs/station/001"],
+                subarray_beams=["low-mccs/subarraybeam/01"],
                 subracks=["low-mccs/subrack/01"],
             )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/02",
-            stations=["low-mccs/station/001", "low-mccs/station/002"],
+            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
         )
 
         controller_resource_manager.deallocate_from("low-mccs/subarray/02")
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            stations=["low-mccs/station/001", "low-mccs/station/002"],
+            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
             subracks=["low-mccs/subrack/01"],
         )
 
@@ -204,29 +216,33 @@ class TestControllerResourceManager:
         """
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
 
-        controller_resource_manager.set_health("stations", "low-mccs/station/001", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            stations=["low-mccs/station/001"],
+            subarray_beams=["low-mccs/subarraybeam/01"],
         )
 
         controller_resource_manager.set_health(
-            "stations", "low-mccs/station/001", False
+            "subarray_beams", "low-mccs/subarraybeam/01", False
         )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            stations=["low-mccs/station/001"],
+            subarray_beams=["low-mccs/subarraybeam/01"],
         )
 
-        controller_resource_manager.deallocate(stations=["low-mccs/station/001"])
+        controller_resource_manager.deallocate(
+            subarray_beams=["low-mccs/subarraybeam/01"]
+        )
 
         with pytest.raises(
             ValueError,
-            match=r"Cannot allocate unhealthy resources: {'stations': \['low-mccs/station/001'\]}.",
+            match=r"Cannot allocate unhealthy resources: {'subarray_beams': \['low-mccs/subarraybeam/01'\]}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                stations=["low-mccs/station/001"],
+                subarray_beams=["low-mccs/subarraybeam/01"],
             )

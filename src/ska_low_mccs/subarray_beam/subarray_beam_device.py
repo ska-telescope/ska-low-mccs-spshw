@@ -201,6 +201,24 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self.component_manager.subarray_beam_id
 
+    @attribute(dtype=("DevLong",), format="%i", max_value=47, min_value=0)
+    def stationBeamIds(self: MccsSubarrayBeam) -> list[int]:
+        """
+        Return the ids of station beams assigned to this subarray beam.
+
+        :return: the station beam ids
+        """
+        return self.component_manager.station_beam_ids
+
+    @stationBeamIds.write  # type: ignore[no-redef]
+    def stationBeamIds(self: MccsSubarrayBeam, station_beam_ids: list[int]) -> None:
+        """
+        Set the station beam ids.
+
+        :param station_beam_ids: ids of the station beams for this subarray beam
+        """
+        self.component_manager.station_beam_ids = station_beam_ids
+
     @attribute(dtype=("DevLong",), max_dim_x=512, format="%i")
     def stationIds(self: MccsSubarrayBeam) -> list[int]:
         """

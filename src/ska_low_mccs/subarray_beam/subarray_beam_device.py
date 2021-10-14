@@ -201,7 +201,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self.component_manager.subarray_beam_id
 
-    @attribute(dtype="DevLong", format="%i", max_value=47, min_value=0)
+    @attribute(dtype=("DevLong",), format="%i", max_value=47, min_value=0)
     def stationBeamIds(self: MccsSubarrayBeam) -> list[int]:
         """
         Return the ids of station beams assigned to this subarray beam.

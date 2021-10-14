@@ -288,7 +288,7 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert device_under_test.testMode == TestMode.NONE
+        assert device_under_test.testMode == TestMode.TEST
 
     def test_maxCapabilities(
         self: TestMccsController,

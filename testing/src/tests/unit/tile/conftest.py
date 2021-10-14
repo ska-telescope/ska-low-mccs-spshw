@@ -63,7 +63,7 @@ def test_mode() -> TestMode:
     :return: the test mode to be used when initialising the tile
         class object.
     """
-    return TestMode.NONE
+    return TestMode.TEST
 
 
 @pytest.fixture()

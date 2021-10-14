@@ -24,6 +24,8 @@ from ska_low_mccs.subrack import (
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
+    TestingSubrackSimulator,
+    TestingSubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
 )
 
@@ -49,22 +51,22 @@ class TestSubrackSimulatorCommon:
 
     @pytest.fixture(
         params=[
-            "subrack_simulator",
-            "subrack_simulator_component_manager",
+            "testing_subrack_simulator",
+            "testing_subrack_simulator_component_manager",
             "switching_subrack_component_manager",
             "subrack_component_manager",
         ]
     )
     def subrack(
         self: TestSubrackSimulatorCommon,
-        subrack_simulator: SubrackSimulator,
-        subrack_simulator_component_manager: SubrackSimulatorComponentManager,
+        testing_subrack_simulator: TestingSubrackSimulator,
+        testing_subrack_simulator_component_manager: TestingSubrackSimulatorComponentManager,
         switching_subrack_component_manager: SwitchingSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
         request: SubRequest,
     ) -> Union[
-        SubrackSimulator,
-        SubrackSimulatorComponentManager,
+        TestingSubrackSimulator,
+        TestingSubrackSimulatorComponentManager,
         SwitchingSubrackComponentManager,
         SubrackComponentManager,
     ]:
@@ -100,11 +102,11 @@ class TestSubrackSimulatorCommon:
 
         :return: the subrack class object under test
         """
-        if request.param == "subrack_simulator":
-            return subrack_simulator
-        elif request.param == "subrack_simulator_component_manager":
-            subrack_simulator_component_manager.start_communicating()
-            return subrack_simulator_component_manager
+        if request.param == "testing_subrack_simulator":
+            return testing_subrack_simulator
+        elif request.param == "testing_subrack_simulator_component_manager":
+            testing_subrack_simulator_component_manager.start_communicating()
+            return testing_subrack_simulator_component_manager
         elif request.param == "switching_subrack_component_manager":
             switching_subrack_component_manager.start_communicating()
             return switching_subrack_component_manager

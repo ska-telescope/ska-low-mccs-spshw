@@ -30,6 +30,7 @@ These assumptions may need to change in future.
 from __future__ import annotations  # allow forward references in type hints
 
 from typing import Any, Callable, Optional
+from time import sleep
 
 from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import ControlMode, ObjectComponent
@@ -585,12 +586,18 @@ class SubrackSimulator(ObjectComponent):
 
     def _emulate_hardware_delay(self: SubrackSimulator) -> None:
         """
-        Emulate a real hardware delay (base implementation).
-
-        Specialist classes will override this method for deployment
-        testing purposes.
+        Specialist implementation to emulate a real hardware delay.
+        
+        To be used specifically in a K8s deployment i.e. TestMode.NONE.
         """
-        pass
+        # Safeguard against deployment in unit testing environment
+        import os
+        assert "PYTEST_CURRENT_TEST" not in os.environ
+
+        for i in range(1, 5):
+            if self._component_progress_changed_callback:
+                self._component_progress_changed_callback(i * 20)
+            sleep(1.0)
 
     def turn_on_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
         """

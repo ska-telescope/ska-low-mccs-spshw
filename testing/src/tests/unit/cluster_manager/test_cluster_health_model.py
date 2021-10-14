@@ -57,7 +57,7 @@ class TestClusterHealthModel:
         """
         return ClusterHealthModel(health_changed_callback)
 
-    def test(
+    def test_cluster_health_model(
         self: TestClusterHealthModel,
         cluster_health_model: ClusterHealthModel,
         health_changed_callback: MockCallable,

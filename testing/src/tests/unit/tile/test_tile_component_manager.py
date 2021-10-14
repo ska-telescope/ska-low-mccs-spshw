@@ -756,7 +756,7 @@ class TestDynamicSimulatorCommon:
         :return: the test mode to be used when initialising the tile
             class object.
         """
-        return TestMode.TEST
+        return TestMode.NONE
 
     @pytest.fixture()
     def initial_subrack_state(self: TestDynamicSimulatorCommon) -> tango.DevState:

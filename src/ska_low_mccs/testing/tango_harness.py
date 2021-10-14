@@ -675,7 +675,7 @@ class StartingStateTangoHarness(WrapperTangoHarness):
         harness: TangoHarness,
         bypass_cache: bool = True,
         check_ready: bool = True,
-        set_test_mode: bool = False,
+        set_test_mode: bool = True,
         *args: Any,
         **kwargs: Any,
     ) -> None:

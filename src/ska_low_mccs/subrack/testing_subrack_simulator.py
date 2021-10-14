@@ -10,17 +10,14 @@
 """
 A simulator for a testing subrack management board.
 
-To be used specifically in a K8s deployment.
-
-This class will override certain methods to emulate delays that real
-hardware would introduce, thus providing a way to test the software
-without real hardware.
+For unit testing purposes, we don't want any emulated delays to increase
+our testing time. This class is here to allow certain methods to be
+overwritten for use in the unit testing environment.
 """
 
 from __future__ import annotations  # allow forward references in type hints
 
 from ska_low_mccs.subrack import SubrackSimulator
-from time import sleep
 
 __all__ = ["TestingSubrackSimulator"]
 
@@ -29,14 +26,7 @@ class TestingSubrackSimulator(SubrackSimulator):
     """A simulator of a testing subrack management board."""
 
     def _emulate_hardware_delay(self: TestingSubrackSimulator) -> None:
-        """Specialist implementation to emulate a real hardware delay."""
-        # Safeguard against deployment in unit testing environment
-        import os
-
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            assert False
-
-        for i in range(1, 5):
-            if self._component_progress_changed_callback:
-                self._component_progress_changed_callback(i * 20)
-            sleep(1.0)
+        """
+        Overwritten method so we don't emulate any hardware delay.
+        """
+        pass

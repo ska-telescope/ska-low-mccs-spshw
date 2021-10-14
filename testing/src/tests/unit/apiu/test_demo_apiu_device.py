@@ -54,7 +54,7 @@ class TestDemoAPIU:
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test(
+    def test_demo_apiu(
         self: TestDemoAPIU,
         device_under_test: MccsDeviceProxy,
     ) -> None:

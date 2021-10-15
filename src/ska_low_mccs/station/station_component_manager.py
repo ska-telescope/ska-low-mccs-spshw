@@ -14,7 +14,6 @@ import functools
 import logging
 import threading
 from typing import Callable, Optional, Sequence
-import time
 import tango
 
 from ska_tango_base.commands import ResultCode
@@ -385,7 +384,10 @@ class StationComponentManager(MccsComponentManager):
         if self._apiu_power_mode == PowerMode.ON:
             return self._turn_on_tiles_and_antennas()
         self._on_called = True
-        return self._apiu_proxy.on()
+        result_code = self._apiu_proxy.on()
+        if result_code:
+            return result_code
+        return ResultCode.OK
 
     @check_communicating
     def _turn_on_tiles_and_antennas(
@@ -396,20 +398,20 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        result_code = ResultCode.OK
-        targets = [
-            {"power_modes": self._tile_power_modes, "proxies": self._tile_proxies},
-            {"power_modes": self._antenna_power_modes, "proxies": self._antenna_proxies},
-        ]
-        for target in targets:
-            if not all(
-                power_mode == PowerMode.ON for power_mode in target.get("power_modes").values()
-            ):
-                result_code = ResultCode.QUEUED
-                results = [proxy.on() for proxy in target.get("proxies")]
-                if ResultCode.FAILED in results:
-                    return ResultCode.FAILED
-        return result_code
+        if not all(
+            power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
+        ):
+            results = [proxy.on() for proxy in self._tile_proxies]
+            if ResultCode.FAILED in results:
+                return ResultCode.FAILED
+        if not all(
+            power_mode == PowerMode.ON
+            for power_mode in self._antenna_power_modes.values()
+        ):
+            results = [proxy.on() for proxy in self._antenna_proxies]
+            if ResultCode.FAILED in results:
+                return ResultCode.FAILED
+        return ResultCode.QUEUED
 
     @check_communicating
     @check_on

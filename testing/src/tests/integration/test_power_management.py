@@ -342,3 +342,4 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
+        assert False

@@ -87,8 +87,8 @@ class TestSubrackSimulatorCommon:
         So any test that relies on this fixture will be run four times:
         once for each of the above classes.
 
-        :param subrack_simulator: the subrack simulator to return
-        :param subrack_simulator_component_manager: the subrack
+        :param testing_subrack_simulator: the testing subrack simulator to return
+        :param testing_subrack_simulator_component_manager: the testing subrack
             simulator component manager to return
         :param switching_subrack_component_manager:
             a component manager that switches between subrack simulator

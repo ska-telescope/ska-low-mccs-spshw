@@ -26,7 +26,5 @@ class TestingSubrackSimulator(SubrackSimulator):
     """A simulator of a testing subrack management board."""
 
     def _emulate_hardware_delay(self: TestingSubrackSimulator) -> None:
-        """
-        Overwritten method so we don't emulate any hardware delay.
-        """
+        """Overwritten method so we don't emulate any hardware delay."""
         pass

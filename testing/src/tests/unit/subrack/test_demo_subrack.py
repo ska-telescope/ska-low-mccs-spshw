@@ -52,7 +52,9 @@ class TestDemoSubrack:
         """
         return tango_harness.get_device("low-mccs/subrack/01")
 
-    def test_demo_subrack(self: TestDemoSubrack, device_under_test: MccsDeviceProxy) -> None:
+    def test_demo_subrack(
+        self: TestDemoSubrack, device_under_test: MccsDeviceProxy
+    ) -> None:
         """
         Test.
 

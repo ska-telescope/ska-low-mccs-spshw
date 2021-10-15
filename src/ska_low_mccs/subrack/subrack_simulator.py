@@ -587,11 +587,12 @@ class SubrackSimulator(ObjectComponent):
     def _emulate_hardware_delay(self: SubrackSimulator) -> None:
         """
         Specialist implementation to emulate a real hardware delay.
-        
+
         To be used specifically in a K8s deployment i.e. TestMode.NONE.
         """
         # Safeguard against deployment in unit testing environment
         import os
+
         assert "PYTEST_CURRENT_TEST" not in os.environ
 
         for i in range(1, 5):

@@ -114,7 +114,9 @@ def testing_subrack_simulator(
     :return: a testing subrack simulator
     """
     testing_subrack_simulator = TestingSubrackSimulator()
-    testing_subrack_simulator.set_progress_changed_callback(component_progress_changed_callback)
+    testing_subrack_simulator.set_progress_changed_callback(
+        component_progress_changed_callback
+    )
     return testing_subrack_simulator
 
 
@@ -194,6 +196,7 @@ def testing_subrack_simulator_component_manager(
         component_progress_changed_callback,
         component_tpm_power_changed_callback,
     )
+
 
 @pytest.fixture()
 def switching_subrack_component_manager(

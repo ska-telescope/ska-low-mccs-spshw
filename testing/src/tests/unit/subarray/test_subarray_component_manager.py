@@ -28,6 +28,7 @@ class TestSubarrayComponentManager:
         communication_status_changed_callback: MockCallable,
         station_on_fqdn: str,
         subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
     ) -> None:
         """
@@ -42,6 +43,8 @@ class TestSubarrayComponentManager:
         :param station_on_fqdn: the FQDN of a mock station that is
             powered on.
         :param subarray_beam_on_fqdn: the FQDN of a mock subarray beam
+            that is powered on
+        :param station_beam_on_fqdn: the FQDN of a mock station beam
             that is powered on
         :param channel_blocks: a mock list of channel blocks
         """
@@ -61,6 +64,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -104,6 +108,8 @@ class TestSubarrayComponentManager:
         station_on_fqdn: str,
         subarray_beam_off_fqdn: str,
         subarray_beam_on_fqdn: str,
+        station_beam_off_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
         assign_completed_callback: MockCallable,
         release_completed_callback: MockCallable,
@@ -121,6 +127,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_off_fqdn: the FQDN of a subarray beam that is powered
             off.
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
+            on.
+        :param station_beam_off_fqdn: the FQDN of a station beam that is powered
+            off.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
             on.
         :param channel_blocks: a list of channel blocks.
         :param assign_completed_callback: callback to be called when the
@@ -140,6 +150,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -155,10 +166,11 @@ class TestSubarrayComponentManager:
         assign_completed_callback.assert_next_call()
         assert subarray_component_manager.assigned_resources == {
             station_off_fqdn,
+            station_beam_off_fqdn,
             subarray_beam_off_fqdn,
         }
         resources_changed_callback.assert_next_call(
-            {station_off_fqdn}, {subarray_beam_off_fqdn}
+            {station_off_fqdn}, {subarray_beam_off_fqdn}, {station_beam_off_fqdn}
         )
 
         # Further assign
@@ -166,6 +178,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -182,12 +195,15 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.assigned_resources == {
             station_off_fqdn,
             station_on_fqdn,
+            station_beam_on_fqdn,
+            station_beam_off_fqdn,
             subarray_beam_off_fqdn,
             subarray_beam_on_fqdn,
         }
         resources_changed_callback.assert_next_call(
             {station_off_fqdn, station_on_fqdn},
             {subarray_beam_off_fqdn, subarray_beam_on_fqdn},
+            {station_beam_off_fqdn, station_beam_on_fqdn},
         )
 
         # Release
@@ -195,6 +211,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -204,9 +221,10 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.assigned_resources == {
             station_on_fqdn,
             subarray_beam_on_fqdn,
+            station_beam_on_fqdn,
         }
         resources_changed_callback.assert_next_call(
-            {station_on_fqdn}, {subarray_beam_on_fqdn}
+            {station_on_fqdn}, {subarray_beam_on_fqdn}, {station_beam_on_fqdn}
         )
 
         # Release all
@@ -214,7 +232,7 @@ class TestSubarrayComponentManager:
         assert result_code == ResultCode.OK
         release_completed_callback.assert_next_call()
         assert subarray_component_manager.assigned_resources == set()
-        resources_changed_callback.assert_next_call(set(), set())
+        resources_changed_callback.assert_next_call(set(), set(), set())
 
     def test_configure(
         self: TestSubarrayComponentManager,
@@ -231,6 +249,8 @@ class TestSubarrayComponentManager:
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
         mock_subarray_beam_on: unittest.mock.Mock,
+        station_beam_on_fqdn: str,
+        station_beam_off_fqdn: str,
         channel_blocks: list[int],
         assign_completed_callback: MockCallable,
         configure_completed_callback: MockCallable,
@@ -261,6 +281,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
         :param mock_subarray_beam_on: a mock subarray beam that is powered on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
+            on.
+        :param station_beam_off_fqdn: the FQDN of a station beam that is powered
+            off.
         :param channel_blocks: a list of channel blocks.
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
@@ -277,6 +301,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -306,6 +331,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_off_fqdn],
+                "station_beams": [station_beam_off_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -338,6 +364,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_off_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -371,6 +398,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -430,6 +458,8 @@ class TestSubarrayComponentManager:
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
         mock_subarray_beam_on: unittest.mock.Mock,
+        station_beam_on_id: int,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
         scan_id: int,
         start_time: float,
@@ -449,6 +479,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
         :param mock_subarray_beam_on: a mock subarray beam that is powered on.
+        :param station_beam_on_id: the id number of a station beam that is
+            powered on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
+            on.
         :param channel_blocks: a list of channel blocks.
         :param scan_id: a scan id for use in testing
         :param start_time: a scan start time for use in testing
@@ -462,6 +496,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [station_on_fqdn],
                 "subarray_beams": [subarray_beam_on_fqdn],
+                "station_beams": [station_beam_on_fqdn],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -472,6 +507,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [{"station_id": station_on_id}],
                 "subarray_beams": [{"subarray_beam_id": subarray_beam_on_id}],
+                "station_beams": [{"station_beam_id": station_beam_on_id}],
             }
         )
         assert result_code == ResultCode.QUEUED

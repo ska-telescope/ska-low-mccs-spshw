@@ -236,6 +236,7 @@ class TestMccsSubarray:
         device_admin_mode_changed_callback: MockChangeEventCallback,
         station_on_fqdn: str,
         subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
     ) -> None:
         """
@@ -249,6 +250,8 @@ class TestMccsSubarray:
         :param station_on_fqdn: the FQDN of a station that is powered
             on.
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
+            on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
             on.
         :param channel_blocks: a list of channel blocks.
         """
@@ -272,6 +275,7 @@ class TestMccsSubarray:
                 {
                     "stations": [station_on_fqdn],
                     "subarray_beams": [subarray_beam_on_fqdn],
+                    "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,
                 }
             )
@@ -279,6 +283,7 @@ class TestMccsSubarray:
         assert result_code == ResultCode.OK
         time.sleep(0.1)
         assert list(device_under_test.assignedResources) == [
+            station_beam_on_fqdn,
             station_on_fqdn,
             subarray_beam_on_fqdn,
         ]
@@ -297,6 +302,7 @@ class TestMccsSubarray:
         station_on_fqdn: str,
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
     ) -> None:
         """
@@ -315,6 +321,8 @@ class TestMccsSubarray:
             powered on.
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is
+            powered on.
         :param channel_blocks: a list of channel blocks.
         """
         device_under_test.add_change_event_callback(
@@ -335,6 +343,7 @@ class TestMccsSubarray:
                 {
                     "stations": [station_on_fqdn],
                     "subarray_beams": [subarray_beam_on_fqdn],
+                    "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,
                 }
             )

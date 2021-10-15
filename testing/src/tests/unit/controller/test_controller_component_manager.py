@@ -195,11 +195,57 @@ class TestControllerComponentManager:
         ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
+        controller_component_manager._subarray_beams[
+            "low-mccs/subarraybeam/01"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._subarray_beams[
+            "low-mccs/subarraybeam/02"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/01"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/02"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/03"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beams[
+            "low-mccs/beam/04"
+        ]._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/01",
+            HealthState.OK,
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/02",
+            HealthState.OK,
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/03",
+            HealthState.OK,
+        )
+        controller_component_manager._station_beam_health_changed(
+            "low-mccs/beam/04",
+            HealthState.OK,
+        )
 
         with pytest.raises(ConnectionError, match="Component is not turned on"):
             controller_component_manager.allocate(
                 99,  # unknown subarray id
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -218,7 +264,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Unsupported resources"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/unknown"],
+                [["low-mccs/station/unknown"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -226,7 +272,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Allocatee is unready"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -243,7 +289,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -256,7 +302,7 @@ class TestControllerComponentManager:
         with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
             controller_component_manager.allocate(
                 1,
-                ["low-mccs/station/001"],
+                [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
                 [3, 4],
             )
@@ -268,7 +314,7 @@ class TestControllerComponentManager:
 
         controller_component_manager.allocate(
             1,
-            ["low-mccs/station/001"],
+            [["low-mccs/station/001"]],
             ["low-mccs/subarraybeam/02"],
             [3, 4],
         )
@@ -281,6 +327,7 @@ class TestControllerComponentManager:
                 {
                     "stations": ["low-mccs/station/001"],
                     "subarray_beams": ["low-mccs/subarraybeam/02"],
+                    "station_beams": ["low-mccs/beam/04"],
                     "channel_blocks": [3, 4],
                 }
             )
@@ -294,7 +341,7 @@ class TestControllerComponentManager:
 
         controller_component_manager.allocate(
             2,
-            ["low-mccs/station/001"],
+            [["low-mccs/station/001"]],
             ["low-mccs/subarraybeam/02"],
             [3, 4],
         )
@@ -307,6 +354,7 @@ class TestControllerComponentManager:
                 {
                     "stations": ["low-mccs/station/001"],
                     "subarray_beams": ["low-mccs/subarraybeam/02"],
+                    "station_beams": ["low-mccs/beam/04"],
                     "channel_blocks": [3, 4],
                 }
             )

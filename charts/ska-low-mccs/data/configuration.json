@@ -23,10 +23,10 @@
                                 "low-mccs/tile/0004"
                             ],
                             "MccsStationBeams": [
-                                "low-mccs/beam/001",
-                                "low-mccs/beam/002",
-                                "low-mccs/beam/003",
-                                "low-mccs/beam/004"
+                                "low-mccs/beam/01",
+                                "low-mccs/beam/02",
+                                "low-mccs/beam/03",
+                                "low-mccs/beam/04"
                             ],
                             "MccsSubarrayBeams": [
                                 "low-mccs/subarraybeam/01",
@@ -131,9 +131,9 @@
             }
         },
         "MccsStationBeam": {
-            "beam_001": {
+            "beam_01": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/001": {
+                    "low-mccs/beam/01": {
                         "properties": {
                             "BeamId": [
                                 "1"
@@ -145,9 +145,9 @@
                     }
                 }
             },
-            "beam_002": {
+            "beam_02": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/002": {
+                    "low-mccs/beam/02": {
                         "properties": {
                             "BeamId": [
                                 "2"
@@ -159,9 +159,9 @@
                     }
                 }
             },
-            "beam_003": {
+            "beam_03": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/003": {
+                    "low-mccs/beam/03": {
                         "properties": {
                             "BeamId": [
                                 "3"
@@ -173,9 +173,9 @@
                     }
                 }
             },
-            "beam_004": {
+            "beam_04": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/004": {
+                    "low-mccs/beam/04": {
                         "properties": {
                             "BeamId": [
                                 "4"

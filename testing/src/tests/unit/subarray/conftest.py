@@ -237,6 +237,23 @@ def subarray_beam_health_changed_callback(
 
 
 @pytest.fixture()
+def station_beam_health_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for a change in the health of one of the subarray's beams.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that one of its station beams has changed health.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
 def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
@@ -254,6 +271,7 @@ def subarray_component_manager(
     obs_fault_callback: MockCallable,
     station_health_changed_callback: MockCallable,
     subarray_beam_health_changed_callback: MockCallable,
+    station_beam_health_changed_callback: MockCallable,
 ) -> SubarrayComponentManager:
     """
     Return a subarray component manager.
@@ -290,6 +308,9 @@ def subarray_component_manager(
     :param subarray_beam_health_changed_callback: a callback to be
         called when the health of one of this subarray's subarray beams
         changes
+    :param station_beam_health_changed_callback: a callback to be
+        called when the health of one of this subarray's station beams
+        changes
 
     :return: a station beam component manager
     """
@@ -309,6 +330,7 @@ def subarray_component_manager(
         obs_fault_callback,
         station_health_changed_callback,
         subarray_beam_health_changed_callback,
+        station_beam_health_changed_callback,
     )
 
 
@@ -404,6 +426,52 @@ def subarray_beam_on_fqdn(subarray_beam_on_id: int) -> str:
 
 
 @pytest.fixture()
+def station_beam_off_id() -> int:
+    """
+    Return the id of a mock station beam that is powered off.
+
+    :return: the id of a mock station beam that is powered off.
+    """
+    return 2
+
+
+@pytest.fixture()
+def station_beam_on_id() -> int:
+    """
+    Return the id of a mock station beam that is powered on.
+
+    :return: the id of a mock station beam that is powered on.
+    """
+    return 3
+
+
+@pytest.fixture()
+def station_beam_off_fqdn(station_beam_off_id: int) -> str:
+    """
+    Fixture that provides the FQDN for a mock station beam that is powered off.
+
+    :param station_beam_off_id: the id number of a station beam that
+        is powered off.
+
+    :return: the FQDN for a mock station beam that is powered off.
+    """
+    return f"low-mccs/beam/{station_beam_off_id:02d}"
+
+
+@pytest.fixture()
+def station_beam_on_fqdn(station_beam_on_id: int) -> str:
+    """
+    Fixture that provides the FQDN for a mock station beam that is powered on.
+
+    :param station_beam_on_id: the id number of a station beam that is
+        powered on
+
+    :return: the FQDN for a mock station beam that is powered on.
+    """
+    return f"low-mccs/beam/{station_beam_on_id:02d}"
+
+
+@pytest.fixture()
 def channel_blocks() -> list[int]:
     """
     Return a list of channel blocks.
@@ -467,6 +535,32 @@ def mock_subarray_beam_on() -> unittest.mock.Mock:
 
 
 @pytest.fixture()
+def mock_station_beam_off() -> unittest.mock.Mock:
+    """
+    Return a mock station beam device that is powered off.
+
+    :return: a mock station beam device that is powered off.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.OFF)
+    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    return builder()
+
+
+@pytest.fixture()
+def mock_station_beam_on() -> unittest.mock.Mock:
+    """
+    Return a mock station beam device that is powered on.
+
+    :return: a mock station beam device that is powered on.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    return builder()
+
+
+@pytest.fixture()
 def initial_mocks(
     station_off_fqdn: str,
     mock_station_off: unittest.mock.Mock,
@@ -476,6 +570,10 @@ def initial_mocks(
     mock_subarray_beam_off: unittest.mock.Mock,
     subarray_beam_on_fqdn: str,
     mock_subarray_beam_on: unittest.mock.Mock,
+    station_beam_off_fqdn: str,
+    mock_station_beam_off: unittest.mock.Mock,
+    station_beam_on_fqdn: str,
+    mock_station_beam_on: unittest.mock.Mock,
 ) -> dict[str, unittest.mock.Mock]:
     """
     Return a dictionary of device proxy mocks to pre-register.
@@ -497,6 +595,14 @@ def initial_mocks(
         powered on.
     :param mock_subarray_beam_on: a mock subarray beam that is powered
         on.
+    :param station_beam_off_fqdn: the FQDN of a station beam that is
+        powered off.
+    :param mock_station_beam_off: a mock station beam that is powered
+        off.
+    :param station_beam_on_fqdn: the FQDN of a station beam that is
+        powered on.
+    :param mock_station_beam_on: a mock station beam that is powered
+        on.
 
     :return: a dictionary of device proxy mocks to pre-register.
     """
@@ -505,6 +611,8 @@ def initial_mocks(
         station_on_fqdn: mock_station_on,
         subarray_beam_off_fqdn: mock_subarray_beam_off,
         subarray_beam_on_fqdn: mock_subarray_beam_on,
+        station_beam_off_fqdn: mock_station_beam_off,
+        station_beam_on_fqdn: mock_station_beam_on,
     }
 
 

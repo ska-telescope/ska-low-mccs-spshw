@@ -86,7 +86,21 @@ def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock subarray beam devices for use in testing.
 
-    :return: a mock tile device for use in testing.
+    :return: a mock subarray beam device for use in testing.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
+def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock station beam devices for use in testing.
+
+    :return: a mock station beam device for use in testing.
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
@@ -134,6 +148,7 @@ def initial_mocks(
     mock_apiu_factory: Callable[[], unittest.mock.Mock],
     mock_antenna_factory: Callable[[], unittest.mock.Mock],
     mock_subarray_beam_factory: Callable[[], unittest.mock.Mock],
+    mock_station_beam_factory: Callable[[], unittest.mock.Mock],
     mock_subrack_factory: Callable[[], unittest.mock.Mock],
     mock_tile_factory: Callable[[], unittest.mock.Mock],
 ) -> dict[str, unittest.mock.Mock]:
@@ -148,6 +163,8 @@ def initial_mocks(
         device
     :param mock_subarray_beam_factory: a factory that returns a mock
         subarray beam device
+    :param mock_station_beam_factory: a factory that returns a mock
+        station beam device
     :param mock_subrack_factory: a factory that returns a mock subrack
         device
     :param mock_tile_factory: a factory that returns a mock tile device
@@ -173,6 +190,10 @@ def initial_mocks(
         "low-mccs/tile/0002": mock_tile_factory(),
         "low-mccs/tile/0003": mock_tile_factory(),
         "low-mccs/tile/0004": mock_tile_factory(),
+        "low-mccs/beam/01": mock_station_beam_factory(),
+        "low-mccs/beam/02": mock_station_beam_factory(),
+        "low-mccs/beam/03": mock_station_beam_factory(),
+        "low-mccs/beam/04": mock_station_beam_factory(),
     }
 
 
@@ -270,8 +291,6 @@ class TestMccsIntegration:
         # check initial state
         assert subarray_1.stationFQDNs is None
         assert subarray_2.stationFQDNs is None
-        assert station_1.subarrayId == 0
-        assert station_2.subarrayId == 0
 
         # allocate station_1 to subarray_1
         ([result_code], [_]) = call_with_json(
@@ -291,8 +310,6 @@ class TestMccsIntegration:
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
         assert list(station_fqdns) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 0
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
@@ -309,14 +326,11 @@ class TestMccsIntegration:
         station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
         assert list(station_fqdns) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 0
 
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
         # subarray, BUT we must remember that the subarray cannot reallocate
         # the same subarray_beam.
-        # TODO This will change when subarray_beam is not a list.
         ([result_code], [_]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
@@ -336,8 +350,6 @@ class TestMccsIntegration:
             station_2.dev_name(),
         ]
         assert subarray_2.stationFQDNs is None
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 1
 
     def test_controller_release_subarray(
         self: TestMccsIntegration,
@@ -454,8 +466,6 @@ class TestMccsIntegration:
         # check initial state
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert list(subarray_2.stationFQDNs) == [station_2.dev_name()]
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 2
 
         # release resources of subarray_2
         ([result_code], [_]) = call_with_json(
@@ -470,8 +480,6 @@ class TestMccsIntegration:
         # check
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 0
 
         # releasing resources of unresourced subarray_2 should succeed (as redundant)
         # i.e. OK not QUEUED because it's quick
@@ -483,8 +491,6 @@ class TestMccsIntegration:
         # check no side-effect to failed release
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
-        assert station_1.subarrayId == 1
-        assert station_2.subarrayId == 0
 
         # release resources of subarray_1
         ([result_code], [_]) = call_with_json(
@@ -496,5 +502,3 @@ class TestMccsIntegration:
 
         assert subarray_1.stationFQDNs is None
         assert subarray_2.stationFQDNs is None
-        assert station_1.subarrayId == 0
-        assert station_2.subarrayId == 0

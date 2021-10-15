@@ -55,10 +55,10 @@ def devices_to_load() -> DevicesToLoadType:
         "devices": [
             {"name": "station_001", "proxy": MccsDeviceProxy},
             {"name": "station_002", "proxy": MccsDeviceProxy},
-            {"name": "beam_001", "proxy": MccsDeviceProxy},
-            {"name": "beam_002", "proxy": MccsDeviceProxy},
-            {"name": "beam_003", "proxy": MccsDeviceProxy},
-            {"name": "beam_004", "proxy": MccsDeviceProxy},
+            {"name": "beam_01", "proxy": MccsDeviceProxy},
+            {"name": "beam_02", "proxy": MccsDeviceProxy},
+            {"name": "beam_03", "proxy": MccsDeviceProxy},
+            {"name": "beam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -158,10 +158,10 @@ class TestMccsIntegration:
         """
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        stationbeam_1 = tango_harness.get_device("low-mccs/beam/001")
-        stationbeam_2 = tango_harness.get_device("low-mccs/beam/002")
-        stationbeam_3 = tango_harness.get_device("low-mccs/beam/003")
-        stationbeam_4 = tango_harness.get_device("low-mccs/beam/004")
+        stationbeam_1 = tango_harness.get_device("low-mccs/beam/01")
+        stationbeam_2 = tango_harness.get_device("low-mccs/beam/02")
+        stationbeam_3 = tango_harness.get_device("low-mccs/beam/03")
+        stationbeam_4 = tango_harness.get_device("low-mccs/beam/04")
         mock_tile_1 = tango_harness.get_device("low-mccs/tile/0001")
         mock_tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         mock_tile_3 = tango_harness.get_device("low-mccs/tile/0003")

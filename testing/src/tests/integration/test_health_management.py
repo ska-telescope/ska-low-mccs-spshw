@@ -75,8 +75,24 @@ def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
 
 
 @pytest.fixture()
+def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
+    """
+    Return a factory that returns mock station beam devices for use in testing.
+
+    :return: a factory that returns mock station beam devices for use
+        in testing
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    return builder
+
+
+@pytest.fixture()
 def initial_mocks(
     mock_subarray_beam_factory: Callable[[], unittest.mock.Mock],
+    mock_station_beam_factory: Callable[[], unittest.mock.Mock],
 ) -> dict[str, unittest.mock.Mock]:
     """
     Return a specification of the mock devices to be set up in the Tango test harness.
@@ -87,6 +103,9 @@ def initial_mocks(
     :param mock_subarray_beam_factory: a factory that returns a mock
         subarray beam device
 
+    :param mock_station_beam_factory: a factory that returns a mock
+        station beam device
+
     :return: specification of the mock devices to be set up in the Tango
         test harness.
     """
@@ -95,6 +114,10 @@ def initial_mocks(
         "low-mccs/subarraybeam/02": mock_subarray_beam_factory(),
         "low-mccs/subarraybeam/03": mock_subarray_beam_factory(),
         "low-mccs/subarraybeam/04": mock_subarray_beam_factory(),
+        "low-mccs/beam/01": mock_station_beam_factory(),
+        "low-mccs/beam/02": mock_station_beam_factory(),
+        "low-mccs/beam/03": mock_station_beam_factory(),
+        "low-mccs/beam/04": mock_station_beam_factory(),
     }
 
 

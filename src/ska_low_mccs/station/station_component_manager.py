@@ -177,6 +177,7 @@ class StationComponentManager(MccsComponentManager):
         self._station_id = station_id
 
         self._is_configured = False
+        self._on_called = False
         self._is_configured_changed_callback = is_configured_changed_callback
 
         self._communication_status_lock = threading.Lock()
@@ -331,6 +332,9 @@ class StationComponentManager(MccsComponentManager):
         with self.__power_mode_lock:
             self._apiu_power_mode = power_mode
             self._evaluate_power_mode()
+            if self._on_called:
+                self._on_called = False
+                _ = self._turn_on_tiles_and_antennas()
 
     def _evaluate_power_mode(
         self: StationComponentManager,
@@ -374,23 +378,38 @@ class StationComponentManager(MccsComponentManager):
         """
         Turn on this station.
 
+        The order to turn a station on is: APIU, then tiles and antennas.
+
         :return: a result code
         """
-        # TODO: This is a temporary solution to improve test stability!
-        # Let the APIU turn on before turning tiles and antennas on.
-        # MCCS-816 will deal with this mess (planned for sprint 12.3).
-        result_apiu = [self._apiu_proxy.on()]
-        time.sleep(1.0)
-        result_tiles = [tile_proxy.on() for tile_proxy in self._tile_proxies]
-        result_antennas = [
-            antenna_proxy.on() for antenna_proxy in self._antenna_proxies
-        ]
-        results = result_apiu + result_tiles + result_antennas
+        if self._apiu_power_mode == PowerMode.ON:
+            return self._turn_on_tiles_and_antennas()
+        self._on_called = True
+        return self._apiu_proxy.on()
 
-        if ResultCode.FAILED in results:
-            return ResultCode.FAILED
-        else:
-            return ResultCode.QUEUED
+    @check_communicating
+    def _turn_on_tiles_and_antennas(
+        self: StationComponentManager,
+    ) -> ResultCode:
+        """
+        Turn on tiles and antennas if not already on.
+
+        :return: a result code
+        """
+        result_code = ResultCode.OK
+        targets = [
+            {"power_modes": self._tile_power_modes, "proxies": self._tile_proxies},
+            {"power_modes": self._antenna_power_modes, "proxies": self._antenna_proxies},
+        ]
+        for target in targets:
+            if not all(
+                power_mode == PowerMode.ON for power_mode in target.get("power_modes").values()
+            ):
+                result_code = ResultCode.QUEUED
+                results = [proxy.on() for proxy in target.get("proxies")]
+                if ResultCode.FAILED in results:
+                    return ResultCode.FAILED
+        return result_code
 
     @check_communicating
     @check_on

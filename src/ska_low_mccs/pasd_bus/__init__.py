@@ -9,7 +9,7 @@
 
 __all__ = [
     "PasdBusComponentManager",
-    # "PasdBusHealthModel",
+    "PasdBusHealthModel",
     "PasdBusSimulator",
     "PasdBusSimulatorComponentManager",
     # "MccsPasdBus",
@@ -21,5 +21,6 @@ from .pasd_bus_component_manager import (
     PasdBusSimulatorComponentManager,
 )
 
-# from .pasd_bus_health_model import PasdBusHealthModel
+from .pasd_bus_health_model import PasdBusHealthModel
+
 # from .pasd_bus_device import MccsPasdBus

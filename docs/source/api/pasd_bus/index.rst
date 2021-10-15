@@ -9,3 +9,4 @@ PaSD bus subpackage
 
   PaSD bus simulator<pasd_bus_simulator>
   PaSD bus component manager<pasd_bus_component_manager>
+  PaSD bus health model<pasd_bus_health_model>

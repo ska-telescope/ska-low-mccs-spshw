@@ -312,6 +312,8 @@ class TestPowerManagement:
         ]
         for device in devices:
             device.adminMode = AdminMode.ONLINE
+            # TODO: Understand and fix why this small delay improves test stability
+            time.sleep(0.1)
 
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
@@ -342,4 +344,3 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
-        assert False

@@ -331,7 +331,7 @@ class StationComponentManager(MccsComponentManager):
         with self.__power_mode_lock:
             self._apiu_power_mode = power_mode
             self._evaluate_power_mode()
-            if self._on_called:
+            if power_mode is PowerMode.ON and self._on_called:
                 self._on_called = False
                 _ = self._turn_on_tiles_and_antennas()
 

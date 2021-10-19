@@ -31,6 +31,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import Any, Callable, Optional
 from time import sleep
+import os
 
 from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import ControlMode, ObjectComponent
@@ -589,11 +590,14 @@ class SubrackSimulator(ObjectComponent):
         Specialist implementation to emulate a real hardware delay.
 
         To be used specifically in a K8s deployment i.e. TestMode.NONE.
+
+        :raises AssertionError: if method is called in unit test environment
         """
         # Safeguard against deployment in unit testing environment
-        import os
-
-        assert "PYTEST_CURRENT_TEST" not in os.environ
+        if "PYTEST_CURRENT_TEST" not in os.environ:
+            raise AssertionError(
+                "Hardware delay emulation not allowed in unit test environment"
+            )
 
         for i in range(1, 5):
             if self._component_progress_changed_callback:

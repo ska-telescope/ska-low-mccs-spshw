@@ -40,6 +40,7 @@ setuptools.setup(
             "MccsAntenna=ska_low_mccs.antenna.antenna_device:main",
             "MccsAPIU=ska_low_mccs.apiu.apiu_device:main",
             "MccsController=ska_low_mccs.controller.controller_device:main",
+            "MccsPasdBus=ska_low_mccs.pasd_bus.pasd_bus_device:main",
             "MccsSubarray=ska_low_mccs.subarray.subarray_device:main",
             "MccsSubarrayBeam=ska_low_mccs.subarray_beam.subarray_beam_device:main",
             "MccsSubrack=ska_low_mccs.subrack.subrack_device:main",

@@ -8,3 +8,4 @@ pytest-repeat
 coverage
 pyyaml
 pytest-rerunfailures
+pytest-timeout

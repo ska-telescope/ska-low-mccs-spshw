@@ -14,7 +14,6 @@ import functools
 import logging
 import threading
 from typing import Callable, Optional, Sequence
-
 import tango
 
 from ska_tango_base.commands import ResultCode
@@ -177,6 +176,7 @@ class StationComponentManager(MccsComponentManager):
         self._station_id = station_id
 
         self._is_configured = False
+        self._on_called = False
         self._is_configured_changed_callback = is_configured_changed_callback
 
         self._communication_status_lock = threading.Lock()
@@ -331,6 +331,9 @@ class StationComponentManager(MccsComponentManager):
         with self.__power_mode_lock:
             self._apiu_power_mode = power_mode
             self._evaluate_power_mode()
+            if power_mode is PowerMode.ON and self._on_called:
+                self._on_called = False
+                _ = self._turn_on_tiles_and_antennas()
 
     def _evaluate_power_mode(
         self: StationComponentManager,
@@ -374,18 +377,41 @@ class StationComponentManager(MccsComponentManager):
         """
         Turn on this station.
 
+        The order to turn a station on is: APIU, then tiles and antennas.
+
         :return: a result code
         """
-        results = (
-            [self._apiu_proxy.on()]
-            + [tile_proxy.on() for tile_proxy in self._tile_proxies]
-            + [antenna_proxy.on() for antenna_proxy in self._antenna_proxies]
-        )
+        if self._apiu_power_mode == PowerMode.ON:
+            return self._turn_on_tiles_and_antennas()
+        self._on_called = True
+        result_code = self._apiu_proxy.on()
+        if result_code:
+            return result_code
+        return ResultCode.OK
 
-        if ResultCode.FAILED in results:
-            return ResultCode.FAILED
-        else:
-            return ResultCode.QUEUED
+    @check_communicating
+    def _turn_on_tiles_and_antennas(
+        self: StationComponentManager,
+    ) -> ResultCode:
+        """
+        Turn on tiles and antennas if not already on.
+
+        :return: a result code
+        """
+        if not all(
+            power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
+        ):
+            results = [proxy.on() for proxy in self._tile_proxies]
+            if ResultCode.FAILED in results:
+                return ResultCode.FAILED
+        if not all(
+            power_mode == PowerMode.ON
+            for power_mode in self._antenna_power_modes.values()
+        ):
+            results = [proxy.on() for proxy in self._antenna_proxies]
+            if ResultCode.FAILED in results:
+                return ResultCode.FAILED
+        return ResultCode.QUEUED
 
     @check_communicating
     @check_on

@@ -103,13 +103,16 @@ class TestStationComponentManager:
         station_component_manager.on()
 
         apiu_proxy.On.assert_next_call()
+
+        # pretend to receive APIU power mode changed event
+        station_component_manager._apiu_power_mode_changed(PowerMode.ON)
+
         for tile_proxy in tile_proxies:
             tile_proxy.On.assert_next_call()
         for antenna_proxy in antenna_proxies:
             antenna_proxy.On.assert_next_call()
 
-        # pretend to receive events
-        station_component_manager._apiu_power_mode_changed(PowerMode.ON)
+        # pretend to receive tile and antenna events
         for fqdn in tile_fqdns:
             station_component_manager._tile_power_mode_changed(fqdn, PowerMode.ON)
         for fqdn in antenna_fqdns:

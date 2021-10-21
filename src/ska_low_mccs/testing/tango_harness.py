@@ -723,6 +723,8 @@ class StartingStateTangoHarness(WrapperTangoHarness):
                     assert device.check_initialised()
                 if self._set_test_mode:
                     device.testMode = TestMode.TEST
+                else:
+                    device.testMode = TestMode.NONE
 
 
 class MockingTangoHarness(WrapperTangoHarness):

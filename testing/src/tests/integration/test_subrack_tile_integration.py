@@ -16,7 +16,7 @@ import time
 import pytest
 from tango import DevState
 
-from ska_tango_base.control_model import AdminMode, TestMode
+from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
 
@@ -37,7 +37,7 @@ def devices_to_load() -> DevicesToLoadType:
         "devices": [
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy},
-            # commented out as they are not used at present and to
+            # TODO: commented out as they are not used at present and to
             # help diagnose the intermittent test failure.
             # {"name": "tile_0002", "proxy": MccsDeviceProxy},
             # {"name": "tile_0003", "proxy": MccsDeviceProxy},
@@ -106,7 +106,6 @@ class TestSubrackTileIntegration:
             AdminMode.OFFLINE
         )
 
-        subrack_device.testMode = TestMode.NONE
         subrack_device.adminMode = AdminMode.ONLINE
         subrack_device_admin_mode_changed_callback.assert_next_change_event(
             AdminMode.ONLINE

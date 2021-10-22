@@ -159,7 +159,7 @@ class MockDeviceBuilder:
 
             :return: the specified return value for the command
             """
-            return getattr(mock_device, name).return_value
+            return getattr(mock_device, name)()
 
         mock_device.command_inout.side_effect = _mock_command_inout
 
@@ -198,7 +198,7 @@ class MockDeviceBuilder:
             :return: the specified return value for the command
             """
             command_name = asynch_id
-            return getattr(mock_device, command_name).return_value
+            return getattr(mock_device, command_name)()
 
         mock_device.command_inout_reply.side_effect = _mock_command_inout_reply
 

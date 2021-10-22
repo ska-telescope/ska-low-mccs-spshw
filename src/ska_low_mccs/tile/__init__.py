@@ -24,17 +24,17 @@ __all__ = [
     "DynamicTpmSimulatorComponentManager",
     "StaticTpmSimulatorComponentManager",
     "TpmDriver",
-    "HwTile",
-    "Tile12",
-    "Tile16",
-    "TpmTestFirmware",
+#    "HwTile",
+#    "Tile12",
+#    "Tile16",
+#    "TpmTestFirmware",
     "demo_tile_device",
     "plugins",
 ]
 
-from .tile_1_2 import Tile12
-from .tile_1_6 import Tile16
-from .tile_wrapper import HwTile
+#from .tile_1_2 import Tile12
+#from .tile_1_6 import Tile16
+#from .tile_wrapper import HwTile
 from .base_tpm_simulator import BaseTpmSimulator
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator

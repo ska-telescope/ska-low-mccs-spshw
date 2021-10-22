@@ -25,8 +25,8 @@ from typing import cast, Optional, Type
 from pyfabil.base.definitions import LibraryError
 from pyfabil.boards.tpm_generic import TPMGeneric
 
-from ska_low_mccs.tile.tile_1_2 import Tile12
-from ska_low_mccs.tile.tile_1_6 import Tile16
+from pyaavs.tile import Tile as Tile12
+from pyaavs.tile_1_6 import Tile16
 
 
 class HwTile(object):

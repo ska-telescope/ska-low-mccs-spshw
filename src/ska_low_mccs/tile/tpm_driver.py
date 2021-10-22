@@ -33,7 +33,6 @@ from ska_low_mccs.component import (
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
 
-
 class TpmDriver(MessageQueueComponentManager):
     """Hardware driver for a TPM."""
 

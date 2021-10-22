@@ -29,15 +29,69 @@ from ska_low_mccs.component import (
     enqueue,
 )
 from ska_low_mccs.controller import ControllerResourceManager
+from ska_low_mccs.resource_manager import ResourcePool
 
 
 __all__ = ["ControllerComponentManager"]
 
 
 class _StationProxy(DeviceComponentManager):
-    """A station's proxy to a subarray."""
+    """A controller's proxy to a station."""
 
-    pass
+    def __init__(
+        self: DeviceComponentManager,
+        fqdn: str,
+        message_queue: MessageQueue,
+        logger: logging.Logger,
+        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        component_fault_callback: Optional[Callable[[bool], None]],
+        health_changed_callback: Optional[
+            Callable[[Optional[HealthState]], None]
+        ] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param message_queue: the message queue to be used by this
+            component manager
+        :param logger: the logger to be used by this object.
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_power_mode_changed_callback: callback to be
+            called when the component power mode changes
+        :param component_fault_callback: callback to be called when the
+            component faults (or stops faulting)
+        :param health_changed_callback: callback to be called when the
+            health state of the device changes. The value it is called
+            with will normally be a HealthState, but may be None if the
+            admin mode of the device indicates that the device's health
+            should not be included in upstream health rollup.
+        """
+        self._channel_block_pool = ResourcePool(channel_blocks=list(range(48)))
+
+        super().__init__(
+            fqdn,
+            message_queue,
+            logger,
+            communication_status_changed_callback,
+            component_power_mode_changed_callback,
+            component_fault_callback,
+            health_changed_callback,
+        )
+
+    def allocate(self: _StationProxy, channel_blocks: int) -> ResultCode:
+        for _ in range(channel_blocks):
+            self._channel_block_pool.get_free_resource("channel_blocks")
+        return ResultCode.OK
+
+    def release(self: _StationProxy, channel_blocks: Iterable[int]) -> None:
+        self._channel_block_pool.free_resources({"channel_blocks": channel_blocks})
+
+    def release_all(self: _StationProxy):
+        self._channel_block_pool.free_all_resources("channel_blocks")
 
 
 class _SubarrayProxy(DeviceComponentManager):
@@ -644,14 +698,25 @@ class ControllerComponentManager(MccsComponentManager):
         """
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
-        # stations are not managed by the resource manager, so we have to explicitely check if
-        # they're valid FQDNs here
-        flattened_station_fqdns = [
-            fqdn for stations in station_fqdns for fqdn in stations
-        ]
-        for fqdn in flattened_station_fqdns:
-            if fqdn not in self._stations.keys():
-                raise ValueError(f"Unsupported resources: {fqdn}.")
+        flattened_station_fqdns = []
+        for group_index, station_group in enumerate(station_fqdns):
+            # check stations have necessary free channel blocks
+            for station_fqdn in station_group:
+                # stations are not managed by the resource manager, so we have to explicitely check if
+                # they're valid FQDNs here
+                if station_fqdn not in self._stations.keys():
+                    raise ValueError(f"Unsupported resources: {station_fqdn}.")
+                if (
+                    not self._stations[station_fqdn].allocate(
+                        channel_blocks[group_index]
+                    )
+                    == ResultCode.OK
+                ):
+                    raise ValueError(
+                        f"Station {station_fqdn} has no more frequency channel capacity"
+                        f"(attempted to allocate {channel_blocks[group_index]} blocks)."
+                    )
+                flattened_station_fqdns.append(station_fqdn)
 
         # need (subarray-beams * stations) number of station-beams from pool
         station_beam_fqdns = []

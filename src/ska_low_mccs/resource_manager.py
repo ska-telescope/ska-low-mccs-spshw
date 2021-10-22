@@ -562,7 +562,13 @@ class HealthfulReadyResourceManager(
 
 
 class ResourcePool:
-    """A manager for a finite pool of resources."""
+    """
+    A manager for a finite pool of resources.
+
+    The manager can be queried to get a free resource, which then marks
+    the resource as allocated/locked and prevents it being returned
+    again until it is freed.
+    """
 
     def __init__(
         self: ResourcePool,
@@ -598,9 +604,7 @@ class ResourcePool:
                 self._resources[resource_type][resource] = False
                 return resource
 
-        raise ValueError(
-            f"No free resources of type: {resource_type}. {self._resources}"
-        )
+        raise ValueError(f"No free resources of type: {resource_type}.")
 
     def free_resources(
         self: ResourcePool,
@@ -621,3 +625,20 @@ class ResourcePool:
         for resource_type in resources:
             for resource in resources[resource_type]:
                 self._resources[resource_type][resource] = True
+
+    def free_all_resources(
+        self: ResourcePool,
+        resource_type: Optional[str]=None,
+    ) -> None:
+        """
+        Free all resources in this Resource Pool.
+
+        :param resource_type: the resource type of which all instances are to be freed.
+        """
+        if resource_type:
+            for resource in self._resources[resource_type]:
+                self._resources[resource_type][resource] = True
+        else:
+            for r_t in self._resources:
+                for resource in self._resources[r_t]:
+                    self._resources[r_t][resource] = True

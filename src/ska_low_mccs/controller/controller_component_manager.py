@@ -29,7 +29,7 @@ from ska_low_mccs.component import (
     enqueue,
 )
 from ska_low_mccs.controller import ControllerResourceManager
-from ska_low_mccs.resource_manager import ResourcePool
+from ska_low_mccs.resource_manager import ResourceManager, ResourcePool
 
 
 __all__ = ["ControllerComponentManager"]
@@ -39,8 +39,9 @@ class _StationProxy(DeviceComponentManager):
     """A controller's proxy to a station."""
 
     def __init__(
-        self: DeviceComponentManager,
+        self: _StationProxy,
         fqdn: str,
+        subarray_fqdns: Iterable[str],
         message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -54,6 +55,8 @@ class _StationProxy(DeviceComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
+        :param subarray_fqdns: the FQDNs of subarrays which channel
+            blocks can be assigned to.
         :param message_queue: the message queue to be used by this
             component manager
         :param logger: the logger to be used by this object.
@@ -70,7 +73,11 @@ class _StationProxy(DeviceComponentManager):
             admin mode of the device indicates that the device's health
             should not be included in upstream health rollup.
         """
-        self._channel_block_pool = ResourcePool(channel_blocks=list(range(48)))
+        self._channel_block_pool = ResourcePool(channel_blocks=range(1, 48))
+        self._resource_manager = ResourceManager(
+            subarray_fqdns,
+            channel_blocks=range(1, 48),
+        )
 
         super().__init__(
             fqdn,
@@ -82,16 +89,45 @@ class _StationProxy(DeviceComponentManager):
             health_changed_callback,
         )
 
-    def allocate(self: _StationProxy, channel_blocks: int) -> ResultCode:
+    def allocate(
+        self: _StationProxy, subarray_fqdn: str, channel_blocks: int
+    ) -> ResultCode:
+        """
+        Allocate channel blocks to a subarray.
+
+        This method removes the requested number of channel blocks from
+        the available pool and assigns them to the provided subarray fqdn.
+
+        :param subarray_fqdn: The fqdn of the subarray to which the channel
+            blocks are to be assigned.
+        :param channel_blocks: The number of channel blocks to assign to the
+            subarray.
+
+        :return: a result code.
+        """
+        channel_blocks_to_allocate = []
         for _ in range(channel_blocks):
-            self._channel_block_pool.get_free_resource("channel_blocks")
+            channel_blocks_to_allocate.append(
+                self._channel_block_pool.get_free_resource("channel_blocks")
+            )
+        self._resource_manager.allocate(
+            subarray_fqdn, channel_blocks=channel_blocks_to_allocate
+        )
         return ResultCode.OK
 
-    def release(self: _StationProxy, channel_blocks: Iterable[int]) -> None:
-        self._channel_block_pool.free_resources({"channel_blocks": channel_blocks})
+    def release_from_subarray(self: _StationProxy, subarray_fqdn: str) -> None:
+        """
+        Release all channel blocks assigned to a subarray.
 
-    def release_all(self: _StationProxy):
-        self._channel_block_pool.free_all_resources("channel_blocks")
+        Channel blocks are released from the subarray and marked as free in the
+            station proxy's device pool for reallocation whenever needed.
+
+        :param subarray_fqdn: The fqdn of the subarray from which this station
+            proxy's channel blocks are to be released.
+        """
+        channel_blocks_to_release = self._resource_manager.get_allocated(subarray_fqdn)
+        self._resource_manager.deallocate_from(subarray_fqdn)
+        self._channel_block_pool.free_resources(channel_blocks_to_release)
 
 
 class _SubarrayProxy(DeviceComponentManager):
@@ -399,6 +435,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._stations: dict[Hashable, _StationProxy] = {
             fqdn: _StationProxy(
                 fqdn,
+                subarray_fqdns,
                 self._message_queue,
                 logger,
                 functools.partial(self._device_communication_status_changed, fqdn),
@@ -689,8 +726,8 @@ class ControllerComponentManager(MccsComponentManager):
             each subarray beam
         :param subarray_beam_fqdns: FQDNs of the subarray beams to be
             allocated to the subarray
-        :param channel_blocks: ordinal numbers of the channel blocks to
-            be allocated to the subarray
+        :param channel_blocks: numbers of the channel blocks to be allocated
+            to the subarray from each station in the associated grouping
 
         :raises ValueError: if trying to assign a station not in the controller's Stations
 
@@ -699,8 +736,14 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
         flattened_station_fqdns = []
+        station_groups = []
+
+        station_fqdns = list(station_fqdns)
+        subarray_beam_fqdns = list(subarray_beam_fqdns)
+        channel_blocks = list(channel_blocks)
+
         for group_index, station_group in enumerate(station_fqdns):
-            # check stations have necessary free channel blocks
+            station_groups.append(list(station_group))
             for station_fqdn in station_group:
                 # stations are not managed by the resource manager, so we have to explicitely check if
                 # they're valid FQDNs here
@@ -708,7 +751,7 @@ class ControllerComponentManager(MccsComponentManager):
                     raise ValueError(f"Unsupported resources: {station_fqdn}.")
                 if (
                     not self._stations[station_fqdn].allocate(
-                        channel_blocks[group_index]
+                        subarray_fqdn, channel_blocks[group_index]
                     )
                     == ResultCode.OK
                 ):
@@ -740,33 +783,31 @@ class ControllerComponentManager(MccsComponentManager):
         )
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            flattened_station_fqdns,
+            list(set(flattened_station_fqdns)),  # unique items only
             subarray_beam_fqdns,
             station_beam_fqdns,
             channel_blocks,
         )
 
-        # don't forget to free Station Beams if allocate was unsuccessful:
+        # don't forget to release resources if allocate was unsuccessful:
         if result_code == ResultCode.FAILED:
-            self._resource_manager.resource_pool.free_resources(
-                {"station_beams": station_beam_fqdns}
-            )
+            self.deallocate_all(subarray_id)
         else:
-            # write ids, fqdns
-            i = 0
-            for subarray_beam_fqdn in subarray_beam_fqdns:
-                for station_group in station_fqdns:
-                    for station_fqdn in station_group:
-                        self._station_beams[station_beam_fqdns[i]].write_station_id(
-                            int(station_fqdn.split("/")[2])
-                        )
-                        self._station_beams[station_beam_fqdns[i]].write_subarray_id(
-                            subarray_id
-                        )
-                        i += 1
+            for i, subarray_beam_fqdn in enumerate(subarray_beam_fqdns):
                 self._subarray_beams[subarray_beam_fqdn].write_station_ids(
-                    [int(station_fqdn.split("/")[2]) for station_fqdn in station_group]
+                    [
+                        int(station_fqdn.split("/")[2])
+                        for station_fqdn in station_groups[i]
+                    ]
                 )
+                for j, station_fqdn in enumerate(station_fqdns[i]):
+                    station_beam_index = i * (j + 1)
+                    self._station_beams[
+                        station_beam_fqdns[station_beam_index]
+                    ].write_station_id(int(station_fqdn.split("/")[2]))
+                    self._station_beams[
+                        station_beam_fqdns[station_beam_index]
+                    ].write_subarray_id(subarray_id)
 
         return result_code
 
@@ -800,6 +841,9 @@ class ControllerComponentManager(MccsComponentManager):
         self._resource_manager.resource_pool.free_resources(
             {"station_beams": station_beams}
         )
+
+        for station_proxy in self._stations.values():
+            station_proxy.release_from_subarray(subarray_fqdn)
 
         return self._subarrays[subarray_fqdn].release_all_resources()
 

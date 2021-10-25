@@ -275,86 +275,6 @@ class ResourceManager:
 
         return unallocated
 
-    def add_allocatees(
-        self: ResourceManager,
-        allocatees: Iterable[Hashable],
-    ) -> None:
-        """
-        Add new allocatee(s) to this resource manager.
-
-        :param allocatees: targets for allocation of resources.
-        """
-        self._allocatees.update(allocatees)
-
-    def remove_allocatees(
-        self: ResourceManager,
-        allocatees: Iterable[Hashable],
-    ) -> None:
-        """
-        Remove allocatees from this Resource Manager.
-
-        :param allocatees: targets for allocation of resources to be removed.
-        """
-        for allocatee in allocatees:
-            self._allocatees.remove(allocatee)
-
-    def add_resources(
-        self: ResourceManager,
-        **resources: Iterable[Hashable],
-    ) -> None:
-        """
-        Add a resource to this resource manager.
-
-        :param resources: keyword args, with each keyword being the name
-            of a resource type, and the value being the set of resources
-            of that type to be added to this resource manager's resources.
-
-        :raises ValueError: ifresource is already managed by this resource manager
-        """
-        # check if managed:
-        already_managed = []
-        for resource_type in resources:
-            for resource in resources[resource_type]:
-                if resource in self._allocations[resource_type]:
-                    already_managed.append({resource_type: resource})
-
-        if already_managed:
-            raise ValueError(
-                f"Cannot add already managed resources: {already_managed}."
-            )
-
-        # No existing managed resources: go ahead and add to resource manager
-        for resource_type in resources:
-            for resource in resources[resource_type]:
-                self._allocations[resource_type][resource] = None
-
-    def remove_resources(
-        self: ResourceManager,
-        **resources: Iterable[Hashable],
-    ) -> None:
-        """
-        Remove a resource from this resource manager.
-
-        :param resources: keyword args, with each keyword being the name
-            of a resource type, and the value being the set of resources
-            of that type to be removed from this resource manager's resources.
-
-        :raises ValueError: ifresource is not managed by this resource manager
-        """
-        # check exists:
-        not_managed = []
-        for resource_type in resources:
-            for resource in resources[resource_type]:
-                if resource not in self._allocations[resource_type]:
-                    not_managed.append({resource_type: resource})
-
-        if not_managed:
-            raise ValueError(f"Cannot remove non-managed resources: {not_managed}.")
-
-        for resource_type in resources:
-            for resource in resources[resource_type]:
-                self._allocations[resource_type].pop(resource)
-
 
 class _HealthfulResourceManager(ResourceManager):
     """A resource manager / tracker for resource types that may have a health state."""
@@ -628,7 +548,7 @@ class ResourcePool:
 
     def free_all_resources(
         self: ResourcePool,
-        resource_type: Optional[str]=None,
+        resource_type: Optional[str] = None,
     ) -> None:
         """
         Free all resources in this Resource Pool.

@@ -453,7 +453,7 @@ class TestMccsIntegrationTmc:
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1, 2]],
-            subarray_beam_ids=[1, 2],
+            subarray_beam_ids=[1],
             channel_blocks=[2],
         )
         assert result_code == ResultCode.QUEUED

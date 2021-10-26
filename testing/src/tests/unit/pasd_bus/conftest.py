@@ -17,8 +17,10 @@ from __future__ import annotations
 import logging
 
 from typing import Callable
+import unittest.mock
 
 import pytest
+import pytest_mock
 import yaml
 
 from ska_tango_base.control_model import SimulationMode
@@ -99,7 +101,73 @@ def pasd_bus_simulator(
 
 
 @pytest.fixture()
+def mock_pasd_bus_simulator(
+    mocker: pytest_mock.MockerFixture,
+    pasd_bus_simulator: PasdBusSimulator,
+) -> unittest.mock.Mock:
+    """
+    Return a mock PaSD bus simulator.
+
+    The returned mock wraps a real simulator instance, so it will behave
+    like a real one, but we can access it as a mock too, for example
+    assert calls.
+
+    :param mocker: fixture that wraps unittest.Mock
+    :param pasd_bus_simulator: a real PaSD bus simulator to wrap in a
+        mock.
+
+    :return: a mock PaSD bus simulator
+    """
+    mock_simulator = mocker.Mock(wraps=pasd_bus_simulator)
+
+    # "wraps" doesn't handle properties -- we have to add them manually
+    for property_name in [
+        "fndh_psu48v_voltages",
+        "fndh_psu5v_voltage",
+        "fndh_psu48v_current",
+        "fndh_psu48v_temperature",
+        "fndh_psu5v_temperature",
+        "fndh_pcb_temperature",
+        "fndh_outside_temperature",
+        "fndh_status",
+        "fndh_service_led_on",
+        "fndh_ports_power_sensed",
+        "fndh_ports_connected",
+        "fndh_port_forcings",
+        "fndh_ports_desired_power_online",
+        "fndh_ports_desired_power_offline",
+        "smartbox_input_voltages",
+        "smartbox_power_supply_output_voltages",
+        "smartbox_statuses",
+        "smartbox_power_supply_temperatures",
+        "smartbox_outside_temperatures",
+        "smartbox_pcb_temperatures",
+        "smartbox_service_leds_on",
+        "smartbox_fndh_ports",
+        "smartboxes_desired_power_online",
+        "smartboxes_desired_power_offline",
+        "antennas_online",
+        "antenna_forcings",
+        "antennas_tripped",
+        "antennas_power_sensed",
+        "antennas_desired_power_online",
+        "antennas_desired_power_offline",
+        "antenna_currents",
+    ]:
+        setattr(
+            type(mock_simulator),
+            property_name,
+            mocker.PropertyMock(
+                return_value=getattr(pasd_bus_simulator, property_name)
+            ),
+        )
+
+    return mock_simulator
+
+
+@pytest.fixture()
 def pasd_bus_simulator_component_manager(
+    mock_pasd_bus_simulator: unittest.mock.Mock,
     message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
@@ -110,6 +178,8 @@ def pasd_bus_simulator_component_manager(
 
     (This is a pytest fixture.)
 
+    :param mock_pasd_bus_simulator: a mock PaSD bus simulator to be used
+        by the PaSD bus simulator component manager
     :param message_queue: the message queue to be used by this component
         manager
     :param logger: the logger to be used by this object.
@@ -126,11 +196,13 @@ def pasd_bus_simulator_component_manager(
         logger,
         communication_status_changed_callback,
         component_fault_callback,
+        _simulator=mock_pasd_bus_simulator,
     )
 
 
 @pytest.fixture()
 def pasd_bus_component_manager(
+    pasd_bus_simulator_component_manager: PasdBusSimulatorComponentManager,
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: MockCallable,
@@ -139,6 +211,9 @@ def pasd_bus_component_manager(
     """
     Return a PaSD bus component manager.
 
+    :param pasd_bus_simulator_component_manager: a pre-initialised
+        PaSD bus simulator component manager to be used by the PaSD bus
+        component manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -156,4 +231,5 @@ def pasd_bus_component_manager(
         communication_status_changed_callback,
         component_fault_callback,
         message_queue_size_callback,
+        _simulator_component_manager=pasd_bus_simulator_component_manager,
     )

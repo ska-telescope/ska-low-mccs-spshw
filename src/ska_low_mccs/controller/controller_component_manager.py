@@ -73,10 +73,10 @@ class _StationProxy(DeviceComponentManager):
             admin mode of the device indicates that the device's health
             should not be included in upstream health rollup.
         """
-        self._channel_block_pool = ResourcePool(channel_blocks=range(1, 48))
+        self._channel_block_pool = ResourcePool(channel_blocks=range(1, 49))
         self._resource_manager = ResourceManager(
             subarray_fqdns,
-            channel_blocks=range(1, 48),
+            channel_blocks=range(1, 49),
         )
 
         super().__init__(
@@ -399,7 +399,7 @@ class ControllerComponentManager(MccsComponentManager):
             subrack_fqdns,
             subarray_beam_fqdns,
             station_beam_fqdns,
-            range(1, 48),
+            range(1, 49),
         )
 
         self._message_queue = MessageQueue(

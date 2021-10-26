@@ -334,7 +334,7 @@ class TestControllerComponentManager:
         )
 
         controller_component_manager.deallocate_all(1)
-        time.sleep(0.1)
+        time.sleep(0.2)
         subarray_proxies[
             "low-mccs/subarray/01"
         ].ReleaseAllResources.assert_called_once_with()
@@ -360,7 +360,18 @@ class TestControllerComponentManager:
             )
         )
 
+        controller_component_manager.deallocate_all(1)
         controller_component_manager.deallocate_all(2)
+        time.sleep(0.1)
+        controller_component_manager.allocate(
+            1,
+            [["low-mccs/station/001"]],
+            ["low-mccs/subarraybeam/02"],
+            [48],
+        )
+
+        # Now all 48 channel blocks of station 1 are assigned to subarray 1,
+        # assigning any more to subarray 2 should fail
         time.sleep(0.1)
         with pytest.raises(
             ValueError, match="No free resources of type: channel_blocks."
@@ -369,7 +380,7 @@ class TestControllerComponentManager:
                 2,
                 [["low-mccs/station/001"]],
                 ["low-mccs/subarraybeam/02"],
-                [100],
+                [1],
             )
 
         controller_component_manager.restart_subarray("low-mccs/subarray/02")

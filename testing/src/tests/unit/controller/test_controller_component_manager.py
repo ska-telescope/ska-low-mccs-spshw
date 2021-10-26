@@ -360,6 +360,18 @@ class TestControllerComponentManager:
             )
         )
 
+        controller_component_manager.deallocate_all(2)
+        time.sleep(0.1)
+        with pytest.raises(
+            ValueError, match="No free resources of type: channel_blocks."
+        ):
+            controller_component_manager.allocate(
+                2,
+                [["low-mccs/station/001"]],
+                ["low-mccs/subarraybeam/02"],
+                [100],
+            )
+
         controller_component_manager.restart_subarray("low-mccs/subarray/02")
         time.sleep(0.1)
         subarray_proxies["low-mccs/subarray/02"].Restart.assert_called_once_with()

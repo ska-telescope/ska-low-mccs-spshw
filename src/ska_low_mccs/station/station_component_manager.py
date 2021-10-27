@@ -185,7 +185,7 @@ class StationComponentManager(MccsComponentManager):
             for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
         }
 
-        self.__power_mode_lock = threading.Lock()
+        self._power_mode_lock = threading.Lock()
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
@@ -309,7 +309,7 @@ class StationComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             self._antenna_power_modes[fqdn] = power_mode
             self._evaluate_power_mode()
 
@@ -319,7 +319,7 @@ class StationComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             self._tile_power_modes[fqdn] = power_mode
             self._evaluate_power_mode()
 
@@ -328,7 +328,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         power_mode: PowerMode,
     ) -> None:
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             self._apiu_power_mode = power_mode
             self._evaluate_power_mode()
             if power_mode is PowerMode.ON and self._on_called:

@@ -167,14 +167,15 @@ class DeviceComponentManager(MessageQueueComponentManager):
         """
         if self.power_mode == PowerMode.ON:
             return None  # already on
-        return self.enqueue(self._on)
+        # return self.enqueue(self._on)
+        return self._on()
 
     def _on(self: DeviceComponentManager) -> ResultCode:
         try:
             assert self._proxy is not None  # for the type checker
-            ([result_code], [message]) = self._proxy.On()
-        except TypeError as te:
-            raise TypeError(f"FQDN is {self._fqdn}") from te
+            ([result_code], _) = self._proxy.On()
+        except TypeError as type_error:
+            raise TypeError(f"FQDN is {self._fqdn}") from type_error
         return result_code
 
     @check_communicating

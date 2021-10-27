@@ -381,6 +381,7 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        print("RCL: station on()")
         if self._apiu_power_mode == PowerMode.ON:
             return self._turn_on_tiles_and_antennas()
         self._on_called = True
@@ -398,10 +399,15 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        print("RCL: _turn_on_tiles_and_antennas()")
         if not all(
             power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
         ):
-            results = [proxy.on() for proxy in self._tile_proxies]
+            results = []
+            for proxy in self._tile_proxies:
+                result_code = proxy.on()
+                print(f"RCL: Tile.On() returned={result_code}")
+                results.append(result_code)
             if ResultCode.FAILED in results:
                 return ResultCode.FAILED
         if not all(

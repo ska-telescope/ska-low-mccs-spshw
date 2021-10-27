@@ -537,7 +537,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_on_tpm()
 
-    @enqueue
+    # @enqueue
     def _power_on_tpm(self: _SubrackProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.PowerOnTpm(self._tpm_bay)
@@ -560,7 +560,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         elif event_value == tango.DevState.OFF:
             self.update_supplied_power_mode(PowerMode.OFF)
 
-    @enqueue
+    # @enqueue
     def _register_are_tpms_on_callback(self: _SubrackProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(

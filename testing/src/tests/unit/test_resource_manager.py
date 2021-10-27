@@ -60,7 +60,9 @@ class TestResourcePool:
         ):
             resource_pool.get_free_resource("channel_blocks")
 
-    def test_free_resources(self, resource_pool: ResourcePool) -> None:
+    def test_free_resources(
+        self: TestResourcePool, resource_pool: ResourcePool
+    ) -> None:
         """
         Test the resource pool's free_resources() method.
 
@@ -74,7 +76,9 @@ class TestResourcePool:
         resource_pool.free_resources({"channel_blocks": [channel_block_1]})
         assert channel_block_1 == resource_pool.get_free_resource("channel_blocks")
 
-    def test_free_all_resources(self, resource_pool: ResourcePool) -> None:
+    def test_free_all_resources(
+        self: TestResourcePool, resource_pool: ResourcePool
+    ) -> None:
         """
         Test the resource pool's free_all_resource() method.
 

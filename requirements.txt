@@ -8,5 +8,6 @@ pyfabil-1.0-py3-none-any.whl
 pytango >= 9.3.3
 requests
 scipy
-ska-tango-base == 0.11.3
+# ska-tango-base == 0.11.3
+git+https://gitlab.com/ska-telescope/ska-tango-base@d7aa5acb#egg=ska-tango-base
 transitions

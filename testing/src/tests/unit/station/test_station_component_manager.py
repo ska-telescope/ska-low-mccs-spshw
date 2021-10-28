@@ -167,6 +167,7 @@ class TestStationComponentManager:
         station_id: int,
         tile_fqdns: list[str],
         logger: logging.Logger,
+        communication_status_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -181,9 +182,17 @@ class TestStationComponentManager:
         :param tile_fqdns: FQDNs of the Tango devices that manage this
             station's tiles.
         :param logger: a logger
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
         """
         station_component_manager.start_communicating()
-        time.sleep(0.1)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
 
         # receive notification that the tile is on
         for tile_proxy in station_component_manager._tile_proxies:
@@ -203,6 +212,7 @@ class TestStationComponentManager:
         tile_fqdns: list[str],
         logger: logging.Logger,
         pointing_delays: unittest.mock.Mock,
+        communication_status_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -217,9 +227,17 @@ class TestStationComponentManager:
             station's tiles.
         :param logger: a logger
         :param pointing_delays: some mock pointing delays
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
         """
         station_component_manager.start_communicating()
-        time.sleep(0.1)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
 
         # Tell this station each of its components is on, so that it thinks it is on
         station_component_manager._apiu_proxy._device_state_changed(

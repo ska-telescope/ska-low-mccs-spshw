@@ -11,6 +11,7 @@ Unit tests
    Cluster manager subpackage<cluster_manager>
    Component subpackage<component>
    Controller subpackage<controller>
+   PaSD bus subpackage<pasd_bus>
    Station subpackage<station>
    Station beam subpackage<station_beam>
    Subarray subpackage<subarray>

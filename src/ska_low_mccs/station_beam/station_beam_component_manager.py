@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import logging
 from typing import Callable, Optional, cast
-from typing_extensions import Literal
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -128,44 +127,6 @@ class StationBeamComponentManager(MccsComponentManager):
 
         if self._station_proxy is not None:
             self._station_proxy.stop_communicating()
-
-    def power_mode(self: StationBeamComponentManager) -> Literal[PowerMode.ON]:
-        """
-        Return the power mode to the station beam.
-
-        The station beam is an always-on device, so this method always
-        return ON.
-
-        :return: the power mode of the station beam.
-        """
-        return PowerMode.ON
-
-    def off(self: StationBeamComponentManager) -> None:
-        """
-        Turn off the station beam.
-
-        :raises NotImplementedError: because station beam is an
-            always-on device.
-        """
-        raise NotImplementedError("MccsStationBeam is an always-on device.")
-
-    def standby(self: StationBeamComponentManager) -> None:
-        """
-        Put the station beam into standby mode.
-
-        :raises NotImplementedError: because station beam is an
-            always-on device.
-        """
-        raise NotImplementedError("MccsStationBeam is an always-on device.")
-
-    def on(self: StationBeamComponentManager) -> None:
-        """
-        Turn on the station beam.
-
-        :raises NotImplementedError: because station beam is an
-            always-on device.
-        """
-        raise NotImplementedError("MccsStationBeam is an always-on device.")
 
     def _device_communication_status_changed(
         self: StationBeamComponentManager,

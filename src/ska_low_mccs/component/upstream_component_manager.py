@@ -221,7 +221,7 @@ class PowerSupplyProxySimulator(
         return cast(PowerSupplyProxySimulator._Component, self._component).power_off()
 
     @check_communicating
-    @enqueue
+    # @enqueue
     def power_on(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn on supply of power to the downstream device.

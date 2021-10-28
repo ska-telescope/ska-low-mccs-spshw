@@ -213,7 +213,7 @@ class TpmDriver(MessageQueueComponentManager):
         self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
-    @enqueue
+    # @enqueue
     def download_firmware(self: TpmDriver, bitfile: str) -> None:
         """
         Download the provided firmware bitfile onto the TPM.

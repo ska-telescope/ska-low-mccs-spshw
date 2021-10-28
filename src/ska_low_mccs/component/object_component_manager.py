@@ -147,7 +147,7 @@ class ObjectComponentManager(MessageQueueComponentManager):
         return self._component.standby()
 
     @check_communicating
-    @enqueue
+    # @enqueue
     def on(self: ObjectComponentManager) -> ResultCode | None:
         """
         Turn the component on.

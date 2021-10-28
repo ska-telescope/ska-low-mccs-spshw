@@ -203,8 +203,12 @@ class MessageQueue:
         :param args: positional arguments to the method
         :param kwargs: keyword arguments to the method
         """
+        # RCL WIP TODO Rather than enqueue, execute now
+        # func(args, kwargs)
         self._queue.put_nowait(Message(func, args, kwargs))
         self._queue_size_changed()
+
+
 
     def get(self: MessageQueue) -> Message:
         """

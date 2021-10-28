@@ -112,7 +112,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_up_antenna()
 
-    @enqueue
+    # @enqueue
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.PowerUpAntenna(
@@ -191,7 +191,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         elif event_value == tango.DevState.OFF:
             self.update_supplied_power_mode(PowerMode.OFF)
 
-    @enqueue
+    # @enqueue
     def _register_are_antennas_on_callback(self: _ApiuProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(

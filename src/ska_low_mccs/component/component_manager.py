@@ -196,12 +196,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """Create a QueueManager.
 
         Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers as specified
-        by the derived constructor. Note: default values are given
-        in the constructor in this class.
+        required max queue size and number of workers.
 
         :return: The queue manager.
-        :rtype: QueueManager
         """
         return QueueManager(max_queue_size=5, num_workers=5)
 

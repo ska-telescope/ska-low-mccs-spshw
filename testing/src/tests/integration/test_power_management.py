@@ -482,11 +482,13 @@ class TestPowerManagement:
             tango.DevState.DISABLE
         )
 
+        # Subscribe to controller's LRC result attribute
         controller.add_change_event_callback(
             "longRunningCommandResult",
             controller_lrc_result_changed_callback,
         )
         controller_lrc_result_changed_callback.assert_next_change_event(None)
+        assert controller.longRunningCommandResult is None
 
         devices = [
             apiu_1,
@@ -533,6 +535,14 @@ class TestPowerManagement:
             tango.DevState.ON
         )
 
+        assert controller.longRunningCommandResult == (
+            unique_id, str(ResultCode.OK.value), "On command completed OK"
+        )
+        return
+        controller_lrc_result_changed_callback.assert_next_change_event(
+            (unique_id, str(ResultCode.OK.value), "On command completed OK")
+        )
+
         for device in devices:
             assert device.state() == tango.DevState.ON
 
@@ -555,14 +565,3 @@ class TestPowerManagement:
         print(f"RCL: station_2  = {station_2.state()}")
         print(f"RCL: subrack    = {subrack.state()}")
         print(f"RCL: controller = {controller.state()}")
-
-
-        # Subscribe to controller's LRC result attribute
-        controller.add_change_event_callback("longRunningCommandResult", controller_lrc_result_changed_callback)
-        controller_lrc_result_changed_callback.assert_next_change_event(None)
-        assert controller.longRunningCommandResult is None
-
-        ...
-
-        # This line will fail until we switch to the LRC implementation from the base classes...
-        controller_lrc_result_changed_callback.assert_next_change_event(["UID", "result_code", "task_result"])

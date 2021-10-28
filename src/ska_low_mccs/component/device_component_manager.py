@@ -86,7 +86,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-        self.enqueue(self._connect_to_device)
+        #self.enqueue(self._connect_to_device)
+        self._connect_to_device()
 
     def _connect_to_device(self: DeviceComponentManager) -> None:
         """
@@ -135,7 +136,8 @@ class DeviceComponentManager(MessageQueueComponentManager):
         """
         if self.power_mode == PowerMode.OFF:
             return None  # already off
-        return self.enqueue(self._off)
+        #return self.enqueue(self._off)
+        return self._off()
 
     def _off(self: DeviceComponentManager) -> ResultCode:
         assert self._proxy is not None  # for the type checker

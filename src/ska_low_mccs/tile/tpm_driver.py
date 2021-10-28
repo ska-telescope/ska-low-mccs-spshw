@@ -140,7 +140,8 @@ class TpmDriver(MessageQueueComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         super().start_communicating()
-        self.enqueue(self._connect_to_tile)
+        #self.enqueue(self._connect_to_tile)
+        self._connect_to_tile()
 
     def _connect_to_tile(self: TpmDriver) -> None:
         self.tile.connect()
@@ -237,7 +238,7 @@ class TpmDriver(MessageQueueComponentManager):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
-    @enqueue
+    # @enqueue
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initializes tile."""
         assert self.tile.tpm is not None  # for the type checker

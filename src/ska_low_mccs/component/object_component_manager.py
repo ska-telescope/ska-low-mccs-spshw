@@ -127,7 +127,7 @@ class ObjectComponentManager(MessageQueueComponentManager):
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating
-    @enqueue
+    # @enqueue
     def off(self: ObjectComponentManager) -> ResultCode | None:
         """
         Turn the component off.

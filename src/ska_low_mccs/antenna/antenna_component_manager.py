@@ -131,7 +131,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_down_antenna()
 
-    @enqueue
+    #@enqueue
     def _power_down_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.PowerDownAntenna(

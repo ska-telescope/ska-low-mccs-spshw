@@ -211,7 +211,7 @@ class PowerSupplyProxySimulator(
         self.update_supplied_power_mode(None)
 
     @check_communicating
-    @enqueue
+    # @enqueue
     def power_off(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn off supply of power to the downstream device.

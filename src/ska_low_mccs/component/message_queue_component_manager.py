@@ -93,7 +93,9 @@ class Message:
 
     def __call__(self: Message) -> None:
         """Execute the task."""
-        self.command(*self.args, **self.kwargs)
+        print(f"RCL: THIS WONT GET EXECUTED {self.command}")
+        # Don't execute any (old style) message
+        # self.command(*self.args, **self.kwargs)
 
 
 class _Worker(threading.Thread):
@@ -203,11 +205,8 @@ class MessageQueue:
         :param args: positional arguments to the method
         :param kwargs: keyword arguments to the method
         """
-        # RCL WIP TODO Rather than enqueue, execute now
-        # func(args, kwargs)
         self._queue.put_nowait(Message(func, args, kwargs))
         self._queue_size_changed()
-
 
 
     def get(self: MessageQueue) -> Message:

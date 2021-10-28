@@ -510,7 +510,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_off_tpm()
 
-    @enqueue
+    # @enqueue
     def _power_off_tpm(self: _SubrackProxy) -> ResultCode | None:
         try:
             assert self._proxy is not None  # for the type checker

@@ -143,7 +143,8 @@ class SubrackDriver(MessageQueueComponentManager):
     def start_communicating(self: SubrackDriver) -> None:
         """Establish communication with the subrack."""
         super().start_communicating()
-        self.enqueue(self._connect_to_subrack)
+        #self.enqueue(self._connect_to_subrack)
+        self._connect_to_subrack()
 
     def _connect_to_subrack(self: SubrackDriver) -> None:
         connected = self._client.connect()

@@ -524,7 +524,7 @@ class TestPowerManagement:
         for device in devices:
             assert device.state() == tango.DevState.OFF
 
-        # Message queue length is zero so command is blocked until complete
+        # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id

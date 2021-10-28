@@ -10,7 +10,6 @@ from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MessageQueue,
     PowerSupplyProxySimulator,
 )
 
@@ -23,7 +22,6 @@ class TestPowerSupplyProxySimulator:
     @pytest.fixture()
     def component_manager(
         self: TestPowerSupplyProxySimulator,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
@@ -31,8 +29,6 @@ class TestPowerSupplyProxySimulator:
         """
         Return a component manager for the component object.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for the component manager to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -43,7 +39,6 @@ class TestPowerSupplyProxySimulator:
         :return: a fake upstream power supply proxy.
         """
         return PowerSupplyProxySimulator(
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,

@@ -25,7 +25,7 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulatorComponentManager,
     ClusterSimulator,
 )
-from ska_low_mccs.component import CommunicationStatus, MessageQueue
+from ska_low_mccs.component import CommunicationStatus
 
 
 @pytest.fixture()
@@ -58,7 +58,6 @@ def cluster_simulator() -> ClusterSimulator:
 
 @pytest.fixture()
 def cluster_simulator_component_manager(
-    message_queue: MessageQueue,
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -70,8 +69,6 @@ def cluster_simulator_component_manager(
     """
     Return a cluster simulator component manager.
 
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
@@ -87,7 +84,6 @@ def cluster_simulator_component_manager(
     :return: a cluster simulator component manager
     """
     return ClusterSimulatorComponentManager(
-        message_queue,
         logger,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
@@ -102,7 +98,6 @@ def cluster_component_manager(
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
-    message_queue_size_callback: Callable[[int], None],
     component_shadow_master_pool_node_health_changed_callback: Callable[
         [list[HealthState]], None
     ],
@@ -118,8 +113,6 @@ def cluster_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
     :param component_shadow_master_pool_node_health_changed_callback:
         callback to be called when the health of a node in the
         shadow pool changes
@@ -133,6 +126,5 @@ def cluster_component_manager(
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
-        message_queue_size_callback,
         component_shadow_master_pool_node_health_changed_callback,
     )

@@ -26,14 +26,12 @@ from pyfabil.base.definitions import Device
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MessageQueue,
-    MessageQueueComponentManager,
-    enqueue,
+    MccsComponentManager,
 )
 from ska_low_mccs.tile import HwTile, Tile12
 
 
-class TpmDriver(MessageQueueComponentManager):
+class TpmDriver(MccsComponentManager):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -61,7 +59,6 @@ class TpmDriver(MessageQueueComponentManager):
 
     def __init__(
         self: TpmDriver,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         ip: str,
         port: int,
@@ -74,8 +71,6 @@ class TpmDriver(MessageQueueComponentManager):
 
         Tries to connect to the given IP and port.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this simulator to use
         :param ip: IP address for hardware tile
         :param port: IP address for hardware tile control
@@ -130,7 +125,6 @@ class TpmDriver(MessageQueueComponentManager):
         )
 
         super().__init__(
-            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -140,7 +134,6 @@ class TpmDriver(MessageQueueComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         super().start_communicating()
-        #self.enqueue(self._connect_to_tile)
         self._connect_to_tile()
 
     def _connect_to_tile(self: TpmDriver) -> None:
@@ -214,7 +207,6 @@ class TpmDriver(MessageQueueComponentManager):
         self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
-    # @enqueue
     def download_firmware(self: TpmDriver, bitfile: str) -> None:
         """
         Download the provided firmware bitfile onto the TPM.
@@ -238,7 +230,6 @@ class TpmDriver(MessageQueueComponentManager):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
-    # @enqueue
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initializes tile."""
         assert self.tile.tpm is not None  # for the type checker

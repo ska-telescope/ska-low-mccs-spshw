@@ -21,11 +21,9 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
-    MessageQueue,
     PowerSupplyProxyComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 
 
@@ -39,7 +37,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         self: _ApiuProxy,
         fqdn: str,
         logical_antenna_id: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -51,8 +48,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :param fqdn: the FQDN of the APIU
         :param logical_antenna_id: this antenna's id within the APIU
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -75,7 +70,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
@@ -112,7 +106,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_up_antenna()
 
-    # @enqueue
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.PowerUpAntenna(
@@ -131,7 +124,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_down_antenna()
 
-    #@enqueue
     def _power_down_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.PowerDownAntenna(
@@ -191,7 +183,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         elif event_value == tango.DevState.OFF:
             self.update_supplied_power_mode(PowerMode.OFF)
 
-    # @enqueue
     def _register_are_antennas_on_callback(self: _ApiuProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(
@@ -248,7 +239,6 @@ class _TileProxy(DeviceComponentManager):
         self: _TileProxy,
         fqdn: str,
         logical_antenna_id: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -258,8 +248,6 @@ class _TileProxy(DeviceComponentManager):
 
         :param fqdn: the FQDN of the Tile device
         :param logical_antenna_id: this antenna's id within the Tile
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -275,7 +263,6 @@ class _TileProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
             communication_status_changed_callback,
             lambda power_mode: None,  # tile doesn't manage antenna power
@@ -364,7 +351,6 @@ class AntennaComponentManager(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
-        message_queue_size_callback: Callable[[int], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -383,8 +369,6 @@ class AntennaComponentManager(MccsComponentManager):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         """
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._target_power_mode: Optional[PowerMode] = None
@@ -398,15 +382,9 @@ class AntennaComponentManager(MccsComponentManager):
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         self._apiu_proxy = _ApiuProxy(
             apiu_fqdn,
             apiu_antenna_id,
-            self._message_queue,
             logger,
             self._apiu_communication_status_changed,
             self._apiu_power_mode_changed,
@@ -416,7 +394,6 @@ class AntennaComponentManager(MccsComponentManager):
         self._tile_proxy = _TileProxy(
             tile_fqdn,
             tile_antenna_id,
-            self._message_queue,
             logger,
             self._tile_communication_status_changed,
             self._tile_component_fault_changed,

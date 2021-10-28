@@ -23,7 +23,6 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
     DriverSimulatorSwitchingComponentManager,
-    MessageQueue,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
 )
@@ -38,7 +37,6 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -51,8 +49,6 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
 
         :param antenna_count: the number of antennas managed by this
             APIU
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -64,7 +60,6 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         """
         super().__init__(
             ApiuSimulator(antenna_count),
-            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -156,7 +151,6 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         self: SwitchingApiuComponentManager,
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -168,8 +162,6 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param antenna_count: number of antennas managed by this APIU
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param initial_simulation_mode: the simulation mode that the
             component should start in
@@ -183,7 +175,6 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         """
         apiu_simulator = ApiuSimulatorComponentManager(
             antenna_count,
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -203,7 +194,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
-        message_queue_size_callback: Callable[[int], None],
         component_antenna_power_changed_callback: Callable[[list[bool]], None],
         _initial_power_mode: PowerMode = PowerMode.OFF,
     ) -> None:
@@ -228,18 +218,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
             device.
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         """
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         hardware_component_manager = SwitchingApiuComponentManager(
             initial_simulation_mode,
             antenna_count,
-            self._message_queue,
             logger,
             self._hardware_communication_status_changed,
             self.component_fault_changed,
@@ -247,7 +229,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
-            self._message_queue,
             logger,
             self._power_supply_communication_status_changed,
             self.component_power_mode_changed,

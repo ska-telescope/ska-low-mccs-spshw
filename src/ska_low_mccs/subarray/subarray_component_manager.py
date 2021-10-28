@@ -22,11 +22,9 @@ import ska_tango_base.subarray
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
-    MessageQueue,
     ObsDeviceComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 
 
@@ -38,7 +36,6 @@ class _StationProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def configure(self: _StationProxy, configuration: dict) -> ResultCode:
         """
         Configure the station.
@@ -59,7 +56,6 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def configure(self: _SubarrayBeamProxy, configuration: dict) -> ResultCode:
         """
         Configure the subarray beam.
@@ -76,7 +72,6 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def scan(self: _SubarrayBeamProxy, scan_id: int, start_time: float) -> ResultCode:
         """
         Start the subarray beam scanning.
@@ -97,7 +92,6 @@ class _StationBeamProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def configure(self: _StationBeamProxy, configuration: dict) -> ResultCode:
         """
         Configure the station beam.
@@ -123,7 +117,6 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        message_queue_size_callback: Callable[[int], None],
         assign_completed_callback: Callable[[], None],
         release_completed_callback: Callable[[], None],
         configure_completed_callback: Callable[[], None],
@@ -149,8 +142,6 @@ class SubarrayComponentManager(
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
         :param release_completed_callback: callback to be called when
@@ -208,11 +199,6 @@ class SubarrayComponentManager(
         self._station_beams: dict[str, _StationBeamProxy] = dict()
 
         self._scan_id: Optional[int] = None
-
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
 
         super().__init__(
             logger,
@@ -312,7 +298,6 @@ class SubarrayComponentManager(
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn] = _StationProxy(
                     fqdn,
-                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     functools.partial(self._station_power_mode_changed, fqdn),
@@ -323,7 +308,6 @@ class SubarrayComponentManager(
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn] = _SubarrayBeamProxy(
                     fqdn,
-                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,
@@ -336,7 +320,6 @@ class SubarrayComponentManager(
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn] = _StationBeamProxy(
                     fqdn,
-                    self._message_queue,
                     self.logger,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,

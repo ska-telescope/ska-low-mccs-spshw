@@ -12,11 +12,9 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
     MccsComponentManagerProtocol,
-    MessageQueue,
     ObjectComponent,
     ObjectComponentManager,
     check_communicating,
-    enqueue,
 )
 from ska_low_mccs.utils import threadsafe
 
@@ -165,7 +163,6 @@ class PowerSupplyProxySimulator(
 
     def __init__(
         self: PowerSupplyProxySimulator,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         supplied_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -174,8 +171,6 @@ class PowerSupplyProxySimulator(
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -187,7 +182,6 @@ class PowerSupplyProxySimulator(
         """
         super().__init__(
             self._Component(initial_supplied_power_mode),
-            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -211,7 +205,6 @@ class PowerSupplyProxySimulator(
         self.update_supplied_power_mode(None)
 
     @check_communicating
-    # @enqueue
     def power_off(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn off supply of power to the downstream device.
@@ -221,7 +214,6 @@ class PowerSupplyProxySimulator(
         return cast(PowerSupplyProxySimulator._Component, self._component).power_off()
 
     @check_communicating
-    # @enqueue
     def power_on(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn on supply of power to the downstream device.

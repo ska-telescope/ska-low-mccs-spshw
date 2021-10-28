@@ -34,15 +34,14 @@ from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import (
     ControlMode,
     CommunicationStatus,
-    MessageQueue,
-    MessageQueueComponentManager,
+    MccsComponentManager,
     WebHardwareClient,
 )
 
 __all__ = ["SubrackDriver"]
 
 
-class SubrackDriver(MessageQueueComponentManager):
+class SubrackDriver(MccsComponentManager):
     """
     A driver for a subrack management board.
 
@@ -71,7 +70,6 @@ class SubrackDriver(MessageQueueComponentManager):
 
     def __init__(
         self: SubrackDriver,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         ip: str,
         port: int,
@@ -86,8 +84,6 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         Initialise a new instance and tries to connect to the given IP and port.
 
-        :param message_queue: the message queue to be used by this
-            driver
         :param logger: a logger for this driver to use
         :param ip: IP address for hardware tile
         :param port: IP address for hardware control
@@ -133,7 +129,6 @@ class SubrackDriver(MessageQueueComponentManager):
         )
         self._component_progress_changed_callback = component_progress_changed_callback
         super().__init__(
-            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -143,7 +138,6 @@ class SubrackDriver(MessageQueueComponentManager):
     def start_communicating(self: SubrackDriver) -> None:
         """Establish communication with the subrack."""
         super().start_communicating()
-        #self.enqueue(self._connect_to_subrack)
         self._connect_to_subrack()
 
     def _connect_to_subrack(self: SubrackDriver) -> None:

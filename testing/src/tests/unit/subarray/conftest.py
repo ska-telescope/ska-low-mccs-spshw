@@ -258,7 +258,6 @@ def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
-    message_queue_size_callback: Callable[[int], None],
     assign_completed_callback: MockCallable,
     release_completed_callback: MockCallable,
     configure_completed_callback: MockCallable,
@@ -281,8 +280,6 @@ def subarray_component_manager(
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
     :param assign_completed_callback: callback to be called when the
         component completes a resource assignment.
     :param release_completed_callback: callback to be called when
@@ -317,7 +314,6 @@ def subarray_component_manager(
     return SubarrayComponentManager(
         logger,
         communication_status_changed_callback,
-        message_queue_size_callback,
         assign_completed_callback,
         release_completed_callback,
         configure_completed_callback,

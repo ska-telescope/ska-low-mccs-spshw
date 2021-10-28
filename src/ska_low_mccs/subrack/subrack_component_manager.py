@@ -27,7 +27,6 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
     SwitchingComponentManager,
-    MessageQueue,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
 )
@@ -47,7 +46,6 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: BaseSubrackSimulatorComponentManager,
         subrack_simulator: SubrackSimulator,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -60,8 +58,6 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         Initialise a new instance.
 
         :param subrack_simulator: a subrack simulator object to use
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -75,7 +71,6 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         """
         super().__init__(
             subrack_simulator,
-            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -203,7 +198,6 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
 
     def __init__(
         self: SubrackSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -215,8 +209,6 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -230,7 +222,6 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         """
         super().__init__(
             SubrackSimulator(),
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -244,7 +235,6 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
 
     def __init__(
         self: TestingSubrackSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -256,8 +246,6 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -271,7 +259,6 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
         """
         super().__init__(
             TestingSubrackSimulator(),
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -287,7 +274,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         self: SwitchingSubrackComponentManager,
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         subrack_ip: str,
         subrack_port: int,
@@ -305,8 +291,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             component should start in
         :param initial_test_mode: the simulation mode that the component
             should start in
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
@@ -323,7 +307,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             called when the power mode of an tpm changes
         """
         subrack_driver = SubrackDriver(
-            message_queue,
             logger,
             subrack_ip,
             subrack_port,
@@ -333,7 +316,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             component_tpm_power_changed_callback,
         )
         subrack_simulator = SubrackSimulatorComponentManager(
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -341,7 +323,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             component_tpm_power_changed_callback,
         )
         testing_subrack_simulator = TestingSubrackSimulatorComponentManager(
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -451,7 +432,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        message_queue_size_callback: Callable[[int], None],
         component_tpm_power_changed_callback: Optional[
             Callable[[Optional[list[bool]]], None]
         ],
@@ -476,8 +456,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component faults (or stops faulting)
         :param component_progress_changed_callback: callback to be called when the
             component command progress values changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of an tpm changes
         :param _initial_power_mode: the initial power mode of the power
@@ -485,15 +463,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             we start connecting to the real upstream power supply
             device.
         """
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
             initial_test_mode,
-            self._message_queue,
             logger,
             subrack_ip,
             subrack_port,
@@ -504,7 +476,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
-            self._message_queue,
             logger,
             self._power_supply_communication_status_changed,
             self.component_power_mode_changed,

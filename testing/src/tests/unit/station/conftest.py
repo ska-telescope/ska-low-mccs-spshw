@@ -258,7 +258,6 @@ def station_component_manager(
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
-    message_queue_size_callback: MockCallable,
     apiu_health_changed_callback: MockCallable,
     antenna_health_changed_callback: MockCallable,
     tile_health_changed_callback: MockCallable,
@@ -281,8 +280,6 @@ def station_component_manager(
         the component manager and its component changes
     :param component_power_mode_changed_callback: callback to be called
         when the component power mode changes
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
     :param apiu_health_changed_callback: callback to be called when the
         health of this station's APIU changes
     :param antenna_health_changed_callback: callback to be called when
@@ -302,7 +299,6 @@ def station_component_manager(
         logger,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
-        message_queue_size_callback,
         apiu_health_changed_callback,
         antenna_health_changed_callback,
         tile_health_changed_callback,

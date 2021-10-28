@@ -88,7 +88,6 @@ class MccsStation(SKAObsDevice):
             self.logger,
             self._communication_status_changed,
             self._component_power_mode_changed,
-            self._message_queue_size_changed,
             self._health_model.apiu_health_changed,
             self._health_model.antenna_health_changed,
             self._health_model.tile_health_changed,
@@ -250,19 +249,6 @@ class MccsStation(SKAObsDevice):
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
-
-    def _message_queue_size_changed(
-        self: MccsStation,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsStation, health: HealthState) -> None:
         """

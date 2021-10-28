@@ -21,10 +21,8 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
-    MessageQueue,
     check_communicating,
     check_on,
-    enqueue,
 )
 
 
@@ -36,7 +34,6 @@ class _StationProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def apply_pointing(self: _StationProxy, pointing_args: list[float]) -> ResultCode:
         """
         Apply the provided pointing arguments to the station.
@@ -58,7 +55,6 @@ class StationBeamComponentManager(MccsComponentManager):
         beam_id: int,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        message_queue_size_callback: Callable[[int], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         station_health_changed_callback: Callable[[Optional[HealthState]], None],
         station_fault_changed_callback: Callable[[bool], None],
@@ -71,8 +67,6 @@ class StationBeamComponentManager(MccsComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param is_beam_locked_changed_callback: a callback to be called
             when whether the beam is locked changes
         :param station_health_changed_callback: a callback to be called
@@ -100,11 +94,6 @@ class StationBeamComponentManager(MccsComponentManager):
         self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
         self._station_health_changed_callback = station_health_changed_callback
         self._station_fault_changed_callback = station_fault_changed_callback
-
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
 
         super().__init__(
             logger,
@@ -209,7 +198,6 @@ class StationBeamComponentManager(MccsComponentManager):
             if self._station_fqdn is not None:
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
-                    self._message_queue,
                     self.logger,
                     self._device_communication_status_changed,
                     None,

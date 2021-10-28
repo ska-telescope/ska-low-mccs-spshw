@@ -112,7 +112,6 @@ class MccsSubrack(SKABaseDevice):
             self._component_power_mode_changed,
             self._component_fault,
             self._component_progress_changed,
-            self._message_queue_size_changed,
             self.are_tpms_on_changed,
         )
 
@@ -248,19 +247,6 @@ class MccsSubrack(SKABaseDevice):
         self._progress = progress
         self.logger.debug(f"Subrack progress value = {progress}")
         # TODO: Link the progress update to an attribute to be exposed to the real world...
-
-    def _message_queue_size_changed(
-        self: MccsSubrack,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsSubrack, health: HealthState) -> None:
         """

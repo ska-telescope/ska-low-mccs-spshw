@@ -41,7 +41,6 @@ def tel_state_component(logger: logging.Logger) -> TelState:
 def tel_state_component_manager(
     logger: logging.Logger,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    message_queue_size_callback: Callable[[int], None],
 ) -> TelStateComponentManager:
     """
     Return a tel state component manager.
@@ -50,13 +49,10 @@ def tel_state_component_manager(
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
-
+    
     :return: a tel state component manager
     """
     return TelStateComponentManager(
         logger,
         communication_status_changed_callback,
-        message_queue_size_callback,
     )

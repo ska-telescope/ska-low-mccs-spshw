@@ -23,13 +23,11 @@ from ska_low_mccs.component import (
     ComponentManagerWithUpstreamPowerSupply,
     DeviceComponentManager,
     MccsComponentManagerProtocol,
-    MessageQueue,
     ObjectComponentManager,
     PowerSupplyProxyComponentManager,
     SwitchingComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 from ska_low_mccs.tile import (
     TpmDriver,
@@ -58,7 +56,6 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: _TpmSimulatorComponentManager,
         tpm_simulator: BaseTpmSimulator,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -68,8 +65,6 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
 
         :param tpm_simulator: the TPM simulator component managed by
             this component manager
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -79,7 +74,6 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         """
         super().__init__(
             tpm_simulator,
-            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -233,7 +227,6 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
 
     def __init__(
         self: StaticTpmSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -241,8 +234,6 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -254,7 +245,6 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             StaticTpmSimulator(
                 logger,
             ),
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -266,7 +256,6 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
 
     def __init__(
         self: DynamicTpmSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -274,8 +263,6 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -287,7 +274,6 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             DynamicTpmSimulator(
                 logger,
             ),
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -308,7 +294,6 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         self: SwitchingTpmComponentManager,
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         tpm_ip: str,
         tpm_cpld_port: int,
@@ -323,8 +308,6 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
             component should start in
         :param initial_test_mode: the simulation mode that the component
             should start in
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
@@ -336,7 +319,6 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
             component faults (or stops faulting)
         """
         tpm_driver = TpmDriver(
-            message_queue,
             logger,
             tpm_ip,
             tpm_cpld_port,
@@ -346,14 +328,12 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         )
 
         dynamic_tpm_simulator_component_manager = DynamicTpmSimulatorComponentManager(
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
         )
 
         static_tpm_simulator_component_manager = StaticTpmSimulatorComponentManager(
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_fault_callback,
@@ -455,7 +435,6 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         self: _SubrackProxy,
         fqdn: str,
         tpm_bay: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -466,8 +445,6 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :param fqdn: the FQDN of the subrack
         :param tpm_bay: the position of the TPM in the subrack
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -486,7 +463,6 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
@@ -510,7 +486,6 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_off_tpm()
 
-    # @enqueue
     def _power_off_tpm(self: _SubrackProxy) -> ResultCode | None:
         try:
             assert self._proxy is not None  # for the type checker
@@ -537,7 +512,6 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_on_tpm()
 
-    # @enqueue
     def _power_on_tpm(self: _SubrackProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.PowerOnTpm(self._tpm_bay)
@@ -560,7 +534,6 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         elif event_value == tango.DevState.OFF:
             self.update_supplied_power_mode(PowerMode.OFF)
 
-    # @enqueue
     def _register_are_tpms_on_callback(self: _SubrackProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(
@@ -612,7 +585,6 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
-        message_queue_size_callback: Callable[[int], None],
         _hardware_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """
@@ -636,25 +608,17 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param _hardware_component_manager: a hardware component manager
             to use instead of creating one. This is provided for testing
             purposes only.
         """
         self._subrack_power_mode = PowerMode.UNKNOWN
 
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         hardware_component_manager = (
             _hardware_component_manager
             or SwitchingTpmComponentManager(
                 initial_simulation_mode,
                 initial_test_mode,
-                self._message_queue,
                 logger,
                 tpm_ip,
                 tpm_cpld_port,
@@ -667,7 +631,6 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         power_supply_component_manager = _SubrackProxy(
             subrack_fqdn,
             subrack_tpm_id,
-            self._message_queue,
             logger,
             self._power_supply_communication_status_changed,
             self._subrack_power_mode_changed,

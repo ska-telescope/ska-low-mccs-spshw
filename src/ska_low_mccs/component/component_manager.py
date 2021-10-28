@@ -19,6 +19,8 @@ from ska_tango_base.base import BaseComponentManager
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
+from ska_tango_base.base.task_queue_manager import QueueManager
+
 __all__ = [
     "CommunicationStatus",
     "ControlMode",
@@ -187,7 +189,21 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         self._faulty: Optional[bool] = None
         self._component_fault_callback = component_fault_callback
+
         super().__init__(None, *args, **kwargs)
+
+    def create_queue_manager(self) -> QueueManager:
+        """Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers as specified
+        by the derived constructor. Note: default values are given
+        in the constructor in this class.
+
+        :return: The queue manager.
+        :rtype: QueueManager
+        """
+        return QueueManager(max_queue_size=5, num_workers=5)
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""

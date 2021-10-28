@@ -121,32 +121,6 @@ class _TileProxy(DeviceComponentManager):
         return result_code
 
 
-class ApiuDeviceComponentManager(DeviceComponentManager):
-    """An APIU specific component manager for a Tango device component."""
-
-    @check_communicating
-    def off(self: DeviceComponentManager) -> ResultCode | None:
-        """
-        Turn the device off.
-
-        :return: a result code, or None if there was nothing to do.
-        """
-        print(f"RCL: APIU CM off() self.power_mode={self.power_mode}\n")
-        if self.power_mode == PowerMode.OFF:
-            print(f"RCL: APIU CM off() return None!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
-            return None  # already off
-        print("RCL: APIU CM off() call to _off()\n")
-        return self._off()
-
-    def _off(self: DeviceComponentManager) -> ResultCode:
-        assert self._proxy is not None  # for the type checker
-
-        print("RCL: APIU CM _off() self._proxy.Off()\n")
-        ([result_code], [message]) = self._proxy.Off()
-        print(f"RCL: APIU CM _off() self._proxy.Off() reply = result_code={result_code}, message={message}\n")
-        return result_code
-
-
 class StationComponentManager(MccsComponentManager):
     """A component manager for a station."""
 
@@ -206,7 +180,7 @@ class StationComponentManager(MccsComponentManager):
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
 
-        self._apiu_proxy = ApiuDeviceComponentManager(
+        self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
             logger,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
@@ -389,7 +363,6 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        print("RCL: station on()")
         if self._apiu_power_mode == PowerMode.ON:
             return self._turn_on_tiles_and_antennas()
         self._on_called = True
@@ -407,14 +380,12 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        print("RCL: _turn_on_tiles_and_antennas()")
         if not all(
             power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
         ):
             results = []
             for proxy in self._tile_proxies:
                 result_code = proxy.on()
-                print(f"RCL: Tile.On() returned={result_code}")
                 results.append(result_code)
             if ResultCode.FAILED in results:
                 return ResultCode.FAILED

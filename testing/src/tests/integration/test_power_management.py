@@ -352,9 +352,9 @@ class TestPowerManagement:
             "On command completed OK",
         )
         # TODO: Check that the event fired - currently not working
-        # controller_lrc_result_changed_callback.assert_next_change_event(
-        #     (unique_id, str(ResultCode.OK.value), "On command completed OK")
-        # )
+        controller_lrc_result_changed_callback.assert_last_change_event(
+            (unique_id, str(ResultCode.OK.value), "On command completed OK")
+        )
         for device in devices:
             assert device.state() == tango.DevState.ON
 

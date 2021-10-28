@@ -18,7 +18,6 @@ from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
-    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -28,7 +27,6 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
 
     def __init__(
         self: PasdBusSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
@@ -38,8 +36,6 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -56,7 +52,6 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         )
         super().__init__(
             pasd_bus_simulator,
-            message_queue,
             logger,
             communication_status_changed_callback,
             None,
@@ -166,7 +161,6 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        message_queue_size_callback: Callable[[int], None],
         _simulator_component_manager: Optional[PasdBusSimulatorComponentManager] = None,
     ) -> None:
         """
@@ -182,21 +176,13 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
             the component manager and its component changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param _simulator_component_manager: for testing only, we can
             provide a pre-created component manager for the simulator,
             rather than letting this component manager create one.
         """
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         pasd_bus_simulator = (
             _simulator_component_manager
             or PasdBusSimulatorComponentManager(
-                self._message_queue,
                 logger,
                 communication_status_changed_callback,
                 component_fault_callback,

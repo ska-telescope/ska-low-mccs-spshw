@@ -40,7 +40,6 @@ class _StationProxy(DeviceComponentManager):
         self: _StationProxy,
         fqdn: str,
         subarray_fqdns: Iterable[str],
-        message_queue: MessageQueue,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
@@ -55,8 +54,6 @@ class _StationProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the device
         :param subarray_fqdns: the FQDNs of subarrays which channel
             blocks can be assigned to.
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
@@ -79,7 +76,6 @@ class _StationProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,

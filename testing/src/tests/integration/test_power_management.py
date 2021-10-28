@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, cast
+from typing import Any, Callable
 import unittest.mock
 
 import pytest
@@ -251,104 +251,8 @@ class TestPowerManagement:
             tiles + stations + [controller] + [subrack], tango.DevState.OFF
         )
 
-    @pytest.mark.timeout(10)
-    def test_power_on_off(
-        self: TestPowerManagement,
-        tango_harness: TangoHarness,
-        controller_device_state_changed_callback: MockChangeEventCallback,
-    ) -> None:
-        """
-        Test that a MccsController device can enable an MccsSubarray device.
-
-        :param tango_harness: a test harness for tango devices
-        :param controller_device_state_changed_callback: a callback to
-            be used to subscribe to controller state change
-        """
-        controller = tango_harness.get_device("low-mccs/control/control")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
-        station_1 = tango_harness.get_device("low-mccs/station/001")
-        station_2 = tango_harness.get_device("low-mccs/station/002")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
-        apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
-        apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
-        antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
-        antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
-        antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
-        antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-        antenna_5 = tango_harness.get_device("low-mccs/antenna/000005")
-        antenna_6 = tango_harness.get_device("low-mccs/antenna/000006")
-        antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
-        antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
-
-        controller.add_change_event_callback(
-            "state",
-            controller_device_state_changed_callback,
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.DISABLE
-        )
-
-        devices = [
-            apiu_1,
-            apiu_2,
-            subrack,
-            tile_1,
-            tile_2,
-            tile_3,
-            tile_4,
-            antenna_1,
-            antenna_2,
-            antenna_3,
-            antenna_4,
-            antenna_5,
-            antenna_6,
-            antenna_7,
-            antenna_8,
-            station_1,
-            station_2,
-            controller,
-        ]
-
-        for device in devices:
-            device.adminMode = AdminMode.ONLINE
-            # TODO: Understand and fix why this small delay improves test stability
-            time.sleep(0.1)
-
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.UNKNOWN
-        )
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.OFF
-        )
-
-        for device in devices:
-            assert device.state() == tango.DevState.OFF
-
-        controller.On()
-        # TODO: Understand and fix why this small delay improves test stability
-        time.sleep(0.5)
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )
-
-        for device in devices:
-            assert device.state() == tango.DevState.ON
-
-        controller.Off()
-        # TODO: Understand and fix why this small delay improves test stability
-        time.sleep(0.5)
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.OFF
-        )
-
-        for device in devices:
-            assert device.state() == tango.DevState.OFF
-
-    #@pytest.mark.timeout(10)
-    def test_power_on_lrc_no_queue(
+    # @pytest.mark.timeout(10)
+    def test_power_on(
         self: TestPowerManagement,
         tango_harness: TangoHarness,
         controller_device_state_changed_callback: MockChangeEventCallback,
@@ -425,62 +329,6 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
-
-        # Message queue length is zero so command is blocked until complete
-        ([result_code], [unique_id]) = controller.On()
-        assert result_code == ResultCode.OK
-        assert "OnCommand" in unique_id
-
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )
-
-        for device in devices:
-            assert device.state() == tango.DevState.ON
-
-
-    #@pytest.mark.timeout(10)
-    def test_power_on_lrc_with_queue(
-        self: TestPowerManagement,
-        tango_harness: TangoHarness,
-        controller_device_state_changed_callback: MockChangeEventCallback,
-        controller_lrc_result_changed_callback: MockChangeEventCallback,
-    ) -> None:
-        """
-        Test that a MccsController device can enable an MccsSubarray device.
-
-        :param tango_harness: a test harness for tango devices
-        :param controller_device_state_changed_callback: a callback to
-            be used to subscribe to controller state change
-        :param controller_lrc_result_changed_callback: a callback to
-            be used to subscribe to controller LRC result changes
-        """
-        controller = tango_harness.get_device("low-mccs/control/control")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
-        station_1 = tango_harness.get_device("low-mccs/station/001")
-        station_2 = tango_harness.get_device("low-mccs/station/002")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
-        apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
-        apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
-        antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
-        antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
-        antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
-        antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-        antenna_5 = tango_harness.get_device("low-mccs/antenna/000005")
-        antenna_6 = tango_harness.get_device("low-mccs/antenna/000006")
-        antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
-        antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
-
-        controller.add_change_event_callback(
-            "state",
-            controller_device_state_changed_callback,
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.DISABLE
-        )
 
         # Subscribe to controller's LRC result attribute
         controller.add_change_event_callback(
@@ -490,42 +338,6 @@ class TestPowerManagement:
         controller_lrc_result_changed_callback.assert_next_change_event(None)
         assert controller.longRunningCommandResult is None
 
-        devices = [
-            apiu_1,
-            apiu_2,
-            subrack,
-            tile_1,
-            tile_2,
-            tile_3,
-            tile_4,
-            antenna_1,
-            antenna_2,
-            antenna_3,
-            antenna_4,
-            antenna_5,
-            antenna_6,
-            antenna_7,
-            antenna_8,
-            station_1,
-            station_2,
-            controller,
-        ]
-
-        for device in devices:
-            device.adminMode = AdminMode.ONLINE
-            # TODO: Understand and fix why this small delay improves test stability
-            time.sleep(0.1)
-
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.UNKNOWN
-        )
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.OFF
-        )
-
-        for device in devices:
-            assert device.state() == tango.DevState.OFF
-
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
@@ -534,34 +346,37 @@ class TestPowerManagement:
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
         )
-
         assert controller.longRunningCommandResult == (
-            unique_id, str(ResultCode.OK.value), "On command completed OK"
+            unique_id,
+            str(ResultCode.OK.value),
+            "On command completed OK",
         )
-        return
-        controller_lrc_result_changed_callback.assert_next_change_event(
-            (unique_id, str(ResultCode.OK.value), "On command completed OK")
-        )
-
+        # TODO: Check that the event fired - currently not working
+        # controller_lrc_result_changed_callback.assert_next_change_event(
+        #     (unique_id, str(ResultCode.OK.value), "On command completed OK")
+        # )
         for device in devices:
             assert device.state() == tango.DevState.ON
 
         return
-        print(f"RCL: antenna_1  = {antenna_1.state()}")
-        print(f"RCL: antenna_2  = {antenna_2.state()}")
-        print(f"RCL: antenna_3  = {antenna_3.state()}")
-        print(f"RCL: antenna_4  = {antenna_4.state()}")
-        print(f"RCL: antenna_5  = {antenna_5.state()}")
-        print(f"RCL: antenna_6  = {antenna_6.state()}")
-        print(f"RCL: antenna_7  = {antenna_7.state()}")
-        print(f"RCL: antenna_8  = {antenna_8.state()}")
-        print(f"RCL: tile_1     = {tile_1.state()}")
-        print(f"RCL: tile_2     = {tile_2.state()}")
-        print(f"RCL: tile_3     = {tile_3.state()}")
-        print(f"RCL: tile_4     = {tile_4.state()}")
-        print(f"RCL: apiu_1     = {apiu_1.state()}")
-        print(f"RCL: apiu_2     = {apiu_2.state()}")
-        print(f"RCL: station_1  = {station_1.state()}")
-        print(f"RCL: station_2  = {station_2.state()}")
-        print(f"RCL: subrack    = {subrack.state()}")
-        print(f"RCL: controller = {controller.state()}")
+        # debug
+        print(
+            f"RCL: antenna_1  = {antenna_1.state()}\n"
+            f"RCL: antenna_2  = {antenna_2.state()}\n"
+            f"RCL: antenna_3  = {antenna_3.state()}\n"
+            f"RCL: antenna_4  = {antenna_4.state()}\n"
+            f"RCL: antenna_5  = {antenna_5.state()}\n"
+            f"RCL: antenna_6  = {antenna_6.state()}\n"
+            f"RCL: antenna_7  = {antenna_7.state()}\n"
+            f"RCL: antenna_8  = {antenna_8.state()}\n"
+            f"RCL: tile_1     = {tile_1.state()}\n"
+            f"RCL: tile_2     = {tile_2.state()}\n"
+            f"RCL: tile_3     = {tile_3.state()}\n"
+            f"RCL: tile_4     = {tile_4.state()}\n"
+            f"RCL: apiu_1     = {apiu_1.state()}\n"
+            f"RCL: apiu_2     = {apiu_2.state()}\n"
+            f"RCL: station_1  = {station_1.state()}\n"
+            f"RCL: station_2  = {station_2.state()}\n"
+            f"RCL: subrack    = {subrack.state()}\n"
+            f"RCL: controller = {controller.state()}\n"
+        )

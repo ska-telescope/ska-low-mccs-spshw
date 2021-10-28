@@ -193,7 +193,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         super().__init__(None, *args, **kwargs)
 
     def create_queue_manager(self) -> QueueManager:
-        """Create a QueueManager.
+        """
+        Create a QueueManager.
 
         Overwrite the creation of the queue manger specifying the
         required max queue size and number of workers.

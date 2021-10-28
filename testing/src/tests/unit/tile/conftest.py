@@ -472,7 +472,7 @@ def tile_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
-    
+
     :return: a TPM component manager in the specified simulation mode.
     """
     return TileComponentManager(

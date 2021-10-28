@@ -1,5 +1,4 @@
 """This module contains pytest-specific test harness for MCCS unit tests."""
-import logging
 from typing import Callable, Optional
 import unittest
 

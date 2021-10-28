@@ -49,7 +49,7 @@ def transient_buffer_component_manager(
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    
+
     :return: a transient buffer component manager
     """
     return TransientBufferComponentManager(

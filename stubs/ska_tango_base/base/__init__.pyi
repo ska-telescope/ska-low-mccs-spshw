@@ -1,12 +1,26 @@
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Callable, Union, Tuple
 
 from tango.server import Device
 
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, StateModelCommand
 from ska_tango_base.control_model import PowerMode
+from ska_tango_base.base.task_queue_manager import QueueManager
 
+class QueueManager:
+    def __init__(
+        self: QueueManager,
+        max_queue_size: int = 0,
+        queue_fetch_timeout: float = 0.1,
+        num_workers: int = 0,
+        logger: Optional[logging.Logger] = None,
+        push_change_event: Optional[Callable] = None,
+    ): ...
+    @property
+    def queue_full(self: QueueManager) -> bool: ...
+    @property
+    def task_result(self: QueueManager) -> Union[Tuple[str, str, str], Tuple[()]]: ...
 
 class BaseComponentManager:
     def __init__(

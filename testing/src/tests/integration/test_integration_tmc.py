@@ -41,12 +41,13 @@ def patched_station_device_class() -> type[MccsStation]:
             self: PatchedStationDevice, power_mode: int
         ) -> None:
             power_mode = PowerMode(power_mode)
-            self.component_manager._apiu_power_mode = power_mode
-            for fqdn in self.component_manager._tile_power_modes:
-                self.component_manager._tile_power_modes[fqdn] = power_mode
-            for fqdn in self.component_manager._antenna_power_modes:
-                self.component_manager._antenna_power_modes[fqdn] = power_mode
-            self.component_manager._evaluate_power_mode()
+            with self.component_manager._power_mode_lock:
+                self.component_manager._apiu_power_mode = power_mode
+                for fqdn in self.component_manager._tile_power_modes:
+                    self.component_manager._tile_power_modes[fqdn] = power_mode
+                for fqdn in self.component_manager._antenna_power_modes:
+                    self.component_manager._antenna_power_modes[fqdn] = power_mode
+                self.component_manager._evaluate_power_mode()
 
     return PatchedStationDevice
 
@@ -378,7 +379,6 @@ class TestMccsIntegrationTmc:
             ObsState.EMPTY
         )
 
-        controller.adminMode = AdminMode.ONLINE
         subarray_1.adminMode = AdminMode.ONLINE
         subarray_2.adminMode = AdminMode.ONLINE
         subrack.adminMode = AdminMode.ONLINE
@@ -388,6 +388,9 @@ class TestMccsIntegrationTmc:
         subarray_beam_2.adminMode = AdminMode.ONLINE
         subarray_beam_3.adminMode = AdminMode.ONLINE
         subarray_beam_4.adminMode = AdminMode.ONLINE
+
+        time.sleep(0.1)
+        controller.adminMode = AdminMode.ONLINE
 
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
@@ -453,7 +456,7 @@ class TestMccsIntegrationTmc:
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1, 2]],
-            subarray_beam_ids=[1, 2],
+            subarray_beam_ids=[1],
             channel_blocks=[2],
         )
         assert result_code == ResultCode.QUEUED

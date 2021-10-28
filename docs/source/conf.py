@@ -55,6 +55,7 @@ autodoc_mock_imports = [
     "ska_tango_base",
     "tango",
     "uritools",
+    "yaml",
 ]
 
 
@@ -103,6 +104,7 @@ nitpick_ignore = [
     ("py:exc", "PluginError"),
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "Status"),
+    ("py:exc", "yaml.YAMLError"),
 ]
 
 extensions = [

@@ -130,6 +130,36 @@
                 }
             }
         },
+        "MccsPasdBus": {
+            "pasdbus_001": {
+                "MccsPasdBus": {
+                    "low-mccs/pasdbus/001": {
+                        "properties": {
+                            "StationId": [
+                                "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "pasdbus_002": {
+                "MccsPasdBus": {
+                    "low-mccs/pasdbus/002": {
+                        "properties": {
+                            "StationId": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "MccsStationBeam": {
             "beam_01": {
                 "MccsStationBeam": {

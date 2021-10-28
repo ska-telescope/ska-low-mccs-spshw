@@ -130,7 +130,7 @@ class SubrackSimulator(ObjectComponent):
             subrack
         :param power_supply_voltages: the initial voltages for the 2 power supply in the
             subrack
-        :param: power_supply_fan_speeds: the initial fan speeds in percent for the 2
+        :param power_supply_fan_speeds: the initial fan speeds in percent for the 2
             power supply in the subrack
         :param tpm_power_modes: the initial power modes of the TPMs
         :param tpm_present: the initial TPM board present on subrack

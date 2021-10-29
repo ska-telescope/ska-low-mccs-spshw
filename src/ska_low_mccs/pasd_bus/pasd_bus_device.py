@@ -662,7 +662,7 @@ class MccsPasdBus(SKABaseDevice):
             self: MccsPasdBus.ReloadDatabaseCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Implement py:meth:`.MccsPasdBus.ReloadDatabase` command.
+            Implement :py:meth:`.MccsPasdBus.ReloadDatabase` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -675,7 +675,7 @@ class MccsPasdBus(SKABaseDevice):
     @command(dtype_out="DevVarLongStringArray")
     def ReloadDatabase(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
-        Return information about the FNDH.
+        Reload PaSD configuration from the configuration database.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -690,7 +690,7 @@ class MccsPasdBus(SKABaseDevice):
 
         def do(self: MccsPasdBus.GetFndhInfoCommand) -> dict:  # type: ignore[override]
             """
-            Implement py:meth:`.MccsPasdBus.GetFndhInfo` command.
+            Implement :py:meth:`.MccsPasdBus.GetFndhInfo` command.
 
             :return: A dictionary containing information about the FNDH.
             """
@@ -776,7 +776,7 @@ class MccsPasdBus(SKABaseDevice):
             self: MccsPasdBus.GetSmartboxInfoCommand, argin: int
         ) -> dict:
             """
-            Implement py:meth:`.MccsPasdBus.GetSmartboxInfo` command.
+            Implement :py:meth:`.MccsPasdBus.GetSmartboxInfo` command.
 
             :param argin: the smartbox id
 
@@ -953,7 +953,7 @@ class MccsPasdBus(SKABaseDevice):
             self: MccsPasdBus.GetAntennaInfoCommand, argin: int
         ) -> dict:
             """
-            Implement py:meth:`.MccsPasdBus.GetAntennaInfo` command.
+            Implement :py:meth:`.MccsPasdBus.GetAntennaInfo` command.
 
             :param argin: the antenna id
 

@@ -257,7 +257,6 @@ class TestPowerManagement:
         tango_harness: TangoHarness,
         controller_lrc_result_changed_callback: MockChangeEventCallback,
         controller_device_state_changed_callback: MockChangeEventCallback,
-        controller_ross_test_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that a MccsController device can enable an MccsSubarray device.
@@ -345,13 +344,6 @@ class TestPowerManagement:
         # of 3 strings, but that doesn't work! Geoff consulted.
         controller_lrc_result_changed_callback.assert_next_change_event("")
 
-        controller.add_change_event_callback(
-            "rossTest",
-            controller_ross_test_changed_callback,
-        )
-        assert "rossTest".casefold() in controller._change_event_subscription_ids
-        controller_ross_test_changed_callback.assert_next_change_event("Original value")
-
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
@@ -369,20 +361,10 @@ class TestPowerManagement:
         assert controller.longRunningCommandResult == (lrc_result)
         controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
-        #
-        # HACK: Remove
-        #
-        print(f"RCL: controller.rossTest={controller.rossTest}")
-        controller_ross_test_changed_callback.assert_next_change_event("It works!")
-        #
-        #
-        #
-
         for device in devices:
             assert device.state() == tango.DevState.ON
 
-        return
-        # debug
+        """
         print(
             f"RCL: antenna_1  = {antenna_1.state()}\n"
             f"RCL: antenna_2  = {antenna_2.state()}\n"
@@ -403,3 +385,4 @@ class TestPowerManagement:
             f"RCL: subrack    = {subrack.state()}\n"
             f"RCL: controller = {controller.state()}\n"
         )
+        """

@@ -12,7 +12,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, cast
 
 import tango
 from tango.server import attribute, command, device_property
@@ -67,7 +67,6 @@ class MccsController(SKABaseDevice):
             self.health_changed,
         )
         self.set_change_event("healthState", True, False)
-        self.set_change_event("rossTest", True, False)
         self.set_change_event("longRunningCommandResult", True, False)
 
     def create_component_manager(
@@ -146,7 +145,6 @@ class MccsController(SKABaseDevice):
             # TODO: This needs to be fixed in the base classes.
             device._health_state = device._health_model.health_state
             device._long_running_command_result = ""
-            device._ross_test = "Original value"
 
             return (result_code, message)
 
@@ -165,17 +163,12 @@ class MccsController(SKABaseDevice):
 
         :param long_running_command_result: the new long running command result value
         """
-        self._ross_test = "It works!"
-        print(f"RCL: Update rossTest with {self._ross_test}, then push change event...")
-        self.push_change_event("rossTest", self._ross_test)
-
-        print(
-            f"RCL: _long_running_command_result_changed({long_running_command_result})"
-        )
+        print(f"RCL: _lrc_result_changed({long_running_command_result})")
+        cast(str, self._long_running_command_result)
         if self._long_running_command_result == long_running_command_result:
             return
         self._long_running_command_result = long_running_command_result
-        print("RCL: Yes, an event should be pushed!")
+        print("RCL: event should be pushed")
         self.push_change_event(
             "longRunningCommandResult", self._long_running_command_result
         )
@@ -256,16 +249,6 @@ class MccsController(SKABaseDevice):
         :return: _long_running_command_result attribute
         """
         return self._long_running_command_result
-
-    @attribute(dtype=("DevString"))
-    def rossTest(self: MccsController) -> str:
-        """
-        Return the ross Test attribute.
-
-        :return: rossTest attribute
-        """
-        print(f"RCL: def rossTest {self._ross_test}")
-        return self._ross_test
 
     @attribute(dtype="DevString")
     def assignedResources(self: MccsController) -> str:

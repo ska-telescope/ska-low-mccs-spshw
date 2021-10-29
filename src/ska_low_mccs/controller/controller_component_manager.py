@@ -14,7 +14,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Hashable, Optional, Iterable, Union, Tuple
+from typing import Callable, Hashable, Optional, Iterable, Tuple
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -28,8 +28,6 @@ from ska_low_mccs.component import (
 )
 from ska_low_mccs.controller import ControllerResourceManager
 from ska_low_mccs.resource_manager import ResourceManager, ResourcePool
-
-from ska_tango_base.base.task_queue_manager import TaskResult
 
 __all__ = ["ControllerComponentManager"]
 
@@ -315,9 +313,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        long_running_command_result_changed: Callable[
-            [Union[Tuple[str, str, str], Tuple[()]]], None
-        ],
+        long_running_command_result_changed: Callable[[str], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -458,7 +454,7 @@ class ControllerComponentManager(MccsComponentManager):
         )
 
     def _attribute_changed_callback(
-        self: ControllerComponentManager, name, result
+        self: ControllerComponentManager, name: str, result: Tuple[str, str, str]
     ) -> None:
         """
         Attribute changed callback method.

@@ -10,7 +10,7 @@ from __future__ import annotations  # allow forward references in type hints
 import enum
 import logging
 import threading
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Tuple
 from typing_extensions import Protocol
 
 from ska_tango_base.commands import ResultCode
@@ -192,9 +192,11 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         super().__init__(None, *args, **kwargs)
 
-    def _attribute_changed_callback(self: MccsComponentManager, name, result):
+    def _attribute_changed_callback(
+        self: MccsComponentManager, name: str, result: Tuple[str, str, str]
+    ) -> None:
         """
-        Default attribute changed callback method.
+        Attribute changed callback method.
 
         :param name: name of the attribute that has changed
         :param result: the value of the attribute

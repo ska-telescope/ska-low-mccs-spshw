@@ -255,8 +255,9 @@ class TestPowerManagement:
     def test_power_on(
         self: TestPowerManagement,
         tango_harness: TangoHarness,
-        controller_device_state_changed_callback: MockChangeEventCallback,
         controller_lrc_result_changed_callback: MockChangeEventCallback,
+        controller_device_state_changed_callback: MockChangeEventCallback,
+        controller_ross_test_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that a MccsController device can enable an MccsSubarray device.
@@ -286,16 +287,11 @@ class TestPowerManagement:
         antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
         antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
 
-        print(
-            f"RCL: _change_event_subscription_ids={controller._change_event_subscription_ids}"
-        )
         controller.add_change_event_callback(
             "state",
             controller_device_state_changed_callback,
         )
-        print(
-            f"RCL: _change_event_subscription_ids={controller._change_event_subscription_ids}"
-        )
+        assert "state" in controller._change_event_subscription_ids
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.DISABLE
         )
@@ -326,12 +322,8 @@ class TestPowerManagement:
             # TODO: Understand and fix why this small delay improves test stability
             time.sleep(0.1)
 
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.UNKNOWN
-        )
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.OFF
-        )
+        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
+        controller_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
@@ -341,29 +333,50 @@ class TestPowerManagement:
             "longRunningCommandResult",
             controller_lrc_result_changed_callback,
         )
-        print(
-            f"RCL: _change_event_subscription_ids={controller._change_event_subscription_ids}"
+        assert "longRunningCommandResult".casefold() in controller._change_event_subscription_ids
+        # TODO Need to see what comes out of this. We need a tuple
+        # of 3 strings, but that doesn't work! Geoff consulted.
+        # controller_lrc_result_changed_callback.assert_next_change_event()
+
+        controller.add_change_event_callback(
+            "rossTest",
+            controller_ross_test_changed_callback,
         )
-        controller_lrc_result_changed_callback.assert_next_change_event(None)
-        assert controller.longRunningCommandResult is None
+        assert "rossTest".casefold() in controller._change_event_subscription_ids
+        controller_ross_test_changed_callback.assert_next_change_event("Original value")
 
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id
 
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )
-        assert controller.longRunningCommandResult == (
-            unique_id,
-            str(ResultCode.OK.value),
-            "On command completed OK",
-        )
-        # TODO: Check that the event fired - currently not working
-        controller_lrc_result_changed_callback.assert_last_change_event(
-            (unique_id, str(ResultCode.OK.value), "On command completed OK")
-        )
+        controller_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+
+
+        # print(f"RCL: controller.longRunningCommandResult={controller.longRunningCommandResult}")
+        # assert controller.longRunningCommandResult == (
+        #    unique_id,
+        #    str(ResultCode.OK.value),
+        #    "On command completed OK",
+        #)
+        # TODO Need to see what comes out of this. We need a tuple
+        # of 3 strings, but that doesn't work! Geoff consulted.
+        # controller_lrc_result_changed_callback.assert_last_change_event(
+        #    (unique_id, str(ResultCode.OK.value), "On command completed OK")
+        # )
+
+
+        #
+        # HACK: Remove
+        #
+        print(f"RCL: controller.rossTest={controller.rossTest}")
+        controller_ross_test_changed_callback.assert_next_change_event("It works!")
+        #
+        #
+        #
+
+        assert False
+
         for device in devices:
             assert device.state() == tango.DevState.ON
 

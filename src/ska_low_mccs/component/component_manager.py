@@ -192,7 +192,12 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         super().__init__(None, *args, **kwargs)
 
-    def create_queue_manager(self) -> QueueManager:
+    def catch_updates(self: MccsComponentManager, name, result):
+        """
+        """
+        print(f"RCL: CM::catch_updates({name}, {result})")
+
+    def create_queue_manager(self: MccsComponentManager) -> QueueManager:
         """
         Create a QueueManager.
 
@@ -201,7 +206,13 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         :return: The queue manager.
         """
-        return QueueManager(max_queue_size=5, num_workers=5)
+        # print("RCL: create_queue_manager")
+        return QueueManager(
+            max_queue_size=5,
+            num_workers=5,
+            logger=self.logger,
+            push_change_event=self.catch_updates
+        )
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""

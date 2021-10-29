@@ -214,7 +214,7 @@ def pasd_bus_component_manager(
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
-    
+
     :return: a PaSD bus component manager
     """
     return PasdBusComponentManager(

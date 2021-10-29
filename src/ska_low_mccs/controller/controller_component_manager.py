@@ -14,7 +14,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Hashable, Optional, Iterable
+from typing import Callable, Hashable, Optional, Iterable, Union, Tuple
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -29,6 +29,7 @@ from ska_low_mccs.component import (
 from ska_low_mccs.controller import ControllerResourceManager
 from ska_low_mccs.resource_manager import ResourceManager, ResourcePool
 
+from ska_tango_base.base.task_queue_manager import TaskResult
 
 __all__ = ["ControllerComponentManager"]
 
@@ -314,6 +315,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
+        long_running_command_result_changed: Callable[[Union[Tuple[str, str, str], Tuple[()]]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -337,6 +339,8 @@ class ControllerComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
+        :param long_running_command_result_changed: callback to be
+            called when the component long running comamnd result changes
         :param subrack_health_changed_callback: callback to be called
             when the health of one of this controller's subracks changes
         :param station_health_changed_callback: callback to be called
@@ -346,6 +350,7 @@ class ControllerComponentManager(MccsComponentManager):
         :param station_beam_health_changed_callback: callback to be
             called when the health of one of this controller's station beams changes
         """
+        self._long_running_command_result_changed = long_running_command_result_changed
         self._station_health_changed_callback = station_health_changed_callback
         self._subarray_beam_health_changed_callback = (
             subarray_beam_health_changed_callback
@@ -449,6 +454,18 @@ class ControllerComponentManager(MccsComponentManager):
             component_power_mode_changed_callback,
             None,
         )
+
+    def catch_updates(self: ControllerComponentManager, name, result):
+        """
+        """
+        print(f"RCL: ControllerCM::catch_updates({name}, {result})")
+        if name == "longRunningCommandResult":
+            task_result = TaskResult.from_task_result(result)
+            print(f"RCL: task_result.unique_id   = {task_result.unique_id}")
+            print(f"RCL: task_result.result_code = {task_result.result_code}")
+            if self._long_running_command_result_changed:
+                self._long_running_command_result_changed(result)
+                # self._long_running_command_result_changed('-'.join(result))
 
     def start_communicating(self: ControllerComponentManager) -> None:
         """Establish communication with the station components."""

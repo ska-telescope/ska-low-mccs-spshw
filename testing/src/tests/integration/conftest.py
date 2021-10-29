@@ -62,6 +62,45 @@ def controller_lrc_result_changed_callback(
 
 
 @pytest.fixture()
+def ross_test_changed_callback_factory(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> Callable[[], MockChangeEventCallback]:
+    """
+    Return a mock change event callback factory for device LRC result change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback factory to be registered with
+        a device via a change event subscription, so that it gets called
+        when the device LRC in queue changes.
+    """
+
+    def _factory() -> MockChangeEventCallback:
+        return mock_change_event_callback_factory("rossTest")
+
+    return _factory
+
+
+@pytest.fixture()
+def controller_ross_test_changed_callback(
+    ross_test_changed_callback_factory: Callable[[], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for controller device LRC result change.
+
+    :param ross_test_changed_callback_factory: fixture that provides a mock
+        change event callback factory for LRC result change events.
+
+    :return: a mock change event callback to be registered with the
+        controller device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return ross_test_changed_callback_factory()
+
+
+@pytest.fixture()
 def state_changed_callback_factory(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> Callable[[], MockChangeEventCallback]:

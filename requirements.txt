@@ -9,6 +9,13 @@ pytango >= 9.3.3
 requests
 scipy
 # ska-tango-base == 0.11.3
-git+https://gitlab.com/ska-telescope/ska-tango-base@d7aa5acb#egg=ska-tango-base
+#
+# Starting point on main = d7aa5acb
+# git+https://gitlab.com/ska-telescope/ska-tango-base@d7aa5acb#egg=ska-tango-base
+#
+# MR for Johan modification - subsequently backed-out
 # git+https://gitlab.com/ska-telescope/ska-tango-base@c45e0ca46669ffdc3c61fc767127533fe6e7d9ec#egg=ska-tango-base
+#
+# 2nd MR from Johan for a fix to events
+git+https://gitlab.com/ska-telescope/ska-tango-base@a5523737#egg=ska-tango-base
 transitions

@@ -315,7 +315,9 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        long_running_command_result_changed: Callable[[Union[Tuple[str, str, str], Tuple[()]]], None],
+        long_running_command_result_changed: Callable[
+            [Union[Tuple[str, str, str], Tuple[()]]], None
+        ],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -455,17 +457,23 @@ class ControllerComponentManager(MccsComponentManager):
             None,
         )
 
-    def catch_updates(self: ControllerComponentManager, name, result):
+    def _attribute_changed_callback(
+        self: ControllerComponentManager, name, result
+    ) -> None:
         """
+        Attribute changed callback method.
+
+        :param name: name of the attribute that has changed
+        :param result: the value of the attribute
         """
-        print(f"RCL: ControllerCM::catch_updates({name}, {result})")
+        print(f"RCL: ControllerCM::_attribute_changed_callback({name}, {result})")
         if name == "longRunningCommandResult":
-            task_result = TaskResult.from_task_result(result)
-            print(f"RCL: task_result.unique_id   = {task_result.unique_id}")
-            print(f"RCL: task_result.result_code = {task_result.result_code}")
             if self._long_running_command_result_changed:
-                self._long_running_command_result_changed(result)
-                # self._long_running_command_result_changed('-'.join(result))
+                # TODO: We should be able to send back a tuple of string - currently
+                #       an issue at the Tango<->Test harness boundary
+                # self._long_running_command_result_changed(result)
+                # TODO: For now, concatenate result
+                self._long_running_command_result_changed("-".join(result))
 
     def start_communicating(self: ControllerComponentManager) -> None:
         """Establish communication with the station components."""

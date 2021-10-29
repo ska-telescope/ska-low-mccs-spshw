@@ -322,8 +322,12 @@ class TestPowerManagement:
             # TODO: Understand and fix why this small delay improves test stability
             time.sleep(0.1)
 
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
-        controller_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.OFF
+        )
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
@@ -333,10 +337,13 @@ class TestPowerManagement:
             "longRunningCommandResult",
             controller_lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in controller._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in controller._change_event_subscription_ids
+        )
         # TODO Need to see what comes out of this. We need a tuple
         # of 3 strings, but that doesn't work! Geoff consulted.
-        # controller_lrc_result_changed_callback.assert_next_change_event()
+        controller_lrc_result_changed_callback.assert_next_change_event("")
 
         controller.add_change_event_callback(
             "rossTest",
@@ -350,21 +357,17 @@ class TestPowerManagement:
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id
 
-        controller_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        )
 
-
-        # print(f"RCL: controller.longRunningCommandResult={controller.longRunningCommandResult}")
-        # assert controller.longRunningCommandResult == (
-        #    unique_id,
-        #    str(ResultCode.OK.value),
-        #    "On command completed OK",
-        #)
         # TODO Need to see what comes out of this. We need a tuple
         # of 3 strings, but that doesn't work! Geoff consulted.
-        # controller_lrc_result_changed_callback.assert_last_change_event(
-        #    (unique_id, str(ResultCode.OK.value), "On command completed OK")
-        # )
-
+        lrc_result = "-".join(
+            (unique_id, str(ResultCode.OK.value), "On command completed OK")
+        )
+        assert controller.longRunningCommandResult == (lrc_result)
+        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         #
         # HACK: Remove
@@ -374,8 +377,6 @@ class TestPowerManagement:
         #
         #
         #
-
-        assert False
 
         for device in devices:
             assert device.state() == tango.DevState.ON

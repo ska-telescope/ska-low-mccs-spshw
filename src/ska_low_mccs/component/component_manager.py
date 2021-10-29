@@ -192,10 +192,14 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         super().__init__(None, *args, **kwargs)
 
-    def catch_updates(self: MccsComponentManager, name, result):
+    def _attribute_changed_callback(self: MccsComponentManager, name, result):
         """
+        Default attribute changed callback method.
+
+        :param name: name of the attribute that has changed
+        :param result: the value of the attribute
         """
-        print(f"RCL: CM::catch_updates({name}, {result})")
+        ...
 
     def create_queue_manager(self: MccsComponentManager) -> QueueManager:
         """
@@ -206,12 +210,11 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         :return: The queue manager.
         """
-        # print("RCL: create_queue_manager")
         return QueueManager(
             max_queue_size=5,
             num_workers=5,
             logger=self.logger,
-            push_change_event=self.catch_updates
+            push_change_event=self._attribute_changed_callback,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:

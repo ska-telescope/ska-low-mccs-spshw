@@ -145,7 +145,7 @@ class MccsController(SKABaseDevice):
             # overwrites it with OK, so we need to update this again.
             # TODO: This needs to be fixed in the base classes.
             device._health_state = device._health_model.health_state
-            device._long_running_command_result = ()
+            device._long_running_command_result = ""
             device._ross_test = "Original value"
 
             return (result_code, message)
@@ -155,10 +155,10 @@ class MccsController(SKABaseDevice):
     # ----------
     def _long_running_command_result_changed(
         self: MccsController,
-        long_running_command_result: Union[Tuple[str, str, str], Tuple[()]],
+        long_running_command_result: str,
     ) -> None:
         """
-        Handle change in long running command result
+        Handle change in long running command result.
 
         Responsible for updating the tango side of things i.e. making sure the attribute
         is up to date, and events are pushed.
@@ -169,12 +169,16 @@ class MccsController(SKABaseDevice):
         print(f"RCL: Update rossTest with {self._ross_test}, then push change event...")
         self.push_change_event("rossTest", self._ross_test)
 
-        print(f"RCL: _long_running_command_result_changed({long_running_command_result})")
-        #if self._long_running_command_result == long_running_command_result:
-        #    return
+        print(
+            f"RCL: _long_running_command_result_changed({long_running_command_result})"
+        )
+        if self._long_running_command_result == long_running_command_result:
+            return
         self._long_running_command_result = long_running_command_result
         print("RCL: Yes, an event should be pushed!")
-        self.push_change_event("longRunningCommandResult", self._long_running_command_result)
+        self.push_change_event(
+            "longRunningCommandResult", self._long_running_command_result
+        )
 
     def _communication_status_changed(
         self: MccsController,
@@ -243,10 +247,11 @@ class MccsController(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    @attribute(dtype=("DevString",), max_dim_x=3)
-    def longRunningCommandResult(self: MccsController) -> list(str):
+    # @attribute(dtype=("DevString",), max_dim_x=3)
+    @attribute(dtype=("DevString"))
+    def longRunningCommandResult(self: MccsController) -> str:
         """
-        Return the long running command result attribute
+        Return the long running command result attribute.
 
         :return: _long_running_command_result attribute
         """
@@ -255,9 +260,9 @@ class MccsController(SKABaseDevice):
     @attribute(dtype=("DevString"))
     def rossTest(self: MccsController) -> str:
         """
-        Return the long running command result attribute
+        Return the ross Test attribute.
 
-        :return: _long_running_command_result attribute
+        :return: rossTest attribute
         """
         print(f"RCL: def rossTest {self._ross_test}")
         return self._ross_test

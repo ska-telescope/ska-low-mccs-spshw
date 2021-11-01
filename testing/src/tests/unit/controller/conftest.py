@@ -230,6 +230,7 @@ def controller_component_manager(
     logger: logging.Logger,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
+    long_running_command_result_changed_callback: MockCallable,
     subrack_health_changed_callback: MockCallable,
     station_health_changed_callback: MockCallable,
     subarray_beam_health_changed_callback: MockCallable,
@@ -250,6 +251,8 @@ def controller_component_manager(
         component manager and its component changes
     :param component_power_mode_changed_callback: callback to be called
         when the component power mode changes
+    :param long_running_command_result_changed_callback: callback to be
+        called when a long running command result changes
     :param subrack_health_changed_callback: callback to be called when
         the health of a subrack changes
     :param station_health_changed_callback: callback to be called when
@@ -270,6 +273,7 @@ def controller_component_manager(
         logger,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
+        long_running_command_result_changed_callback,
         subrack_health_changed_callback,
         station_health_changed_callback,
         subarray_beam_health_changed_callback,

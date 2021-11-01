@@ -313,7 +313,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        long_running_command_result_changed: Callable[[str], None],
+        long_running_command_result_changed_callback: Callable[[str], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -337,7 +337,7 @@ class ControllerComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
-        :param long_running_command_result_changed: callback to be
+        :param long_running_command_result_changed_callback: callback to be
             called when the component long running comamnd result changes
         :param subrack_health_changed_callback: callback to be called
             when the health of one of this controller's subracks changes
@@ -348,7 +348,9 @@ class ControllerComponentManager(MccsComponentManager):
         :param station_beam_health_changed_callback: callback to be
             called when the health of one of this controller's station beams changes
         """
-        self._long_running_command_result_changed = long_running_command_result_changed
+        self._long_running_command_result_changed_callback = (
+            long_running_command_result_changed_callback
+        )
         self._station_health_changed_callback = station_health_changed_callback
         self._subarray_beam_health_changed_callback = (
             subarray_beam_health_changed_callback
@@ -464,12 +466,12 @@ class ControllerComponentManager(MccsComponentManager):
         """
         print(f"RCL: ControllerCM::_attribute_changed_callback({name}, {result})")
         if name == "longRunningCommandResult":
-            if self._long_running_command_result_changed:
+            if self._long_running_command_result_changed_callback:
                 # TODO: We should be able to send back a tuple of string - currently
                 #       an issue at the Tango<->Test harness boundary
-                # self._long_running_command_result_changed(result)
+                # self._long_running_command_result_changed_callback(result)
                 # TODO: For now, concatenate result
-                self._long_running_command_result_changed("-".join(result))
+                self._long_running_command_result_changed_callback("-".join(result))
 
     def start_communicating(self: ControllerComponentManager) -> None:
         """Establish communication with the station components."""

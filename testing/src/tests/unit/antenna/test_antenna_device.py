@@ -592,8 +592,8 @@ class TestMccsAntenna:
         time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.On()
-        assert result_code == ResultCode.OK
-        assert message == "On command completed OK"
+        assert result_code == ResultCode.QUEUED
+        assert "_OnCommand" in message
 
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
         # At this point the APIU should turn the antenna on, then fire a change event.

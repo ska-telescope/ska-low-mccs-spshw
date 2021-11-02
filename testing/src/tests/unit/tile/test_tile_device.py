@@ -447,8 +447,8 @@ class TestMccsTileCommands:
         time.sleep(0.1)
 
         [[result_code], [message]] = tile_device.On()
-        assert result_code == ResultCode.OK
-        assert message == "On command completed OK"
+        assert result_code == ResultCode.QUEUED
+        assert "_OnCommand" in message
 
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
         # At this point the subrack should turn the TPM on, then fire a change event.

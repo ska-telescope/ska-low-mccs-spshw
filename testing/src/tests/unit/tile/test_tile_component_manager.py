@@ -102,7 +102,7 @@ class TestTileSubrackProxy:
         assert tile_subrack_proxy.power_mode == PowerMode.OFF
         assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
 
-        tile_subrack_proxy.on()
+        assert tile_subrack_proxy.on() == ResultCode.OK
         mock_subrack_device_proxy.On.assert_next_call()
 
         # Fake an event that tells this proxy that the subrack has been turned on.
@@ -113,7 +113,7 @@ class TestTileSubrackProxy:
         assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
 
         time.sleep(0.1)
-        assert tile_subrack_proxy.power_on() == ResultCode.QUEUED
+        assert tile_subrack_proxy.power_on() == ResultCode.OK
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
 
         # The tile power mode won't update until an event confirms that the tile is on.
@@ -129,7 +129,7 @@ class TestTileSubrackProxy:
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
         assert tile_subrack_proxy.supplied_power_mode == PowerMode.ON
 
-        assert tile_subrack_proxy.power_off() == ResultCode.QUEUED
+        assert tile_subrack_proxy.power_off() == ResultCode.OK
         mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
 
         # The power mode won't update until an event confirms that the tile is on.

@@ -305,6 +305,8 @@ class MccsDeviceProxy:
 
         :return: the subscription id
         """
+        if "longrunningcommandresult".casefold() in attribute_name:
+            print(f"RCL: subscribe to event: {attribute_name}")
         return self._device.subscribe_event(
             attribute_name,
             tango.EventType.CHANGE_EVENT,
@@ -322,6 +324,7 @@ class MccsDeviceProxy:
         """
         # TODO: not sure if it is overkill to serialise change event
         # handling, but it seems like the safer way to go
+        print(f"RCL: _change_event_received: {event}")
         with self._change_event_lock:
             attribute_data = self._process_event(event)
             if attribute_data is not None:

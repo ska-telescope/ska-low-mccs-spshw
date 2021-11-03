@@ -340,9 +340,11 @@ class TestPowerManagement:
             "longRunningCommandResult".casefold()
             in controller._change_event_subscription_ids
         )
+        time.sleep(0.1) # allow event system time to run
+
         # TODO Need to see what comes out of this. We need a tuple
         # of 3 strings, but that doesn't work! Geoff consulted.
-        controller_lrc_result_changed_callback.assert_next_change_event("")
+        # controller_lrc_result_changed_callback.assert_next_change_event(("1", "2", "3"))
 
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
@@ -355,11 +357,14 @@ class TestPowerManagement:
 
         # TODO Need to see what comes out of this. We need a tuple
         # of 3 strings, but that doesn't work! Geoff consulted.
-        lrc_result = "-".join(
-            (unique_id, str(ResultCode.OK.value), "On command completed OK")
-        )
+        #lrc_result = "-".join(
+        lrc_result = (unique_id, str(ResultCode.OK.value), "On command completed OK")
         assert controller.longRunningCommandResult == (lrc_result)
-        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
+
+        controller_lrc_result_changed_callback.assert_next_change_event(lrc_result, exe_assert=False)
+        controller_lrc_result_changed_callback.assert_next_change_event(lrc_result, exe_assert=False)
+        # Hard stop for debugging
+        assert False
 
         for device in devices:
             assert device.state() == tango.DevState.ON

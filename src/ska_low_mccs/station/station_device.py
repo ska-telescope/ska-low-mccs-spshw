@@ -523,9 +523,9 @@ class MccsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/station/01")
         >>> dp.command_inout("Configure", json_str)
         """
-        handler = self.get_command_object("Configure")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        command_object = self.get_command_object("Configure")
+        unique_id, return_code = self.component_manager.enqueue(command_object)
+        return [[return_code], [unique_id]]
 
     class ApplyPointingCommand(ResponseCommand):
         """Class for handling the ApplyPointing(argin) command."""

@@ -486,7 +486,7 @@ def mock_station_off() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.OFF)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -499,7 +499,7 @@ def mock_station_on() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -512,7 +512,7 @@ def mock_subarray_beam_off() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.OFF)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -525,8 +525,8 @@ def mock_subarray_beam_on() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
-    builder.add_result_command("Scan", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
+    builder.add_result_command("Scan", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -539,7 +539,7 @@ def mock_station_beam_off() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.OFF)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -552,7 +552,7 @@ def mock_station_beam_on() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 

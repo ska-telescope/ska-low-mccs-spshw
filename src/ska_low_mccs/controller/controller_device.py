@@ -144,7 +144,7 @@ class MccsController(SKABaseDevice):
             # overwrites it with OK, so we need to update this again.
             # TODO: This needs to be fixed in the base classes.
             device._health_state = device._health_model.health_state
-            #device._long_running_command_result = ("", "", "")
+            device._long_running_command_result = ("a", "default", "value")
 
             return (result_code, message)
 
@@ -164,19 +164,14 @@ class MccsController(SKABaseDevice):
         :param long_running_command_result: the new long running command result value
         """
         print(f"RCL: _lrc_result_changed({long_running_command_result})")
-        # cast(str, self._long_running_command_result)
-        #cast(str, self.longRunningCommandResult)
-        # if self._long_running_command_result == long_running_command_result:
-        #if self.longRunningCommandResult == long_running_command_result:
-        #    return
-        # self._long_running_command_result = long_running_command_result
-        #self.longRunningCommandResult = long_running_command_result
+        if self._long_running_command_result == long_running_command_result:
+            return
+        self._long_running_command_result = long_running_command_result
 
-        #print("RCL: event should be pushed")
-        #self.push_change_event(
-        #    # "longRunningCommandResult", self._long_running_command_result
-        #    "longRunningCommandResult", self.longRunningCommandResult
-        #)
+        print("RCL: event should be pushed")
+        self.push_change_event(
+            "longRunningCommandResult", self._long_running_command_result,
+        )
 
     def _communication_status_changed(
         self: MccsController,
@@ -246,15 +241,13 @@ class MccsController(SKABaseDevice):
     # Attributes
     # ----------
     #@attribute(dtype=("DevString",), max_dim_x=3)
-    ##@attribute(dtype=("DevString"))
-    #def longRunningCommandResult(self: MccsController) -> str:
+    #def longRunningCommandResult(self: MccsController) -> list(str):
     #    """
     #    Return the long running command result attribute.
-    #
+    
     #    :return: _long_running_command_result attribute
     #    """
-    #    # return self._long_running_command_result
-    #    return self.longRunningCommandResult
+    #    return self._long_running_command_result
 
     @attribute(dtype="DevString")
     def assignedResources(self: MccsController) -> str:

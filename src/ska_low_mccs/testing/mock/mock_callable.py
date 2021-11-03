@@ -218,7 +218,7 @@ class MockChangeEventCallback(MockCallable):
     def __init__(
         self: MockChangeEventCallback,
         event_name: str,
-        called_timeout: float = 1.0,
+        called_timeout: float = 5.0,
         not_called_timeout: float = 0.5,
     ):
         """
@@ -245,7 +245,6 @@ class MockChangeEventCallback(MockCallable):
     def assert_next_change_event(
         self: MockChangeEventCallback,
         value: Any,
-        exe_assert: bool = True,
         quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
     ) -> None:
         """
@@ -262,23 +261,15 @@ class MockChangeEventCallback(MockCallable):
         """
         (args, _) = self.get_next_call()
         (call_name, call_value, call_quality) = args
-        if exe_assert:
-            assert (
-                call_name.lower() == self._event_name
-            ), f"Event name '{call_name.lower()}'' does not match expected name '{self._event_name}'"
-            assert (
-                call_value == value
-            ), f"Call value {call_value} does not match expected value {value}"
-            assert (
-                call_quality == quality
-            ), f"Call quality {call_quality} does not match expected quality {quality}"
-        else:
-            if not call_name.lower() == self._event_name:
-                print(f"RCLev: Event name '{call_name.lower()}'' does not match expected name '{self._event_name}'")
-            if not call_value == value:
-                print(f"RCLev: Call value {call_value} does not match expected value {value}")
-            if not call_quality == quality:
-                print(f"RCLev: Call quality {call_quality} does not match expected quality {quality}")
+        assert (
+            call_name.lower() == self._event_name
+        ), f"Event name '{call_name.lower()}'' does not match expected name '{self._event_name}'"
+        assert (
+            call_value == value
+        ), f"Call value {call_value} does not match expected value {value}"
+        assert (
+            call_quality == quality
+        ), f"Call quality {call_quality} does not match expected quality {quality}"
 
 
     def assert_last_change_event(

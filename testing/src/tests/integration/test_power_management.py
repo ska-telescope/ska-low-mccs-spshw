@@ -341,10 +341,9 @@ class TestPowerManagement:
             in controller._change_event_subscription_ids
         )
         time.sleep(0.1) # allow event system time to run
-
-        # TODO Need to see what comes out of this. We need a tuple
-        # of 3 strings, but that doesn't work! Geoff consulted.
-        # controller_lrc_result_changed_callback.assert_next_change_event(("1", "2", "3"))
+        initial_lrc_result = ('', '', '')
+        assert controller.longRunningCommandResult == initial_lrc_result
+        controller_lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
@@ -355,39 +354,9 @@ class TestPowerManagement:
             tango.DevState.ON
         )
 
-        # TODO Need to see what comes out of this. We need a tuple
-        # of 3 strings, but that doesn't work! Geoff consulted.
-        #lrc_result = "-".join(
         lrc_result = (unique_id, str(ResultCode.OK.value), "On command completed OK")
         assert controller.longRunningCommandResult == (lrc_result)
-
-        controller_lrc_result_changed_callback.assert_next_change_event(lrc_result, exe_assert=False)
-        controller_lrc_result_changed_callback.assert_next_change_event(lrc_result, exe_assert=False)
-        # Hard stop for debugging
-        assert False
+        controller_lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
         for device in devices:
             assert device.state() == tango.DevState.ON
-
-        """
-        print(
-            f"RCL: antenna_1  = {antenna_1.state()}\n"
-            f"RCL: antenna_2  = {antenna_2.state()}\n"
-            f"RCL: antenna_3  = {antenna_3.state()}\n"
-            f"RCL: antenna_4  = {antenna_4.state()}\n"
-            f"RCL: antenna_5  = {antenna_5.state()}\n"
-            f"RCL: antenna_6  = {antenna_6.state()}\n"
-            f"RCL: antenna_7  = {antenna_7.state()}\n"
-            f"RCL: antenna_8  = {antenna_8.state()}\n"
-            f"RCL: tile_1     = {tile_1.state()}\n"
-            f"RCL: tile_2     = {tile_2.state()}\n"
-            f"RCL: tile_3     = {tile_3.state()}\n"
-            f"RCL: tile_4     = {tile_4.state()}\n"
-            f"RCL: apiu_1     = {apiu_1.state()}\n"
-            f"RCL: apiu_2     = {apiu_2.state()}\n"
-            f"RCL: station_1  = {station_1.state()}\n"
-            f"RCL: station_2  = {station_2.state()}\n"
-            f"RCL: subrack    = {subrack.state()}\n"
-            f"RCL: controller = {controller.state()}\n"
-        )
-        """

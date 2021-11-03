@@ -324,10 +324,11 @@ class MccsDeviceProxy:
         """
         # TODO: not sure if it is overkill to serialise change event
         # handling, but it seems like the safer way to go
-        print(f"RCL: _change_event_received: {event}")
         with self._change_event_lock:
             attribute_data = self._process_event(event)
             if attribute_data is not None:
+                if "longrunningcommandresult" in attribute_data.name.lower():
+                    print(f"RCL: _change_event_received: {event}")
                 for callback in self._change_event_callbacks[
                     attribute_data.name.lower()
                 ]:

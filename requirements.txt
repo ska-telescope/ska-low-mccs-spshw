@@ -17,5 +17,11 @@ scipy
 # git+https://gitlab.com/ska-telescope/ska-tango-base@c45e0ca46669ffdc3c61fc767127533fe6e7d9ec#egg=ska-tango-base
 #
 # 2nd MR from Johan for a fix to events
-git+https://gitlab.com/ska-telescope/ska-tango-base@a5523737#egg=ska-tango-base
+# git+https://gitlab.com/ska-telescope/ska-tango-base@a5523737#egg=ska-tango-base
+#
+# OK, let's use main...
+# git+https://gitlab.com/ska-telescope/ska-tango-base@main#egg=ska-tango-base
+#
+# OK, the latest MR - branch sar-286_lrc_one_subarry_command
+git+https://gitlab.com/ska-telescope/ska-tango-base@7159f3d3#egg=ska-tango-base
 transitions

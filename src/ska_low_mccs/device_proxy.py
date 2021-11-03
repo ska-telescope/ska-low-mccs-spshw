@@ -305,8 +305,6 @@ class MccsDeviceProxy:
 
         :return: the subscription id
         """
-        if "longrunningcommandresult".casefold() in attribute_name:
-            print(f"RCL: subscribe to event: {attribute_name}")
         return self._device.subscribe_event(
             attribute_name,
             tango.EventType.CHANGE_EVENT,
@@ -327,8 +325,6 @@ class MccsDeviceProxy:
         with self._change_event_lock:
             attribute_data = self._process_event(event)
             if attribute_data is not None:
-                if "longrunningcommandresult" in attribute_data.name.lower():
-                    print(f"RCL: _change_event_received: {event}")
                 for callback in self._change_event_callbacks[
                     attribute_data.name.lower()
                 ]:

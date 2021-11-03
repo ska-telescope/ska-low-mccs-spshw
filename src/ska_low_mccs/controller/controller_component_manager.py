@@ -464,17 +464,8 @@ class ControllerComponentManager(MccsComponentManager):
         :param name: name of the attribute that has changed
         :param result: the value of the attribute
         """
-        print(f"RCL: ControllerCM::_attribute_changed_callback({name}, {result})")
         if name == "longRunningCommandResult":
             if self._long_running_command_result_changed_callback:
-                # TODO: We should be able to send back a tuple of string - currently
-                #       an issue at the Tango<->Test harness boundary
-                # self._long_running_command_result_changed_callback(result)
-                # TODO: For now, concatenate result
-
-                #self._long_running_command_result_changed_callback("-".join(result))
-                #
-                print(f"RCL: ControllerCM::about to call _long_running_command_result_changed_callback({result})")
                 self._long_running_command_result_changed_callback(result)
 
     def start_communicating(self: ControllerComponentManager) -> None:

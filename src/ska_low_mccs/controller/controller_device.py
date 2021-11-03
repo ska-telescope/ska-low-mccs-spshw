@@ -16,6 +16,7 @@ from typing import List, Optional, Tuple, cast, Union
 
 import tango
 from tango.server import attribute, command, device_property
+from tango import AttrWriteType
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -163,12 +164,9 @@ class MccsController(SKABaseDevice):
 
         :param long_running_command_result: the new long running command result value
         """
-        print(f"RCL: _lrc_result_changed({long_running_command_result})")
         if self._long_running_command_result == long_running_command_result:
             return
         self._long_running_command_result = long_running_command_result
-
-        print("RCL: event should be pushed")
         self.push_change_event(
             "longRunningCommandResult", self._long_running_command_result,
         )
@@ -240,14 +238,14 @@ class MccsController(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    #@attribute(dtype=("DevString",), max_dim_x=3)
-    #def longRunningCommandResult(self: MccsController) -> list(str):
-    #    """
-    #    Return the long running command result attribute.
-    
-    #    :return: _long_running_command_result attribute
-    #    """
-    #    return self._long_running_command_result
+    # @attribute(dtype=("DevString",), max_dim_x=3)
+    # def longRunningCommandResult(self: MccsController) -> list(str):
+    #     """
+    #     Return the long running command result attribute.
+    #
+    #     :return: _long_running_command_result attribute
+    #     """
+    #     return self._long_running_command_result
 
     @attribute(dtype="DevString")
     def assignedResources(self: MccsController) -> str:

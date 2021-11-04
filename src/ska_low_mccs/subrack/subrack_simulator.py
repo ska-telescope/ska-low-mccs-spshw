@@ -587,6 +587,10 @@ class SubrackSimulator(ObjectComponent):
             tpm_data = self._tpm_data[logical_tpm_id - 1]
             if tpm_data["is_on"]:
                 tpm_data["is_on"] = False
+                if self._component_progress_changed_callback:
+                    self._component_progress_changed_callback(0)
+                    self._emulate_hardware_delay()
+                    self._component_progress_changed_callback(100)
                 self._are_tpms_on_changed()
                 return True
             return None
@@ -600,7 +604,7 @@ class SubrackSimulator(ObjectComponent):
         :raises AssertionError: if method is called in unit test environment
         """
         # Safeguard against deployment in unit testing environment
-        if "PYTEST_CURRENT_TEST" not in os.environ:
+        if "PYTEST_CURRENT_TEST" in os.environ:
             raise AssertionError(
                 "Hardware delay emulation not allowed in unit test environment"
             )
@@ -645,6 +649,10 @@ class SubrackSimulator(ObjectComponent):
                     tpm_data["is_on"] = True
                     changed = True
             if changed:
+                if self._component_progress_changed_callback:
+                    self._component_progress_changed_callback(0)
+                    self._emulate_hardware_delay()
+                    self._component_progress_changed_callback(100)
                 self._are_tpms_on_changed()
                 return True
             return None
@@ -662,6 +670,10 @@ class SubrackSimulator(ObjectComponent):
                     tpm_data["is_on"] = False
                     changed = True
             if changed:
+                if self._component_progress_changed_callback:
+                    self._component_progress_changed_callback(0)
+                    self._emulate_hardware_delay()
+                    self._component_progress_changed_callback(100)
                 self._are_tpms_on_changed()
                 return True
             return None

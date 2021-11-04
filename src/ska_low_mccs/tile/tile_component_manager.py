@@ -20,12 +20,11 @@ from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    ComponentManagerWithUpstreamPowerSupply,
     DeviceComponentManager,
+    MccsComponentManager,
     MccsComponentManagerProtocol,
     MessageQueue,
     ObjectComponentManager,
-    PowerSupplyProxyComponentManager,
     SwitchingComponentManager,
     check_communicating,
     check_on,
@@ -37,7 +36,7 @@ from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     StaticTpmSimulator,
 )
-
+from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
 
 __all__ = [
     "DynamicTpmSimulatorComponentManager",
@@ -108,7 +107,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "fpga2_temperature",
         "fpgas_time",
         "get_40g_configuration",
-        "hardware_version",
+        "tpm_version",
         "initialise_beamformer",
         "initialise",
         "is_beamformer_running",
@@ -448,7 +447,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
                 self.start_communicating()
 
 
-class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
+class _SubrackProxy(DeviceComponentManager):
     """A component manager for a subrack's tile power control functionality."""
 
     def __init__(
@@ -484,6 +483,9 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         self._tpm_change_registered = False
 
+        self._tpm_power_mode: Optional[PowerMode] = None
+        self._tpm_power_mode_changed_callback = tpm_power_mode_changed_callback
+
         super().__init__(
             fqdn,
             message_queue,
@@ -491,13 +493,33 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
-            supplied_power_mode_changed_callback=tpm_power_mode_changed_callback,
         )
 
     def stop_communicating(self: _SubrackProxy) -> None:
         """Cease communicating with the subrack device."""
         super().stop_communicating()
         self._tpm_change_registered = False
+        self._tpm_power_mode = None
+
+    @property
+    def tpm_power_mode(
+        self: _SubrackProxy,
+    ) -> Optional[PowerMode]:
+        """
+        Return the power mode of the APIU.
+
+        :return: the power mode of the APIU.
+        """
+        return self._tpm_power_mode
+
+    def update_tpm_power_mode(
+        self: _SubrackProxy,
+        tpm_power_mode: Optional[PowerMode],
+    ) -> None:
+        if self._tpm_power_mode != tpm_power_mode:
+            self._tpm_power_mode = tpm_power_mode
+            if self._tpm_power_mode is not None:
+                self._tpm_power_mode_changed_callback(self._tpm_power_mode)
 
     @check_communicating
     def power_off(self: _SubrackProxy) -> ResultCode | None:
@@ -506,7 +528,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        if self.supplied_power_mode == PowerMode.OFF:
+        if self.tpm_power_mode == PowerMode.OFF:
             return None
         return self._power_off_tpm()
 
@@ -533,7 +555,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        if self.supplied_power_mode == PowerMode.ON:
+        if self.tpm_power_mode == PowerMode.ON:
             return None
         return self._power_on_tpm()
 
@@ -557,8 +579,6 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         super()._device_state_changed(event_name, event_value, event_quality)
         if event_value == tango.DevState.ON and not self._tpm_change_registered:
             self._register_are_tpms_on_callback()
-        elif event_value == tango.DevState.OFF:
-            self.update_supplied_power_mode(PowerMode.OFF)
 
     @enqueue
     def _register_are_tpms_on_callback(self: _SubrackProxy) -> None:
@@ -591,12 +611,12 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             "subrack 'areTpmsOn' attribute changed callback called but "
             f"event_name is {event_name}."
         )
-        self.update_supplied_power_mode(
+        self.update_tpm_power_mode(
             PowerMode.ON if event_value[self._tpm_bay - 1] else PowerMode.OFF
         )
 
 
-class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
+class TileComponentManager(MccsComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
     def __init__(
@@ -613,7 +633,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
         message_queue_size_callback: Callable[[int], None],
-        _hardware_component_manager: Optional[MccsComponentManagerProtocol] = None,
+        _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -638,8 +658,8 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component faults (or stops faulting)
         :param message_queue_size_callback: callback to be called when
             the size of the message queue changes
-        :param _hardware_component_manager: a hardware component manager
-            to use instead of creating one. This is provided for testing
+        :param _tpm_component_manager: a tpm component manager to use
+            instead of creating one. This is provided for testing
             purposes only.
         """
         self._subrack_power_mode = PowerMode.UNKNOWN
@@ -649,8 +669,22 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
             queue_size_callback=message_queue_size_callback,
         )
 
-        hardware_component_manager = (
-            _hardware_component_manager
+        self._target_power_mode: Optional[PowerMode] = None
+
+        self._subrack_communication_status = CommunicationStatus.DISABLED
+        self._tpm_communication_status = CommunicationStatus.DISABLED
+
+        self._subrack_component_manager = _SubrackProxy(
+            subrack_fqdn,
+            subrack_tpm_id,
+            self._message_queue,
+            logger,
+            self._subrack_communication_status_changed,
+            self._subrack_power_mode_changed,
+            self.component_power_mode_changed,
+        )
+        self._tpm_component_manager = (
+            _tpm_component_manager
             or SwitchingTpmComponentManager(
                 initial_simulation_mode,
                 initial_test_mode,
@@ -659,52 +693,208 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 tpm_ip,
                 tpm_cpld_port,
                 tpm_version,
-                self._hardware_communication_status_changed,
+                self._tpm_communication_status_changed,
                 self.component_fault_changed,
             )
         )
 
-        power_supply_component_manager = _SubrackProxy(
-            subrack_fqdn,
-            subrack_tpm_id,
-            self._message_queue,
+        self._tile_orchestrator = TileOrchestrator(
+            self._subrack_component_manager.start_communicating,
+            self._subrack_component_manager.stop_communicating,
+            self._start_communicating_with_tpm,
+            self._stop_communicating_with_tpm,
+            self._subrack_component_manager.power_off,
+            self._subrack_component_manager.power_on,
+            self.update_communication_status,
+            self.update_component_power_mode,
+            self.update_component_fault,
             logger,
-            self._power_supply_communication_status_changed,
-            self._subrack_power_mode_changed,
-            self.component_power_mode_changed,
         )
 
         super().__init__(
-            hardware_component_manager,
-            power_supply_component_manager,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
-            None,
         )
+
+    def start_communicating(self: TileComponentManager) -> None:
+        """Establish communication with the tpm and the upstream power supply."""
+        self._tile_orchestrator.desire_online()
+        # if self.communication_status == CommunicationStatus.ESTABLISHED:
+        #     return
+        # if self.communication_status == CommunicationStatus.DISABLED:
+        #     self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+
+        # if (
+        #     self._subrack_component_manager.communication_status
+        #     == CommunicationStatus.ESTABLISHED
+        # ):
+        #     self._tpm_component_manager.start_communicating()
+        # else:
+        #     self._subrack_component_manager.start_communicating()
+
+    def stop_communicating(self: TileComponentManager) -> None:
+        """Establish communication with the tpm and the upstream power supply."""
+        self._tile_orchestrator.desire_offline()
+        # if self.communication_status == CommunicationStatus.DISABLED:
+        #     return
+
+        # self.update_communication_status(CommunicationStatus.DISABLED)
+        # self.update_component_power_mode(None)
+        # self.update_component_fault(None)
+
+        # self._tpm_component_manager.stop_communicating()
+        # self._subrack_component_manager.stop_communicating()
+
+    def _subrack_communication_status_changed(
+        self: TileComponentManager,
+        communication_status: CommunicationStatus,
+    ) -> None:
+        """
+        Handle a change in status of communication with the antenna via the APIU.
+
+        :param communication_status: the status of communication with
+            the antenna via the APIU.
+        """
+        self._tile_orchestrator.update_subrack_communication_status(
+            communication_status
+        )
+        # self._subrack_communication_status = communication_status
+        # self._evaluate_communication_status()
+
+    def _tpm_communication_status_changed(
+        self: TileComponentManager,
+        communication_status: CommunicationStatus,
+    ) -> None:
+        """
+        Handle a change in status of communication with the tpm.
+
+        :param communication_status: the status of communication with
+            the tpm.
+        """
+        self._tile_orchestrator.update_tpm_communication_status(communication_status)
+        # self._tpm_communication_status = communication_status
+        # self._evaluate_communication_status()
+
+    # def _evaluate_communication_status(
+    #     self: TileComponentManager,
+    # ) -> None:
+    #     if self._subrack_communication_status == CommunicationStatus.ESTABLISHED:
+    #         if self._tpm_communication_status == CommunicationStatus.DISABLED:
+    #             self.update_communication_status(CommunicationStatus.ESTABLISHED)
+    #         else:
+    #             self.update_communication_status(self._tpm_communication_status)
+    #     else:
+    #         self.update_communication_status(self._subrack_communication_status)
+
+    def component_progress_changed(self: TileComponentManager, progress: int) -> None:
+        """
+        Handle notification that the component's progress value has changed.
+
+        This is a callback hook, to be passed to the managed component.
+
+        :param progress: The progress percentage of the long-running command
+        """
+        if self._component_progress_changed_callback is not None:
+            self._component_progress_changed_callback(progress)
+
+    def component_power_mode_changed(
+        self: TileComponentManager,
+        power_mode: PowerMode,
+    ) -> None:
+        """
+        Handle a change in power mode of the tpm.
+
+        :param power_mode: the power mode of the tpm
+        """
+        self._tile_orchestrator.update_tpm_power_mode(power_mode)
+        # if power_mode == PowerMode.OFF:
+        #     self._tpm_component_manager.stop_communicating()
+        # elif power_mode == PowerMode.ON:
+        #     self._tpm_component_manager.start_communicating()
+        # self.update_component_power_mode(power_mode)
+        # self._review_power()
+
+    @check_communicating
+    def off(self: TileComponentManager) -> ResultCode | None:
+        """
+        Tell the upstream power supply proxy to turn the tpm off.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        self._tile_orchestrator.desire_off()
+        return ResultCode.QUEUED
+        # self._target_power_mode = PowerMode.OFF
+        # return self._review_power()
+
+    @check_communicating
+    def on(self: TileComponentManager) -> ResultCode | None:
+        """
+        Tell the upstream power supply proxy to turn the tpm off.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        self._tile_orchestrator.desire_on()
+        return ResultCode.QUEUED
+        # self._target_power_mode = PowerMode.ON
+        # return self._review_power()
 
     def _subrack_power_mode_changed(
         self: TileComponentManager,
         subrack_power_mode: PowerMode,
     ) -> None:
-        self._subrack_power_mode = subrack_power_mode
+        self._tile_orchestrator.update_subrack_power_mode(subrack_power_mode)
+        # self._subrack_power_mode = subrack_power_mode
 
-        if subrack_power_mode == PowerMode.UNKNOWN:
-            self.component_power_mode_changed(PowerMode.UNKNOWN)
-        elif subrack_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
-            self.component_power_mode_changed(PowerMode.OFF)
-        else:
-            # power_mode is ON, wait for TPM power change
-            pass
-        self._review_power()
+        # if subrack_power_mode == PowerMode.UNKNOWN:
+        #     self.component_power_mode_changed(PowerMode.UNKNOWN)
+        # elif subrack_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
+        #     self.component_power_mode_changed(PowerMode.OFF)
+        # else:
+        #     # power_mode is ON, wait for TPM power change
+        #     pass
+        # self._review_power()
 
-    def _review_power(self: TileComponentManager) -> ResultCode | None:
-        if self._target_power_mode is None:
-            return None
-        if self._subrack_power_mode != PowerMode.ON:
-            return ResultCode.QUEUED
-        return super()._review_power()
+    # def _review_power(self: TileComponentManager) -> ResultCode | None:
+    #     if self._target_power_mode is None:
+    #         return None
+    #     if self._subrack_power_mode != PowerMode.ON:
+    #         return ResultCode.QUEUED
+
+    #     with self.__power_mode_lock:
+    #         if self._target_power_mode is None:
+    #             return None
+    #         if self.power_mode == self._target_power_mode:
+    #             self._target_power_mode = None  # attained without any action needed
+    #             return None
+    #         if (
+    #             self.power_mode == PowerMode.OFF
+    #             and self._target_power_mode == PowerMode.ON
+    #         ):
+    #             result_code = self._subrack_component_manager.power_on()
+    #             self._target_power_mode = None
+    #             return result_code
+    #         if (
+    #             self.power_mode == PowerMode.ON
+    #             and self._target_power_mode == PowerMode.OFF
+    #         ):
+    #             result_code = self._subrack_component_manager.power_off()
+    #             self._target_power_mode = None
+    #             return result_code
+    #         return ResultCode.QUEUED
+
+    def _start_communicating_with_tpm(self: TileComponentManager) -> None:
+        # Pass this as a callback, rather than the method that is calls,
+        # so that self._tpm_component_manager is resolved when the
+        # callback is called, not when it is registered.
+        self._tpm_component_manager.start_communicating()
+
+    def _stop_communicating_with_tpm(self: TileComponentManager) -> None:
+        # Pass this as a callback, rather than the method that is calls,
+        # so that self._tpm_component_manager is resolved when the
+        # callback is called, not when it is registered.
+        self._tpm_component_manager.stop_communicating()
 
     @property
     def simulation_mode(self: TileComponentManager) -> SimulationMode:
@@ -714,7 +904,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: the simulation mode
         """
         return cast(
-            SwitchingTpmComponentManager, self._hardware_component_manager
+            SwitchingTpmComponentManager, self._tpm_component_manager
         ).simulation_mode
 
     @simulation_mode.setter
@@ -725,7 +915,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param value: the new value for the simulation mode.
         """
         cast(
-            SwitchingTpmComponentManager, self._hardware_component_manager
+            SwitchingTpmComponentManager, self._tpm_component_manager
         ).simulation_mode = value
 
     @property
@@ -735,9 +925,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the test mode
         """
-        return cast(
-            SwitchingTpmComponentManager, self._hardware_component_manager
-        ).test_mode
+        return cast(SwitchingTpmComponentManager, self._tpm_component_manager).test_mode
 
     @test_mode.setter
     def test_mode(
@@ -750,7 +938,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param value: the new value for the test mode.
         """
         cast(
-            SwitchingTpmComponentManager, self._hardware_component_manager
+            SwitchingTpmComponentManager, self._tpm_component_manager
         ).test_mode = value
 
     __PASSTHROUGH = [
@@ -857,7 +1045,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: the attribute value
         """
         # This one-liner is only a method so that we can decorate it.
-        return getattr(self._hardware_component_manager, name)
+        return getattr(self._tpm_component_manager, name)
 
     def __setattr__(
         self: TileComponentManager,
@@ -889,4 +1077,4 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param value: new value for the attribute
         """
         # This one-liner is only a method so that we can decorate it.
-        setattr(self._hardware_component_manager, name, value)
+        setattr(self._tpm_component_manager, name, value)

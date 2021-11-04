@@ -9,6 +9,7 @@ Tile subpackage
 
   Demo tile device<demo_tile_device>
   Tile CLI<tile_cli>
+  Tile orchestrator<tile_orchestrator>
   Tile component manager<tile_component_manager>
   Tile device<tile_device>
   Tile health model<tile_health_model>

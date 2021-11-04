@@ -546,7 +546,7 @@ def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> Type[MccsTile]
         def MockTilePoweredOn(self: PatchedTileDevice) -> None:
             are_tpms_on = list(initial_are_tpms_on)
             are_tpms_on[self.SubrackBay - 1] = True
-            self.component_manager._power_supply_component_manager._tpm_power_mode_changed(
+            self.component_manager._subrack_component_manager._tpm_power_mode_changed(
                 "areTpmsOn",
                 are_tpms_on,
                 tango.AttrQuality.ATTR_VALID,
@@ -561,7 +561,7 @@ def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> Type[MccsTile]
             event from its subrack indicating that the subrack is now
             OFF.
             """
-            self.component_manager._power_supply_component_manager._device_state_changed(
+            self.component_manager._subrack_component_manager._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
 
@@ -573,7 +573,7 @@ def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> Type[MccsTile]
             Make the tile device think it has received a state change
             event from its subrack indicating that the suback is now ON.
             """
-            self.component_manager._power_supply_component_manager._device_state_changed(
+            self.component_manager._subrack_component_manager._device_state_changed(
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
 

@@ -654,7 +654,7 @@ class MccsTile(SKABaseDevice):
         :return: IP addresses
         """
         return [
-            item["DstIP"] for item in self.component_manager.get_40g_configuration()
+            item["dst_ip"] for item in self.component_manager.get_40g_configuration()
         ]
 
     @attribute(dtype=("DevLong",), max_dim_x=256)
@@ -665,7 +665,7 @@ class MccsTile(SKABaseDevice):
         :return: ports
         """
         return [
-            item["DstPort"] for item in self.component_manager.get_40g_configuration()
+            item["dst_port"] for item in self.component_manager.get_40g_configuration()
         ]
 
     @attribute(dtype=("DevDouble",), max_dim_x=32)

@@ -271,7 +271,6 @@ class MockChangeEventCallback(MockCallable):
             call_quality == quality
         ), f"Call quality {call_quality} does not match expected quality {quality}"
 
-
     def assert_last_change_event(
         self: MockChangeEventCallback,
         value: Any,

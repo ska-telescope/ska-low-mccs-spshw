@@ -12,11 +12,10 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import List, Optional, Tuple, cast, Union
+from typing import List, Optional, Tuple, Union, cast
 
 import tango
 from tango.server import attribute, command, device_property
-from tango import AttrWriteType
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -164,11 +163,12 @@ class MccsController(SKABaseDevice):
 
         :param long_running_command_result: the new long running command result value
         """
-        if self._long_running_command_result == long_running_command_result:
+        if (self._long_running_command_result == long_running_command_result):
             return
         self._long_running_command_result = long_running_command_result
         self.push_change_event(
-            "longRunningCommandResult", self._long_running_command_result,
+            "longRunningCommandResult",
+            self._long_running_command_result,
         )
 
     def _communication_status_changed(

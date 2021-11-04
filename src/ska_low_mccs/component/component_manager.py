@@ -10,7 +10,7 @@ from __future__ import annotations  # allow forward references in type hints
 import enum
 import logging
 import threading
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple, Union
 from typing_extensions import Protocol
 
 from ska_tango_base.commands import ResultCode
@@ -193,7 +193,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         super().__init__(None, *args, **kwargs)
 
     def _attribute_changed_callback(
-        self: MccsComponentManager, name: str, result: Tuple[str, str, str]
+        self: MccsComponentManager,
+        name: str,
+        result: Union[Tuple[str, str, str], Tuple[()]],
     ) -> None:
         """
         Attribute changed callback method.

@@ -340,10 +340,12 @@ class TestPowerManagement:
             "longRunningCommandResult".casefold()
             in controller._change_event_subscription_ids
         )
-        time.sleep(0.1) # allow event system time to run
-        initial_lrc_result = ('', '', '')
+        time.sleep(0.1)  # allow event system time to run
+        initial_lrc_result = ("", "", "")
         assert controller.longRunningCommandResult == initial_lrc_result
-        controller_lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+        controller_lrc_result_changed_callback.assert_next_change_event(
+            initial_lrc_result
+        )
 
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()

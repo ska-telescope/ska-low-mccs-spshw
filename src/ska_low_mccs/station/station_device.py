@@ -508,7 +508,9 @@ class MccsStation(SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
+    def Configure(
+        self: MccsStation, argin: str
+    ) -> Tuple[List[ResultCode], List[Optional[str]]]:
         """
         Configure the station with all relevant parameters.
 

@@ -313,7 +313,9 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        long_running_command_result_changed_callback: Callable[[str], None],
+        long_running_command_result_changed_callback: Callable[
+            [Tuple[str, str, str]], None
+        ],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[

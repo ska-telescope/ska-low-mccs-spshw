@@ -85,28 +85,37 @@ class TestDemoSubrack:
         assert_powered([False, False, False, False])
 
         device_under_test.PowerOnTpm1()
+        time.sleep(0.1)
         assert_powered([True, False, False, False])
 
         device_under_test.PowerOnTpm2()
+        time.sleep(0.1)
         assert_powered([True, True, False, False])
 
         device_under_test.PowerOffTpm1()
+        time.sleep(0.1)
         assert_powered([False, True, False, False])
 
         device_under_test.PowerOnTpm3()
+        time.sleep(0.1)
         assert_powered([False, True, True, False])
 
         device_under_test.PowerOffTpm2()
+        time.sleep(0.1)
         assert_powered([False, False, True, False])
 
         device_under_test.PowerOnTpm4()
+        time.sleep(0.1)
         assert_powered([False, False, True, True])
 
         device_under_test.PowerOffTpm3()
+        time.sleep(0.1)
         assert_powered([False, False, False, True])
 
         device_under_test.PowerOnTpm1()
+        time.sleep(0.1)
         assert_powered([True, False, False, True])
 
         device_under_test.PowerOffTpm4()
+        time.sleep(0.1)
         assert_powered([True, False, False, False])

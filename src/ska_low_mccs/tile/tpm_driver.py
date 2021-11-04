@@ -52,11 +52,11 @@ class TpmDriver(MessageQueueComponentManager):
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "itpm_v1_6.bit"
-    FIRMWARE_LIST = {
-        "cpld": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-        "fpga1": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-        "fpga2": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-    }
+    FIRMWARE_LIST = [
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+    ]
     REGISTER_MAP: dict[int, dict[str, dict]] = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
         1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
@@ -161,7 +161,7 @@ class TpmDriver(MessageQueueComponentManager):
         self.tile.tpm = None
 
     @property
-    def firmware_available(self: TpmDriver) -> dict[str, dict[str, Any]]:
+    def firmware_available(self: TpmDriver) -> list[dict[str, Any]]:
         """
         Return the list of the firmware loaded in the system.
 

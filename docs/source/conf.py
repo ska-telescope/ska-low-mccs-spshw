@@ -51,6 +51,7 @@ autodoc_mock_imports = [
     "jsonschema",
     "numpy",
     "pyfabil",
+    "pyaavs",
     "scipy",
     "ska_tango_base",
     "tango",

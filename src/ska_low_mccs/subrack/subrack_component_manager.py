@@ -14,6 +14,7 @@ import logging
 from typing import Any, Callable, cast, Optional, Tuple
 
 from ska_tango_base.commands import ResultCode
+
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.subrack import (
@@ -30,6 +31,7 @@ from ska_low_mccs.component import (
     MessageQueue,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
+    enqueue,
 )
 
 
@@ -156,10 +158,6 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             "tpm_supply_fault",
             "is_tpm_on",
             "are_tpms_on",
-            "turn_off_tpm",
-            "turn_on_tpm",
-            "turn_on_tpms",
-            "turn_off_tpms",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
             "set_power_supply_fan_speed",
@@ -181,6 +179,44 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         ]:
             return self._get_from_component(name)
         return default_value
+
+    @enqueue
+    @check_communicating
+    def turn_on_tpm(
+        self: BaseSubrackSimulatorComponentManager, logical_tpm_id: int
+    ) -> None:
+        """
+        Turn on a specified TPM.
+
+        :param logical_tpm_id: this subrack's internal id for the
+            TPM to be turned on
+        """
+        self._get_from_component("turn_on_tpm")(logical_tpm_id)
+
+    @enqueue
+    @check_communicating
+    def turn_off_tpm(
+        self: BaseSubrackSimulatorComponentManager, logical_tpm_id: int
+    ) -> None:
+        """
+        Turn off a specified TPM.
+
+        :param logical_tpm_id: this subrack's internal id for the
+            TPM to be turned off
+        """
+        self._get_from_component("turn_off_tpm")(logical_tpm_id)
+
+    @enqueue
+    @check_communicating
+    def turn_on_tpms(self: BaseSubrackSimulatorComponentManager) -> None:
+        """Turn on all TPMs."""
+        self._get_from_component("turn_on_tpms")()
+
+    @enqueue
+    @check_communicating
+    def turn_off_tpms(self: BaseSubrackSimulatorComponentManager) -> None:
+        """Turn off all TPMs."""
+        self._get_from_component("turn_off_tpms")()
 
     @check_communicating
     def _get_from_component(

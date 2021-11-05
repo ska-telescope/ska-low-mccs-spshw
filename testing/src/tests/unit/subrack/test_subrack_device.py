@@ -182,7 +182,7 @@ class TestMccsSubrack:
 
         [[result_code], [message]] = device_under_test.PowerOnTpm(1)
         assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 1 power-on is redundant"
+        assert message == "Subrack TPM 1 power-on successful"  # is redundant"
 
     def test_PowerOffTpm(
         self: TestMccsSubrack,
@@ -201,7 +201,7 @@ class TestMccsSubrack:
 
         [[result_code], [message]] = device_under_test.PowerOffTpm(1)
         assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 1 power-off is redundant"
+        assert message == "Subrack TPM 1 power-off successful"
         time.sleep(0.1)
 
         _ = device_under_test.PowerOnTpm(1)

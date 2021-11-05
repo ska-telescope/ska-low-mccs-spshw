@@ -1312,7 +1312,16 @@ class MccsTile(SKABaseDevice):
             component_manager = self.target
             item = component_manager.get_40g_configuration(core_id, arp_table_entry)
             if item is not None:
-                return json.dumps(item)
+                item_new = {
+                    "CoreID": item.get("core_id", None),
+                    "ArpTableEntry": item.get("arp_table_entry", None),
+                    "SrcMac": item.get("src_mac", None),
+                    "SrcIP": item.get("src_ip", None),
+                    "SrcPort": item.get("src_port", None),
+                    "DstIp": item.get("dst_ip", None),
+                    "DstPort": item.get("dst_port", None),
+                }
+                return json.dumps(item_new)
             raise ValueError("Invalid core id or arp table id specified")
 
     @command(dtype_in="DevString", dtype_out="DevString")

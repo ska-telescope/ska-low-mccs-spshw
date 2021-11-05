@@ -858,13 +858,13 @@ class TestStaticSimulatorCommon:
         )
 
         expected = {
-            "CoreID": 2,
-            "ArpTableEntry": 1,
-            "SrcMac": "mock_src_mac",
-            "SrcIP": "mock_src_ip",
-            "SrcPort": 8888,
-            "DstIP": "mock_dst_ip",
-            "DstPort": 3333,
+            "core_id": 2,
+            "arp_table_entry": 1,
+            "src_mac": "mock_src_mac",
+            "src_ip": "mock_src_ip",
+            "src_port": 8888,
+            "dst_ip": "mock_dst_ip",
+            "dst_port": 3333,
         }
 
         assert tile.get_40g_configuration(-1, 0) == [expected]

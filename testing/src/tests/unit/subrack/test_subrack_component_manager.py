@@ -20,6 +20,8 @@ from _pytest.fixtures import SubRequest
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.component import ExtendedPowerMode
+from ska_tango_base.commands import ResultCode
+
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
     SubrackData,
@@ -592,12 +594,12 @@ class TestSubrackComponentManager:
         assert subrack_component_manager.turn_on_tpm(tpm_id) is None
         component_tpm_power_changed_callback.assert_not_called()
 
-        assert subrack_component_manager.turn_off_tpm(tpm_id) is True
+        assert subrack_component_manager.turn_off_tpm(tpm_id) is ResultCode.QUEUED
         expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerMode.OFF
         component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
         assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
 
-        assert subrack_component_manager.turn_off_tpm(tpm_id) is None
+        assert subrack_component_manager.turn_off_tpm(tpm_id) is ResultCode.QUEUED
         component_tpm_power_changed_callback.assert_not_called()
 
         assert subrack_component_manager.off()

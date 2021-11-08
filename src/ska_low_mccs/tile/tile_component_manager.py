@@ -721,31 +721,10 @@ class TileComponentManager(MccsComponentManager):
     def start_communicating(self: TileComponentManager) -> None:
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_online()
-        # if self.communication_status == CommunicationStatus.ESTABLISHED:
-        #     return
-        # if self.communication_status == CommunicationStatus.DISABLED:
-        #     self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-
-        # if (
-        #     self._subrack_component_manager.communication_status
-        #     == CommunicationStatus.ESTABLISHED
-        # ):
-        #     self._tpm_component_manager.start_communicating()
-        # else:
-        #     self._subrack_component_manager.start_communicating()
 
     def stop_communicating(self: TileComponentManager) -> None:
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_offline()
-        # if self.communication_status == CommunicationStatus.DISABLED:
-        #     return
-
-        # self.update_communication_status(CommunicationStatus.DISABLED)
-        # self.update_component_power_mode(None)
-        # self.update_component_fault(None)
-
-        # self._tpm_component_manager.stop_communicating()
-        # self._subrack_component_manager.stop_communicating()
 
     def _subrack_communication_status_changed(
         self: TileComponentManager,
@@ -760,8 +739,6 @@ class TileComponentManager(MccsComponentManager):
         self._tile_orchestrator.update_subrack_communication_status(
             communication_status
         )
-        # self._subrack_communication_status = communication_status
-        # self._evaluate_communication_status()
 
     def _tpm_communication_status_changed(
         self: TileComponentManager,
@@ -774,19 +751,6 @@ class TileComponentManager(MccsComponentManager):
             the tpm.
         """
         self._tile_orchestrator.update_tpm_communication_status(communication_status)
-        # self._tpm_communication_status = communication_status
-        # self._evaluate_communication_status()
-
-    # def _evaluate_communication_status(
-    #     self: TileComponentManager,
-    # ) -> None:
-    #     if self._subrack_communication_status == CommunicationStatus.ESTABLISHED:
-    #         if self._tpm_communication_status == CommunicationStatus.DISABLED:
-    #             self.update_communication_status(CommunicationStatus.ESTABLISHED)
-    #         else:
-    #             self.update_communication_status(self._tpm_communication_status)
-    #     else:
-    #         self.update_communication_status(self._subrack_communication_status)
 
     def component_progress_changed(self: TileComponentManager, progress: int) -> None:
         """
@@ -809,12 +773,6 @@ class TileComponentManager(MccsComponentManager):
         :param power_mode: the power mode of the tpm
         """
         self._tile_orchestrator.update_tpm_power_mode(power_mode)
-        # if power_mode == PowerMode.OFF:
-        #     self._tpm_component_manager.stop_communicating()
-        # elif power_mode == PowerMode.ON:
-        #     self._tpm_component_manager.start_communicating()
-        # self.update_component_power_mode(power_mode)
-        # self._review_power()
 
     @check_communicating
     def off(self: TileComponentManager) -> ResultCode | None:
@@ -825,8 +783,6 @@ class TileComponentManager(MccsComponentManager):
         """
         self._tile_orchestrator.desire_off()
         return ResultCode.QUEUED
-        # self._target_power_mode = PowerMode.OFF
-        # return self._review_power()
 
     @check_communicating
     def on(self: TileComponentManager) -> ResultCode | None:
@@ -837,52 +793,12 @@ class TileComponentManager(MccsComponentManager):
         """
         self._tile_orchestrator.desire_on()
         return ResultCode.QUEUED
-        # self._target_power_mode = PowerMode.ON
-        # return self._review_power()
 
     def _subrack_power_mode_changed(
         self: TileComponentManager,
         subrack_power_mode: PowerMode,
     ) -> None:
         self._tile_orchestrator.update_subrack_power_mode(subrack_power_mode)
-        # self._subrack_power_mode = subrack_power_mode
-
-        # if subrack_power_mode == PowerMode.UNKNOWN:
-        #     self.component_power_mode_changed(PowerMode.UNKNOWN)
-        # elif subrack_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
-        #     self.component_power_mode_changed(PowerMode.OFF)
-        # else:
-        #     # power_mode is ON, wait for TPM power change
-        #     pass
-        # self._review_power()
-
-    # def _review_power(self: TileComponentManager) -> ResultCode | None:
-    #     if self._target_power_mode is None:
-    #         return None
-    #     if self._subrack_power_mode != PowerMode.ON:
-    #         return ResultCode.QUEUED
-
-    #     with self.__power_mode_lock:
-    #         if self._target_power_mode is None:
-    #             return None
-    #         if self.power_mode == self._target_power_mode:
-    #             self._target_power_mode = None  # attained without any action needed
-    #             return None
-    #         if (
-    #             self.power_mode == PowerMode.OFF
-    #             and self._target_power_mode == PowerMode.ON
-    #         ):
-    #             result_code = self._subrack_component_manager.power_on()
-    #             self._target_power_mode = None
-    #             return result_code
-    #         if (
-    #             self.power_mode == PowerMode.ON
-    #             and self._target_power_mode == PowerMode.OFF
-    #         ):
-    #             result_code = self._subrack_component_manager.power_off()
-    #             self._target_power_mode = None
-    #             return result_code
-    #         return ResultCode.QUEUED
 
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,

@@ -362,3 +362,6 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.ON
+
+        # TODO: Remove forced failure for debug output
+        assert False

@@ -23,5 +23,14 @@ scipy
 # git+https://gitlab.com/ska-telescope/ska-tango-base@main#egg=ska-tango-base
 #
 # OK, the latest MR - branch sar-286_lrc_one_subarry_command
-git+https://gitlab.com/ska-telescope/ska-tango-base@7159f3d3#egg=ska-tango-base
+# git+https://gitlab.com/ska-telescope/ska-tango-base@7159f3d3#egg=ska-tango-base
+# FAILED TO FIND THIS VERSION! Command errored out with exit status 1:
+# git checkout -q 7159f3d3 Check the logs for full command output.
+#
+# Now try latest on branch sar-286_lrc_one_subarry_command
+# git+https://gitlab.com/ska-telescope/ska-tango-base@main#egg=ska-tango-base
+#
+# Latest code from Karoo - containing EnqueueSuspend
+git+https://gitlab.com/ska-telescope/ska-tango-base@sar_302-POC_await_sub_device_state#egg=ska-tango-base
+
 transitions

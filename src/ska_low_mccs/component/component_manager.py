@@ -198,11 +198,12 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         result: Union[Tuple[str, str, str], Tuple[()]],
     ) -> None:
         """
-        Attribute changed callback method.
+        Abstract attribute changed callback method.
 
         :param name: name of the attribute that has changed
         :param result: the value of the attribute
         """
+        print(f"RCL: IGNORE - NOT IMPLEMENTED {name}:{result}")
         ...
 
     def create_queue_manager(self: MccsComponentManager) -> QueueManager:
@@ -215,8 +216,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         :return: The queue manager.
         """
         return QueueManager(
-            max_queue_size=5,
-            num_workers=5,
+            max_queue_size=1,
+            num_workers=1,
             logger=self.logger,
             push_change_event=self._attribute_changed_callback,
         )

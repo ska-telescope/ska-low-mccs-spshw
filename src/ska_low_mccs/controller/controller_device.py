@@ -212,6 +212,7 @@ class MccsController(SKABaseDevice):
 
         :param power_mode: the power mode of the component.
         """
+        print(f"RCL: _component_power_mode_changed {power_mode}")
         action_map = {
             PowerMode.OFF: "component_off",
             PowerMode.STANDBY: "component_standby",

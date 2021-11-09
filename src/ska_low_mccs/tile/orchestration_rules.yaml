@@ -1,5 +1,20 @@
 # This file provides rules for how the tile orchestrator should act in response to
 # given stimuli in given states.
+#
+# Each line is a single key-value pair. The key describes a state and a
+# stimulus; the value names an action to take when the given stimulus
+# occurs when in the given state.
+#
+# The structure of a key is
+#     [
+#         ONLINE,  # State: the operator desires this device to be online
+#         ESTABLISHED,  # State: communication with the subrack is established
+#         "ON",  # State: the subrack is powered on
+#         False,  # State: the subrack is NOT supplying power to the TPM
+#         DISABLED,  # State: Communication with the TPM is disabled
+#         DESIRE_ON,  # Stimulus: the operator has invoked the On() command
+#     ]
+#
 !!python/tuple [OFFLINE, DISABLED, ~, ~, DISABLED, DESIRE_ONLINE]: start_communicating_with_subrack
 !!python/tuple [OFFLINE, ESTABLISHED, ~, ~, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
 !!python/tuple [OFFLINE, ESTABLISHED, "OFF", ~, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled

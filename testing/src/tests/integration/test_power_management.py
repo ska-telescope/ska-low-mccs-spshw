@@ -351,6 +351,9 @@ class TestPowerManagement:
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id
+        #([result_code_failed], [_]) = controller.On()
+        # We would expect this command to fail
+
 
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
@@ -363,4 +366,4 @@ class TestPowerManagement:
             assert device.state() == tango.DevState.ON
 
         # TODO: Remove forced failure for debug output
-        # assert False
+        assert False

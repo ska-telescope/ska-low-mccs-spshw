@@ -38,8 +38,8 @@ class MockSubarrayBuilder(MockDeviceBuilder):
         super().__init__(from_factory=from_factory)
 
         for (command_name, succeeded_message) in [
-            ("On", "On command completed OK"),
-            ("Off", "Off command completed OK"),
+            ("On", "Subarray On command completed OK"),
+            ("Off", "Subarray Off command completed OK"),
             ("AssignResources", "AssignResources command completed OK"),
             ("ReleaseResources", "ReleaseResources command completed OK"),
             ("ReleaseAllResources", "ReleaseAllResources command completed OK"),

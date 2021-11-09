@@ -14,6 +14,8 @@ import functools
 import json
 import logging
 import threading
+import queue
+from tango import DevState
 from typing import Callable, Hashable, Optional, Iterable, Tuple
 
 from ska_tango_base.commands import BaseCommand, ResultCode
@@ -351,6 +353,7 @@ class ControllerComponentManager(MccsComponentManager):
         :param station_beam_health_changed_callback: callback to be
             called when the health of one of this controller's station beams changes
         """
+        self.on_complete_queue = queue.Queue()
         self._long_running_command_result_changed_callback = (
             long_running_command_result_changed_callback
         )
@@ -458,6 +461,22 @@ class ControllerComponentManager(MccsComponentManager):
             None,
         )
 
+    def component_power_mode_changed(
+        self: ControllerComponentManager, power_mode: PowerMode
+    ) -> None:
+        """
+        Handle notification that the component's power mode has changed.
+
+        This is a callback hook, to be passed to the managed component.
+
+        :param power_mode: the new power mode of the component
+        """
+        self.update_component_power_mode(power_mode)
+        if power_mode == PowerMode.ON:
+        # if self.target.state() == DevState.ON:
+            print(f"RCL345: put an entry onto the queue")
+            self.on_complete_queue.put(ResultCode.OK)
+
     def _attribute_changed_callback(
         self: ControllerComponentManager, name: str, result: Tuple[str, str, str]
     ) -> None:
@@ -467,6 +486,7 @@ class ControllerComponentManager(MccsComponentManager):
         :param name: name of the attribute that has changed
         :param result: the value of the attribute
         """
+        print(f"RCL: CONTROLLER IMPLEMENTED {name}:{result}")
         if name == "longRunningCommandResult":
             if self._long_running_command_result_changed_callback:
                 self._long_running_command_result_changed_callback(result)
@@ -694,29 +714,42 @@ class ControllerComponentManager(MccsComponentManager):
         :return: a result code
         """
         class OnInternal(BaseCommand):
-            def do(self):
-                print(f"RCL123: does this get called?")
+            def do(self, argin=None):
+                print("RCL345: OnInternal::on()")
                 target = self.target
                 results = [station_proxy.on() for station_proxy in target._stations.values()] + [
                     subrack_proxy.on() for subrack_proxy in target._subracks.values()
                 ]
                 if ResultCode.FAILED in results:
-                    print(f"RCL: FAILED!!!!! {results}")
                     return ResultCode.FAILED    # TODO: How do we signal this has failed???
                 else:
                     return ResultCode.QUEUED
 
-        with EnqueueSuspend(self._queue_manager, OnInternal(target=self)) as unique_id:
-            print(f"RCL: Do we ever get here???")
-            # Ensure the command exists
-            assert unique_id
-            # We can just let this end as we wait for the state to change in the test...
+        result_code = ResultCode.OK
+        try:
+            with EnqueueSuspend(self._queue_manager, OnInternal(target=self)) as unique_id:
+                print(f"RCL345: unique_id = {unique_id}")
+                # Ensure the command exists
+                assert unique_id
+                # We can just let this end as we wait for the state to change in the test...
+
+                # Wait as long as we need to for the on command to complete (or timeout)
+                try:
+                    result_code = self.on_complete_queue.get(timeout=3.0)
+                except queue.Empty:
+                    result_code = ResultCode.FAILED
+        except:
+            print("RCL345: Handled exception")
+
+        print(f"RCL345: signal result code = {result_code}")
+        return result_code
 
     @check_communicating
     @check_on
     def allocate(
         self: ControllerComponentManager,
         subarray_id: int,
+
         station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],

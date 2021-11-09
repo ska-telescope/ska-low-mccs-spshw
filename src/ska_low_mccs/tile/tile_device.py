@@ -229,7 +229,7 @@ class MccsTile(SKABaseDevice):
             """
             # TODO: return OK for now to be consistent with base classes
             _ = self.target.on()
-            message = "On command completed OK"
+            message = "Tile On command completed OK"
             return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsTile) -> bool:

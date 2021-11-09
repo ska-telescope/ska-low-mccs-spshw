@@ -699,6 +699,7 @@ class TileComponentManager(MccsComponentManager):
         )
 
         self._tile_orchestrator = TileOrchestrator(
+            "src/ska_low_mccs/tile/orchestration_rules.yaml",
             self._subrack_component_manager.start_communicating,
             self._subrack_component_manager.stop_communicating,
             self._start_communicating_with_tpm,

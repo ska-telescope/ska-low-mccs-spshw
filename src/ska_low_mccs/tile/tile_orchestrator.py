@@ -5,6 +5,7 @@ from enum import IntEnum
 import logging
 import threading
 from typing import Any, Callable, Optional, Tuple
+import yaml
 
 from ska_tango_base.control_model import PowerMode
 
@@ -33,8 +34,14 @@ class OperatorDesire(IntEnum):
     """The operator wants this device to turn its component on (implies online)."""
 
 
-class _Stimulus(IntEnum):
-    """An enumerated type for a stimulus upon which this orchestrator acts."""
+class Stimulus(IntEnum):
+    """
+    An enumerated type for a stimulus upon which this orchestrator acts.
+
+    TODO: This is only public because it is exposed for testing purposes
+    through the API, so sphinx needs it to be public when building the
+    docs. We should refactor so that we can hide this.
+    """
 
     DESIRE_OFFLINE = 1
     """The tile device has been asked to start communicating with the TPM."""
@@ -113,6 +120,7 @@ class TileOrchestrator:
 
     def __init__(
         self: TileOrchestrator,
+        rules_path: str,
         start_communicating_with_subrack_callback: Callable[[], None],
         stop_communicating_with_subrack_callback: Callable[[], None],
         start_communicating_with_tpm_callback: Callable[[], None],
@@ -136,6 +144,8 @@ class TileOrchestrator:
         """
         Initialise a new instance.
 
+        :param rules_path: path to a YAML file specifying rules for this
+            orchestrator
         :param start_communicating_with_subrack_callback: callback to be
             called in order to initiate communication with the subrack.
         :param stop_communicating_with_subrack_callback: callback to be
@@ -159,6 +169,9 @@ class TileOrchestrator:
         :param _initial_state: set the initial state of this tile
             orchestrator. This is provided for unit testing purposes
             and should not be used outside of unit tests.
+
+        :raises yaml.YAMLError: if the configuration couldn't be loaded
+            from file.
         """
         self.__lock = threading.RLock()
 
@@ -200,71 +213,46 @@ class TileOrchestrator:
             CommunicationStatus.DISABLED,
         )
 
-        # fmt: off
+        with open(rules_path, "r") as stream:
+            try:
+                rules = yaml.load(stream, Loader=yaml.Loader)
+            except yaml.YAMLError as exception:
+                self._logger.error(
+                    f"Tile orchestrator could not load configuration: {exception}."
+                )
+                raise
+
         self._decision_table = {
-            (OperatorDesire.OFFLINE, CommunicationStatus.DISABLED, None, None, CommunicationStatus.DISABLED, _Stimulus.DESIRE_ONLINE): self._start_communicating_with_subrack,  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_COMMS_DISABLED): self._set_subrack_communication_disabled,  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_COMMS_DISABLED): self._set_subrack_communication_disabled,  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_COMMS_DISABLED): self._set_subrack_communication_disabled,  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_COMMS_DISABLED): self._set_subrack_communication_disabled,  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_COMMS_DISABLED): self._set_subrack_communication_disabled,  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, _Stimulus.TPM_COMMS_DISABLED): self._set_tpm_communication_disabled,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.NOT_ESTABLISHED, None, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED): self._do_nothing,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.NOT_ESTABLISHED, None, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_COMMS_ESTABLISHED): self._set_subrack_communication_established,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, _Stimulus.DESIRE_OFFLINE): self._stop_communicating,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_OFF): self._report_subrack_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_ON): self._report_subrack_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_UNKNOWN): self._report_subrack_unknown,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, _Stimulus.DESIRE_ON): self._set_desired_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, _Stimulus.DESIRE_OFFLINE): self._stop_communicating,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_OFF): self._report_subrack_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_ON): self._report_subrack_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_UNKNOWN): self._report_subrack_unknown,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, _Stimulus.DESIRE_OFFLINE): self._stop_communicating,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_OFF): self._report_subrack_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_SAYS_TPM_OFF): self._report_tpm_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_SAYS_TPM_ON): self._report_tpm_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, _Stimulus.DESIRE_ON): self._set_desired_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, _Stimulus.DESIRE_OFFLINE): self._stop_communicating,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, _Stimulus.DESIRE_OFF): self._do_nothing,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, _Stimulus.DESIRE_ON): self._turn_tpm_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_OFF): self._report_subrack_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_SAYS_TPM_ON): self._report_tpm_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.ESTABLISHED, _Stimulus.TPM_COMMS_DISABLED): self._set_tpm_communication_disabled,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.DISABLED, _Stimulus.TPM_COMMS_NOT_ESTABLISHED): self._set_tpm_communication_not_established,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.NOT_ESTABLISHED, _Stimulus.TPM_COMMS_ESTABLISHED): self._set_tpm_communication_established,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, _Stimulus.DESIRE_OFF): self._turn_tpm_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, _Stimulus.DESIRE_OFFLINE): self._stop_communicating,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, _Stimulus.SUBRACK_OFF): self._report_subrack_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, _Stimulus.SUBRACK_SAYS_TPM_OFF): self._report_tpm_off,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, _Stimulus.DESIRE_ON): self._set_desired_on,  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_OFF): self._report_subrack_off,  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_ON): self._report_subrack_on_and_turn_tpm_on,  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_SAYS_TPM_OFF): self._report_tpm_off_and_turn_tpm_on,  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_OFF): self._report_subrack_off,  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, _Stimulus.SUBRACK_ON): self._report_subrack_on_and_turn_tpm_on,  # noqa: E501
+            (
+                OperatorDesire[state[0]],
+                CommunicationStatus[state[1]],
+                None if state[2] is None else PowerMode[state[2]],
+                state[3],
+                CommunicationStatus[state[4]],
+                Stimulus[state[5]],
+            ): getattr(self, f"_{action}")
+            for state, action in rules.items()
         }
-        # fmt: on
 
     def desire_online(self: TileOrchestrator) -> None:
         """Advise that the operator desires the component manager to be online."""
         with self.__lock:
-            self._act(_Stimulus.DESIRE_ONLINE)
+            self._act(Stimulus.DESIRE_ONLINE)
 
     def desire_offline(self: TileOrchestrator) -> None:
         """Advise that the operator desires the component manager to be offline."""
         with self.__lock:
-            self._act(_Stimulus.DESIRE_OFFLINE)
+            self._act(Stimulus.DESIRE_OFFLINE)
 
     def desire_on(self: TileOrchestrator) -> None:
         """Advise that the operator desires the TPM to be on."""
         with self.__lock:
-            self._act(_Stimulus.DESIRE_ON)
+            self._act(Stimulus.DESIRE_ON)
 
     def desire_off(self: TileOrchestrator) -> None:
         """Advise that the operator desires the TPM to be off."""
         with self.__lock:
-            self._act(_Stimulus.DESIRE_OFF)
+            self._act(Stimulus.DESIRE_OFF)
 
     def update_subrack_communication_status(
         self: TileOrchestrator,
@@ -282,11 +270,11 @@ class TileOrchestrator:
         """
         with self.__lock:
             if communication_status == CommunicationStatus.DISABLED:
-                self._act(_Stimulus.SUBRACK_COMMS_DISABLED)
+                self._act(Stimulus.SUBRACK_COMMS_DISABLED)
             elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
-                self._act(_Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED)
+                self._act(Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED)
             elif communication_status == CommunicationStatus.ESTABLISHED:
-                self._act(_Stimulus.SUBRACK_COMMS_ESTABLISHED)
+                self._act(Stimulus.SUBRACK_COMMS_ESTABLISHED)
             else:
                 raise NotImplementedError()
 
@@ -305,13 +293,13 @@ class TileOrchestrator:
         """
         with self.__lock:
             if power_mode == PowerMode.UNKNOWN:
-                self._act(_Stimulus.SUBRACK_UNKNOWN)
+                self._act(Stimulus.SUBRACK_UNKNOWN)
             elif power_mode == PowerMode.OFF:
-                self._act(_Stimulus.SUBRACK_OFF)
+                self._act(Stimulus.SUBRACK_OFF)
             elif power_mode == PowerMode.STANDBY:
-                self._act(_Stimulus.SUBRACK_STANDBY)
+                self._act(Stimulus.SUBRACK_STANDBY)
             elif power_mode == PowerMode.ON:
-                self._act(_Stimulus.SUBRACK_ON)
+                self._act(Stimulus.SUBRACK_ON)
             else:
                 raise NotImplementedError()
 
@@ -330,11 +318,11 @@ class TileOrchestrator:
         """
         with self.__lock:
             if communication_status == CommunicationStatus.DISABLED:
-                self._act(_Stimulus.TPM_COMMS_DISABLED)
+                self._act(Stimulus.TPM_COMMS_DISABLED)
             elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
-                self._act(_Stimulus.TPM_COMMS_NOT_ESTABLISHED)
+                self._act(Stimulus.TPM_COMMS_NOT_ESTABLISHED)
             elif communication_status == CommunicationStatus.ESTABLISHED:
-                self._act(_Stimulus.TPM_COMMS_ESTABLISHED)
+                self._act(Stimulus.TPM_COMMS_ESTABLISHED)
             else:
                 raise NotImplementedError()
 
@@ -352,13 +340,13 @@ class TileOrchestrator:
         """
         with self.__lock:
             if power_mode == PowerMode.OFF:
-                self._act(_Stimulus.SUBRACK_SAYS_TPM_OFF)
+                self._act(Stimulus.SUBRACK_SAYS_TPM_OFF)
             elif power_mode == PowerMode.ON:
-                self._act(_Stimulus.SUBRACK_SAYS_TPM_ON)
+                self._act(Stimulus.SUBRACK_SAYS_TPM_ON)
             else:
                 raise NotImplementedError()
 
-    def _act(self: TileOrchestrator, stimulus: _Stimulus) -> None:
+    def _act(self: TileOrchestrator, stimulus: Stimulus) -> None:
         key = (
             self._operator_desire,
             self._subrack_communication_status,

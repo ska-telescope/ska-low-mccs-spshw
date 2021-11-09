@@ -18,19 +18,38 @@ import unittest.mock
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
+import yaml
 
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.tile.tile_orchestrator import OperatorDesire, TileOrchestrator
+from ska_low_mccs.tile.tile_orchestrator import (
+    OperatorDesire,
+    TileOrchestrator,
+    Stimulus,
+)
 
 
 class TestTileOrchestrator:
     """Class for testing the tile orchestrator."""
 
     @pytest.fixture(scope="session")
-    def actions(
-        self,
+    def rules_path(self: TestTileOrchestrator) -> str:
+        """
+        Return the path to a YAML file that specifies rules for the orchestrator.
+
+        :return: the path to a YAML file that specifies rules for the
+            orchestrator.
+        """
+        # TODO: At the moment this YAML file is used by the code as well as the tests.
+        # Eventually the code may be reimplemented so that it doesn't depend on this
+        # file. At that time we should move it into test data space.
+        return "src/ska_low_mccs/tile/orchestration_rules.yaml"
+
+    @pytest.fixture(scope="session")
+    def rules(
+        self: TestTileOrchestrator,
+        rules_path: str,
     ) -> Mapping[
         Tuple[
             OperatorDesire,
@@ -38,12 +57,12 @@ class TestTileOrchestrator:
             Optional[PowerMode],
             Optional[bool],
             CommunicationStatus,
-            str,
+            Stimulus,
         ],
         str,
     ]:
         """
-        Return a static dictionary of orchestrator actions.
+        Return a static dictionary of orchestrator rules.
 
         The dictionary keys are tuples that describe the current state
         of the orchestrator, together with the stimulus that has just
@@ -55,56 +74,30 @@ class TestTileOrchestrator:
         taken. Thus, the values of this dictionary are keys of the
         ``checks`` dictionary.
 
+        :param rules_path: path to a YAML file specifying rules for the
+            orchestrator
+
         :return: a static dictionary of orchestrator actions
         """
-        # fmt: off
+        with open(rules_path, "r") as stream:
+            rules = yaml.load(stream, Loader=yaml.Loader)
+
         return {
-            (OperatorDesire.OFFLINE, CommunicationStatus.DISABLED, None, None, CommunicationStatus.DISABLED, "desire_online"): "start_communicating_with_subrack",  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, "subrack_communication_disabled"): "set_subrack_communication_disabled",  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, "subrack_communication_disabled"): "set_subrack_communication_disabled",  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, "subrack_communication_disabled"): "set_subrack_communication_disabled",  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, "subrack_communication_disabled"): "set_subrack_communication_disabled",  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.DISABLED, "subrack_communication_disabled"): "set_subrack_communication_disabled",  # noqa: E501
-            (OperatorDesire.OFFLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, "tpm_communication_disabled"): "set_tpm_communication_disabled",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.NOT_ESTABLISHED, None, None, CommunicationStatus.DISABLED, "subrack_communication_not_established"): "do_nothing",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.NOT_ESTABLISHED, None, None, CommunicationStatus.DISABLED, "subrack_communication_established"): "set_subrack_communication_established",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, "desire_offline"): "stop_communicating",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, "subrack_power_is_off"): "report_subrack_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, "subrack_power_is_on"): "report_subrack_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, None, None, CommunicationStatus.DISABLED, "subrack_power_is_unknown"): "report_subrack_unknown",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, "subrack_power_is_off"): "report_subrack_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, "desire_on"): "set_desired_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, "desire_on"): "set_desired_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, "desire_offline"): "stop_communicating",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, "subrack_power_is_off"): "report_subrack_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, "subrack_power_is_on"): "report_subrack_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, "subrack_power_is_unknown"): "report_subrack_unknown",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, "desire_offline"): "stop_communicating",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, "subrack_power_is_off"): "report_subrack_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, "tpm_power_is_off"): "report_tpm_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, "tpm_power_is_on"): "report_tpm_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, "desire_on"): "set_desired_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, "desire_offline"): "stop_communicating",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, "desire_off"): "do_nothing",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, "desire_on"): "turn_tpm_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, "subrack_power_is_off"): "report_subrack_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.DISABLED, "tpm_power_is_on"): "report_tpm_on",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, False, CommunicationStatus.ESTABLISHED, "tpm_communication_disabled"): "set_tpm_communication_disabled",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.DISABLED, "tpm_communication_not_established"): "set_tpm_communication_not_established",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.NOT_ESTABLISHED, "tpm_communication_established"): "set_tpm_communication_established",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, "desire_off"): "turn_tpm_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, "desire_offline"): "stop_communicating",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, "subrack_power_is_off"): "report_subrack_off",  # noqa: E501
-            (OperatorDesire.ONLINE, CommunicationStatus.ESTABLISHED, PowerMode.ON, True, CommunicationStatus.ESTABLISHED, "tpm_power_is_off"): "report_tpm_off",  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.OFF, None, CommunicationStatus.DISABLED, "subrack_power_is_on"): "report_subrack_on_and_turn_tpm_on",  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.ON, None, CommunicationStatus.DISABLED, "tpm_power_is_off"): "report_tpm_off_and_turn_tpm_on",  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, "subrack_power_is_off"): "report_subrack_off",  # noqa: E501
-            (OperatorDesire.ON, CommunicationStatus.ESTABLISHED, PowerMode.UNKNOWN, None, CommunicationStatus.DISABLED, "subrack_power_is_on"): "report_subrack_on_and_turn_tpm_on",  # noqa: E501
+            (
+                OperatorDesire[state[0]],
+                CommunicationStatus[state[1]],
+                None if state[2] is None else PowerMode[state[2]],
+                state[3],
+                CommunicationStatus[state[4]],
+                Stimulus[state[5]],
+            ): action
+            for state, action in rules.items()
         }
-        # fmt: on
 
     @pytest.fixture(scope="session")
-    def checks(self) -> Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]]]]:
+    def checks(
+        self: TestTileOrchestrator,
+    ) -> Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]]]]:
         """
         Return a static dictionary of orchestrator action checks.
 
@@ -236,7 +229,7 @@ class TestTileOrchestrator:
         """
         return defaultdict(mocker.Mock)
 
-    @pytest.fixture(params=list(OperatorDesire))
+    @pytest.fixture(scope="session", params=list(OperatorDesire))
     def operator_desire(
         self: TestTileOrchestrator, request: SubRequest
     ) -> OperatorDesire:
@@ -259,7 +252,7 @@ class TestTileOrchestrator:
         """
         return request.param
 
-    @pytest.fixture(params=list(CommunicationStatus))
+    @pytest.fixture(scope="session", params=list(CommunicationStatus))
     def subrack_communication_status(
         self: TestTileOrchestrator, request: SubRequest
     ) -> CommunicationStatus:
@@ -277,7 +270,7 @@ class TestTileOrchestrator:
         """
         return request.param
 
-    @pytest.fixture(params=[None] + list(PowerMode))
+    @pytest.fixture(scope="session", params=[None] + list(PowerMode))
     def subrack_power_mode(
         self: TestTileOrchestrator, request: SubRequest
     ) -> Optional[PowerMode]:
@@ -302,7 +295,7 @@ class TestTileOrchestrator:
         """
         return request.param
 
-    @pytest.fixture(params=[None, False, True])
+    @pytest.fixture(scope="session", params=[None, False, True])
     def is_tpm_on(self: TestTileOrchestrator, request: SubRequest) -> Optional[bool]:
         """
         Return whether the TPM is powered on, of None if unknown.
@@ -318,7 +311,7 @@ class TestTileOrchestrator:
         """
         return request.param
 
-    @pytest.fixture(params=list(CommunicationStatus))
+    @pytest.fixture(scope="session", params=list(CommunicationStatus))
     def tpm_communication_status(
         self: TestTileOrchestrator, request: SubRequest
     ) -> CommunicationStatus:
@@ -336,7 +329,7 @@ class TestTileOrchestrator:
         """
         return request.param
 
-    @pytest.fixture()
+    @pytest.fixture(scope="session")
     def state(
         self: TestTileOrchestrator,
         operator_desire: OperatorDesire,
@@ -397,6 +390,7 @@ class TestTileOrchestrator:
     @pytest.fixture()
     def tile_orchestrator(
         self: TestTileOrchestrator,
+        rules_path: str,
         callbacks: Mapping[str, unittest.mock.Mock],
         logger: logging.Logger,
         state: Tuple[
@@ -410,6 +404,8 @@ class TestTileOrchestrator:
         """
         Return the tile orchestrator under test.
 
+        :param rules_path: path to a YAML file specifying rules for the
+            orchestrator
         :param callbacks: a dictionary of mocks to be used as callbacks.
         :param logger: a logger for the orchestrator.
         :param state: the initial state of the orchestrator.
@@ -417,6 +413,7 @@ class TestTileOrchestrator:
         :return: the tile orchestrator under test.
         """
         return TileOrchestrator(
+            rules_path,
             callbacks["start_communicating_with_subrack"],
             callbacks["stop_communicating_with_subrack"],
             callbacks["start_communicating_with_tpm"],
@@ -430,27 +427,8 @@ class TestTileOrchestrator:
             _initial_state=state,
         )
 
-    @pytest.fixture(
-        params=[
-            "desire_online",
-            "desire_offline",
-            "desire_on",
-            "desire_off",
-            "subrack_communication_disabled",
-            "subrack_communication_not_established",
-            "subrack_communication_established",
-            "subrack_power_is_unknown",
-            "subrack_power_is_off",
-            "subrack_power_is_standby",
-            "subrack_power_is_on",
-            "tpm_communication_disabled",
-            "tpm_communication_not_established",
-            "tpm_communication_established",
-            "tpm_power_is_off",
-            "tpm_power_is_on",
-        ]
-    )
-    def stimulus(self: TestTileOrchestrator, request: SubRequest) -> str:
+    @pytest.fixture(scope="session", params=list(Stimulus))
+    def stimulus(self: TestTileOrchestrator, request: SubRequest) -> Stimulus:
         """
         Return the name of a orchestrator stimulus.
 
@@ -468,17 +446,17 @@ class TestTileOrchestrator:
         """
         return request.param
 
-    @pytest.fixture()
+    @pytest.fixture(scope="session")
     def check(
         self: TestTileOrchestrator,
-        actions: Mapping[
+        rules: Mapping[
             Tuple[
                 OperatorDesire,
                 CommunicationStatus,
                 Optional[PowerMode],
                 Optional[bool],
                 CommunicationStatus,
-                str,
+                Stimulus,
             ],
             str,
         ],
@@ -490,7 +468,7 @@ class TestTileOrchestrator:
             Optional[bool],
             CommunicationStatus,
         ],
-        stimulus: str,
+        stimulus: Stimulus,
     ) -> Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]]]]:
         """
         Return checks to be performed as part of this test.
@@ -509,7 +487,7 @@ class TestTileOrchestrator:
         :raises KeyError: if this test doesn't know how to check that the
             orchestrator has taken the correct action.
 
-        :param actions: a static dictionary of orchestrator actions.
+        :param rules: a static dictionary of orchestrator rules.
         :param checks: a static dictionary of choreography action
             checks.
         :param state: the initial state of the tile orchestrator
@@ -517,7 +495,7 @@ class TestTileOrchestrator:
 
         :return: the checks to be performed.
         """
-        action = actions.get(state + (stimulus,), None)
+        action = rules.get(state + (stimulus,), None)
         if action is None:
             return None
         if action not in checks:
@@ -535,7 +513,7 @@ class TestTileOrchestrator:
             Optional[bool],
             CommunicationStatus,
         ],
-        stimulus: str,
+        stimulus: Stimulus,
         check: Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]]]],
     ) -> None:
         """
@@ -558,42 +536,46 @@ class TestTileOrchestrator:
         def stimulate() -> None:
             """Apply the specified stimulus on the orchestrator."""
             {
-                "desire_online": lambda tc: tc.desire_online(),
-                "desire_offline": lambda tc: tc.desire_offline(),
-                "desire_on": lambda tc: tc.desire_on(),
-                "desire_off": lambda tc: tc.desire_off(),
-                "subrack_communication_disabled": lambda tc: tc.update_subrack_communication_status(
+                Stimulus.DESIRE_ONLINE: lambda tc: tc.desire_online(),
+                Stimulus.DESIRE_OFFLINE: lambda tc: tc.desire_offline(),
+                Stimulus.DESIRE_ON: lambda tc: tc.desire_on(),
+                Stimulus.DESIRE_OFF: lambda tc: tc.desire_off(),
+                Stimulus.SUBRACK_COMMS_DISABLED: lambda tc: tc.update_subrack_communication_status(
                     CommunicationStatus.DISABLED
                 ),
-                "subrack_communication_not_established": lambda tc: tc.update_subrack_communication_status(
+                Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_subrack_communication_status(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
-                "subrack_communication_established": lambda tc: tc.update_subrack_communication_status(
+                Stimulus.SUBRACK_COMMS_ESTABLISHED: lambda tc: tc.update_subrack_communication_status(
                     CommunicationStatus.ESTABLISHED
                 ),
-                "subrack_power_is_unknown": lambda tc: tc.update_subrack_power_mode(
+                Stimulus.SUBRACK_UNKNOWN: lambda tc: tc.update_subrack_power_mode(
                     PowerMode.UNKNOWN
                 ),
-                "subrack_power_is_off": lambda tc: tc.update_subrack_power_mode(
+                Stimulus.SUBRACK_OFF: lambda tc: tc.update_subrack_power_mode(
                     PowerMode.OFF
                 ),
-                "subrack_power_is_standby": lambda tc: tc.update_subrack_power_mode(
+                Stimulus.SUBRACK_STANDBY: lambda tc: tc.update_subrack_power_mode(
                     PowerMode.STANDBY
                 ),
-                "subrack_power_is_on": lambda tc: tc.update_subrack_power_mode(
+                Stimulus.SUBRACK_ON: lambda tc: tc.update_subrack_power_mode(
                     PowerMode.ON
                 ),
-                "tpm_communication_disabled": lambda tc: tc.update_tpm_communication_status(
+                Stimulus.TPM_COMMS_DISABLED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.DISABLED
                 ),
-                "tpm_communication_not_established": lambda tc: tc.update_tpm_communication_status(
+                Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
-                "tpm_communication_established": lambda tc: tc.update_tpm_communication_status(
+                Stimulus.TPM_COMMS_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.ESTABLISHED
                 ),
-                "tpm_power_is_off": lambda tc: tc.update_tpm_power_mode(PowerMode.OFF),
-                "tpm_power_is_on": lambda tc: tc.update_tpm_power_mode(PowerMode.ON),
+                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(
+                    PowerMode.OFF
+                ),
+                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(
+                    PowerMode.ON
+                ),
             }[stimulus](tile_orchestrator)
 
         def check_state(**expected_state_changes: Any) -> None:

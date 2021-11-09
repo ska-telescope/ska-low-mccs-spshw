@@ -357,11 +357,10 @@ class TestPowerManagement:
         )
 
         lrc_result = (unique_id, str(ResultCode.OK.value), "On command completed OK")
-        assert controller.longRunningCommandResult == (lrc_result)
-        controller_lrc_result_changed_callback.assert_next_change_event(lrc_result)
+        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         for device in devices:
             assert device.state() == tango.DevState.ON
 
         # TODO: Remove forced failure for debug output
-        assert False
+        # assert False

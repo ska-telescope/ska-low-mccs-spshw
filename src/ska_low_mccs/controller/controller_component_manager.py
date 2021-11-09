@@ -16,8 +16,9 @@ import logging
 import threading
 from typing import Callable, Hashable, Optional, Iterable, Tuple
 
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import BaseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.utils import EnqueueSuspend
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -692,14 +693,24 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        results = [station_proxy.on() for station_proxy in self._stations.values()] + [
-            subrack_proxy.on() for subrack_proxy in self._subracks.values()
-        ]
+        class OnInternal(BaseCommand):
+            def do(self):
+                print(f"RCL123: does this get called?")
+                target = self.target
+                results = [station_proxy.on() for station_proxy in target._stations.values()] + [
+                    subrack_proxy.on() for subrack_proxy in target._subracks.values()
+                ]
+                if ResultCode.FAILED in results:
+                    print(f"RCL: FAILED!!!!! {results}")
+                    return ResultCode.FAILED    # TODO: How do we signal this has failed???
+                else:
+                    return ResultCode.QUEUED
 
-        if ResultCode.FAILED in results:
-            return ResultCode.FAILED
-        else:
-            return ResultCode.QUEUED
+        with EnqueueSuspend(self._queue_manager, OnInternal(target=self)) as unique_id:
+            print(f"RCL: Do we ever get here???")
+            # Ensure the command exists
+            assert unique_id
+            # We can just let this end as we wait for the state to change in the test...
 
     @check_communicating
     @check_on

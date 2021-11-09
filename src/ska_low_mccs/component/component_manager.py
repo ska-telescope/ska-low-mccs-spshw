@@ -217,7 +217,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         return QueueManager(
             max_queue_size=1,
-            num_workers=1,
+            num_workers=2,
             logger=self.logger,
             push_change_event=self._attribute_changed_callback,
         )

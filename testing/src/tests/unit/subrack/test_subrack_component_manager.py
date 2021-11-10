@@ -21,6 +21,7 @@ from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
+    SubrackData,
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
@@ -130,16 +131,15 @@ class TestSubrackSimulatorCommon:
             (
                 "subrack_fan_speeds_percent",
                 [
-                    speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                    speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
             ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
-            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
+            ("tpm_count", SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_temperatures",
-                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_powers",
@@ -147,11 +147,11 @@ class TestSubrackSimulatorCommon:
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "power_supply_fan_speeds",
@@ -172,7 +172,7 @@ class TestSubrackSimulatorCommon:
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
             (
                 "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
             ),
         ),
     )
@@ -401,24 +401,24 @@ class TestSubrackDriverCommon:
             (
                 "subrack_fan_speeds_percent",
                 [
-                    speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                    speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
             ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
-            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
-            ("tpm_temperatures", [0.0] * SubrackSimulator.TPM_BAY_COUNT),
+            ("tpm_count", SubrackData.TPM_BAY_COUNT),
+            ("tpm_temperatures", [0.0] * SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_powers",
                 [
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "power_supply_fan_speeds",
@@ -439,7 +439,7 @@ class TestSubrackDriverCommon:
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
             (
                 "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
             ),
         ),
     )

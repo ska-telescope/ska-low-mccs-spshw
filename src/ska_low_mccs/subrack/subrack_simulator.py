@@ -35,6 +35,8 @@ import os
 
 from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import ControlMode, ObjectComponent
+from ska_low_mccs.subrack.subrack_data import SubrackData
+
 
 __all__ = ["SubrackSimulator"]
 
@@ -70,9 +72,6 @@ class SubrackSimulator(ObjectComponent):
     This can be overruled using the set_subrack_fan_speed method.
     """
 
-    MAX_SUBRACK_FAN_SPEED = 8000.0
-    """The maximum fan speed for the subrack."""
-
     DEFAULT_SUBRACK_FAN_MODES = [ControlMode.AUTO] * 4
     """
     The default fan mode for the subrack.
@@ -80,13 +79,10 @@ class SubrackSimulator(ObjectComponent):
     This can be overruled using the set_fan_mode method.
     """
 
-    TPM_BAY_COUNT = 8
-    """The number of TPM bays (not all bays may house TPMs)"""
-
-    DEFAULT_TPM_POWER_MODES = [PowerMode.OFF] * TPM_BAY_COUNT
+    DEFAULT_TPM_POWER_MODES = [PowerMode.OFF] * SubrackData.TPM_BAY_COUNT
     """The default on/off status of the housed TPMs."""
 
-    DEFAULT_TPM_PRESENT = [True] * TPM_BAY_COUNT
+    DEFAULT_TPM_PRESENT = [True] * SubrackData.TPM_BAY_COUNT
     """Whether each TPM is present in the subrack by default."""
 
     DEFAULT_POWER_SUPPLY_POWERS = [50.0, 70.0]
@@ -292,7 +288,7 @@ class SubrackSimulator(ObjectComponent):
         :return: the fan speed, in percent
         """
         return [
-            speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+            speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
             for speed in self._subrack_fan_speeds
         ]
 
@@ -667,7 +663,7 @@ class SubrackSimulator(ObjectComponent):
         :param speed_percent: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
         """
         self._subrack_fan_speeds[fan_id - 1] = (
-            speed_percent / 100.0 * SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+            speed_percent / 100.0 * SubrackData.MAX_SUBRACK_FAN_SPEED
         )
 
     def set_subrack_fan_modes(

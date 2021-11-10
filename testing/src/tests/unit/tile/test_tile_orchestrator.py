@@ -34,22 +34,8 @@ class TestTileOrchestrator:
     """Class for testing the tile orchestrator."""
 
     @pytest.fixture(scope="session")
-    def rules_path(self: TestTileOrchestrator) -> str:
-        """
-        Return the path to a YAML file that specifies rules for the orchestrator.
-
-        :return: the path to a YAML file that specifies rules for the
-            orchestrator.
-        """
-        # TODO: At the moment this YAML file is used by the code as well as the tests.
-        # Eventually the code may be reimplemented so that it doesn't depend on this
-        # file. At that time we should move it into test data space.
-        return "src/ska_low_mccs/tile/orchestration_rules.yaml"
-
-    @pytest.fixture(scope="session")
     def rules(
         self: TestTileOrchestrator,
-        rules_path: str,
     ) -> Mapping[
         Tuple[
             OperatorDesire,
@@ -74,12 +60,9 @@ class TestTileOrchestrator:
         taken. Thus, the values of this dictionary are keys of the
         ``checks`` dictionary.
 
-        :param rules_path: path to a YAML file specifying rules for the
-            orchestrator
-
         :return: a static dictionary of orchestrator actions
         """
-        with open(rules_path, "r") as stream:
+        with open(TileOrchestrator.RULES_PATH, "r") as stream:
             rules = yaml.load(stream, Loader=yaml.Loader)
 
         return {
@@ -390,7 +373,6 @@ class TestTileOrchestrator:
     @pytest.fixture()
     def tile_orchestrator(
         self: TestTileOrchestrator,
-        rules_path: str,
         callbacks: Mapping[str, unittest.mock.Mock],
         logger: logging.Logger,
         state: Tuple[
@@ -404,8 +386,6 @@ class TestTileOrchestrator:
         """
         Return the tile orchestrator under test.
 
-        :param rules_path: path to a YAML file specifying rules for the
-            orchestrator
         :param callbacks: a dictionary of mocks to be used as callbacks.
         :param logger: a logger for the orchestrator.
         :param state: the initial state of the orchestrator.
@@ -413,7 +393,6 @@ class TestTileOrchestrator:
         :return: the tile orchestrator under test.
         """
         return TileOrchestrator(
-            rules_path,
             callbacks["start_communicating_with_subrack"],
             callbacks["stop_communicating_with_subrack"],
             callbacks["start_communicating_with_tpm"],

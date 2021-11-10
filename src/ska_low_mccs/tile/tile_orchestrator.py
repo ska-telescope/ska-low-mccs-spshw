@@ -116,11 +116,18 @@ class TileOrchestrator:
     * Establishing or breaking off communication with the TPM
     * Telling the subrack to turn the TPM off / on
     * Calling callbacks that update the monitored state of the component
+
+    The specific actions are defined in a YAML file as follows:
+
+    .. literalinclude:: ../../../../src/ska_low_mccs/tile/orchestration_rules.yaml
+        :language: yaml
     """
+
+    RULES_PATH = "src/ska_low_mccs/tile/orchestration_rules.yaml"
+    """Path to the rules file that specifies behaviour of this choreographer."""
 
     def __init__(
         self: TileOrchestrator,
-        rules_path: str,
         start_communicating_with_subrack_callback: Callable[[], None],
         stop_communicating_with_subrack_callback: Callable[[], None],
         start_communicating_with_tpm_callback: Callable[[], None],
@@ -144,8 +151,6 @@ class TileOrchestrator:
         """
         Initialise a new instance.
 
-        :param rules_path: path to a YAML file specifying rules for this
-            orchestrator
         :param start_communicating_with_subrack_callback: callback to be
             called in order to initiate communication with the subrack.
         :param stop_communicating_with_subrack_callback: callback to be
@@ -213,7 +218,7 @@ class TileOrchestrator:
             CommunicationStatus.DISABLED,
         )
 
-        with open(rules_path, "r") as stream:
+        with open(self.RULES_PATH, "r") as stream:
             try:
                 rules = yaml.load(stream, Loader=yaml.Loader)
             except yaml.YAMLError as exception:

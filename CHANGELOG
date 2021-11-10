@@ -3,6 +3,41 @@
 ## unreleased
 
 * MCCS-838 - Add tile orchestrator
+* MCCS-708 - Remove allocated_resources attribute from controller
+* MCCS-767 - PaSD bus device
+* MCCS-405 - Resource management of Channels within Station
+* MCCS-835 - Fix test harness bug
+* MCCS-816 - Unit test stability improvements
+* MCCS-403 - Station  beam resource management
+* MCCS-821 - Refactor complex test
+* MCCS-817 - Refactor complex method and fix silent failure
+* MCCS-810 - Make docstrings comply with PEP-257
+* MCCS-572 - Add typehints to tile
+* MCCS-747 - Make subrack component manager report progress and status of commands
+* MCCS-749 - Add Message queue size callback
+* MCCS-806 - Update dependencies
+* MCCS-571 - Add typehints to subrack
+* MCCS-726 - Add message queue to subrack driver
+* MCCS-726 - Allow message queue sharing
+* MCCS-712 - Add unit tests for subrack driver
+* MCCS-568 - Add typehints to cluster manager
+* MCCS-573 - Add typehints to station, station beam and point station
+* MCCS-716 - Update to Sphinx 4
+* MCCS-715 - Sundry instability fixes
+* MCCS-574 - Add typehints to subarray and subarray beam
+* MCCS-575 - Add typehints to transient buffer and telstate
+* MCCS-681 - Add Taranta dashboard for allocate and release testing
+* MCCS-702 - Omit Webjive charts by default
+* MCCS-567 - Add typehints to APIU
+* MCCS-668 - Start on developer guideline
+* MCCS-559 - Add typehints to antenna
+* MCCS-579 - Test harness typehints
+* MCCS-699 - Stability and thread safety
+* MCCS-569 - Add typehints to controller
+* MCCS-697 - Move test harness to main source tree
+* MCCS-579 - Add typehints to hardware client
+* MCCS-480 - Relax pod initialisation constraint
+* MCCS-400 - Update to ska_tango_base 0.11, and use concurrency throughout
 
 ## 0.8.6
 
@@ -76,7 +111,6 @@
 * MCCS-421 - Added support for TPM test signal generator to Tango tile
 * MCCS-523 - skip configure as well
 * MCCS-410 - Implement interface of Tango device with hardware Subrack
->>>>>>> master
 * MCCS-517 - Fix to integration tests
 * MCCS-502 - convert apiu to svg & add subarray structure class diagram
 * MCCS-441 - enable abort and obsreset

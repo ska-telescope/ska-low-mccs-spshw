@@ -907,7 +907,7 @@ class MccsSubrack(SKABaseDevice):
             self: MccsSubrack.SetSubrackFanModeCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
-            Implement py:meth:`.MccsSubrack.SetSubrackFanMode` command.
+            Implement :py:meth:`.MccsSubrack.SetSubrackFanMode` command.
 
             :param argin: a JSON-encoded dictionary of arguments
 
@@ -964,7 +964,7 @@ class MccsSubrack(SKABaseDevice):
             self: MccsSubrack.SetPowerSupplyFanSpeedCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
-            Implement py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command.
+            Implement :py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command.
 
             :param argin: a JSON-encoded dictionary of arguments
 

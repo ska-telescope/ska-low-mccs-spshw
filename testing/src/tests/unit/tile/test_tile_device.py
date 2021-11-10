@@ -180,11 +180,22 @@ class TestMccsTile:
 
         tile_device.MockSubrackOn()
         time.sleep(0.1)
+        # TODO: That MockSubrackOn() up there causes the tile to
+        # subscribe to are_tpms_on. We should receive an initial event
+        # telling us that this tile's TPM is off.
+        #
+        # And that MockTilePoweredOn() immediately below fakes the tile
+        # receiving an are_tpms_on event telling it that its TPM is on.
+        #
+        # If we make that call too quickly, we might receive the off
+        # event _after_ the on event. This occasionally makes the
+        # assert_last_change_event fail.
 
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = getattr(tile_device, attribute)
 
         tile_device.MockTilePoweredOn()
+        device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
 
         assert getattr(tile_device, attribute) == initial_value
 

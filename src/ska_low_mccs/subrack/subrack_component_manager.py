@@ -580,6 +580,38 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         ).turn_off_tpms()
         return super().off()
 
+    def turn_off_tpm(self: SubrackComponentManager, logical_tpm_id: int) -> bool | None:
+        """
+        Turn off a TPM.
+
+        TODO: This method is implemented with a temporary measure to
+        handle a common race condition. When ``MccsController.Off()`` is
+        called, both ``MccsTile`` and ``MccsSubrack`` may end up being
+        told to turn off at roughly the same time. This can result in
+        ``MccsTile`` telling its subrack to turn off its TPM when the
+        subrack has itself just been turned off. For now, we handle this
+        by accepting the command (and doing nothing) when the subrack is
+        off. In future, we should review this behaviour in case there is
+        a better way to handle it.
+
+        :param logical_tpm_id: this subrack's internal id for the
+            TPM to be turned off
+
+        :return: whether successful, or None if there was nothing to do
+
+        :raises ConnectionError: if the subrack is neither off not on
+            (when on, we can turn the TPM off, when off, there's nothing
+            to do here.)
+        """
+        if self.power_mode == PowerMode.OFF:
+            return None
+        elif self.power_mode == PowerMode.ON:
+            return cast(
+                SwitchingSubrackComponentManager, self._hardware_component_manager
+            ).turn_off_tpm(logical_tpm_id)
+        else:
+            raise ConnectionError("Component is not turned on.")
+
     def __getattr__(
         self: SubrackComponentManager,
         name: str,
@@ -634,7 +666,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "tpm_supply_fault",
             "is_tpm_on",
             "are_tpms_on",
-            "turn_off_tpm",
             "turn_on_tpm",
             "turn_on_tpms",
             "turn_off_tpms",

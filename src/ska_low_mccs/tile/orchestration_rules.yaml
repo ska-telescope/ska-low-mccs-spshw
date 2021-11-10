@@ -1,0 +1,58 @@
+# This file provides rules for how the tile orchestrator should act in response to
+# given stimuli in given states.
+#
+# Each line is a single key-value pair. The key describes a state and a
+# stimulus; the value names an action to take when the given stimulus
+# occurs when in the given state.
+#
+# The structure of a key is
+#     [
+#         ONLINE,  # State: the operator desires this device to be online
+#         ESTABLISHED,  # State: communication with the subrack is established
+#         "ON",  # State: the subrack is powered on
+#         False,  # State: the subrack is NOT supplying power to the TPM
+#         DISABLED,  # State: Communication with the TPM is disabled
+#         DESIRE_ON,  # Stimulus: the operator has invoked the On() command
+#     ]
+#
+!!python/tuple [OFFLINE, DISABLED, ~, ~, DISABLED, DESIRE_ONLINE]: start_communicating_with_subrack
+!!python/tuple [OFFLINE, ESTABLISHED, ~, ~, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "OFF", ~, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "ON", ~, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "ON", False, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "ON", True, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "ON", True, ESTABLISHED, TPM_COMMS_DISABLED]: set_tpm_communication_disabled
+!!python/tuple [ONLINE, NOT_ESTABLISHED, ~, ~, DISABLED, SUBRACK_COMMS_NOT_ESTABLISHED]: do_nothing
+!!python/tuple [ONLINE, NOT_ESTABLISHED, ~, ~, DISABLED, SUBRACK_COMMS_ESTABLISHED]: set_subrack_communication_established
+!!python/tuple [ONLINE, ESTABLISHED, ~, ~, DISABLED, DESIRE_OFFLINE]: stop_communicating
+!!python/tuple [ONLINE, ESTABLISHED, ~, ~, DISABLED, SUBRACK_OFF]: report_subrack_off
+!!python/tuple [ONLINE, ESTABLISHED, ~, ~, DISABLED, SUBRACK_ON]: report_subrack_on
+!!python/tuple [ONLINE, ESTABLISHED, ~, ~, DISABLED, SUBRACK_UNKNOWN]: report_subrack_unknown
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", ~, DISABLED, DESIRE_ON]: set_desired_on
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", ~, DISABLED, DESIRE_OFFLINE]: stop_communicating
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", ~, DISABLED, SUBRACK_OFF]: report_subrack_off
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", ~, DISABLED, SUBRACK_ON]: report_subrack_on
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", ~, DISABLED, SUBRACK_UNKNOWN]: report_subrack_unknown
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ~, DISABLED, DESIRE_OFFLINE]: stop_communicating
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ~, DISABLED, SUBRACK_OFF]: report_subrack_off
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ~, DISABLED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ~, DISABLED, SUBRACK_SAYS_TPM_ON]: report_tpm_on
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ~, DISABLED, DESIRE_ON]: set_desired_on
+!!python/tuple [ONLINE, ESTABLISHED, "ON", False, DISABLED, DESIRE_OFFLINE]: stop_communicating
+!!python/tuple [ONLINE, ESTABLISHED, "ON", False, DISABLED, DESIRE_OFF]: do_nothing
+!!python/tuple [ONLINE, ESTABLISHED, "ON", False, DISABLED, DESIRE_ON]: turn_tpm_on
+!!python/tuple [ONLINE, ESTABLISHED, "ON", False, DISABLED, SUBRACK_OFF]: report_subrack_off
+!!python/tuple [ONLINE, ESTABLISHED, "ON", False, DISABLED, SUBRACK_SAYS_TPM_ON]: report_tpm_on
+!!python/tuple [ONLINE, ESTABLISHED, "ON", False, ESTABLISHED, TPM_COMMS_DISABLED]: set_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, "ON", True, DISABLED, TPM_COMMS_NOT_ESTABLISHED]: set_tpm_communication_not_established
+!!python/tuple [ONLINE, ESTABLISHED, "ON", True, NOT_ESTABLISHED, TPM_COMMS_ESTABLISHED]: set_tpm_communication_established
+!!python/tuple [ONLINE, ESTABLISHED, "ON", True, ESTABLISHED, DESIRE_OFF]: turn_tpm_off
+!!python/tuple [ONLINE, ESTABLISHED, "ON", True, ESTABLISHED, DESIRE_OFFLINE]: stop_communicating
+!!python/tuple [ONLINE, ESTABLISHED, "ON", True, ESTABLISHED, SUBRACK_OFF]: report_subrack_off
+!!python/tuple [ONLINE, ESTABLISHED, "ON", True, ESTABLISHED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, ~, DISABLED, DESIRE_ON]: set_desired_on
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, ~, DISABLED, SUBRACK_OFF]: report_subrack_off
+!!python/tuple ["ON", ESTABLISHED, "OFF", ~, DISABLED, SUBRACK_ON]: report_subrack_on_and_turn_tpm_on
+!!python/tuple ["ON", ESTABLISHED, "ON", ~, DISABLED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_and_turn_tpm_on
+!!python/tuple ["ON", ESTABLISHED, UNKNOWN, ~, DISABLED, SUBRACK_OFF]: report_subrack_off
+!!python/tuple ["ON", ESTABLISHED, UNKNOWN, ~, DISABLED, SUBRACK_ON]: report_subrack_on_and_turn_tpm_on

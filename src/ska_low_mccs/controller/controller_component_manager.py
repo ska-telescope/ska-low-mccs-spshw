@@ -21,6 +21,7 @@ from typing import Callable, Hashable, Optional, Iterable, Tuple
 from ska_tango_base.commands import BaseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.utils import EnqueueSuspend
+from ska_low_mccs.utils import threadsafe
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -461,20 +462,20 @@ class ControllerComponentManager(MccsComponentManager):
             None,
         )
 
-    def component_power_mode_changed(
-        self: ControllerComponentManager, power_mode: PowerMode
+    @threadsafe
+    def update_component_power_mode(
+        self: ControllerComponentManager, power_mode: Optional[PowerMode]
     ) -> None:
         """
-        Handle notification that the component's power mode has changed.
+        Update the power mode, calling callbacks as required.
 
-        This is a callback hook, to be passed to the managed component.
-
-        :param power_mode: the new power mode of the component
+        :param power_mode: the new power mode of the component. This can
+            be None, in which case the internal value is updated but no
+            callback is called. This is useful to ensure that the
+            callback is called next time a real value is pushed.
         """
-        self.update_component_power_mode(power_mode)
+        super().update_component_power_mode(power_mode)
         if power_mode == PowerMode.ON:
-        # if self.target.state() == DevState.ON:
-            print(f"RCL345: put an entry onto the queue")
             self.on_complete_queue.put(ResultCode.OK)
 
     def _attribute_changed_callback(
@@ -707,42 +708,47 @@ class ControllerComponentManager(MccsComponentManager):
     @check_communicating
     def on(
         self: ControllerComponentManager,
-    ) -> ResultCode:
+    ) -> list[ResultCode, str]:
         """
         Turn on the MCCS subsystem.
 
         :return: a result code
         """
-        class OnInternal(BaseCommand):
+        class ControllerOnInternal(BaseCommand):
             def do(self, argin=None):
-                print("RCL345: OnInternal::on()")
                 target = self.target
                 results = [station_proxy.on() for station_proxy in target._stations.values()] + [
                     subrack_proxy.on() for subrack_proxy in target._subracks.values()
                 ]
+                # return ResultCode.FAILED # TODO: Force failure to see results...
                 if ResultCode.FAILED in results:
-                    return ResultCode.FAILED    # TODO: How do we signal this has failed???
+                    return ResultCode.FAILED    # TODO: How do we signal this has failed??? LRC result presumably???
                 else:
                     return ResultCode.QUEUED
 
         result_code = ResultCode.OK
+        message = "Controller On command completed OK"
         try:
-            with EnqueueSuspend(self._queue_manager, OnInternal(target=self)) as unique_id:
-                print(f"RCL345: unique_id = {unique_id}")
+            with EnqueueSuspend(self._queue_manager, ControllerOnInternal(target=self)) as unique_id:
+                task_state = self.get_task_state(unique_id)
+                task_id, res_code, res = self.task_result
+                print(f"RCL: task_state = {task_state}, task_id = {task_id}, res_code = {res_code}, res = {res}")
                 # Ensure the command exists
                 assert unique_id
-                # We can just let this end as we wait for the state to change in the test...
-
                 # Wait as long as we need to for the on command to complete (or timeout)
                 try:
+                    # Look-up the LRC by unique_id to see if is QUEUED correctly
+
                     result_code = self.on_complete_queue.get(timeout=3.0)
+
                 except queue.Empty:
                     result_code = ResultCode.FAILED
+                    message = "Controller On failed to receive completion signal in time"
         except:
-            print("RCL345: Handled exception")
+            message = "Controller On LRC exception"
 
-        print(f"RCL345: signal result code = {result_code}")
-        return result_code
+        print(f"RCL: signal result code = {result_code.name}, {message}")
+        return result_code, message
 
     @check_communicating
     @check_on

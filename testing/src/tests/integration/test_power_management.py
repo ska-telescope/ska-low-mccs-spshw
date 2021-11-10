@@ -359,7 +359,7 @@ class TestPowerManagement:
             tango.DevState.ON
         )
 
-        lrc_result = (unique_id, str(ResultCode.OK.value), "On command completed OK")
+        lrc_result = (unique_id, str(ResultCode.OK.value), "Controller On command completed OK")
         controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         for device in devices:

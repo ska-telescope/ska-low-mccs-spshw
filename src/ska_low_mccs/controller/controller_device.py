@@ -148,6 +148,24 @@ class MccsController(SKABaseDevice):
 
             return (result_code, message)
 
+    class OnCommand(SKABaseDevice.OnCommand):
+        """A class for the MccsController's On() command."""
+
+        def do(  # type: ignore[override]
+            self: MccsController.InitCommand,
+        ):
+            """
+            Stateless hook for On() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            result_code, message = self.target.on()
+            self.logger.info(message)
+            return (result_code, message)
+
     # ----------
     # Callbacks
     # ----------

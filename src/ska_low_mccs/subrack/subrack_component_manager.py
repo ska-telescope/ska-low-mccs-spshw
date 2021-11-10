@@ -584,13 +584,15 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         Turn off a TPM.
 
-        This method is implemented with a temporary measure to handle a
-        common race condition. When MccsController.Off() is called, both
-        MccsTile and MccsSubrack may end up being told to turn off at
-        roughly the same time. This can result in MccsTile telling a
-        subrack to turn off its TPM when the subrack has itself just
-        been turned off. For now, we handle this by accepting the
-        command when the TPM is off.
+        TODO: This method is implemented with a temporary measure to
+        handle a common race condition. When ``MccsController.Off()`` is
+        called, both ``MccsTile`` and ``MccsSubrack`` may end up being
+        told to turn off at roughly the same time. This can result in
+        ``MccsTile`` telling its subrack to turn off its TPM when the
+        subrack has itself just been turned off. For now, we handle this
+        by accepting the command (and doing nothing) when the subrack is
+        off. In future, we should review this behaviour in case there is
+        a better way to handle it.
 
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be turned off

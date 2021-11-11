@@ -783,7 +783,7 @@ class ControllerComponentManager(MccsComponentManager):
         )
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            list(set(flattened_station_fqdns)),  # unique items only
+            station_fqdns,
             subarray_beam_fqdns,
             station_beam_fqdns,
             channel_blocks,

@@ -203,9 +203,11 @@ class SubarrayComponentManager(
         self._device_obs_states: dict[str, Optional[ObsState]] = {}
         self._is_assigning = False
         self._configuring_resources: set[str] = set()
+        self._station_groups: list[list[str]] = list()
         self._stations: dict[str, _StationProxy] = dict()
         self._subarray_beams: dict[str, _SubarrayBeamProxy] = dict()
         self._station_beams: dict[str, _StationBeamProxy] = dict()
+        self._channel_blocks: list[int] = list()
 
         self._scan_id: Optional[int] = None
 
@@ -284,7 +286,7 @@ class SubarrayComponentManager(
 
                 {
                     "subarray_beams": ["low-mccs/subarraybeam/01"],
-                    "stations": ["low-mccs/station/001", "low-mccs/station/002"],
+                    "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
                     "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"]
                     "channel_blocks": [3]
                 }
@@ -294,8 +296,16 @@ class SubarrayComponentManager(
         station_fqdns: Sequence[str] = resource_spec.get("stations", [])
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
         station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
+        channel_blocks: Sequence[int] = resource_spec.get("channel_blocks", [])
 
-        station_fqdns_to_add = station_fqdns - self._stations.keys()
+        station_fqdn_set = set()
+        for station_group in station_fqdns:
+            for station_fqdn in station_group:
+                station_fqdn_set.add(station_fqdn)
+            self._station_groups.append(station_group)
+        self._channel_blocks = channel_blocks
+
+        station_fqdns_to_add = sorted(station_fqdn_set) - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
         station_beam_fqdns_to_add = station_beam_fqdns - self._station_beams.keys()
         fqdns_to_add = station_fqdns_to_add.union(
@@ -364,15 +374,24 @@ class SubarrayComponentManager(
     @check_communicating
     def assigned_resources(
         self: SubarrayComponentManager,
-    ) -> set[str]:
+    ) -> str:
         """
         Return this subarray's resources.
 
         :return: this subarray's resources.
         """
-        return (
-            set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
+        # return (
+        #     set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
+        # )
+        jstr = json.dumps(
+            {
+                "stations": self._station_groups,
+                "subarray_beams": sorted(self._subarray_beams.keys()),
+                "station_beams": sorted(self._station_beams.keys()),
+                "channel_blocks": self._channel_blocks,
+            }
         )
+        return jstr
 
     @check_communicating
     def release(  # type: ignore[override]
@@ -380,7 +399,7 @@ class SubarrayComponentManager(
         resource_spec: dict[str, Sequence[Any]],
     ) -> ResultCode:
         """
-        Assign resources to this subarray.
+        Release resources from this subarray.
 
         :param resource_spec: a resource specification; for example
 
@@ -452,8 +471,10 @@ class SubarrayComponentManager(
         """
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
+            self._station_groups.clear()
             self._subarray_beams.clear()
             self._station_beams.clear()
+            self._channel_blocks.clear()
             self._device_communication_statuses.clear()
             self._device_obs_states.clear()
 

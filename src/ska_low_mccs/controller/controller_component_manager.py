@@ -87,6 +87,54 @@ class _StationProxy(DeviceComponentManager):
             health_changed_callback,
         )
 
+    def create_queue_manager(self: _StationProxy) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._attribute_changed_callback,
+        )
+
+    @check_communicating
+    def on(self: _StationProxy) -> ResultCode | None:
+        """
+        Turn the device on.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        if self.power_mode == PowerMode.ON:
+            return None  # already on
+        onCommand = self._onCommand(target=self)
+        return self.enqueue(onCommand)
+
+    class _onCommand(BaseCommand):
+        def do(self: _StationProxy._onCommand) -> ResultCode:
+            """Station on command implementation"""
+            try:
+                assert self.target._proxy is not None  # for the type checker
+                ([result_code], _) = self.target._proxy.On() # Fire and forget
+            except TypeError as type_error:
+                raise TypeError(f"FQDN is {self.target._fqdn}") from type_error
+            return result_code
+
+    """
+    def _on(self: _StationProxy) -> ResultCode:
+        try:
+            assert self._proxy is not None  # for the type checker
+            ([result_code], _) = self._proxy.On()
+        except TypeError as type_error:
+            raise TypeError(f"FQDN is {self._fqdn}") from type_error
+        return result_code
+    """
+
     def allocate(
         self: _StationProxy, subarray_fqdn: str, channel_blocks: int
     ) -> ResultCode:

@@ -360,14 +360,14 @@ class MccsSubarray(SKASubarray):
         """
         return sorted(self.component_manager.station_fqdns)
 
-    @attribute(dtype=("str",), max_dim_x=100)
-    def assignedResources(self: MccsSubarray) -> list[str]:
+    @attribute(dtype=("DevString"), max_dim_x=1024)
+    def assignedResources(self: MccsSubarray) -> str:
         """
         Return this subarray's assigned resources.
 
         :return: this subarray's assigned resources.
         """
-        return sorted(self.component_manager.assigned_resources)
+        return self.component_manager.assigned_resources
 
     # ------------------
     # Attribute methods

@@ -12,7 +12,7 @@ from typing import Callable, Optional
 
 import tango
 
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerMode
 from ska_tango_base.base.task_queue_manager import QueueManager
 
@@ -75,6 +75,22 @@ class DeviceComponentManager(MccsComponentManager):
             component_fault_callback,
         )
 
+    def create_queue_manager(self: _StationProxy) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._attribute_changed_callback,
+        )
+
     def start_communicating(self: DeviceComponentManager) -> None:
         """
         Establish communication with the component, then start monitoring.
@@ -123,6 +139,37 @@ class DeviceComponentManager(MccsComponentManager):
         self._proxy = None
 
     @check_communicating
+    def on(self: DeviceComponentManager) -> ResultCode | None:
+        """
+        Turn the device on.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        if self.power_mode == PowerMode.ON:
+            return None  # already on
+        onCommand = self.DeviceProxyOnCommand(target=self)
+        # Enqueue the on command.
+        # This is a fire and forget command, so we don't need to keep unique ID.
+        result_code, _ = self.enqueue(onCommand)
+        return result_code
+
+    class DeviceProxyOnCommand(BaseCommand):
+        """Base command class for the on command to be enqueued."""
+
+        def do(self: DeviceComponentManager.DeviceProxyOnCommand) -> ResultCode:
+            """
+            On command implementation that simply calls On, on its proxy.
+            
+            :return: a result code.
+            """
+            try:
+                assert self.target._proxy is not None  # for the type checker
+                ([result_code], _) = self.target._proxy.On()  # Fire and forget
+            except TypeError as type_error:
+                raise TypeError(f"FQDN is {self.target._fqdn}") from type_error
+            return result_code
+
+    @check_communicating
     def off(self: DeviceComponentManager) -> ResultCode | None:
         """
         Turn the device off.
@@ -152,25 +199,6 @@ class DeviceComponentManager(MccsComponentManager):
     def _standby(self: DeviceComponentManager) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.Standby()
-        return result_code
-
-    @check_communicating
-    def on(self: DeviceComponentManager) -> ResultCode | None:
-        """
-        Turn the device on.
-
-        :return: a result code, or None if there was nothing to do.
-        """
-        if self.power_mode == PowerMode.ON:
-            return None  # already on
-        return self._on()
-
-    def _on(self: DeviceComponentManager) -> ResultCode:
-        try:
-            assert self._proxy is not None  # for the type checker
-            ([result_code], _) = self._proxy.On()
-        except TypeError as type_error:
-            raise TypeError(f"FQDN is {self._fqdn}") from type_error
         return result_code
 
     @check_communicating

@@ -98,6 +98,12 @@ class MccsController(SKABaseDevice):
         super().init_command_objects()
 
         self.register_command_object(
+            "On",
+            self.OnCommand(
+                self, self.op_state_model, self.logger
+            ),
+        )
+        self.register_command_object(
             "Allocate",
             self.AllocateCommand(
                 self.component_manager, self.op_state_model, self.logger
@@ -162,7 +168,18 @@ class MccsController(SKABaseDevice):
                 information purpose only.
             :rtype: (ResultCode, str)
             """
-            result_code, message = self.target.on()
+            result_code = self.target.component_manager.on()
+            if result_code == ResultCode.FAILED:
+                return (ResultCode.FAILED, "Controller failed to initiate On command")
+            # Johan: block here
+            #
+            # Wait for conditions on CM to unblock
+            # Could include timeouts here too
+            #
+
+
+            result_code = ResultCode.OK
+            message = "Controller On command completed OK"
             self.logger.info(message)
             return (result_code, message)
 

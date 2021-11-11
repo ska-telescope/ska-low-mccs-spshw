@@ -18,6 +18,7 @@ import tango
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.base.task_queue_manager import QueueManager
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -220,6 +221,22 @@ class StationComponentManager(MccsComponentManager):
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
+        )
+
+    def create_queue_manager(self: StationComponentManager) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._attribute_changed_callback,
         )
 
     def start_communicating(self: StationComponentManager) -> None:

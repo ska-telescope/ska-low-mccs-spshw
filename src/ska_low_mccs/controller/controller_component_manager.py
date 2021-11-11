@@ -21,7 +21,7 @@ from typing import Callable, Hashable, Optional, Iterable, Tuple
 from ska_tango_base.commands import BaseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.utils import EnqueueSuspend
-from ska_tango_base.base.task_queue_manager import TaskState
+from ska_tango_base.base.task_queue_manager import QueueManager
 from ska_low_mccs.utils import threadsafe
 
 from ska_low_mccs.component import (
@@ -461,6 +461,22 @@ class ControllerComponentManager(MccsComponentManager):
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
+        )
+
+    def create_queue_manager(self: ControllerComponentManager) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._attribute_changed_callback,
         )
 
     def _attribute_changed_callback(

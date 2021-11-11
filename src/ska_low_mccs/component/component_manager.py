@@ -19,8 +19,6 @@ from ska_tango_base.base import BaseComponentManager
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
-from ska_tango_base.base.task_queue_manager import QueueManager
-
 __all__ = [
     "CommunicationStatus",
     "ControlMode",
@@ -205,22 +203,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         print(f"RCL: IGNORE - NOT IMPLEMENTED {name}:{result}")
         ...
-
-    def create_queue_manager(self: MccsComponentManager) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=2,
-            logger=self.logger,
-            push_change_event=self._attribute_changed_callback,
-        )
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""

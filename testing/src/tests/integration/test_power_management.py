@@ -353,7 +353,10 @@ class TestPowerManagement:
         assert "OnCommand" in unique_id
 
         lrc_result = (unique_id, str(ResultCode.OK.value), "Controller On command completed OK")
-        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
+        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result, do_assert=False)
+
+        # Debug
+        self.show_state_of_devices(devices)
 
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
@@ -364,3 +367,13 @@ class TestPowerManagement:
 
         # TODO: Remove forced failure for debug output
         # assert False
+
+    def show_state_of_devices(
+        self: TestPowerManagement,
+        devices: Any,
+    ):
+        """
+        Show the state of the requested devices
+        """
+        for device in devices:
+            print(f"Device: {device.name} = {device.state()}")

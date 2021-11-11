@@ -274,6 +274,7 @@ class MockChangeEventCallback(MockCallable):
     def assert_last_change_event(
         self: MockChangeEventCallback,
         value: Any,
+        do_assert: bool = True,
         quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
     ) -> None:
         """
@@ -335,5 +336,5 @@ class MockChangeEventCallback(MockCallable):
                 called_mock = None
                 continue
 
-        if called_mock is None:
+        if called_mock is None and do_assert:
             raise AssertionError(failure_message)

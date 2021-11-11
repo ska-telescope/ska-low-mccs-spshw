@@ -14,6 +14,7 @@ import tango
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerMode
+from ska_tango_base.base.task_queue_manager import QueueManager
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (

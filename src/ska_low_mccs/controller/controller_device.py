@@ -172,25 +172,20 @@ class MccsController(SKABaseDevice):
             result_code = self.target.component_manager.on()
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, "Controller failed to initiate On command")
-            # Johan: block here
-            #
-            # Wait for conditions on CM to unblock
-            # Could include timeouts here too
-            #
-            def wait_until_on(device, timeout, period=0.25) -> ResultCode:
+
+            def wait_until_on(device, timeout, period=0.25) -> list[ResultCode, str]:
                 """Wait untill the device is on"""
                 elapsed_time = 0.0
                 while elapsed_time <= timeout:
-                    if device.get_state() == tango.DevState.ON: return ResultCode.OK
+                    if device.get_state() == tango.DevState.ON:
+                        message = "Controller On command completed OK"
+                        return ResultCode.OK, message
                     time.sleep(period)
-                return ResultCode.FAILED
-
-            timeout = 10.0
-            result_code = wait_until_on(self.target, timeout=timeout)
-            message = "Controller On command completed OK"
-            if result_code != ResultCode.OK:
                 message = "Controller On command didn't complete within {timeout} seconds"
+                return ResultCode.FAILED, message
 
+            # Wait for conditions on component manager to unblock
+            result_code, message = wait_until_on(self.target, timeout=10.0)
             self.logger.info(message)
             return (result_code, message)
 

@@ -351,8 +351,6 @@ class TestPowerManagement:
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id
-        #([result_code_failed], [_]) = controller.On()
-        # We would expect this command to fail
 
         lrc_result = (unique_id, str(ResultCode.OK.value), "Controller On command completed OK")
         controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)

@@ -354,15 +354,15 @@ class TestPowerManagement:
         #([result_code_failed], [_]) = controller.On()
         # We would expect this command to fail
 
+        lrc_result = (unique_id, str(ResultCode.OK.value), "Controller On command completed OK")
+        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
+
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
         )
-
-        lrc_result = (unique_id, str(ResultCode.OK.value), "Controller On command completed OK")
-        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         for device in devices:
             assert device.state() == tango.DevState.ON
 
         # TODO: Remove forced failure for debug output
-        assert False
+        # assert False

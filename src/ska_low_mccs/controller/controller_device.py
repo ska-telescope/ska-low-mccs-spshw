@@ -15,6 +15,7 @@ import json
 from typing import List, Optional, Tuple, Union, cast
 
 import tango
+import time
 from tango.server import attribute, command, device_property
 
 from ska_tango_base.base import SKABaseDevice
@@ -158,7 +159,7 @@ class MccsController(SKABaseDevice):
         """A class for the MccsController's On() command."""
 
         def do(  # type: ignore[override]
-            self: MccsController.InitCommand,
+            self: MccsController.OnCommand,
         ):
             """
             Stateless hook for On() command functionality.
@@ -176,10 +177,20 @@ class MccsController(SKABaseDevice):
             # Wait for conditions on CM to unblock
             # Could include timeouts here too
             #
+            def wait_until_on(device, timeout, period=0.25) -> ResultCode:
+                """Wait untill the device is on"""
+                elapsed_time = 0.0
+                while elapsed_time <= timeout:
+                    if device.get_state() == tango.DevState.ON: return ResultCode.OK
+                    time.sleep(period)
+                return ResultCode.FAILED
 
-
-            result_code = ResultCode.OK
+            timeout = 10.0
+            result_code = wait_until_on(self.target, timeout=timeout)
             message = "Controller On command completed OK"
+            if result_code != ResultCode.OK:
+                message = "Controller On command didn't complete within {timeout} seconds"
+
             self.logger.info(message)
             return (result_code, message)
 

@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Tuple
 import unittest
 
 import pytest
@@ -413,8 +413,16 @@ def subrack_proxies(
     return [MccsDeviceProxy(fqdn, logger) for fqdn in subrack_fqdns]
 
 
+@pytest.fixture
+def unique_id() -> str:
+    """A unique ID used to test Tango layer infrastructure."""
+    return "a unique id"
+
 @pytest.fixture()
-def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
+def mock_component_manager(
+    mocker: pytest_mock.mocker,
+    unique_id: str,
+) -> unittest.mock.Mock:
     """
     Return a mock component manager.
 
@@ -424,6 +432,7 @@ def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
     and the component is off.
 
     :param mocker: pytest wrapper for unittest.mock
+    :param unique_id: a unique id used to check Tango layer functionality
 
     :return: a mock component manager
     """
@@ -435,8 +444,12 @@ def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
         mock._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
         mock._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
         mock._component_power_mode_changed_callback(PowerMode.OFF)
-
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
+
+    def _enqueue(mock: unittest.mock.Mock, handle) -> Tuple[str, ResultCode]:
+        mock.handle = handle
+        return unique_id, ResultCode.QUEUED
+    mock.enqueue.side_effect = lambda handle: _enqueue(mock, handle)
 
     return mock
 

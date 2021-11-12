@@ -117,9 +117,11 @@ class TestMccsController:
     @pytest.mark.parametrize(
         ("device_command", "component_method"),
         [
-            ("Off", "off"),
-            ("Standby", "standby"),
-            ("On", "on"),
+            ("On", "enqueue"),
+            ("Off", "enqueue"),
+            ("GetVersionInfo", "enqueue"),
+            ("Standby", "enqueue"),
+            ("Reset", "enqueue"),
         ],
     )
     def test_command(
@@ -128,6 +130,7 @@ class TestMccsController:
         device_command: str,
         mock_component_manager: unittest.mock.Mock,
         component_method: str,
+        unique_id: str,
     ) -> None:
         """
         Test that device commands are passed through to the component manager.
@@ -140,10 +143,13 @@ class TestMccsController:
             been patched into the device under test
         :param component_method: name of the component method that
             implements the device command
+        :param unique_id: a unique id used to check Tango layer functionality
         """
         device_under_test.adminMode = AdminMode.ONLINE
-        getattr(device_under_test, device_command)()
-        getattr(mock_component_manager, component_method).assert_called_once_with()
+        [[result_code], [uid]] = getattr(device_under_test, device_command)()
+        assert uid == unique_id
+        assert result_code == ResultCode.QUEUED
+        getattr(mock_component_manager, component_method).assert_called_once_with(mock_component_manager.handle)
 
     @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(

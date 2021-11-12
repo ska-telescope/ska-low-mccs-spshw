@@ -30,6 +30,7 @@ class TransientBufferComponentManager(ObjectComponentManager):
     def __init__(
         self: TransientBufferComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
     ) -> None:
         """
@@ -43,6 +44,7 @@ class TransientBufferComponentManager(ObjectComponentManager):
         super().__init__(
             TransientBuffer(logger),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,

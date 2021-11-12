@@ -47,6 +47,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self: BaseSubrackSimulatorComponentManager,
         subrack_simulator: SubrackSimulator,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -72,6 +73,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             subrack_simulator,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -199,6 +201,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
     def __init__(
         self: SubrackSimulatorComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -223,6 +226,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         super().__init__(
             SubrackSimulator(),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_progress_changed_callback,
@@ -236,6 +240,7 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
     def __init__(
         self: TestingSubrackSimulatorComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -260,6 +265,7 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
         super().__init__(
             TestingSubrackSimulator(),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_progress_changed_callback,
@@ -275,6 +281,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
+        push_change_event,
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -308,6 +315,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         """
         subrack_driver = SubrackDriver(
             logger,
+            push_change_event,
             subrack_ip,
             subrack_port,
             communication_status_changed_callback,
@@ -317,6 +325,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         )
         subrack_simulator = SubrackSimulatorComponentManager(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_progress_changed_callback,
@@ -324,6 +333,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         )
         testing_subrack_simulator = TestingSubrackSimulatorComponentManager(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_progress_changed_callback,
@@ -426,6 +436,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
+        push_change_event,
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -467,6 +478,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             initial_simulation_mode,
             initial_test_mode,
             logger,
+            push_change_event,
             subrack_ip,
             subrack_port,
             self._hardware_communication_status_changed,
@@ -477,6 +489,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
+            push_change_event,
             self._power_supply_communication_status_changed,
             self.component_power_mode_changed,
             _initial_power_mode,
@@ -485,6 +498,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

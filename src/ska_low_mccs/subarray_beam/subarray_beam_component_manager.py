@@ -30,6 +30,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         is_configured_changed_callback: Callable[[bool], None],
@@ -52,6 +53,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         super().__init__(
             SubarrayBeam(logger),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,

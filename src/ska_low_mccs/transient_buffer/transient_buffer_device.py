@@ -59,6 +59,7 @@ class MccsTransientBuffer(SKABaseDevice):
         """
         return TransientBufferComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
         )
 

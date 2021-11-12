@@ -14,11 +14,12 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Hashable, Optional, Iterable, Tuple
+from typing import Callable, Hashable, Optional, Iterable
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.base.task_queue_manager import QueueManager
+from tango.server import Device
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -41,6 +42,7 @@ class _StationProxy(DeviceComponentManager):
         fqdn: str,
         subarray_fqdns: Iterable[str],
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -77,10 +79,27 @@ class _StationProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
             health_changed_callback,
+        )
+
+    def create_queue_manager(self: _StationProxy) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
         )
 
     def allocate(
@@ -123,9 +142,43 @@ class _StationProxy(DeviceComponentManager):
         self._resource_manager.deallocate_from(subarray_fqdn)
         self._channel_block_pool.free_resources(channel_blocks_to_release)
 
+class _SubrackProxy(DeviceComponentManager):
+    """A controller's proxy to a subrack."""
+
+    def create_queue_manager(self: _SubrackProxy) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
+        )
 
 class _SubarrayProxy(DeviceComponentManager):
     """A controller's proxy to a subarray."""
+
+    def create_queue_manager(self: _SubarrayProxy) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
+        )
 
     @check_communicating
     @check_on
@@ -194,6 +247,22 @@ class _SubarrayProxy(DeviceComponentManager):
 class _SubarrayBeamProxy(DeviceComponentManager):
     """A controller's proxy to a subarray beam."""
 
+    def create_queue_manager(self: _SubarrayBeamProxy) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
+        )
+
     @check_communicating
     @check_on
     def write_station_ids(
@@ -220,6 +289,22 @@ class _SubarrayBeamProxy(DeviceComponentManager):
 
 class _StationBeamProxy(DeviceComponentManager):
     """A controller's proxy to a station beam."""
+
+    def create_queue_manager(self: _StationBeamProxy) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
+        )
 
     @check_communicating
     @check_on
@@ -312,9 +397,9 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_beam_fqdns: Iterable[str],
         station_beam_fqdns: Iterable[str],
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        push_change_event: Optional[Callable],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -349,7 +434,6 @@ class ControllerComponentManager(MccsComponentManager):
         :param station_beam_health_changed_callback: callback to be
             called when the health of one of this controller's station beams changes
         """
-        self._push_change_event = push_change_event
         self._station_health_changed_callback = station_health_changed_callback
         self._subarray_beam_health_changed_callback = (
             subarray_beam_health_changed_callback
@@ -394,6 +478,7 @@ class ControllerComponentManager(MccsComponentManager):
             fqdn: _SubarrayProxy(
                 fqdn,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -401,10 +486,11 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_fqdns
         }
-        self._subracks: dict[str, DeviceComponentManager] = {
-            fqdn: DeviceComponentManager(
+        self._subracks: dict[str, _SubrackProxy] = {
+            fqdn: _SubrackProxy(
                 fqdn,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._subrack_power_mode_changed, fqdn),
                 None,
@@ -417,6 +503,7 @@ class ControllerComponentManager(MccsComponentManager):
                 fqdn,
                 subarray_fqdns,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._station_power_mode_changed, fqdn),
                 None,
@@ -428,6 +515,7 @@ class ControllerComponentManager(MccsComponentManager):
             fqdn: _SubarrayBeamProxy(
                 fqdn,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -439,6 +527,7 @@ class ControllerComponentManager(MccsComponentManager):
             fqdn: _StationBeamProxy(
                 fqdn,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -449,6 +538,7 @@ class ControllerComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
@@ -725,6 +815,7 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        print(f"RCL: 1             ")
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
         flattened_station_fqdns = []
@@ -753,6 +844,7 @@ class ControllerComponentManager(MccsComponentManager):
                     )
                 flattened_station_fqdns.append(station_fqdn)
 
+        print(f"RCL: 2             ")
         # need (subarray-beams * stations) number of station-beams from pool
         station_beam_fqdns = []
         station_beams_required = len(list(subarray_beam_fqdns)) * len(
@@ -774,6 +866,7 @@ class ControllerComponentManager(MccsComponentManager):
             channel_blocks=channel_blocks,
         )
 
+        print(f"RCL: 3             ")
         result_code = self._subarrays[subarray_fqdn].assign_resources(
             list(set(flattened_station_fqdns)),  # unique items only
             subarray_beam_fqdns,
@@ -781,6 +874,7 @@ class ControllerComponentManager(MccsComponentManager):
             channel_blocks,
         )
 
+        print(f"RCL: 4   {result_code}          ")
         # don't forget to release resources if allocate was unsuccessful:
         if result_code == ResultCode.FAILED:
             self.deallocate_all(subarray_id)

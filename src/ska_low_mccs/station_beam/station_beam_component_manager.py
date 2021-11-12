@@ -53,6 +53,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         station_health_changed_callback: Callable[[Optional[HealthState]], None],
@@ -96,6 +97,7 @@ class StationBeamComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,

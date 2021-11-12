@@ -28,6 +28,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: PasdBusSimulatorComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         _simulator: Optional[PasdBusSimulator] = None,
@@ -53,6 +54,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             pasd_bus_simulator,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -159,6 +161,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         self: PasdBusComponentManager,
         initial_simulation_mode: SimulationMode,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         _simulator_component_manager: Optional[PasdBusSimulatorComponentManager] = None,
@@ -184,6 +187,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
             _simulator_component_manager
             or PasdBusSimulatorComponentManager(
                 logger,
+                push_change_event,
                 communication_status_changed_callback,
                 component_fault_callback,
             )

@@ -57,6 +57,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         self: _TpmSimulatorComponentManager,
         tpm_simulator: BaseTpmSimulator,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -75,6 +76,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             tpm_simulator,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -228,6 +230,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: StaticTpmSimulatorComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -246,6 +249,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
                 logger,
             ),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
         )
@@ -257,6 +261,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: DynamicTpmSimulatorComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -275,6 +280,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
                 logger,
             ),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
         )
@@ -295,6 +301,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
+        push_change_event,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
@@ -320,6 +327,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         """
         tpm_driver = TpmDriver(
             logger,
+            push_change_event,
             tpm_ip,
             tpm_cpld_port,
             tpm_version,
@@ -329,12 +337,14 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
 
         dynamic_tpm_simulator_component_manager = DynamicTpmSimulatorComponentManager(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
         )
 
         static_tpm_simulator_component_manager = StaticTpmSimulatorComponentManager(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
         )
@@ -436,6 +446,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         tpm_bay: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         tpm_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -464,6 +475,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
@@ -577,6 +589,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
+        push_change_event,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
@@ -620,6 +633,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 initial_simulation_mode,
                 initial_test_mode,
                 logger,
+                push_change_event,
                 tpm_ip,
                 tpm_cpld_port,
                 tpm_version,
@@ -632,6 +646,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
             subrack_fqdn,
             subrack_tpm_id,
             logger,
+            push_change_event,
             self._power_supply_communication_status_changed,
             self._subrack_power_mode_changed,
             self.component_power_mode_changed,
@@ -641,6 +656,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

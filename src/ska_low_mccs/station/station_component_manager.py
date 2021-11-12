@@ -42,6 +42,7 @@ class _TileProxy(DeviceComponentManager):
         station_id: int,
         logical_tile_id: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -77,6 +78,7 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -132,9 +134,9 @@ class StationComponentManager(MccsComponentManager):
         antenna_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        push_change_event: Optional[Callable],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -169,7 +171,6 @@ class StationComponentManager(MccsComponentManager):
         """
         self._station_id = station_id
 
-        self._push_change_event = push_change_event
         self._is_configured = False
         self._on_called = False
         self._is_configured_changed_callback = is_configured_changed_callback
@@ -188,6 +189,7 @@ class StationComponentManager(MccsComponentManager):
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
             logger,
+            push_change_event,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
             self._apiu_power_mode_changed,
             None,
@@ -197,6 +199,7 @@ class StationComponentManager(MccsComponentManager):
             DeviceComponentManager(
                 antenna_fqdn,
                 logger,
+                push_change_event,
                 functools.partial(
                     self._device_communication_status_changed, antenna_fqdn
                 ),
@@ -212,6 +215,7 @@ class StationComponentManager(MccsComponentManager):
                 station_id,
                 logical_tile_id,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
                 functools.partial(self._tile_power_mode_changed, tile_fqdn),
                 None,
@@ -222,6 +226,7 @@ class StationComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,

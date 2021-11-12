@@ -73,6 +73,7 @@ class MccsSubarray(SKASubarray):
         """
         return SubarrayComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._assign_completed,
             self._release_completed,

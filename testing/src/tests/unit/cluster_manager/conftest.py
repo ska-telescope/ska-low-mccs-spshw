@@ -59,6 +59,7 @@ def cluster_simulator() -> ClusterSimulator:
 @pytest.fixture()
 def cluster_simulator_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
@@ -85,6 +86,7 @@ def cluster_simulator_component_manager(
     """
     return ClusterSimulatorComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
@@ -95,6 +97,7 @@ def cluster_simulator_component_manager(
 @pytest.fixture()
 def cluster_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
@@ -122,6 +125,7 @@ def cluster_component_manager(
     """
     return ClusterComponentManager(
         logger,
+        lrc_result_changed_callback,
         SimulationMode.TRUE,
         communication_status_changed_callback,
         component_power_mode_changed_callback,

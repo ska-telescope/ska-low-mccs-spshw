@@ -38,6 +38,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_antenna_power_changed_callback: Optional[
@@ -61,6 +62,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             ApiuSimulator(antenna_count),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -152,6 +154,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_antenna_power_changed_callback: Callable[[list[bool]], None],
@@ -176,6 +179,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         apiu_simulator = ApiuSimulatorComponentManager(
             antenna_count,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_antenna_power_changed_callback,
@@ -191,6 +195,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -223,6 +228,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             initial_simulation_mode,
             antenna_count,
             logger,
+            push_change_event,
             self._hardware_communication_status_changed,
             self.component_fault_changed,
             component_antenna_power_changed_callback,
@@ -230,6 +236,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
+            push_change_event,
             self._power_supply_communication_status_changed,
             self.component_power_mode_changed,
             _initial_power_mode,
@@ -238,6 +245,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

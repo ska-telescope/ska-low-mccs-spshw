@@ -164,6 +164,7 @@ class PowerSupplyProxySimulator(
     def __init__(
         self: PowerSupplyProxySimulator,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         supplied_power_mode_changed_callback: Callable[[PowerMode], None],
         initial_supplied_power_mode: PowerMode = PowerMode.OFF,
@@ -183,6 +184,7 @@ class PowerSupplyProxySimulator(
         super().__init__(
             self._Component(initial_supplied_power_mode),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,
@@ -247,6 +249,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         hardware_component_manager: MccsComponentManagerProtocol,
         power_supply_component_manager: PowerSupplyProxyComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -283,6 +286,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

@@ -69,6 +69,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return SubarrayBeamComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._health_model.is_beam_locked_changed,
             self._obs_state_model.is_configured_changed,

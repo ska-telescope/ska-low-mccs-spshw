@@ -122,6 +122,7 @@ def testing_subrack_simulator(
 @pytest.fixture()
 def subrack_simulator_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_progress_changed_callback: MockCallable,
@@ -147,6 +148,7 @@ def subrack_simulator_component_manager(
     """
     return SubrackSimulatorComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
         component_progress_changed_callback,
@@ -157,6 +159,7 @@ def subrack_simulator_component_manager(
 @pytest.fixture()
 def testing_subrack_simulator_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_progress_changed_callback: MockCallable,
@@ -182,6 +185,7 @@ def testing_subrack_simulator_component_manager(
     """
     return TestingSubrackSimulatorComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
         component_progress_changed_callback,
@@ -192,6 +196,7 @@ def testing_subrack_simulator_component_manager(
 @pytest.fixture()
 def switching_subrack_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
@@ -223,6 +228,7 @@ def switching_subrack_component_manager(
         SimulationMode.TRUE,
         TestMode.TEST,
         logger,
+        lrc_result_changed_callback,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,
@@ -376,6 +382,7 @@ def subrack_driver(
 @pytest.fixture()
 def subrack_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
@@ -413,6 +420,7 @@ def subrack_component_manager(
         SimulationMode.TRUE,
         TestMode.TEST,
         logger,
+        lrc_result_changed_callback,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,

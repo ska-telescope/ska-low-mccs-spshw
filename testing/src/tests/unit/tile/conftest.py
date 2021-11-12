@@ -339,6 +339,7 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 @pytest.fixture()
 def static_tpm_simulator_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> StaticTpmSimulatorComponentManager:
@@ -358,6 +359,7 @@ def static_tpm_simulator_component_manager(
     """
     return StaticTpmSimulatorComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )
@@ -366,6 +368,7 @@ def static_tpm_simulator_component_manager(
 @pytest.fixture()
 def dynamic_tpm_simulator_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> DynamicTpmSimulatorComponentManager:
@@ -385,6 +388,7 @@ def dynamic_tpm_simulator_component_manager(
     """
     return DynamicTpmSimulatorComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )
@@ -395,6 +399,7 @@ def switching_tpm_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -426,6 +431,7 @@ def switching_tpm_component_manager(
         simulation_mode,
         test_mode,
         logger,
+        lrc_result_changed_callback,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -440,6 +446,7 @@ def tile_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -479,6 +486,7 @@ def tile_component_manager(
         simulation_mode,
         test_mode,
         logger,
+        lrc_result_changed_callback,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,

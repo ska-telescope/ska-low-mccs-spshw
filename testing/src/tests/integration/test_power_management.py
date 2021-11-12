@@ -251,7 +251,6 @@ class TestPowerManagement:
             tiles + stations + [controller] + [subrack], tango.DevState.OFF
         )
 
-    # @pytest.mark.timeout(10)
     def test_power_on(
         self: TestPowerManagement,
         tango_harness: TangoHarness,

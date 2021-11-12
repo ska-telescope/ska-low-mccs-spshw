@@ -257,6 +257,7 @@ def station_beam_health_changed_callback(
 def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     assign_completed_callback: MockCallable,
     release_completed_callback: MockCallable,
@@ -313,6 +314,7 @@ def subarray_component_manager(
     """
     return SubarrayComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         assign_completed_callback,
         release_completed_callback,

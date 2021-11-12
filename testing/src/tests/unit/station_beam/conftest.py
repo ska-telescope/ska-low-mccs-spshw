@@ -93,6 +93,7 @@ def station_beam_component_manager(
     tango_harness: TangoHarness,
     beam_id: int,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_is_beam_locked_changed_callback: MockCallable,
     component_device_health_changed_callback: MockCallable,
@@ -121,6 +122,7 @@ def station_beam_component_manager(
     return StationBeamComponentManager(
         beam_id,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_is_beam_locked_changed_callback,
         component_device_health_changed_callback,

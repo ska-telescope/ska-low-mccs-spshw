@@ -42,6 +42,7 @@ class ObjectComponentManager(MccsComponentManager):
         self: ObjectComponentManager,
         component: ObjectComponent,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
@@ -72,6 +73,7 @@ class ObjectComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

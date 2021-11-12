@@ -77,6 +77,7 @@ def subarray_beam_component(
 @pytest.fixture()
 def subarray_beam_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_is_beam_locked_changed_callback: Callable[[bool], None],
     is_configured_changed_callback: Callable[[bool], None],
@@ -97,6 +98,7 @@ def subarray_beam_component_manager(
     """
     return SubarrayBeamComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_is_beam_locked_changed_callback,
         is_configured_changed_callback,

@@ -106,6 +106,7 @@ class MccsSubrack(SKABaseDevice):
             SimulationMode.TRUE,
             TestMode.NONE,
             self.logger,
+            self.push_change_event,
             self.SubrackIp,
             self.SubrackPort,
             self._component_communication_status_changed,

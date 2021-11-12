@@ -30,6 +30,7 @@ class TelStateComponentManager(ObjectComponentManager):
     def __init__(
         self: TelStateComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
     ) -> None:
         """
@@ -43,6 +44,7 @@ class TelStateComponentManager(ObjectComponentManager):
         super().__init__(
             TelState(logger),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,

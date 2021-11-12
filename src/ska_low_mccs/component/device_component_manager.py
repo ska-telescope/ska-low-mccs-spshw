@@ -34,9 +34,9 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
-        push_change_event: Optional[Callable],
         component_fault_callback: Optional[Callable[[bool], None]],
         health_changed_callback: Optional[
             Callable[[Optional[HealthState]], None]
@@ -66,7 +66,6 @@ class DeviceComponentManager(MccsComponentManager):
         self._proxy: Optional[MccsDeviceProxy] = None
         self._logger = logger
 
-        self._push_change_event = push_change_event
         self._health: Optional[HealthState] = None
         self._device_health_state = HealthState.UNKNOWN
         self._device_admin_mode = AdminMode.OFFLINE
@@ -74,25 +73,10 @@ class DeviceComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
-        )
-
-    def create_queue_manager(self: DeviceComponentManager) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
         )
 
     def start_communicating(self: DeviceComponentManager) -> None:
@@ -334,6 +318,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         self: ObsDeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -366,6 +351,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

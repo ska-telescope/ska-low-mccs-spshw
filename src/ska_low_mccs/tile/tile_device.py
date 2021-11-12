@@ -84,6 +84,7 @@ class MccsTile(SKABaseDevice):
             SimulationMode.TRUE,
             TestMode.NONE,
             self.logger,
+            self.push_change_event,
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,

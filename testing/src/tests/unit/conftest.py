@@ -207,23 +207,6 @@ def component_power_mode_changed_callback(
 
 
 @pytest.fixture()
-def long_running_command_result_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for component long running command result.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the component manager
-        detects that a long running command result of its component has changed.
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
 def component_fault_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:

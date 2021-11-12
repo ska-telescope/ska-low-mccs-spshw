@@ -86,6 +86,7 @@ class MccsStation(SKAObsDevice):
             self.AntennaFQDNs,
             self.TileFQDNs,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
             self._component_power_mode_changed,
             self._health_model.apiu_health_changed,

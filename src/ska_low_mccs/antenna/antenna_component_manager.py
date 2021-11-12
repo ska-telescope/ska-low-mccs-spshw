@@ -38,6 +38,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -71,6 +72,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -240,6 +242,7 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -264,6 +267,7 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             lambda power_mode: None,  # tile doesn't manage antenna power
             component_fault_callback,
@@ -348,6 +352,7 @@ class AntennaComponentManager(MccsComponentManager):
         tile_fqdn: str,
         tile_antenna_id: int,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -386,6 +391,7 @@ class AntennaComponentManager(MccsComponentManager):
             apiu_fqdn,
             apiu_antenna_id,
             logger,
+            push_change_event,
             self._apiu_communication_status_changed,
             self._apiu_power_mode_changed,
             self._apiu_component_fault_changed,
@@ -395,12 +401,14 @@ class AntennaComponentManager(MccsComponentManager):
             tile_fqdn,
             tile_antenna_id,
             logger,
+            push_change_event,
             self._tile_communication_status_changed,
             self._tile_component_fault_changed,
         )
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

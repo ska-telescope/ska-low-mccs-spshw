@@ -36,6 +36,7 @@ class TestObjectComponentManager:
         self: TestObjectComponentManager,
         component: unittest.mock.Mock,
         logger: logging.Logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
         component_fault_callback: MockCallable,
@@ -59,6 +60,7 @@ class TestObjectComponentManager:
         return ObjectComponentManager(
             component,
             logger,
+            lrc_result_changed_callback,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

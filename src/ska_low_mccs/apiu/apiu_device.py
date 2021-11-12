@@ -93,6 +93,7 @@ class MccsAPIU(SKABaseDevice):
             SimulationMode.TRUE,
             len(self.AntennaFQDNs),
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,

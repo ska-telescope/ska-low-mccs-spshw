@@ -93,6 +93,7 @@ class MccsPasdBus(SKABaseDevice):
         return PasdBusComponentManager(
             SimulationMode.TRUE,
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._component_fault,
         )

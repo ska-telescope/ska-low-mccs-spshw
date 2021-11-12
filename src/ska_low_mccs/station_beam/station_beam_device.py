@@ -71,6 +71,7 @@ class MccsStationBeam(SKAObsDevice):
         return StationBeamComponentManager(
             self.BeamId,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
             self._health_model.is_beam_locked_changed,
             self._health_model.station_health_changed,

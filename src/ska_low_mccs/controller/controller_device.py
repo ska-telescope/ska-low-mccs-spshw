@@ -84,9 +84,9 @@ class MccsController(SKABaseDevice):
             self.MccsSubarrayBeams,
             self.MccsStationBeams,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
             self._component_power_mode_changed,
-            self.push_change_event,
             self._health_model.subrack_health_changed,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
@@ -100,6 +100,10 @@ class MccsController(SKABaseDevice):
         self.register_command_object(
             "On",
             self.OnCommand(self, self.op_state_model, self.logger),
+        )
+        self.register_command_object(
+            "Off",
+            self.OffCommand(self, self.op_state_model, self.logger),
         )
         self.register_command_object(
             "Allocate",
@@ -148,7 +152,6 @@ class MccsController(SKABaseDevice):
             # overwrites it with OK, so we need to update this again.
             # TODO: This needs to be fixed in the base classes.
             device._health_state = device._health_model.health_state
-            device._long_running_command_result = ("a", "default", "value")
 
             return (result_code, message)
 
@@ -193,6 +196,50 @@ class MccsController(SKABaseDevice):
 
             # Wait for conditions on component manager to unblock
             result_code, message = wait_until_on(self.target, timeout=10.0)
+            self.logger.info(message)
+            return (result_code, message)
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """A class for the MccsController's Off() command."""
+
+        def do(  # type: ignore[override]
+            self: MccsController.OffCommand,
+        ):
+            """
+            Stateless hook for Off() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            result_code = self.target.component_manager.off()
+            if result_code == ResultCode.FAILED:
+                return (ResultCode.FAILED, "Controller failed to initiate Off command")
+
+            def wait_until_off(device, timeout, period=0.5) -> List[ResultCode, str]:
+                """
+                Wait until the device is off.
+
+                :param device: the device to wait for
+                :param timeout: the time we are prepared to wait for the device to become OFF
+                :param period: the polling period in seconds
+
+                :return: a return code and a string message indicating status.
+                    The message is for information purpose only.
+                """
+                elapsed_time = 0.0
+                while elapsed_time <= timeout:
+                    if device.get_state() == tango.DevState.OFF:
+                        message = "Controller Off command completed OK"
+                        return (ResultCode.OK, message)
+                    time.sleep(period)
+                message = (
+                    "Controller Off command didn't complete within {timeout} seconds"
+                )
+                return (ResultCode.FAILED, message)
+
+            # Wait for conditions on component manager to unblock
+            result_code, message = wait_until_off(self.target, timeout=10.0)
             self.logger.info(message)
             return (result_code, message)
 
@@ -267,15 +314,6 @@ class MccsController(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    # @attribute(dtype=("DevString",), max_dim_x=3)
-    # def longRunningCommandResult(self: MccsController) -> list(str):
-    #     """
-    #     Return the long running command result attribute.
-    #
-    #     :return: _long_running_command_result attribute
-    #     """
-    #     return self._long_running_command_result
-
     @attribute(dtype="DevString")
     def assignedResources(self: MccsController) -> str:
         """
@@ -374,7 +412,7 @@ class MccsController(SKABaseDevice):
             )
         """
         handler = self.get_command_object("Allocate")
-        unique_id, result_code = self.component_manager.enqueue(handler, argin)
+        unique_id, result_code = self.component_manager.enqueue(task=handler, argin=argin)
         return [[result_code], [unique_id]]
 
     class AllocateCommand(ResponseCommand):

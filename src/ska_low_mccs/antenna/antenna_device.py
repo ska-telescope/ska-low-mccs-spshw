@@ -70,6 +70,7 @@ class MccsAntenna(SKABaseDevice):
             f"low-mccs/tile/{self.TileId:04}",
             self.LogicalTileAntennaId,
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,

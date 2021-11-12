@@ -120,6 +120,7 @@ class SubarrayComponentManager(
     def __init__(
         self: SubarrayComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         assign_completed_callback: Callable[[], None],
         release_completed_callback: Callable[[], None],
@@ -206,6 +207,7 @@ class SubarrayComponentManager(
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,

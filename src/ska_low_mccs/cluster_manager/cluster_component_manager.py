@@ -31,6 +31,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: ClusterSimulatorComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
@@ -49,6 +50,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             cluster_simulator,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             power_mode_changed_callback,
             fault_callback,
@@ -173,6 +175,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
     def __init__(
         self: ClusterComponentManager,
         logger: logging.Logger,
+        push_change_event,
         initial_simulation_mode: SimulationMode,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
@@ -202,6 +205,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         """
         cluster_simulator = ClusterSimulatorComponentManager(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

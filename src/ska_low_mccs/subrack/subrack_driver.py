@@ -71,6 +71,7 @@ class SubrackDriver(MccsComponentManager):
     def __init__(
         self: SubrackDriver,
         logger: logging.Logger,
+        push_change_event,
         ip: str,
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -130,6 +131,7 @@ class SubrackDriver(MccsComponentManager):
         self._component_progress_changed_callback = component_progress_changed_callback
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,

@@ -60,6 +60,7 @@ class TpmDriver(MccsComponentManager):
     def __init__(
         self: TpmDriver,
         logger: logging.Logger,
+        push_change_event,
         ip: str,
         port: int,
         tpm_version: str,
@@ -126,6 +127,7 @@ class TpmDriver(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,

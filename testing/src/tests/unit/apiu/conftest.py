@@ -104,6 +104,7 @@ def apiu_simulator(
 def apiu_simulator_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_antenna_power_changed_callback: MockCallable,
@@ -128,6 +129,7 @@ def apiu_simulator_component_manager(
     return ApiuSimulatorComponentManager(
         apiu_antenna_count,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
         component_antenna_power_changed_callback,
@@ -138,6 +140,7 @@ def apiu_simulator_component_manager(
 def switching_apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: Callable[[bool], None],
     component_antenna_power_changed_callback: MockCallable,
@@ -163,6 +166,7 @@ def switching_apiu_component_manager(
         SimulationMode.TRUE,
         apiu_antenna_count,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
         component_antenna_power_changed_callback,
@@ -173,6 +177,7 @@ def switching_apiu_component_manager(
 def apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -204,6 +209,7 @@ def apiu_component_manager(
         SimulationMode.TRUE,
         apiu_antenna_count,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,

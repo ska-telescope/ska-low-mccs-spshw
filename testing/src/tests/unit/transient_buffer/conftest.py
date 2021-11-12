@@ -40,6 +40,7 @@ def transient_buffer_component(logger: logging.Logger) -> TransientBuffer:
 @pytest.fixture()
 def transient_buffer_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
 ) -> TransientBufferComponentManager:
     """
@@ -54,5 +55,6 @@ def transient_buffer_component_manager(
     """
     return TransientBufferComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
     )

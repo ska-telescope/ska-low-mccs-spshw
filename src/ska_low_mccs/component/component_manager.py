@@ -149,6 +149,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
     def __init__(
         self: MccsComponentManager,
         logger: logging.Logger,
+        push_change_event,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
@@ -172,6 +173,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         :param kwargs: other keyword args
         """
         self.logger = logger
+        assert push_change_event
+        self._push_change_event = push_change_event
 
         self.__communication_lock = threading.Lock()
         self._communication_status = CommunicationStatus.DISABLED

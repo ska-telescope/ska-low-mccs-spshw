@@ -75,7 +75,7 @@ class DeviceComponentManager(MccsComponentManager):
             component_fault_callback,
         )
 
-    def create_queue_manager(self: _StationProxy) -> QueueManager:
+    def create_queue_manager(self: DeviceComponentManager) -> QueueManager:
         """
         Create a QueueManager.
 
@@ -147,26 +147,31 @@ class DeviceComponentManager(MccsComponentManager):
         """
         if self.power_mode == PowerMode.ON:
             return None  # already on
-        onCommand = self.DeviceProxyOnCommand(target=self)
+        on_command = self.DeviceProxyOnCommand(target=self)
         # Enqueue the on command.
         # This is a fire and forget command, so we don't need to keep unique ID.
-        result_code, _ = self.enqueue(onCommand)
+        result_code, _ = self.enqueue(on_command)
         return result_code
 
     class DeviceProxyOnCommand(BaseCommand):
         """Base command class for the on command to be enqueued."""
 
-        def do(self: DeviceComponentManager.DeviceProxyOnCommand) -> ResultCode:
+        def do(  # type: ignore[override]
+            self: DeviceComponentManager.DeviceProxyOnCommand,
+        ) -> ResultCode:
             """
             On command implementation that simply calls On, on its proxy.
-            
+
             :return: a result code.
             """
             try:
                 assert self.target._proxy is not None  # for the type checker
                 ([result_code], _) = self.target._proxy.On()  # Fire and forget
             except TypeError as type_error:
-                raise TypeError(f"FQDN is {self.target._fqdn}") from type_error
+                self._logger.fatal(
+                    f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
+                )
+                result_code = ResultCode.FAILED
             return result_code
 
     @check_communicating

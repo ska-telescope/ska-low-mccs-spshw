@@ -255,7 +255,7 @@ class TestPowerManagement:
     def test_power_on(
         self: TestPowerManagement,
         tango_harness: TangoHarness,
-        controller_lrc_result_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback: MockChangeEventCallback,
         controller_device_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
@@ -264,8 +264,8 @@ class TestPowerManagement:
         :param tango_harness: a test harness for tango devices
         :param controller_device_state_changed_callback: a callback to
             be used to subscribe to controller state change
-        :param controller_lrc_result_changed_callback: a callback to
-            be used to subscribe to controller LRC result changes
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         subrack = tango_harness.get_device("low-mccs/subrack/01")
@@ -334,7 +334,7 @@ class TestPowerManagement:
         # Subscribe to controller's LRC result attribute
         controller.add_change_event_callback(
             "longRunningCommandResult",
-            controller_lrc_result_changed_callback,
+            lrc_result_changed_callback,
         )
         assert (
             "longRunningCommandResult".casefold()
@@ -343,7 +343,7 @@ class TestPowerManagement:
         time.sleep(0.1)  # allow event system time to run
         initial_lrc_result = ("", "", "")
         assert controller.longRunningCommandResult == initial_lrc_result
-        controller_lrc_result_changed_callback.assert_next_change_event(
+        lrc_result_changed_callback.assert_next_change_event(
             initial_lrc_result
         )
 
@@ -352,12 +352,14 @@ class TestPowerManagement:
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id
 
-        lrc_result = (unique_id, str(ResultCode.OK.value), "Controller On command completed OK")
-        controller_lrc_result_changed_callback.assert_last_change_event(lrc_result, do_assert=False)
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            "Controller On command completed OK",
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
-        # Debug
-        self.show_state_of_devices(devices)
-
+        # Double check that the controller fired a state change event
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
         )
@@ -368,12 +370,14 @@ class TestPowerManagement:
         # TODO: Remove forced failure for debug output
         # assert False
 
-    def show_state_of_devices(
+    def _show_state_of_devices(
         self: TestPowerManagement,
-        devices: Any,
-    ):
+        devices: list[MccsDeviceProxy],
+    ) -> None:
         """
-        Show the state of the requested devices
+        Show the state of the requested devices.
+
+        :param devices: list of MCCS device proxies
         """
         for device in devices:
             print(f"Device: {device.name} = {device.state()}")

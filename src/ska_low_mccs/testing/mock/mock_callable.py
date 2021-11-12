@@ -293,6 +293,7 @@ class MockChangeEventCallback(MockCallable):
         :param value: the asserted value of the change event
         :param quality: the asserted quality of the change event. This
             is optional, with a default of ATTR_VALID.
+        :param do_assert: option to not perform an assert (useful for debugging).
 
         :raises AssertionError: if the callback has not been called.
         """

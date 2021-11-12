@@ -14,15 +14,11 @@ import functools
 import json
 import logging
 import threading
-import queue
-from tango import DevState
 from typing import Callable, Hashable, Optional, Iterable, Tuple
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
-from ska_tango_base.utils import EnqueueSuspend
 from ska_tango_base.base.task_queue_manager import QueueManager
-from ska_low_mccs.utils import threadsafe
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -355,7 +351,6 @@ class ControllerComponentManager(MccsComponentManager):
         :param station_beam_health_changed_callback: callback to be
             called when the health of one of this controller's station beams changes
         """
-        self.on_complete_queue = queue.Queue()
         self._long_running_command_result_changed_callback = (
             long_running_command_result_changed_callback
         )
@@ -728,7 +723,6 @@ class ControllerComponentManager(MccsComponentManager):
     def allocate(
         self: ControllerComponentManager,
         subarray_id: int,
-
         station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],

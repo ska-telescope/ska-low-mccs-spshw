@@ -9,6 +9,7 @@ pytango >= 9.3.3
 requests
 scipy
 # ska-tango-base == 0.11.3
+ska-tango-base == 0.12.0
 #
 # Starting point on main = d7aa5acb
 # git+https://gitlab.com/ska-telescope/ska-tango-base@d7aa5acb#egg=ska-tango-base
@@ -31,6 +32,6 @@ scipy
 # git+https://gitlab.com/ska-telescope/ska-tango-base@main#egg=ska-tango-base
 #
 # Latest code from Karoo - containing EnqueueSuspend
-git+https://gitlab.com/ska-telescope/ska-tango-base@sar_302-POC_await_sub_device_state#egg=ska-tango-base
+#git+https://gitlab.com/ska-telescope/ska-tango-base@sar_302-POC_await_sub_device_state#egg=ska-tango-base
 
 transitions

@@ -102,6 +102,7 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         """
         vinfo = release.get_release_info(device_under_test.info().dev_class)
+        
         assert device_under_test.GetVersionInfo() == [vinfo]
 
     def test_adminMode(

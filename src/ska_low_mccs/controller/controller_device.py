@@ -12,7 +12,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import List, Optional, Tuple, Union, cast
+from typing import List, Optional, Tuple, Union
 
 import tango
 import time
@@ -100,9 +100,7 @@ class MccsController(SKABaseDevice):
 
         self.register_command_object(
             "On",
-            self.OnCommand(
-                self, self.op_state_model, self.logger
-            ),
+            self.OnCommand(self, self.op_state_model, self.logger),
         )
         self.register_command_object(
             "Allocate",
@@ -167,22 +165,32 @@ class MccsController(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
             """
             result_code = self.target.component_manager.on()
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, "Controller failed to initiate On command")
 
-            def wait_until_on(device, timeout, period=0.25) -> list[ResultCode, str]:
-                """Wait untill the device is on"""
+            def wait_until_on(device, timeout, period=0.5) -> List[ResultCode, str]:
+                """
+                Wait until the device is on.
+
+                :param device: the device to wait for
+                :param timeout: the time we are prepared to wait for the device to become ON
+                :param period: the polling period in seconds
+
+                :return: a return code and a string message indicating status.
+                    The message is for information purpose only.
+                """
                 elapsed_time = 0.0
                 while elapsed_time <= timeout:
                     if device.get_state() == tango.DevState.ON:
                         message = "Controller On command completed OK"
-                        return ResultCode.OK, message
+                        return (ResultCode.OK, message)
                     time.sleep(period)
-                message = "Controller On command didn't complete within {timeout} seconds"
-                return ResultCode.FAILED, message
+                message = (
+                    "Controller On command didn't complete within {timeout} seconds"
+                )
+                return (ResultCode.FAILED, message)
 
             # Wait for conditions on component manager to unblock
             result_code, message = wait_until_on(self.target, timeout=10.0)
@@ -204,7 +212,7 @@ class MccsController(SKABaseDevice):
 
         :param long_running_command_result: the new long running command result value
         """
-        if (self._long_running_command_result == long_running_command_result):
+        if self._long_running_command_result == long_running_command_result:
             return
         self._long_running_command_result = long_running_command_result
         self.push_change_event(

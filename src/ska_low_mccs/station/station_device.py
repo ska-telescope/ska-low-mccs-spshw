@@ -508,9 +508,7 @@ class MccsStation(SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def Configure(
-        self: MccsStation, argin: str
-    ) -> Tuple[List[ResultCode], List[Optional[str]]]:
+    def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the station with all relevant parameters.
 
@@ -521,13 +519,12 @@ class MccsStation(SKAObsDevice):
             information purpose only.
 
         :example:
-
-        >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("Configure", json_str)
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("Configure", json_str)
         """
-        command_object = self.get_command_object("Configure")
-        unique_id, return_code = self.component_manager.enqueue(command_object)
-        return [[return_code], [unique_id]]
+        handler = self.get_command_object("Configure")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
     class ApplyPointingCommand(ResponseCommand):
         """Class for handling the ApplyPointing(argin) command."""

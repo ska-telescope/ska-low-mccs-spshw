@@ -314,9 +314,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        long_running_command_result_changed_callback: Callable[
-            [Tuple[str, str, str]], None
-        ],
+        push_change_event: Optional[Callable],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -340,8 +338,8 @@ class ControllerComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
-        :param long_running_command_result_changed_callback: callback to be
-            called when the component long running comamnd result changes
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param subrack_health_changed_callback: callback to be called
             when the health of one of this controller's subracks changes
         :param station_health_changed_callback: callback to be called
@@ -351,9 +349,7 @@ class ControllerComponentManager(MccsComponentManager):
         :param station_beam_health_changed_callback: callback to be
             called when the health of one of this controller's station beams changes
         """
-        self._long_running_command_result_changed_callback = (
-            long_running_command_result_changed_callback
-        )
+        self._push_change_event = push_change_event
         self._station_health_changed_callback = station_health_changed_callback
         self._subarray_beam_health_changed_callback = (
             subarray_beam_health_changed_callback
@@ -471,22 +467,8 @@ class ControllerComponentManager(MccsComponentManager):
             max_queue_size=1,
             num_workers=1,
             logger=self.logger,
-            push_change_event=self._attribute_changed_callback,
+            push_change_event=self._push_change_event,
         )
-
-    def _attribute_changed_callback(
-        self: ControllerComponentManager, name: str, result: Tuple[str, str, str]
-    ) -> None:
-        """
-        Attribute changed callback method.
-
-        :param name: name of the attribute that has changed
-        :param result: the value of the attribute
-        """
-        print(f"RCL: CONTROLLER IMPLEMENTED {name}:{result}")
-        if name == "longRunningCommandResult":
-            if self._long_running_command_result_changed_callback:
-                self._long_running_command_result_changed_callback(result)
 
     def start_communicating(self: ControllerComponentManager) -> None:
         """Establish communication with the station components."""

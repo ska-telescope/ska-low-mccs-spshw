@@ -262,10 +262,10 @@ class TestPowerManagement:
         Test that a MccsController device can enable an MccsSubarray device.
 
         :param tango_harness: a test harness for tango devices
-        :param controller_device_state_changed_callback: a callback to
-            be used to subscribe to controller state change
         :param lrc_result_changed_callback: a callback to
             be used to subscribe to device LRC result changes
+        :param controller_device_state_changed_callback: a callback to
+            be used to subscribe to controller state change
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         subrack = tango_harness.get_device("low-mccs/subrack/01")

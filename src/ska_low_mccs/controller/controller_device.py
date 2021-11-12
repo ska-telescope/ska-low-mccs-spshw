@@ -68,7 +68,6 @@ class MccsController(SKABaseDevice):
             self.health_changed,
         )
         self.set_change_event("healthState", True, False)
-        # self.set_change_event("longRunningCommandResult", True, True)
 
     def create_component_manager(
         self: MccsController,
@@ -87,7 +86,7 @@ class MccsController(SKABaseDevice):
             self.logger,
             self._communication_status_changed,
             self._component_power_mode_changed,
-            self._long_running_command_result_changed,
+            self.push_change_event,
             self._health_model.subrack_health_changed,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
@@ -200,26 +199,6 @@ class MccsController(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
-    def _long_running_command_result_changed(
-        self: MccsController,
-        long_running_command_result: Union[Tuple[str, str, str], Tuple[()]],
-    ) -> None:
-        """
-        Handle change in long running command result.
-
-        Responsible for updating the tango side of things i.e. making sure the attribute
-        is up to date, and events are pushed.
-
-        :param long_running_command_result: the new long running command result value
-        """
-        if self._long_running_command_result == long_running_command_result:
-            return
-        self._long_running_command_result = long_running_command_result
-        self.push_change_event(
-            "longRunningCommandResult",
-            self._long_running_command_result,
-        )
-
     def _communication_status_changed(
         self: MccsController,
         communication_status: CommunicationStatus,

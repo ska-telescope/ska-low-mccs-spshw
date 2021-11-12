@@ -23,6 +23,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsController, MccsDeviceProxy, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
@@ -93,6 +94,7 @@ class TestMccsController:
     def test_GetVersionInfo(
         self: TestMccsController,
         device_under_test: MccsDeviceProxy,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for GetVersionInfo.
@@ -100,9 +102,39 @@ class TestMccsController:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
+        # Subscribe to controller's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(
+            initial_lrc_result
+        )
+
         vinfo = release.get_release_info(device_under_test.info().dev_class)
-        
+
+        # Message queue length is non-zero so command is queued
+        ([result_code], [unique_id]) = device_under_test.GetVersionInfo()
+        assert result_code == ResultCode.QUEUED
+        assert "GetVersionInfo" in unique_id
+
+        return
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            "Controller On command completed OK",
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
+
         assert device_under_test.GetVersionInfo() == [vinfo]
 
     def test_adminMode(

@@ -331,6 +331,7 @@ class TestMccsIntegrationTmc:
         subarray_beam_4: MccsDeviceProxy,
         controller_device_state_changed_callback: MockChangeEventCallback,
         subarray_device_obs_state_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that we can turn the controller on.
@@ -349,6 +350,8 @@ class TestMccsIntegrationTmc:
             be used to subscribe to controller state change
         :param subarray_device_obs_state_changed_callback: a callback to
             be used to subscribe to subarray obs state change
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         assert controller.state() == tango.DevState.DISABLE
         assert subrack.state() == tango.DevState.DISABLE
@@ -421,8 +424,20 @@ class TestMccsIntegrationTmc:
         # TODO: Understand this race condition and resolve it properly
         time.sleep(0.1)
 
-        ([result_code], _) = controller.On()
-        assert result_code == ResultCode.OK  # should be QUEUED but base classes
+        # Subscribe to controller's LRC result attribute
+        controller.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in controller._change_event_subscription_ids
+        )
+
+        # Message queue length is non-zero so command is queued
+        ([result_code], [unique_id]) = controller.On()
+        assert result_code == ResultCode.QUEUED
+        assert "OnCommand" in unique_id
 
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
@@ -434,6 +449,14 @@ class TestMccsIntegrationTmc:
         # controller.
         station_1.FakeSubservientDevicesPowerMode(PowerMode.ON)
         station_2.FakeSubservientDevicesPowerMode(PowerMode.ON)
+
+        # Wait for command to complete
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            "Controller On command completed OK",
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
@@ -452,7 +475,7 @@ class TestMccsIntegrationTmc:
         time.sleep(0.5)
 
         # allocate station_1 to subarray_1
-        ([result_code], [message]) = call_with_json(
+        ([result_code], [unique_id]) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1, 2]],
@@ -460,6 +483,15 @@ class TestMccsIntegrationTmc:
             channel_blocks=[2],
         )
         assert result_code == ResultCode.QUEUED
+        assert "AllocateCommand" in unique_id
+
+        # Wait for command to complete
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            "Allocate command completed OK",
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         subarray_device_obs_state_changed_callback.assert_next_change_event(
             ObsState.RESOURCING
@@ -476,7 +508,7 @@ class TestMccsIntegrationTmc:
         time.sleep(0.2)  # TODO: to give subarray beams time to turn on
 
         # configure subarray
-        ([result_code], [message]) = call_with_json(
+        ([result_code], [unique_id]) = call_with_json(
             subarray_1.Configure,
             stations=[{"station_id": 1}, {"station_id": 2}],
             subarray_beams=[
@@ -492,6 +524,7 @@ class TestMccsIntegrationTmc:
             ],
         )
         assert result_code == ResultCode.QUEUED
+        assert "ConfigureCommand" in unique_id
 
         subarray_device_obs_state_changed_callback.assert_next_change_event(
             ObsState.CONFIGURING

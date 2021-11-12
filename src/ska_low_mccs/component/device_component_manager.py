@@ -36,6 +36,7 @@ class DeviceComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        push_change_event: Optional[Callable],
         component_fault_callback: Optional[Callable[[bool], None]],
         health_changed_callback: Optional[
             Callable[[Optional[HealthState]], None]
@@ -51,6 +52,8 @@ class DeviceComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
         :param health_changed_callback: callback to be called when the
@@ -63,6 +66,7 @@ class DeviceComponentManager(MccsComponentManager):
         self._proxy: Optional[MccsDeviceProxy] = None
         self._logger = logger
 
+        self._push_change_event = push_change_event
         self._health: Optional[HealthState] = None
         self._device_health_state = HealthState.UNKNOWN
         self._device_admin_mode = AdminMode.OFFLINE
@@ -88,7 +92,7 @@ class DeviceComponentManager(MccsComponentManager):
             max_queue_size=1,
             num_workers=1,
             logger=self.logger,
-            push_change_event=self._attribute_changed_callback,
+            push_change_event=self._push_change_event,
         )
 
     def start_communicating(self: DeviceComponentManager) -> None:

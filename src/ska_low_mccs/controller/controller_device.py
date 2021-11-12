@@ -374,8 +374,8 @@ class MccsController(SKABaseDevice):
             )
         """
         handler = self.get_command_object("Allocate")
-        (result_code, message) = handler(argin)
-        return ([result_code], [message])
+        unique_id, result_code = self.component_manager.enqueue(handler, argin)
+        return [[result_code], [unique_id]]
 
     class AllocateCommand(ResponseCommand):
         """

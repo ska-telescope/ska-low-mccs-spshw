@@ -32,6 +32,8 @@ ska-tango-base == 0.12.0
 # git+https://gitlab.com/ska-telescope/ska-tango-base@main#egg=ska-tango-base
 #
 # Latest code from Karoo - containing EnqueueSuspend
-#git+https://gitlab.com/ska-telescope/ska-tango-base@sar_302-POC_await_sub_device_state#egg=ska-tango-base
-
+# git+https://gitlab.com/ska-telescope/ska-tango-base@sar_302-POC_await_sub_device_state#egg=ska-tango-base
+#
+# Try __init__.py changes
+# git+https://gitlab.com/ska-telescope/ska-tango-base@sar-303-restore-lrc-docs#egg=ska-tango-base
 transitions

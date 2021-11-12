@@ -190,20 +190,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         super().__init__(None, *args, **kwargs)
 
-    def _attribute_changed_callback(
-        self: MccsComponentManager,
-        name: str,
-        result: Union[Tuple[str, str, str], Tuple[()]],
-    ) -> None:
-        """
-        Abstract attribute changed callback method.
-
-        :param name: name of the attribute that has changed
-        :param result: the value of the attribute
-        """
-        print(f"RCL: IGNORE - NOT IMPLEMENTED {name}:{result}")
-        ...
-
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""
         if self.communication_status == CommunicationStatus.ESTABLISHED:

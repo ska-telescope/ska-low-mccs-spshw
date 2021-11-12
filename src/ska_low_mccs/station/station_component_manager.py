@@ -134,6 +134,7 @@ class StationComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
+        push_change_event: Optional[Callable],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -155,6 +156,8 @@ class StationComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param apiu_health_changed_callback: callback to be called when
             the health of this station's APIU changes
         :param antenna_health_changed_callback: callback to be called when
@@ -166,6 +169,7 @@ class StationComponentManager(MccsComponentManager):
         """
         self._station_id = station_id
 
+        self._push_change_event = push_change_event
         self._is_configured = False
         self._on_called = False
         self._is_configured_changed_callback = is_configured_changed_callback
@@ -236,7 +240,7 @@ class StationComponentManager(MccsComponentManager):
             max_queue_size=1,
             num_workers=1,
             logger=self.logger,
-            push_change_event=self._attribute_changed_callback,
+            push_change_event=self._push_change_event,
         )
 
     def start_communicating(self: StationComponentManager) -> None:

@@ -6,6 +6,7 @@ functional (BDD).
 """
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Any, Callable, Generator, Set, cast
 import pytest
@@ -294,11 +295,55 @@ def logger() -> logging.Logger:
 
 
 @pytest.fixture()
-def mock_change_event_callback_factory() -> Callable[[str], MockChangeEventCallback]:
+def mock_callback_called_timeout() -> float:
+    """
+    Return the time to wait for a mock callback to be called when a call is expected.
+
+    This is a high value because calls will usually arrive much much
+    sooner, but we should be prepared to wait plenty of time before
+    giving up and failing a test.
+
+    :return: the time to wait for a mock callback to be called when a
+        call is asserted.
+    """
+    return 7.5
+
+
+@pytest.fixture()
+def mock_callback_not_called_timeout() -> float:
+    """
+    Return the time to wait for a mock callback to be called when a call is unexpected.
+
+    An assertion that a callback has not been called can only be passed
+    once we have waited the full timeout period without a call being
+    received. Thus, having a high value for this timeout will make such
+    assertions very slow. It is better to keep this value fairly low,
+    and accept the risk of an assertion passing prematurely.
+
+    :return: the time to wait for a mock callback to be called when a
+        call is unexpected.
+    """
+    return 0.5
+
+
+@pytest.fixture()
+def mock_change_event_callback_factory(
+    mock_callback_called_timeout: float,
+    mock_callback_not_called_timeout: float,
+) -> Callable[[str], MockChangeEventCallback]:
     """
     Return a factory that returns a new mock change event callback each call.
+
+    :param mock_callback_called_timeout: the time to wait for a mock
+        callback to be called when a call is expected
+    :param mock_callback_not_called_timeout: the time to wait for a mock
+        callback to be called when a call is unexpected
 
     :return: a factory that returns a new mock change event callback
         each time it is called with the name of a device attribute.
     """
-    return MockChangeEventCallback
+    return functools.partial(
+        MockChangeEventCallback,
+        called_timeout=mock_callback_called_timeout,
+        not_called_timeout=mock_callback_not_called_timeout,
+    )

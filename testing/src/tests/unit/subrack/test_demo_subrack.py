@@ -16,6 +16,7 @@ import pytest
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
+from ska_low_mccs.component import ExtendedPowerMode
 from ska_low_mccs.subrack.demo_subrack_device import DemoSubrack
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -58,7 +59,6 @@ class TestDemoSubrack:
         """
         Test.
 
-        * the `isTpm1Powered`, `isTpm2Powered` etc attributes.
         * the `PowerOnTpm1`, `PowerOffTpm2` etc commands.
 
         :param device_under_test: fixture that provides a
@@ -72,10 +72,13 @@ class TestDemoSubrack:
 
             :param expected: the expected power mode of each TPM
             """
-            assert [
-                device_under_test.read_attribute(f"isTpm{tpm_id}Powered").value
-                for tpm_id in range(1, 5)
-            ] == expected
+            for (i, is_on) in enumerate(expected):
+                assert (
+                    device_under_test.read_attribute(f"tpm{i+1}PowerMode").value
+                    == ExtendedPowerMode.ON
+                    if is_on
+                    else ExtendedPowerMode.OFF
+                )
 
         device_under_test.adminMode = AdminMode.ONLINE
         device_under_test.On()

@@ -284,6 +284,8 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
+        resource_spec = json.loads(resource_spec)
+
         station_fqdns: Sequence[str] = resource_spec.get("stations", [])
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
         station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])

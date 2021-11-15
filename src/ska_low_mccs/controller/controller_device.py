@@ -417,9 +417,12 @@ class MccsController(SKABaseDevice):
                 )
             )
         """
+        #handler = self.get_command_object("Allocate")
+        #unique_id, result_code = self.component_manager.enqueue(task=handler, argin=argin)
+        #return [[result_code], [unique_id]]
         handler = self.get_command_object("Allocate")
-        unique_id, result_code = self.component_manager.enqueue(task=handler, argin=argin)
-        return [[result_code], [unique_id]]
+        (result_code, message) = handler(argin)
+        return [[result_code], [message]]
 
     class AllocateCommand(ResponseCommand):
         """
@@ -511,9 +514,9 @@ class MccsController(SKABaseDevice):
     class RestartSubarrayCommand(ResponseCommand):
         """Restart a subarray."""
 
-        SUCCEEDED_MESSAGE = "Allocate command completed OK"
-        QUEUED_MESSAGE = "Allocate command queued"
-        FAILED_MESSAGE = "Allocate command failed"
+        SUCCEEDED_MESSAGE = "Restart subarray command completed OK"
+        QUEUED_MESSAGE = "Restart subarray command queued"
+        FAILED_MESSAGE = "Restart subarray command failed"
 
         def do(  # type: ignore[override]
             self: MccsController.RestartSubarrayCommand, subarray_id: int

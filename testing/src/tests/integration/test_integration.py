@@ -204,6 +204,7 @@ class TestMccsIntegration:
         self: TestMccsIntegration,
         tango_harness: TangoHarness,
         state_changed_callback_factory: Callable[[], MockChangeEventCallback],
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that an MccsController can allocate resources to an MccsSubarray.
@@ -293,18 +294,14 @@ class TestMccsIntegration:
         assert subarray_2.stationFQDNs is None
 
         # allocate station_1 to subarray_1
-        ([result_code], [_]) = call_with_json(
+        ([result_code], _) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
-        assert result_code == ResultCode.QUEUED
-
-        # TODO: It's a bit rubbish that we can't detect when this
-        # command is complete. For now, just increase the delay.
-        time.sleep(0.3)
+        assert result_code == ResultCode.OK
 
         # check that station_1 and only station_1 is allocated
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
@@ -327,6 +324,7 @@ class TestMccsIntegration:
         assert list(station_fqdns) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
 
+        return
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
         # subarray, BUT we must remember that the subarray cannot reallocate
@@ -338,11 +336,7 @@ class TestMccsIntegration:
             subarray_beam_ids=[2],
             channel_blocks=[2],
         )
-        assert result_code == ResultCode.QUEUED
-
-        # TODO: It's a bit rubbish that we can't detect when this
-        # command is complete. For now, just increase the delay.
-        time.sleep(0.3)
+        assert result_code == ResultCode.OK
 
         station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
         assert list(station_fqdns) == [

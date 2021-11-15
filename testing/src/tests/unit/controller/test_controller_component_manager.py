@@ -30,7 +30,7 @@ from ska_low_mccs.testing.mock import MockCallable
 class TestControllerComponentManager:
     """Tests of the controller component manager."""
 
-    def test_communication(
+    def test_communication_Ross(
         self: TestControllerComponentManager,
         controller_component_manager: ControllerComponentManager,
         communication_status_changed_callback: MockCallable,

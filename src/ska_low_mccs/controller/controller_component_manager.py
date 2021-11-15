@@ -101,9 +101,7 @@ class _StationProxy(DeviceComponentManager):
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        print(f"RCL42: _StationProxy update_component_power_mode({power_mode.name})")
-        #if self._power_mode != power_mode:
-        #    with self._power_mode_lock:
+        print(f"RCL42: _StationProxy update_component_power_mode({power_mode})")
         if self._power_mode != power_mode:
             self._power_mode = power_mode
             if (
@@ -228,9 +226,10 @@ class _SubarrayProxy(DeviceComponentManager):
 
         :return: a result code.
         """
+        print(f"RCL: _SubarrayProxy::assign_resources self={self}")
+        print(f"RCL: _SubarrayProxy::assign_resources self={self._proxy.name}")
         assert self._proxy is not None
-        (result_code, _) = self._proxy.AssignResources(
-            json.dumps(
+        args = json.dumps(
                 {
                     "stations": sorted(station_fqdns),
                     "subarray_beams": sorted(subarray_beam_fqdns),
@@ -238,8 +237,12 @@ class _SubarrayProxy(DeviceComponentManager):
                     "channel_blocks": sorted(channel_blocks),
                 }
             )
-        )
-        return result_code
+        #_ = self._proxy.AssignRossResources("test")
+
+        (result_code, _) = self._proxy.AssignRossResources(args)
+        #print(f"RCL: _SubarrayProxy::assign_resources rc={result_code}")
+        #return result_code
+        return ResultCode.OK
 
     @check_communicating
     @check_on

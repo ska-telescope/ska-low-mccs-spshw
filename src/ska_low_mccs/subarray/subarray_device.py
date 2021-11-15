@@ -11,6 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 from typing import Any, List, Optional, Tuple
+import json
 
 import tango
 from tango.server import attribute, command
@@ -93,6 +94,16 @@ class MccsSubarray(SKASubarray):
     def init_command_objects(self: MccsSubarray) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
+
+        self.register_command_object(
+            "AssignRossResources",
+            self.AssignRossResourcesCommand(
+                self.component_manager,
+                self.op_state_model,
+                self.obs_state_model,
+                self.logger,
+            ),
+        )
 
         self.register_command_object(
             "SendTransientBuffer",
@@ -359,7 +370,7 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    class AssignResourcesCommand(
+    class AssignRossResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand
     ):
         """
@@ -377,7 +388,7 @@ class MccsSubarray(SKASubarray):
         }
 
         def __init__(
-            self: MccsSubarray.AssignResourcesCommand,
+            self: MccsSubarray.AssignRossResourcesCommand,
             target: Any,
             op_state_model: OpStateModel,
             obs_state_model: SubarrayObsStateModel,
@@ -401,7 +412,7 @@ class MccsSubarray(SKASubarray):
             )
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.AssignResourcesCommand, argin: str
+            self: MccsSubarray.AssignRossResourcesCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
             Stateless hook for AssignResources() command functionality.
@@ -412,9 +423,27 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             """
+            print(f"RCL: AssignRossResourcesCommand! {argin}")
+            #args = json.loads(argin)
+            # print(f"RCL: args = {args}")
+            #print(f"RCL: station = {args.get('stations', None)}")
+            #return (ResultCode.OK, "Alrighty then!")
             component_manager = self.target
             result_code = component_manager.assign(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
+
+    @command(
+        dtype_in="DevString",
+        doc_in="JSON-encoded string with the resources to add to subarray",
+        dtype_out="DevVarLongStringArray",
+        doc_out="([Command ResultCode], [Command result description])",
+    )
+    def AssignRossResources(self: MccsSubarray, argin):
+        """Call assign resources directly - DON'T USE LRC!"""
+        print(f"RCL: def AssignRossResources type of argin = {type(argin)}")
+        handler = self.get_command_object("AssignRossResources")
+        (rc, desc) = handler(argin)
+        return [[rc], [desc]]
 
     class ReleaseResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand

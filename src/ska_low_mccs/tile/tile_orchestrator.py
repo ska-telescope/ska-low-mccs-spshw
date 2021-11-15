@@ -4,9 +4,10 @@ from __future__ import annotations
 import enum
 import logging
 import threading
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple, cast
 import yaml
 
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
@@ -249,15 +250,27 @@ class TileOrchestrator:
         with self.__lock:
             self._act(Stimulus.DESIRE_OFFLINE)
 
-    def desire_on(self: TileOrchestrator) -> None:
-        """Advise that the operator desires the TPM to be on."""
-        with self.__lock:
-            self._act(Stimulus.DESIRE_ON)
+    def desire_on(self: TileOrchestrator) -> ResultCode:
+        """
+        Advise that the operator desires the TPM to be on.
 
-    def desire_off(self: TileOrchestrator) -> None:
-        """Advise that the operator desires the TPM to be off."""
+        :return: a result code: either ResultCode.QUEUED if the command
+            could not commenced immediately, or the initial result of
+            commencing the command
+        """
         with self.__lock:
-            self._act(Stimulus.DESIRE_OFF)
+            return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
+
+    def desire_off(self: TileOrchestrator) -> ResultCode:
+        """
+        Advise that the operator desires the TPM to be off.
+
+        :return: a result code: either ResultCode.QUEUED if the command
+            could not commenced immediately, or the initial result of
+            commencing the command
+        """
+        with self.__lock:
+            return cast(ResultCode, self._act(Stimulus.DESIRE_OFF))
 
     def update_subrack_communication_status(
         self: TileOrchestrator,
@@ -330,7 +343,7 @@ class TileOrchestrator:
             else:
                 raise NotImplementedError()
 
-    def _act(self: TileOrchestrator, stimulus: Stimulus) -> None:
+    def _act(self: TileOrchestrator, stimulus: Stimulus) -> Optional[ResultCode]:
         key = (
             self._operator_desire,
             self._subrack_communication_status,
@@ -344,7 +357,7 @@ class TileOrchestrator:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
         self._logger.debug(f"TileOrchestrator: {key} ==> {action}")
-        action()
+        return action()
 
     def _start_communicating_with_subrack(self: TileOrchestrator) -> None:
         self._operator_desire = OperatorDesire.ONLINE
@@ -455,7 +468,7 @@ class TileOrchestrator:
         self._power_mode_changed_callback(PowerMode.OFF)
         self._stop_communicating_with_tpm_callback()
 
-    def _report_tpm_off_and_turn_tpm_on(self: TileOrchestrator) -> None:
+    def _report_tpm_off_and_turn_tpm_on(self: TileOrchestrator) -> ResultCode:
         self._tpm_power_mode = ExtendedPowerMode.OFF
         self._operator_desire = OperatorDesire.ONLINE
         self._power_mode_changed_callback(PowerMode.OFF)
@@ -479,13 +492,14 @@ class TileOrchestrator:
         self._tpm_communication_status = CommunicationStatus.ESTABLISHED
         self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
 
-    def _set_desired_on(self: TileOrchestrator) -> None:
+    def _set_desired_on(self: TileOrchestrator) -> ResultCode:
         self._operator_desire = OperatorDesire.ON
+        return ResultCode.QUEUED
 
-    def _turn_tpm_on(self: TileOrchestrator) -> None:
+    def _turn_tpm_on(self: TileOrchestrator) -> ResultCode:
         self._operator_desire = OperatorDesire.ONLINE
         return self._turn_tpm_on_callback()
 
-    def _turn_tpm_off(self: TileOrchestrator) -> None:
+    def _turn_tpm_off(self: TileOrchestrator) -> ResultCode:
         self._operator_desire = OperatorDesire.ONLINE
         return self._turn_tpm_off_callback()

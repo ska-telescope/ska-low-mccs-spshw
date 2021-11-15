@@ -553,32 +553,22 @@ class TileComponentManager(MessageQueueComponentManager):
         self._tile_orchestrator.desire_offline()
 
     @check_communicating  # TODO: orchestrator should handle this
-    def off(self: TileComponentManager) -> ResultCode | None:
+    def off(self: TileComponentManager) -> ResultCode:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._tile_orchestrator.desire_off()
-        return ResultCode.QUEUED
-        # TODO: orchestrator's desire_off() should return one of
-        # FAILED: if not communicating (hence handling the decorator case)
-        # QUEUED: if it can't action the off immediately
-        # STARTED: if it can action the off immediately
+        return self._tile_orchestrator.desire_off()
 
     @check_communicating  # TODO: orchestrator should handle this
-    def on(self: TileComponentManager) -> ResultCode | None:
+    def on(self: TileComponentManager) -> ResultCode:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._tile_orchestrator.desire_on()
-        return ResultCode.QUEUED
-        # TODO: orchestrator's desire_on() should return one of
-        # FAILED: if not communicating (hence handling the decorator case)
-        # QUEUED: if it can't action the off immediately
-        # STARTED: if it can action the off immediately
+        return self._tile_orchestrator.desire_on()
 
     def component_progress_changed(self: TileComponentManager, progress: int) -> None:
         """
@@ -677,20 +667,22 @@ class TileComponentManager(MessageQueueComponentManager):
         )
 
     @enqueue
-    def _turn_off_tpm(self: TileComponentManager) -> None:
+    def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
-        ([_], [_]) = self._subrack_proxy.PowerOffTpm(self._subrack_tpm_id)
-        # TODO: Handle returned values and exceptions somehow. Probably
-        # we need to let the orchestrator know, so that it can let the
-        # Off() command/task know....
+        ([result_code], [message]) = self._subrack_proxy.PowerOffTpm(
+            self._subrack_tpm_id
+        )
+        # TODO better handling of result code and exceptions.
+        return result_code
 
     @enqueue
-    def _turn_on_tpm(self: TileComponentManager) -> None:
+    def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
-        ([_], [_]) = self._subrack_proxy.PowerOnTpm(self._subrack_tpm_id)
-        # TODO: Handle returned values and exceptions somehow. Probably
-        # we need to let the orchestrator know, so that it can let the
-        # Off() command/task know....
+        ([result_code], [message]) = self._subrack_proxy.PowerOnTpm(
+            self._subrack_tpm_id
+        )
+        # TODO better handling of result code and exceptions.
+        return result_code
 
     def _tpm_power_mode_changed(
         self: TileComponentManager,

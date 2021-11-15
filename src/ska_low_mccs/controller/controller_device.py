@@ -188,14 +188,17 @@ class MccsController(SKABaseDevice):
                     if device.get_state() == tango.DevState.ON:
                         message = "Controller On command completed OK"
                         return (ResultCode.OK, message)
+                    else:
+                        print(f"RCLx: Waiting for controller ON...{elapsed_time}")
                     time.sleep(period)
+                    elapsed_time += period
                 message = (
                     "Controller On command didn't complete within {timeout} seconds"
                 )
                 return (ResultCode.FAILED, message)
 
             # Wait for conditions on component manager to unblock
-            result_code, message = wait_until_on(self.target, timeout=10.0)
+            result_code, message = wait_until_on(self.target, timeout=2.0)
             self.logger.info(message)
             return (result_code, message)
 
@@ -212,7 +215,9 @@ class MccsController(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
+            print("RCL: Off command was called!")
             result_code = self.target.component_manager.off()
+            print("RCL: Post Off call")
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, "Controller failed to initiate Off command")
 
@@ -233,6 +238,7 @@ class MccsController(SKABaseDevice):
                         message = "Controller Off command completed OK"
                         return (ResultCode.OK, message)
                     time.sleep(period)
+                    elapsed_time += period
                 message = (
                     "Controller Off command didn't complete within {timeout} seconds"
                 )

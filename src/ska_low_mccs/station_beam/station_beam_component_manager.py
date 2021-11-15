@@ -162,6 +162,7 @@ class StationBeamComponentManager(MccsComponentManager):
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
                     self.logger,
+                    self._push_change_event,
                     self._device_communication_status_changed,
                     None,
                     self._station_fault_changed_callback,

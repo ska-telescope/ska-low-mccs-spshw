@@ -47,7 +47,7 @@ def patched_station_device_class() -> type[MccsStation]:
                     self.component_manager._tile_power_modes[fqdn] = power_mode
                 for fqdn in self.component_manager._antenna_power_modes:
                     self.component_manager._antenna_power_modes[fqdn] = power_mode
-                self.component_manager._evaluate_power_mode()
+            self.component_manager._evaluate_power_mode()
 
     return PatchedStationDevice
 
@@ -444,8 +444,8 @@ class TestMccsIntegrationTmc:
         )
 
         # Make the station think it has received events from its APIU,
-        # tiles and antennas, telling it they are all OFF. This makes
-        # the station transition to OFF, and this flows up to the
+        # tiles and antennas, telling it they are all ON. This makes
+        # the station transition to ON, and this flows up to the
         # controller.
         station_1.FakeSubservientDevicesPowerMode(PowerMode.ON)
         station_2.FakeSubservientDevicesPowerMode(PowerMode.ON)
@@ -474,7 +474,7 @@ class TestMccsIntegrationTmc:
         # crossed.
         time.sleep(0.5)
 
-        # TODO: Figure out why this fails later
+        # TODO: Figure out why this fails later...
         if False:
             # allocate station_1 to subarray_1
             ([result_code], [unique_id]) = call_with_json(

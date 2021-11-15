@@ -19,6 +19,19 @@ from typing import Any, Callable, Optional
 import jsonschema
 
 
+def dbg(obj, msg):
+    """Debugging aid that displays the object name before debug message"""
+    obj_name = obj#str(obj).split(".")[3].split()[0]
+    to_log = f"dbg: obj={obj_name}: {msg}"
+    # Try each of the logger names we typically use
+    for logger in [obj.logger, obj._logger]:
+        if logger and False:
+            logger.info(to_log)
+            return
+    # Revert to classic print if no logger is present
+    print(to_log)
+
+
 def call_with_json(func: Callable, **kwargs: Any) -> Any:
     """
     Call a command with a json string.

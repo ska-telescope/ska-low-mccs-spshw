@@ -11,7 +11,7 @@ import logging
 from typing import Callable, Optional
 
 import tango
-
+from ska_low_mccs.utils import dbg
 from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerMode
 from ska_tango_base.base.task_queue_manager import QueueManager
@@ -86,37 +86,47 @@ class DeviceComponentManager(MccsComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-        self._connect_to_device()
+        connect_command = self.ConnectToDevice(target=self)
+        # Enqueue the connect command
+        _ = self.enqueue(connect_command)
 
-    def _connect_to_device(self: DeviceComponentManager) -> None:
-        """
-        Establish communication with the component, then start monitoring.
+    class ConnectToDevice(BaseCommand):
+        """Base command class for connection to be enqueued."""
+        ...
 
-        This contains the actual communication logic that is enqueued to
-        be run asynchronously.
+        def do(  # type: ignore[override]
+            self: DeviceComponentManager.ConnectToDevice,
+        ) -> ResultCode:
+            """
+            Establish communication with the component, then start monitoring.
 
-        :raises ConnectionError: if the attempt to establish
-            communication with the channel fails.
-        """
-        self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
-        try:
-            self._proxy.connect()
-        except tango.DevFailed as dev_failed:
-            self._proxy = None
-            raise ConnectionError(
-                f"Could not connect to '{self._fqdn}'"
-            ) from dev_failed
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
 
-        self.update_communication_status(CommunicationStatus.ESTABLISHED)
-        self._proxy.add_change_event_callback("state", self._device_state_changed)
+            :raises ConnectionError: if the attempt to establish
+                communication with the channel fails.
+            """
+            target = self.target
+            target._proxy = MccsDeviceProxy(target._fqdn, target._logger, connect=False)
+            try:
+                target._proxy.connect()
+            except tango.DevFailed as dev_failed:
+                proxy = None
+                raise ConnectionError(
+                    f"Could not connect to '{target._fqdn}'"
+                ) from dev_failed
 
-        if self._health_changed_callback is not None:
-            self._proxy.add_change_event_callback(
-                "healthState", self._device_health_state_changed
-            )
-            self._proxy.add_change_event_callback(
-                "adminMode", self._device_admin_mode_changed
-            )
+            target.update_communication_status(CommunicationStatus.ESTABLISHED)
+            target._proxy.add_change_event_callback("state", target._device_state_changed)
+
+            if target._health_changed_callback is not None:
+                target._proxy.add_change_event_callback(
+                    "healthState", target._device_health_state_changed
+                )
+                target._proxy.add_change_event_callback(
+                    "adminMode", target._device_admin_mode_changed
+                )
+            return ResultCode.OK
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
@@ -138,7 +148,7 @@ class DeviceComponentManager(MccsComponentManager):
         on_command = self.DeviceProxyOnCommand(target=self)
         # Enqueue the on command.
         # This is a fire and forget command, so we don't need to keep unique ID.
-        result_code, _ = self.enqueue(on_command)
+        _, result_code = self.enqueue(on_command)
         return result_code
 
     class DeviceProxyOnCommand(BaseCommand):
@@ -152,6 +162,7 @@ class DeviceComponentManager(MccsComponentManager):
 
             :return: a result code.
             """
+            print("RCLON...deviceproxyoncommand...1   ")
             try:
                 assert self.target._proxy is not None  # for the type checker
                 ([result_code], _) = self.target._proxy.On()  # Fire and forget
@@ -169,14 +180,38 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
+        dbg(self, "def off")
         if self.power_mode == PowerMode.OFF:
+            print("RCL: return None!")
             return None  # already off
-        return self._off()
-
-    def _off(self: DeviceComponentManager) -> ResultCode:
-        assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.Off()
+        off_command = self.DeviceProxyOffCommand(target=self)
+        print(f"RCL: off_command = {off_command}")
+        # Enqueue the off command.
+        # This is a fire and forget command, so we don't need to keep unique ID.
+        uid, result_code = self.enqueue(off_command)
+        print(f"RCL: rc = {result_code}, uid = {uid}")
         return result_code
+
+    class DeviceProxyOffCommand(BaseCommand):
+        """Base command class for the off command to be enqueued."""
+
+        def do(  # type: ignore[override]
+            self: DeviceComponentManager.DeviceProxyOffCommand,
+        ) -> ResultCode:
+            """
+            Off command implementation that simply calls Off, on its proxy.
+
+            :return: a result code.
+            """
+            try:
+                assert self.target._proxy is not None  # for the type checker
+                ([result_code], _) = self.target._proxy.Off()  # Fire and forget
+            except TypeError as type_error:
+                self._logger.fatal(
+                    f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
+                )
+                result_code = ResultCode.FAILED
+            return result_code
 
     @check_communicating
     def standby(self: DeviceComponentManager) -> ResultCode | None:
@@ -246,14 +281,15 @@ class DeviceComponentManager(MccsComponentManager):
         elif event_value != tango.DevState.FAULT and self.faulty:
             self.update_component_fault(False)
 
-        if event_value == tango.DevState.OFF:
-            self.update_component_power_mode(PowerMode.OFF)
-        elif event_value == tango.DevState.STANDBY:
-            self.update_component_power_mode(PowerMode.STANDBY)
-        elif event_value == tango.DevState.ON:
-            self.update_component_power_mode(PowerMode.ON)
-        else:  # INIT, DISABLE, UNKNOWN, FAULT
-            self.update_component_power_mode(PowerMode.UNKNOWN)
+        with self._power_mode_lock:
+            if event_value == tango.DevState.OFF:
+                self.update_component_power_mode(PowerMode.OFF)
+            elif event_value == tango.DevState.STANDBY:
+                self.update_component_power_mode(PowerMode.STANDBY)
+            elif event_value == tango.DevState.ON:
+                self.update_component_power_mode(PowerMode.ON)
+            else:  # INIT, DISABLE, UNKNOWN, FAULT
+                self.update_component_power_mode(PowerMode.UNKNOWN)
 
     def _device_health_state_changed(
         self: DeviceComponentManager,

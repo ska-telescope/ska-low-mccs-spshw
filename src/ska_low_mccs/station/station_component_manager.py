@@ -181,7 +181,6 @@ class StationComponentManager(MccsComponentManager):
             for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
         }
 
-        self._power_mode_lock = threading.Lock()
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
@@ -319,7 +318,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_mode_lock:
             self._antenna_power_modes[fqdn] = power_mode
-            self._evaluate_power_mode()
+        self._evaluate_power_mode()
 
     @threadsafe
     def _tile_power_mode_changed(
@@ -329,7 +328,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_mode_lock:
             self._tile_power_modes[fqdn] = power_mode
-            self._evaluate_power_mode()
+        self._evaluate_power_mode()
 
     @threadsafe
     def _apiu_power_mode_changed(
@@ -338,25 +337,26 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_mode_lock:
             self._apiu_power_mode = power_mode
-            self._evaluate_power_mode()
-            if power_mode is PowerMode.ON and self._on_called:
-                self._on_called = False
-                _ = self._turn_on_tiles_and_antennas()
+        self._evaluate_power_mode()
+        if power_mode is PowerMode.ON and self._on_called:
+            self._on_called = False
+            _ = self._turn_on_tiles_and_antennas()
 
     def _evaluate_power_mode(
         self: StationComponentManager,
     ) -> None:
-        power_modes = (
-            [self._apiu_power_mode]
-            + list(self._antenna_power_modes.values())
-            + list(self._tile_power_modes.values())
-        )
-        if all(power_mode == PowerMode.ON for power_mode in power_modes):
-            self.update_component_power_mode(PowerMode.ON)
-        elif all(power_mode == PowerMode.OFF for power_mode in power_modes):
-            self.update_component_power_mode(PowerMode.OFF)
-        else:
-            self.update_component_power_mode(PowerMode.UNKNOWN)
+        with self._power_mode_lock:
+            power_modes = (
+                [self._apiu_power_mode]
+                + list(self._antenna_power_modes.values())
+                + list(self._tile_power_modes.values())
+            )
+            if all(power_mode == PowerMode.ON for power_mode in power_modes):
+                self.update_component_power_mode(PowerMode.ON)
+            elif all(power_mode == PowerMode.OFF for power_mode in power_modes):
+                self.update_component_power_mode(PowerMode.OFF)
+            else:
+                self.update_component_power_mode(PowerMode.UNKNOWN)
 
     @check_communicating
     def off(
@@ -406,23 +406,24 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        if not all(
-            power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
-        ):
-            results = []
-            for proxy in self._tile_proxies:
-                result_code = proxy.on()
-                results.append(result_code)
-            if ResultCode.FAILED in results:
-                return ResultCode.FAILED
-        if not all(
-            power_mode == PowerMode.ON
-            for power_mode in self._antenna_power_modes.values()
-        ):
-            results = [proxy.on() for proxy in self._antenna_proxies]
-            if ResultCode.FAILED in results:
-                return ResultCode.FAILED
-        return ResultCode.QUEUED
+        with self._power_mode_lock:
+            if not all(
+                power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
+            ):
+                results = []
+                for proxy in self._tile_proxies:
+                    result_code = proxy.on()
+                    results.append(result_code)
+                if ResultCode.FAILED in results:
+                    return ResultCode.FAILED
+            if not all(
+                power_mode == PowerMode.ON
+                for power_mode in self._antenna_power_modes.values()
+            ):
+                results = [proxy.on() for proxy in self._antenna_proxies]
+                if ResultCode.FAILED in results:
+                    return ResultCode.FAILED
+            return ResultCode.QUEUED
 
     @check_communicating
     @check_on

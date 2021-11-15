@@ -667,7 +667,8 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: TileComponentManager,
         subrack_power_mode: PowerMode,
     ) -> None:
-        self._subrack_power_mode = subrack_power_mode
+        with self._power_mode_lock:
+            self._subrack_power_mode = subrack_power_mode
 
         if subrack_power_mode == PowerMode.UNKNOWN:
             self.component_power_mode_changed(PowerMode.UNKNOWN)
@@ -679,10 +680,11 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._review_power()
 
     def _review_power(self: TileComponentManager) -> ResultCode | None:
-        if self._target_power_mode is None:
-            return None
-        if self._subrack_power_mode != PowerMode.ON:
-            return ResultCode.QUEUED
+        with self._power_mode_lock:
+            if self._target_power_mode is None:
+                return None
+            if self._subrack_power_mode != PowerMode.ON:
+                return ResultCode.QUEUED
         return super()._review_power()
 
     @property

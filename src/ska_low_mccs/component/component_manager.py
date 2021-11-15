@@ -10,12 +10,13 @@ from __future__ import annotations  # allow forward references in type hints
 import enum
 import logging
 import threading
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional
 from typing_extensions import Protocol
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 from ska_tango_base.base import BaseComponentManager
+from ska_tango_base.base.task_queue_manager import QueueManager
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
@@ -182,7 +183,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             communication_status_changed_callback
         )
 
-        self.__power_mode_lock = threading.Lock()
+        self._power_mode_lock = threading.RLock()
         self._power_mode: Optional[PowerMode] = None
         self._component_power_mode_changed_callback = (
             component_power_mode_changed_callback
@@ -192,6 +193,22 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         self._component_fault_callback = component_fault_callback
 
         super().__init__(None, *args, **kwargs)
+
+    def create_queue_manager(self: MccsComponentManager) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
+        )
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""
@@ -208,7 +225,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             return
 
         self.update_communication_status(CommunicationStatus.DISABLED)
-        self.update_component_power_mode(None)
+        with self._power_mode_lock:
+            self.update_component_power_mode(None)
         self.update_component_fault(None)
 
     @threadsafe
@@ -269,15 +287,16 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
+        print(f"RCL: Controller::update_component_power_mode({power_mode})\n")
+        #if self._power_mode != power_mode:
+        #    with self._power_mode_lock:
         if self._power_mode != power_mode:
-            with self.__power_mode_lock:
-                if self._power_mode != power_mode:
-                    self._power_mode = power_mode
-                    if (
-                        self._component_power_mode_changed_callback is not None
-                        and power_mode is not None
-                    ):
-                        self._component_power_mode_changed_callback(power_mode)
+            self._power_mode = power_mode
+            if (
+                self._component_power_mode_changed_callback is not None
+                and power_mode is not None
+            ):
+                self._component_power_mode_changed_callback(power_mode)
 
     def component_power_mode_changed(
         self: MccsComponentManager, power_mode: PowerMode
@@ -289,7 +308,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         :param power_mode: the new power mode of the component
         """
-        self.update_component_power_mode(power_mode)
+        with self._power_mode_lock:
+            self.update_component_power_mode(power_mode)
 
     @property
     def power_mode(self: MccsComponentManager) -> Optional[PowerMode]:

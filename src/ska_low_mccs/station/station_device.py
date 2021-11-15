@@ -180,8 +180,10 @@ class MccsStation(SKAObsDevice):
                 information purpose only.
             """
             # TODO: return OK for now to be consistent with base classes
+            print("RCLON...station...1   ")
             _ = self.target.on()
             message = "Station On command completed OK"
+            print("RCLON...station...1xOK   ")
             return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsStation) -> bool:

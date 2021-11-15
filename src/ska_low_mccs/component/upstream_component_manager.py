@@ -55,6 +55,7 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         raise NotImplementedError("PowerSupplyComponentManager is abstract")
 
     def power_on(self: PowerSupplyProxyComponentManager) -> ResultCode | None:
+        print("RCLON...upstream_comp_man...power_on...1   ")
         raise NotImplementedError("PowerSupplyComponentManager is abstract")
 
     def update_supplied_power_mode(
@@ -115,6 +116,7 @@ class PowerSupplyProxySimulator(
             :param supplied_power_mode_changed_callback: the callback to be
                 called when the power mode changes.
             """
+            print(f"RCLON..._Comp...set_supplied_power_mode_changed_callback...{supplied_power_mode_changed_callback}   ")
             self._supplied_power_mode_changed_callback = (
                 supplied_power_mode_changed_callback
             )
@@ -141,6 +143,7 @@ class PowerSupplyProxySimulator(
 
             :return: a result code, or None if there was nothing to do.
             """
+            print("RCLON...upstream_comp_man...power_on...2   ")
             if self._supplied_power_mode == PowerMode.ON:
                 return None
 
@@ -222,12 +225,14 @@ class PowerSupplyProxySimulator(
 
         :return: a resultcode, or None if there was nothing to do.
         """
+        print("RCLON...upstream_comp_man...power_on...3   ")
         return cast(PowerSupplyProxySimulator._Component, self._component).power_on()
 
     def _supplied_power_mode_changed(
         self: PowerSupplyProxySimulator,
         supplied_power_mode: PowerMode,
     ) -> None:
+        print(f"RCLON...upstream_comp_man..._supplied_power_mode_changed...{supplied_power_mode}   ")
         self.update_supplied_power_mode(supplied_power_mode)
 
 
@@ -273,7 +278,6 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param component_progress_changed_callback: callback to be called when the
             component command progress values changes
         """
-        self.__power_mode_lock = threading.Lock()
         self._target_power_mode: Optional[PowerMode] = None
 
         self._power_supply_communication_status = CommunicationStatus.DISABLED
@@ -369,6 +373,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :param power_mode: the power mode of the hardware
         """
+        print(f"RCLON...upstream_comp_man...component_power_mode_changed...{power_mode}   ")
         if power_mode == PowerMode.OFF:
             self._hardware_component_manager.stop_communicating()
         elif power_mode == PowerMode.ON:
@@ -392,7 +397,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._target_power_mode = PowerMode.OFF
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.OFF
         return self._review_power()
 
     @check_communicating
@@ -402,14 +408,18 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._target_power_mode = PowerMode.ON
-        return self._review_power()
+        print("RCLON...Upstream_comp_man...1   ")
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.ON
+        rc = self._review_power()
+        print("RCLON...Upstream_comp_man...1x   ")
+        return rc
 
     @threadsafe
     def _review_power(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> ResultCode | None:
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             if self._target_power_mode is None:
                 return None
             if self.power_mode == self._target_power_mode:
@@ -419,7 +429,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
                 self.power_mode == PowerMode.OFF
                 and self._target_power_mode == PowerMode.ON
             ):
+                print("RCLON...upstream_comp_man...2   ")
                 result_code = self._power_supply_component_manager.power_on()
+                print("RCLON...upstream_comp_man...2x   ")
                 self._target_power_mode = None
                 return result_code
             if (

@@ -104,9 +104,12 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
+        print("RCLON...antenna_comp_man...power_on...1   ")
         if self.supplied_power_mode == PowerMode.ON:
             return None
-        return self._power_up_antenna()
+        rc = self._power_up_antenna()
+        print("RCLON...antenna_comp_man...power_on...1x   ")
+        return rc
 
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
@@ -473,22 +476,24 @@ class AntennaComponentManager(MccsComponentManager):
         self: AntennaComponentManager,
         apiu_power_mode: PowerMode,
     ) -> None:
-        self._apiu_power_mode = apiu_power_mode
+        with self._power_mode_lock:
+            self._apiu_power_mode = apiu_power_mode
 
-        if apiu_power_mode == PowerMode.UNKNOWN:
-            self.update_component_power_mode(PowerMode.UNKNOWN)
-        elif apiu_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
-            self.update_component_power_mode(PowerMode.OFF)
-        else:
-            # power_mode is ON, wait for antenna power change
-            pass
+            if apiu_power_mode == PowerMode.UNKNOWN:
+                self.update_component_power_mode(PowerMode.UNKNOWN)
+            elif apiu_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
+                self.update_component_power_mode(PowerMode.OFF)
+            else:
+                # power_mode is ON, wait for antenna power change
+                pass
         self._review_power()
 
     def _antenna_power_mode_changed(
         self: AntennaComponentManager,
         antenna_power_mode: PowerMode,
     ) -> None:
-        self.update_component_power_mode(antenna_power_mode)
+        with self._power_mode_lock:
+            self.update_component_power_mode(antenna_power_mode)
         self._review_power()
 
     def _apiu_component_fault_changed(
@@ -528,7 +533,8 @@ class AntennaComponentManager(MccsComponentManager):
 
         :return: a ResultCode, or None if there was nothing to do
         """
-        self._target_power_mode = PowerMode.OFF
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.OFF
         return self._review_power()
 
     def standby(self: AntennaComponentManager) -> None:
@@ -550,27 +556,29 @@ class AntennaComponentManager(MccsComponentManager):
 
         :return: whether successful, or None if there was nothing to do.
         """
-        self._target_power_mode = PowerMode.ON
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.ON
         return self._review_power()
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
-        if self._target_power_mode is None:
-            return None
-        if self.power_mode == self._target_power_mode:
-            self._target_power_mode = None  # attained without any action needed
-            return None
+        with self._power_mode_lock:
+            if self._target_power_mode is None:
+                return None
+            if self.power_mode == self._target_power_mode:
+                self._target_power_mode = None  # attained without any action needed
+                return None
 
-        if self._apiu_power_mode != PowerMode.ON:
+            if self._apiu_power_mode != PowerMode.ON:
+                return ResultCode.QUEUED
+            if self.power_mode == PowerMode.OFF and self._target_power_mode == PowerMode.ON:
+                result_code = self._apiu_proxy.power_on()
+                self._target_power_mode = None
+                return result_code
+            if self.power_mode == PowerMode.ON and self._target_power_mode == PowerMode.OFF:
+                result_code = self._apiu_proxy.power_off()
+                self._target_power_mode = None
+                return result_code
             return ResultCode.QUEUED
-        if self.power_mode == PowerMode.OFF and self._target_power_mode == PowerMode.ON:
-            result_code = self._apiu_proxy.power_on()
-            self._target_power_mode = None
-            return result_code
-        if self.power_mode == PowerMode.ON and self._target_power_mode == PowerMode.OFF:
-            result_code = self._apiu_proxy.power_off()
-            self._target_power_mode = None
-            return result_code
-        return ResultCode.QUEUED
 
     def reset(self: AntennaComponentManager) -> None:
         """

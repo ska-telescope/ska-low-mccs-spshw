@@ -20,6 +20,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.base.task_queue_manager import QueueManager
 from tango.server import Device
+from ska_low_mccs.utils import threadsafe
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -85,6 +86,31 @@ class _StationProxy(DeviceComponentManager):
             component_fault_callback,
             health_changed_callback,
         )
+
+    @threadsafe
+    def update_component_power_mode(
+        self: _StationProxy, power_mode: Optional[PowerMode]
+    ) -> None:
+        """
+        Update the power mode, calling callbacks as required.
+
+        This is a helper method for use by subclasses.
+
+        :param power_mode: the new power mode of the component. This can
+            be None, in which case the internal value is updated but no
+            callback is called. This is useful to ensure that the
+            callback is called next time a real value is pushed.
+        """
+        print(f"RCL42: _StationProxy update_component_power_mode({power_mode.name})")
+        #if self._power_mode != power_mode:
+        #    with self._power_mode_lock:
+        if self._power_mode != power_mode:
+            self._power_mode = power_mode
+            if (
+                self._component_power_mode_changed_callback is not None
+                and power_mode is not None
+            ):
+                self._component_power_mode_changed_callback(power_mode)
 
     def create_queue_manager(self: _StationProxy) -> QueueManager:
         """
@@ -445,7 +471,6 @@ class ControllerComponentManager(MccsComponentManager):
         self.__communication_status_lock = threading.Lock()
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
 
-        self.__power_mode_lock = threading.Lock()
         self._station_power_modes: dict[str, PowerMode] = {}
         self._subrack_power_modes: dict[str, PowerMode] = {}
 
@@ -634,7 +659,8 @@ class ControllerComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        self._subrack_power_modes[fqdn] = power_mode
+        with self._power_mode_lock:
+            self._subrack_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     def _station_power_mode_changed(
@@ -642,7 +668,8 @@ class ControllerComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        self._station_power_modes[fqdn] = power_mode
+        with self._power_mode_lock:
+            self._station_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     def _evaluate_power_mode(self: ControllerComponentManager) -> None:
@@ -650,7 +677,7 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             for power_mode in [
                 PowerMode.UNKNOWN,
                 PowerMode.OFF,
@@ -782,12 +809,15 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        print("RCLON...controller...1   ")
         results = [station_proxy.on() for station_proxy in self._stations.values()] + [
             subrack_proxy.on() for subrack_proxy in self._subracks.values()
         ]
         if ResultCode.FAILED in results:
+            print("RCLON...controller...1x FAILED   ")
             return ResultCode.FAILED
         else:
+            print("RCLON...controller...1x QUEUED   ")
             return ResultCode.QUEUED
 
     @check_communicating

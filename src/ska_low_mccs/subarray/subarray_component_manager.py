@@ -227,7 +227,8 @@ class SubarrayComponentManager(
                 station_beam_proxy.start_communicating()
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
-            self.update_component_power_mode(PowerMode.ON)
+            with self._power_mode_lock:
+                self.update_component_power_mode(PowerMode.ON)
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""
@@ -305,6 +306,7 @@ class SubarrayComponentManager(
                 self._stations[fqdn] = _StationProxy(
                     fqdn,
                     self.logger,
+                    self._push_change_event,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     functools.partial(self._station_power_mode_changed, fqdn),
                     None,
@@ -315,6 +317,7 @@ class SubarrayComponentManager(
                 self._subarray_beams[fqdn] = _SubarrayBeamProxy(
                     fqdn,
                     self.logger,
+                    self._push_change_event,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,
                     None,
@@ -327,6 +330,7 @@ class SubarrayComponentManager(
                 self._station_beams[fqdn] = _StationBeamProxy(
                     fqdn,
                     self.logger,
+                    self._push_change_event,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,
                     None,

@@ -303,7 +303,7 @@ class SubarrayComponentManager(
             for station_fqdn in station_group:
                 station_fqdn_set.add(station_fqdn)
             self._station_groups.append(station_group)
-        self._channel_blocks = channel_blocks
+        self._channel_blocks = self._channel_blocks + channel_blocks
 
         station_fqdns_to_add = sorted(station_fqdn_set) - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()

@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 import tango
-from tango.server import attribute, device_property
+from tango.server import attribute, device_property, command
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResultCode
@@ -133,6 +133,26 @@ class MccsAntenna(SKABaseDevice):
             device._health_state = device._health_model.health_state
 
             return (ResultCode.OK, "Init command completed OK")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    def Reset(self):
+        """
+        Reset the device from the FAULT state.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
+        """
+        handler = self.get_command_object("Reset")
+        (result_code, message) = handler()
+        return [[result_code], [message]]
 
     # --------------
     # Callback hooks

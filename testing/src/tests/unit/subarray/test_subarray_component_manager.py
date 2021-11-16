@@ -234,7 +234,7 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.assigned_resources == set()
         resources_changed_callback.assert_next_call(set(), set(), set())
 
-    def test_configure_ross(
+    def test_configure(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
         station_off_id: int,
@@ -450,7 +450,7 @@ class TestSubarrayComponentManager:
         configured_changed_callback.assert_next_call(False)
         configure_completed_callback.assert_not_called()
 
-    def test_scan_ross(
+    def test_scan(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
         station_on_id: int,

@@ -273,6 +273,7 @@ def tpm_version() -> str:
 @pytest.fixture()
 def tpm_driver(
     logger: logging.Logger,
+    lrc_result_changed_callback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -298,6 +299,7 @@ def tpm_driver(
     """
     return TpmDriver(
         logger,
+        lrc_result_changed_callback,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,

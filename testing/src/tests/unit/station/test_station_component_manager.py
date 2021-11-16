@@ -54,7 +54,6 @@ class TestStationComponentManager:
             station_component_manager.communication_status
             == CommunicationStatus.ESTABLISHED
         )
-        return
 
         is_configured_changed_callback.assert_next_call(False)
 
@@ -203,6 +202,7 @@ class TestStationComponentManager:
 
         for logical_tile_id, tile_fqdn in enumerate(tile_fqdns):
             tile_device_proxy = MccsDeviceProxy(tile_fqdn, logger)
+            print(f"RCL: {tile_device_proxy.stationId} == {station_id}")
             assert tile_device_proxy.stationId == station_id
             assert tile_device_proxy.logicalTileId == logical_tile_id
 

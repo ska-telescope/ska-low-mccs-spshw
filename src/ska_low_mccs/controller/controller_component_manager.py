@@ -806,15 +806,12 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        print("RCLON...controller...1   ")
         results = [station_proxy.on() for station_proxy in self._stations.values()] + [
             subrack_proxy.on() for subrack_proxy in self._subracks.values()
         ]
         if ResultCode.FAILED in results:
-            print("RCLON...controller...1x FAILED   ")
             return ResultCode.FAILED
         else:
-            print("RCLON...controller...1x QUEUED   ")
             return ResultCode.QUEUED
 
     @check_communicating

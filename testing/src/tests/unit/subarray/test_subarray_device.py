@@ -166,6 +166,7 @@ class TestMccsSubarray:
     def test_GetVersionInfo(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
+        lrc_result_changed_callback,
     ) -> None:
         """
         Test for GetVersionInfo.
@@ -174,8 +175,33 @@ class TestMccsSubarray:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        version_info = release.get_release_info(device_under_test.info().dev_class)
-        assert device_under_test.GetVersionInfo() == [version_info]
+        # Subscribe to controller's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(
+            initial_lrc_result
+        )
+
+        ([result_code], [unique_id]) = device_under_test.GetVersionInfo()
+        assert result_code == ResultCode.QUEUED
+        assert "GetVersionInfo" in unique_id
+
+        vinfo = release.get_release_info(device_under_test.info().dev_class)
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            str([vinfo]),
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
+
 
     def test_buildState(
         self: TestMccsSubarray,

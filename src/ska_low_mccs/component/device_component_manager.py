@@ -162,7 +162,6 @@ class DeviceComponentManager(MccsComponentManager):
 
             :return: a result code.
             """
-            print("RCLON...deviceproxyoncommand...1   ")
             try:
                 assert self.target._proxy is not None  # for the type checker
                 ([result_code], _) = self.target._proxy.On()  # Fire and forget

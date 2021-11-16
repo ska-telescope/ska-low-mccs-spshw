@@ -104,11 +104,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        print("RCLON...antenna_comp_man...power_on...1   ")
         if self.supplied_power_mode == PowerMode.ON:
             return None
         rc = self._power_up_antenna()
-        print("RCLON...antenna_comp_man...power_on...1x   ")
         return rc
 
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:

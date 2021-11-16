@@ -421,7 +421,8 @@ class TestClusterComponentManager:
     """Contains tests specific to ClusterComponentManager."""
 
     def test_init_simulation_mode(
-        self: TestClusterComponentManager, logger: logging.Logger
+        self: TestClusterComponentManager, logger: logging.Logger,
+        lrc_result_changed_callback,
     ) -> None:
         """
         Test that we can't create a cluster manager that's not in simulation mode.
@@ -435,6 +436,7 @@ class TestClusterComponentManager:
         ):
             _ = ClusterComponentManager(
                 logger,
+                lrc_result_changed_callback,
                 SimulationMode.FALSE,
                 None,
                 None,

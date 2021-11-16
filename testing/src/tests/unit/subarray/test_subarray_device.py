@@ -297,7 +297,7 @@ class TestMccsSubarray:
         assert device_under_test.assignedResources == json.dumps(
             {
                 "subarray_beam_ids": [],
-                "station_ids": [],                
+                "station_ids": [],
                 "channel_blocks": [],
             }
         )

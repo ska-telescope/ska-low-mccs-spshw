@@ -382,7 +382,7 @@ class MccsSubarray(SKASubarray):
         return json.dumps(
             {
                 "subarray_beam_ids": subarray_beams,
-                "station_ids": stations,                
+                "station_ids": stations,
                 "channel_blocks": channel_blocks,
             }
         )

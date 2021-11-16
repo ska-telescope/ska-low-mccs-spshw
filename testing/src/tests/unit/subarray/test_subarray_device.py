@@ -283,19 +283,26 @@ class TestMccsSubarray:
         assert result_code == ResultCode.OK
         time.sleep(0.1)
         assert device_under_test.assignedResources == json.dumps(
-                {
-                    "stations": [[station_on_fqdn]],
-                    "subarray_beams": [subarray_beam_on_fqdn],
-                    "station_beams": [station_beam_on_fqdn],
-                    "channel_blocks": channel_blocks,
-                }
-            )
+            {
+                "stations": [[station_on_fqdn.split("/")[-1].lstrip("0")]],
+                "subarray_beams": [subarray_beam_on_fqdn.split("/")[-1].lstrip("0")],
+                "station_beams": [station_beam_on_fqdn.split("/")[-1].lstrip("0")],
+                "channel_blocks": channel_blocks,
+            }
+        )
 
         assert device_under_test.state() == DevState.ON
         ([result_code], [message]) = device_under_test.ReleaseAllResources()
         assert result_code == ResultCode.OK
         time.sleep(0.1)
-        assert device_under_test.assignedResources == json.dumps({"stations": [], "subarray_beams": [], "station_beams": [], "channel_blocks": []})
+        assert device_under_test.assignedResources == json.dumps(
+            {
+                "stations": [],
+                "subarray_beams": [],
+                "station_beams": [],
+                "channel_blocks": [],
+            }
+        )
 
     def test_configure(
         self: TestMccsSubarray,

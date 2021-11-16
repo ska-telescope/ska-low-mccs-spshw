@@ -143,15 +143,12 @@ class TestSubarrayComponentManager:
         subarray_component_manager.start_communicating()
         assert subarray_component_manager.power_mode == PowerMode.ON
 
-        assert subarray_component_manager.assigned_resources == json.dumps(
-            {
-                "stations": list(),
-                "subarray_beams": list(),
-                "station_beams": list(),
-                "channel_blocks": list(),
-            }
-        )
-
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": list(),
+            "subarray_beams": list(),
+            "station_beams": list(),
+            "channel_blocks": list(),
+        }
 
         # Assignment from empty
         result_code = subarray_component_manager.assign(
@@ -172,14 +169,13 @@ class TestSubarrayComponentManager:
         )
 
         assign_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == json.dumps(
-            {
-                "stations": [[station_off_fqdn]],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [station_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": [[station_off_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+
         resources_changed_callback.assert_next_call(
             {station_off_fqdn}, {subarray_beam_off_fqdn}, {station_beam_off_fqdn}
         )
@@ -203,14 +199,12 @@ class TestSubarrayComponentManager:
         )
 
         assign_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == json.dumps(
-            {
-                "stations": [[station_off_fqdn], [station_on_fqdn]],
-                "subarray_beams": [subarray_beam_off_fqdn, subarray_beam_on_fqdn],
-                "station_beams": [station_beam_off_fqdn, station_beam_on_fqdn],
-                "channel_blocks": channel_blocks + channel_blocks,
-            }
-        )
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": [[station_off_fqdn], [station_on_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn, subarray_beam_on_fqdn],
+            "station_beams": [station_beam_off_fqdn, station_beam_on_fqdn],
+            "channel_blocks": channel_blocks + channel_blocks,
+        }
 
         resources_changed_callback.assert_next_call(
             {station_off_fqdn, station_on_fqdn},
@@ -218,32 +212,18 @@ class TestSubarrayComponentManager:
             {station_beam_off_fqdn, station_beam_on_fqdn},
         )
 
-        # Release
-        result_code = subarray_component_manager.release(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [station_beam_off_fqdn],
-            }
-        )
-        assert result_code == ResultCode.OK
-
-        release_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == {
-            station_on_fqdn,
-            subarray_beam_on_fqdn,
-            station_beam_on_fqdn,
-        }
-        resources_changed_callback.assert_next_call(
-            {station_on_fqdn}, {subarray_beam_on_fqdn}, {station_beam_on_fqdn}
-        )
-
         # Release all
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
         release_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == set()
         resources_changed_callback.assert_next_call(set(), set(), set())
+
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": list(),
+            "subarray_beams": list(),
+            "station_beams": list(),
+            "channel_blocks": list(),
+        }
 
     def test_configure(
         self: TestSubarrayComponentManager,

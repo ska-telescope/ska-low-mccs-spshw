@@ -138,7 +138,7 @@ class _SubarrayProxy(DeviceComponentManager):
     @enqueue
     def assign_resources(
         self: _SubarrayProxy,
-        station_fqdns: Iterable[str],
+        station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         station_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],

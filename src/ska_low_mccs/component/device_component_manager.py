@@ -182,14 +182,11 @@ class DeviceComponentManager(MccsComponentManager):
         """
         dbg(self, "def off")
         if self.power_mode == PowerMode.OFF:
-            print("RCL: return None!")
             return None  # already off
         off_command = self.DeviceProxyOffCommand(target=self)
-        print(f"RCL: off_command = {off_command}")
         # Enqueue the off command.
         # This is a fire and forget command, so we don't need to keep unique ID.
         uid, result_code = self.enqueue(off_command)
-        print(f"RCL: rc = {result_code}, uid = {uid}")
         return result_code
 
     class DeviceProxyOffCommand(BaseCommand):

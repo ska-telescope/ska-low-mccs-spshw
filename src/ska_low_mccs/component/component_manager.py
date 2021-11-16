@@ -287,7 +287,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        print(f"RCL: Controller::update_component_power_mode({power_mode})\n")
         if self._power_mode != power_mode:
             self._power_mode = power_mode
             if (

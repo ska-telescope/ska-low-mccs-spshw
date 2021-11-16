@@ -96,8 +96,8 @@ class MccsSubarray(SKASubarray):
         super().init_command_objects()
 
         self.register_command_object(
-            "AssignRossResources",
-            self.AssignRossResourcesCommand(
+            "AssignResources",
+            self.AssignResourcesCommand(
                 self.component_manager,
                 self.op_state_model,
                 self.obs_state_model,
@@ -370,12 +370,13 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    class AssignRossResourcesCommand(
+    class AssignResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand
     ):
         """
         A class for MccsSubarray's AssignResources() command.
 
+        TODO: Can this now inherit from SKASubarray.AssignResourcesCommand?
         Overrides SKASubarray.AssignResourcesCommand because that is a
         CompletionCommand, which is misimplemented and assumes
         synchronous completion.
@@ -388,7 +389,7 @@ class MccsSubarray(SKASubarray):
         }
 
         def __init__(
-            self: MccsSubarray.AssignRossResourcesCommand,
+            self: MccsSubarray.AssignResourcesCommand,
             target: Any,
             op_state_model: OpStateModel,
             obs_state_model: SubarrayObsStateModel,
@@ -412,7 +413,7 @@ class MccsSubarray(SKASubarray):
             )
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.AssignRossResourcesCommand, argin: str
+            self: MccsSubarray.AssignResourcesCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
             Stateless hook for AssignResources() command functionality.
@@ -423,11 +424,6 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             """
-            print(f"RCL: AssignRossResourcesCommand! {argin}")
-            #args = json.loads(argin)
-            # print(f"RCL: args = {args}")
-            #print(f"RCL: station = {args.get('stations', None)}")
-            #return (ResultCode.OK, "Alrighty then!")
             component_manager = self.target
             result_code = component_manager.assign(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
@@ -438,10 +434,17 @@ class MccsSubarray(SKASubarray):
         dtype_out="DevVarLongStringArray",
         doc_out="([Command ResultCode], [Command result description])",
     )
-    def AssignRossResources(self: MccsSubarray, argin):
-        """Call assign resources directly - DON'T USE LRC!"""
-        print(f"RCL: def AssignRossResources type of argin = {type(argin)}")
-        handler = self.get_command_object("AssignRossResources")
+    def AssignResources(self: MccsSubarray, argin):
+        """
+        Assign resources to this subarray.
+
+        :param argin: the resources to be assigned
+
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        # TODO Call assign resources directly - DON'T USE LRC - for now.
+        handler = self.get_command_object("AssignResources")
         (rc, desc) = handler(argin)
         return [[rc], [desc]]
 

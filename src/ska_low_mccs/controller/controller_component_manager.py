@@ -226,8 +226,6 @@ class _SubarrayProxy(DeviceComponentManager):
 
         :return: a result code.
         """
-        print(f"RCL: _SubarrayProxy::assign_resources self={self}")
-        print(f"RCL: _SubarrayProxy::assign_resources self={self._proxy.name}")
         assert self._proxy is not None
         args = json.dumps(
                 {
@@ -237,12 +235,8 @@ class _SubarrayProxy(DeviceComponentManager):
                     "channel_blocks": sorted(channel_blocks),
                 }
             )
-        #_ = self._proxy.AssignRossResources("test")
-
-        (result_code, _) = self._proxy.AssignRossResources(args)
-        #print(f"RCL: _SubarrayProxy::assign_resources rc={result_code}")
-        #return result_code
-        return ResultCode.OK
+        ([result_code], [desc]) = self._proxy.AssignResources(args)
+        return result_code
 
     @check_communicating
     @check_on
@@ -255,7 +249,7 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.ReleaseAllResources()
+        ([result_code], _) = self._proxy.ReleaseAllResources()
         return result_code
 
     @check_communicating
@@ -269,7 +263,7 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.Restart()
+        ([result_code], _) = self._proxy.Restart()
         return result_code
 
 
@@ -848,7 +842,6 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        print(f"RCL: 1             ")
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
         flattened_station_fqdns = []
@@ -877,7 +870,6 @@ class ControllerComponentManager(MccsComponentManager):
                     )
                 flattened_station_fqdns.append(station_fqdn)
 
-        print(f"RCL: 2             ")
         # need (subarray-beams * stations) number of station-beams from pool
         station_beam_fqdns = []
         station_beams_required = len(list(subarray_beam_fqdns)) * len(
@@ -899,7 +891,6 @@ class ControllerComponentManager(MccsComponentManager):
             channel_blocks=channel_blocks,
         )
 
-        print(f"RCL: 3             ")
         result_code = self._subarrays[subarray_fqdn].assign_resources(
             list(set(flattened_station_fqdns)),  # unique items only
             subarray_beam_fqdns,
@@ -907,7 +898,6 @@ class ControllerComponentManager(MccsComponentManager):
             channel_blocks,
         )
 
-        print(f"RCL: 4   {result_code}          ")
         # don't forget to release resources if allocate was unsuccessful:
         if result_code == ResultCode.FAILED:
             self.deallocate_all(subarray_id)

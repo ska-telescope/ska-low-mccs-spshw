@@ -215,9 +215,7 @@ class MccsController(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            print("RCL: Off command was called!")
             result_code = self.target.component_manager.off()
-            print("RCL: Post Off call")
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, "Controller failed to initiate Off command")
 
@@ -293,7 +291,6 @@ class MccsController(SKABaseDevice):
 
         :param power_mode: the power mode of the component.
         """
-        print(f"RCL: _component_power_mode_changed {power_mode}")
         action_map = {
             PowerMode.OFF: "component_off",
             PowerMode.STANDBY: "component_standby",
@@ -392,8 +389,6 @@ class MccsController(SKABaseDevice):
         specifies the overall sub-array composition in terms of which stations should be
         allocated to the specified Sub-Array.
 
-        Method returns as soon as the message has been enqueued.
-
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and subarray_beam_ids.
 
@@ -417,9 +412,7 @@ class MccsController(SKABaseDevice):
                 )
             )
         """
-        #handler = self.get_command_object("Allocate")
-        #unique_id, result_code = self.component_manager.enqueue(task=handler, argin=argin)
-        #return [[result_code], [unique_id]]
+        # TODO Call Allocate directly - DON'T USE LRC - for now.
         handler = self.get_command_object("Allocate")
         (result_code, message) = handler(argin)
         return [[result_code], [message]]

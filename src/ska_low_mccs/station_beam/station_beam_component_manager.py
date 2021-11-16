@@ -42,7 +42,7 @@ class _StationProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.ApplyPointing(pointing_args)
+        ([result_code], _) = self._proxy.ApplyPointing(pointing_args)
         return result_code
 
 

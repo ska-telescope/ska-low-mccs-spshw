@@ -48,10 +48,6 @@ class _StationProxy(ObsDeviceComponentManager):
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
         [[result_code], _] = self._proxy.Configure(configuration_str)
-        print(
-            f"RCL: class _StationProxy (result_code, _) = ({result_code}, _)"
-            " = self._proxy.Configure(configuration_str)"
-        )
         return result_code
 
 
@@ -71,7 +67,7 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        (result_code, _) = self._proxy.Configure(configuration_str)
+        ([result_code], _) = self._proxy.Configure(configuration_str)
         return result_code
 
     @check_communicating
@@ -87,7 +83,7 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         scan_arg = json.dumps({"scan_id": scan_id, "start_time": start_time})
-        (result_code, _) = self._proxy.Scan(scan_arg)
+        ([result_code], _) = self._proxy.Scan(scan_arg)
         return result_code
 
 
@@ -107,7 +103,7 @@ class _StationBeamProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        (result_code, _) = self._proxy.Configure(configuration_str)
+        ([result_code], _) = self._proxy.Configure(configuration_str)
         return result_code
 
 
@@ -482,18 +478,13 @@ class SubarrayComponentManager(
         }
 
         result_code = self._configure_stations(station_configuration)
-        print(f"RCL: result_code = {result_code.name} = self._configure_stations()")
         if result_code != ResultCode.FAILED:
             result_code = self._configure_subarray_beams(subarray_beam_configuration)
-            print(
-                f"RCL: result_code = {result_code.name} = self._configure_subarray_beams()"
-            )
         self._configured_changed_callback(True)
 
         if result_code == ResultCode.OK:
             self._configure_completed_callback()
 
-        print(f"RCL: result_code = {result_code.name}")
         return result_code
 
     def _configure_stations(
@@ -512,9 +503,6 @@ class SubarrayComponentManager(
             station_fqdn = f"low-mccs/station/{station_id:03d}"
             station_proxy = self._stations[station_fqdn]
             proxy_result_code = station_proxy.configure(configuration)
-            print(
-                f"RCL: proxy_result_code = {proxy_result_code} = station_proxy.configure(configuration)"
-            )
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
             elif proxy_result_code == ResultCode.QUEUED:
@@ -522,7 +510,6 @@ class SubarrayComponentManager(
                 self._device_obs_states[station_fqdn] = ObsState.CONFIGURING
                 if result_code == ResultCode.OK:
                     result_code = ResultCode.QUEUED
-        print(f"RCL: _configure_stations = {result_code}")
         return result_code
 
     def _configure_subarray_beams(

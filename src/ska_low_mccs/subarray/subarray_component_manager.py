@@ -273,7 +273,7 @@ class SubarrayComponentManager(
     @check_communicating
     def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resource_spec: dict[str, Sequence[Any]],
+        resource_spec: dict[str, list[Any]],
     ) -> ResultCode:
         """
         Assign resources to this subarray.
@@ -293,16 +293,12 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        station_fqdns: Sequence[str] = resource_spec.get("stations", [])
-        subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
-        station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
-        channel_blocks: Sequence[int] = resource_spec.get("channel_blocks", [])
+        station_fqdns: list[list[str]] = resource_spec.get("stations", [])
+        subarray_beam_fqdns: list[str] = resource_spec.get("subarray_beams", [])
+        station_beam_fqdns: list[str] = resource_spec.get("station_beams", [])
+        channel_blocks: list[int] = resource_spec.get("channel_blocks", [])
 
-        station_fqdn_set = set()
-        for station_group in station_fqdns:
-            for station_fqdn in station_group:
-                station_fqdn_set.add(station_fqdn)
-            self._station_groups.append(station_group)
+        station_fqdn_set = self._add_station_groups(station_fqdns)
         self._channel_blocks = self._channel_blocks + channel_blocks
 
         station_fqdns_to_add = sorted(station_fqdn_set) - self._stations.keys()
@@ -370,95 +366,57 @@ class SubarrayComponentManager(
 
         return ResultCode.OK
 
+    def _add_station_groups(
+        self: SubarrayComponentManager,
+        station_fqdns: list[list[str]],
+    ) -> set:
+        """
+        Add station groups to this subarray component manager's _station_groups.
+
+        This is for housekeeping to store the station heirarchy for the assigned_resources_dict attribute.
+
+        :param station_fqdns: list of lists of stations
+
+        :return: a (1-D) set of station fqdns
+        """
+        station_fqdn_set = set()
+        for station_group in station_fqdns:
+            for station_fqdn in station_group:
+                station_fqdn_set.add(station_fqdn)
+            self._station_groups.append(station_group)
+
+        return station_fqdn_set
+
     @property  # type: ignore[misc]
     @check_communicating
     def assigned_resources(
         self: SubarrayComponentManager,
-    ) -> str:
+    ) -> set:
         """
         Return this subarray's resources.
 
         :return: this subarray's resources.
         """
-        # return (
-        #     set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
-        # )
-        jstr = json.dumps(
-            {
-                "stations": self._station_groups,
-                "subarray_beams": sorted(self._subarray_beams.keys()),
-                "station_beams": sorted(self._station_beams.keys()),
-                "channel_blocks": self._channel_blocks,
-            }
+        return (
+            set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
         )
-        return jstr
 
+    @property  # type: ignore[misc]
     @check_communicating
-    def release(  # type: ignore[override]
+    def assigned_resources_dict(
         self: SubarrayComponentManager,
-        resource_spec: dict[str, Sequence[Any]],
-    ) -> ResultCode:
+    ) -> dict[str, Sequence[Any]]:
         """
-        Release resources from this subarray.
+        Return a dictionary of resource types and fqdns.
 
-        :param resource_spec: a resource specification; for example
-
-            .. code-block:: python
-
-                {
-                    "subarray_beams": ["low-mccs/subarraybeam/01"],
-                    "stations": ["low-mccs/station/001", "low-mccs/station/002"],
-                    "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"],
-                    "channel_blocks": [3]
-                }
-
-        :return: a result code
+        :return: this subarray's resources.
         """
-        station_fqdns: Sequence[str] = resource_spec.get("stations", [])
-        subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
-        station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
-
-        station_fqdns_to_remove = self._stations.keys() & station_fqdns
-        subarray_beam_fqdns_to_remove = (
-            self._subarray_beams.keys() & subarray_beam_fqdns
-        )
-        station_beam_fqdns_to_remove = self._station_beams.keys() & station_beam_fqdns
-
-        if len(station_fqdns_to_remove) != len(subarray_beam_fqdns_to_remove):
-            self.logger.error(
-                f"Mismatch: releasing {len(station_fqdns_to_remove)} stations, "
-                f"{len(subarray_beam_fqdns_to_remove)} subarray beams."
-            )
-            self._release_completed_callback()
-            return ResultCode.FAILED
-
-        if (
-            station_fqdns_to_remove
-            or subarray_beam_fqdns_to_remove
-            or station_beam_fqdns_to_remove
-        ):
-            for fqdn in station_fqdns_to_remove:
-                del self._stations[fqdn]
-                del self._device_communication_statuses[fqdn]
-                del self._device_obs_states[fqdn]
-            for fqdn in subarray_beam_fqdns_to_remove:
-                del self._subarray_beams[fqdn]
-                del self._device_communication_statuses[fqdn]
-                del self._device_obs_states[fqdn]
-            for fqdn in station_beam_fqdns_to_remove:
-                del self._station_beams[fqdn]
-                del self._device_communication_statuses[fqdn]
-                del self._device_obs_states[fqdn]
-
-            self._resources_changed_callback(
-                set(self._stations.keys()),
-                set(self._subarray_beams.keys()),
-                set(self._station_beams.keys()),
-            )
-            self._evaluate_communication_status()
-
-        self._release_completed_callback()
-        return ResultCode.OK
+        return {
+            "stations": self._station_groups,
+            "subarray_beams": sorted(self._subarray_beams.keys()),
+            "station_beams": sorted(self._station_beams.keys()),
+            "channel_blocks": self._channel_blocks,
+        }
 
     @check_communicating
     def release_all(  # type: ignore[override]

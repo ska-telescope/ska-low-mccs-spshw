@@ -10,6 +10,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
+import json
 from typing import Any, List, Optional, Tuple
 
 import tango
@@ -367,7 +368,29 @@ class MccsSubarray(SKASubarray):
 
         :return: this subarray's assigned resources.
         """
-        return self.component_manager.assigned_resources
+        resource_dict = self.component_manager.assigned_resources_dict
+        stations = []
+        for station_group in resource_dict["stations"]:
+            stations.append(
+                [station.split("/")[-1].lstrip("0") for station in station_group]
+            )
+        subarray_beams = [
+            subarray_beam.split("/")[-1].lstrip("0")
+            for subarray_beam in resource_dict["subarray_beams"]
+        ]
+        station_beams = [
+            station_beam.split("/")[-1].lstrip("0")
+            for station_beam in resource_dict["station_beams"]
+        ]
+        channel_blocks = resource_dict["channel_blocks"]
+        return json.dumps(
+            {
+                "stations": stations,
+                "subarray_beams": subarray_beams,
+                "station_beams": station_beams,
+                "channel_blocks": channel_blocks,
+            }
+        )
 
     # ------------------
     # Attribute methods
@@ -427,63 +450,6 @@ class MccsSubarray(SKASubarray):
             """
             component_manager = self.target
             result_code = component_manager.assign(argin)
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class ReleaseResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
-        """
-        A class for MccsSubarray's ReleaseResources() command.
-
-        Overrides SKASubarray.ReleaseResourcesCommand because that is a
-        CompletionCommand, which is misimplemented and assumes
-        synchronous completion.
-        """
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "ReleaseResources command completed OK",
-            ResultCode.QUEUED: "ReleaseResources command queued",
-            ResultCode.FAILED: "ReleaseResources command failed",
-        }
-
-        def __init__(
-            self: MccsSubarray.ReleaseResourcesCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new ReleaseResourcesCommand instance.
-
-            :param target: the object that this command acts upon; for
-                example, the device's component manager
-            :param op_state_model: the op state model that this command
-                uses to check that it is allowed to run
-            :param obs_state_model: the observation state model that
-                 this command uses to check that it is allowed to run,
-                 and that it drives with actions.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            super().__init__(
-                target, obs_state_model, "release", op_state_model, logger=logger
-            )
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.ReleaseResourcesCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for ReleaseResources() command functionality.
-
-            :param argin: The resources to be released
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.release(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     class ReleaseAllResourcesCommand(

@@ -162,14 +162,8 @@ class MccsSubrack(SKABaseDevice):
 
             device = self.target
 
-            device.set_change_event("tpm1PowerMode", True, False)
-            device.set_change_event("tpm2PowerMode", True, False)
-            device.set_change_event("tpm3PowerMode", True, False)
-            device.set_change_event("tpm4PowerMode", True, False)
-            device.set_change_event("tpm5PowerMode", True, False)
-            device.set_change_event("tpm6PowerMode", True, False)
-            device.set_change_event("tpm7PowerMode", True, False)
-            device.set_change_event("tpm8PowerMode", True, False)
+            for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
+                device.set_change_event(f"tpm{tpm_number}PowerMode", True, False)
 
             # The health model updates our health, but then the base class super().do()
             # overwrites it with OK, so we need to update this again.

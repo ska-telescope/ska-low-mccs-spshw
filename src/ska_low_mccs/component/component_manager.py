@@ -86,6 +86,42 @@ class ControlMode(enum.Enum):
     """
 
 
+class ExtendedPowerMode(enum.IntEnum):
+    """
+    Enumerated type for power mode.
+
+    Used by components that rely upon a power supply, such as hardware.
+    """
+
+    # TODO: This replaces ska_tango_base.control_model.PowerMode, in
+    # order to provide the NO_SUPPLY enum value (python enums cannot be
+    # extended). We should push this up to ska_tango_base. Meanwhile,
+    # we're going to have to work with both enums, so we're deliberately
+    # adopting this unwieldy name.
+
+    UNKNOWN = 0
+    """The power mode is not known."""
+
+    NO_SUPPLY = 1
+    """
+    The component is unsupplied with power and cannot be commanded on.
+
+    For example, the power mode of a TPM will be NO_SUPPLY if the
+    subrack that powers the TPM is turned off: not only is the TPM
+    off, but it cannot even be turned on (until the subrack has been
+    turned on).
+    """
+
+    OFF = 2
+    """The component is turned off but can be commanded on."""
+
+    STANDBY = 3
+    """The component is powered on and running in low-power standby mode."""
+
+    ON = 4
+    """The component is powered on and running in fully-operational mode."""
+
+
 class MccsComponentManagerProtocol(Protocol):
     """
     Specification of the interface of an MCCS component manager (for type-checking).

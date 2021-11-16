@@ -29,12 +29,14 @@ These assumptions may need to change in future.
 
 from __future__ import annotations  # allow forward references in type hints
 
+import threading
 from typing import Any, Callable, Optional
 from time import sleep
 import os
 
-from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import ControlMode, ObjectComponent
+from ska_low_mccs.subrack.subrack_data import SubrackData
+
 
 __all__ = ["SubrackSimulator"]
 
@@ -70,9 +72,6 @@ class SubrackSimulator(ObjectComponent):
     This can be overruled using the set_subrack_fan_speed method.
     """
 
-    MAX_SUBRACK_FAN_SPEED = 8000.0
-    """The maximum fan speed for the subrack."""
-
     DEFAULT_SUBRACK_FAN_MODES = [ControlMode.AUTO] * 4
     """
     The default fan mode for the subrack.
@@ -80,13 +79,10 @@ class SubrackSimulator(ObjectComponent):
     This can be overruled using the set_fan_mode method.
     """
 
-    TPM_BAY_COUNT = 8
-    """The number of TPM bays (not all bays may house TPMs)"""
-
-    DEFAULT_TPM_POWER_MODES = [PowerMode.OFF] * TPM_BAY_COUNT
+    DEFAULT_ARE_TPMS_ON = [False] * SubrackData.TPM_BAY_COUNT
     """The default on/off status of the housed TPMs."""
 
-    DEFAULT_TPM_PRESENT = [True] * TPM_BAY_COUNT
+    DEFAULT_TPM_PRESENT = [True] * SubrackData.TPM_BAY_COUNT
     """Whether each TPM is present in the subrack by default."""
 
     DEFAULT_POWER_SUPPLY_POWERS = [50.0, 70.0]
@@ -111,7 +107,7 @@ class SubrackSimulator(ObjectComponent):
         power_supply_currents: list[float] = DEFAULT_POWER_SUPPLY_CURRENTS,
         power_supply_voltages: list[float] = DEFAULT_POWER_SUPPLY_VOLTAGES,
         power_supply_fan_speeds: list[float] = DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
-        tpm_power_modes: list[PowerMode] = DEFAULT_TPM_POWER_MODES,
+        initial_are_tpms_on: list[bool] = DEFAULT_ARE_TPMS_ON,
         tpm_present: list[bool] = DEFAULT_TPM_PRESENT,
         _tpm_data: Optional[list[dict[str, Any]]] = None,
     ) -> None:
@@ -132,7 +128,7 @@ class SubrackSimulator(ObjectComponent):
             subrack
         :param power_supply_fan_speeds: the initial fan speeds in percent for the 2
             power supply in the subrack
-        :param tpm_power_modes: the initial power modes of the TPMs
+        :param initial_are_tpms_on: the initial power state of each TPM
         :param tpm_present: the initial TPM board present on subrack
         :param _tpm_data: optional list of subrack bay simulators to be
             used. This is for testing purposes only, allowing us to
@@ -148,30 +144,30 @@ class SubrackSimulator(ObjectComponent):
         self._power_supply_voltages = list(power_supply_voltages)
         self._power_supply_fan_speeds = list(power_supply_fan_speeds)
 
-        self._tpm_data = _tpm_data or [
-            {
-                "power_mode": tpm_power_modes[i],
-                "voltage": self.DEFAULT_TPM_VOLTAGE,
-                "current": self.DEFAULT_TPM_CURRENT,
-                "temperature": self.DEFAULT_TPM_TEMPERATURE,
-                "power": self.DEFAULT_TPM_POWER,
-            }
-            for i in range(len(tpm_power_modes))
-        ]
+        self._tpm_data_lock = threading.RLock()
+        with self._tpm_data_lock:
+            self._tpm_data = _tpm_data or [
+                {
+                    "is_on": initial_are_tpms_on[i],
+                    "voltage": self.DEFAULT_TPM_VOLTAGE,
+                    "current": self.DEFAULT_TPM_CURRENT,
+                    "temperature": self.DEFAULT_TPM_TEMPERATURE,
+                    "power": self.DEFAULT_TPM_POWER,
+                }
+                for i in range(len(initial_are_tpms_on))
+            ]
 
         self._bay_count = len(self._tpm_data)
         self._tpm_present = tpm_present[0 : self._bay_count]
         self._tpm_supply_fault = [0] * self._bay_count
 
-        self._tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
+        self._are_tpms_on_changed_callback: Optional[
+            Callable[[list[bool]], None]
         ] = None
 
-    def set_tpm_power_changed_callback(
+    def set_are_tpms_on_changed_callback(
         self: SubrackSimulator,
-        tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
-        ] = None,
+        are_tpms_on_changed_callback: Optional[Callable[[list[bool]], None]] = None,
     ) -> None:
         """
         Set the callback to be called when the power mode of a TPM changes.
@@ -181,11 +177,11 @@ class SubrackSimulator(ObjectComponent):
 
         If the value provided is None, then any set callback is removed.
 
-        :param tpm_power_changed_callback: the callback to be called
-            when the power mode of an antenna changes
+        :param are_tpms_on_changed_callback: the callback to be called
+            whenever any TPM its turned off or on
         """
-        self._tpm_power_changed_callback = tpm_power_changed_callback
-        self._tpm_power_changed()
+        self._are_tpms_on_changed_callback = are_tpms_on_changed_callback
+        self._are_tpms_on_changed()
 
     def set_progress_changed_callback(
         self: SubrackSimulator,
@@ -199,14 +195,14 @@ class SubrackSimulator(ObjectComponent):
         """
         self._component_progress_changed_callback = component_progress_changed_callback
 
-    def _tpm_power_changed(self: SubrackSimulator) -> None:
+    def _are_tpms_on_changed(self: SubrackSimulator) -> None:
         """
         Handle a change in TPM power.
 
         This is a helper method that calls the callback if it exists.
         """
-        if self._tpm_power_changed_callback is not None:
-            self._tpm_power_changed_callback(self.are_tpms_on())
+        if self._are_tpms_on_changed_callback is not None:
+            self._are_tpms_on_changed_callback(self.are_tpms_on)
 
     @property
     def backplane_temperatures(self: SubrackSimulator) -> list[float]:
@@ -292,7 +288,7 @@ class SubrackSimulator(ObjectComponent):
         :return: the fan speed, in percent
         """
         return [
-            speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+            speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
             for speed in self._subrack_fan_speeds
         ]
 
@@ -349,7 +345,8 @@ class SubrackSimulator(ObjectComponent):
 
         :return: the temperatures of the TPMs housed in this subrack
         """
-        return [tpm_data["temperature"] for tpm_data in self._tpm_data]
+        with self._tpm_data_lock:
+            return [tpm_data["temperature"] for tpm_data in self._tpm_data]
 
     def simulate_tpm_temperatures(
         self: SubrackSimulator, tpm_temperatures: list[float]
@@ -365,8 +362,9 @@ class SubrackSimulator(ObjectComponent):
         if len(tpm_temperatures) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
-        for (tpm_data, temperature) in zip(self._tpm_data, tpm_temperatures):
-            tpm_data["temperature"] = temperature
+        with self._tpm_data_lock:
+            for (tpm_data, temperature) in zip(self._tpm_data, tpm_temperatures):
+                tpm_data["temperature"] = temperature
 
     @property
     def tpm_currents(self: SubrackSimulator) -> list[float]:
@@ -375,7 +373,8 @@ class SubrackSimulator(ObjectComponent):
 
         :return: the currents of the TPMs housed in this subrack
         """
-        return [tpm_data["current"] for tpm_data in self._tpm_data]
+        with self._tpm_data_lock:
+            return [tpm_data["current"] for tpm_data in self._tpm_data]
 
     def simulate_tpm_currents(
         self: SubrackSimulator, tpm_currents: list[float]
@@ -391,8 +390,9 @@ class SubrackSimulator(ObjectComponent):
         if len(tpm_currents) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
-        for (tpm_data, current) in zip(self._tpm_data, tpm_currents):
-            tpm_data["simulate_current"] = current
+        with self._tpm_data_lock:
+            for (tpm_data, current) in zip(self._tpm_data, tpm_currents):
+                tpm_data["simulate_current"] = current
 
     @property
     def tpm_powers(self: SubrackSimulator) -> list[float]:
@@ -401,7 +401,8 @@ class SubrackSimulator(ObjectComponent):
 
         :return: the powers of the TPMs housed in this subrack
         """
-        return [tpm_data["power"] for tpm_data in self._tpm_data]
+        with self._tpm_data_lock:
+            return [tpm_data["power"] for tpm_data in self._tpm_data]
 
     def simulate_tpm_powers(self: SubrackSimulator, tpm_powers: list[float]) -> None:
         """
@@ -415,8 +416,9 @@ class SubrackSimulator(ObjectComponent):
         if len(tpm_powers) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
-        for (tpm_data, power) in zip(self._tpm_data, tpm_powers):
-            tpm_data["power"] = power
+        with self._tpm_data_lock:
+            for (tpm_data, power) in zip(self._tpm_data, tpm_powers):
+                tpm_data["power"] = power
 
     @property
     def tpm_voltages(self: SubrackSimulator) -> list[float]:
@@ -425,7 +427,8 @@ class SubrackSimulator(ObjectComponent):
 
         :return: the voltages of the TPMs housed in this subrack
         """
-        return [tpm_data["voltage"] for tpm_data in self._tpm_data]
+        with self._tpm_data_lock:
+            return [tpm_data["voltage"] for tpm_data in self._tpm_data]
 
     def simulate_tpm_voltages(
         self: SubrackSimulator, tpm_voltages: list[float]
@@ -441,8 +444,9 @@ class SubrackSimulator(ObjectComponent):
         if len(tpm_voltages) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
-        for (tpm_data, voltage) in zip(self._tpm_data, tpm_voltages):
-            tpm_data["voltage"] = voltage
+        with self._tpm_data_lock:
+            for (tpm_data, voltage) in zip(self._tpm_data, tpm_voltages):
+                tpm_data["voltage"] = voltage
 
     @property
     def power_supply_fan_speeds(self: SubrackSimulator) -> list[float]:
@@ -556,17 +560,18 @@ class SubrackSimulator(ObjectComponent):
             is off
         """
         self._check_tpm_id(logical_tpm_id)
-        return self._tpm_data[logical_tpm_id - 1]["power_mode"] == PowerMode.ON
+        with self._tpm_data_lock:
+            return self._tpm_data[logical_tpm_id - 1]["is_on"]
 
-    def are_tpms_on(self: SubrackSimulator) -> Optional[list[bool]]:
+    @property
+    def are_tpms_on(self: SubrackSimulator) -> list[bool]:
         """
-        Return whether each TPM is powered or not.
+        Return whether each TPM is on.
 
-        Returns None if the subrack itself is turned off.
-
-        :return: whether each TPM is powered or not.
+        :return: whether each TPM is on
         """
-        return [tpm_data["power_mode"] == PowerMode.ON for tpm_data in self._tpm_data]
+        with self._tpm_data_lock:
+            return [tpm_data["is_on"] for tpm_data in self._tpm_data]
 
     def turn_off_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
         """
@@ -578,12 +583,13 @@ class SubrackSimulator(ObjectComponent):
         :return: whether successful, or None if there was nothing to do
         """
         self._check_tpm_id(logical_tpm_id)
-        tpm_data = self._tpm_data[logical_tpm_id - 1]
-        if tpm_data["power_mode"] == PowerMode.ON:
-            tpm_data["power_mode"] = PowerMode.OFF
-            self._tpm_power_changed()
-            return True
-        return None
+        with self._tpm_data_lock:
+            tpm_data = self._tpm_data[logical_tpm_id - 1]
+            if tpm_data["is_on"]:
+                tpm_data["is_on"] = False
+                self._are_tpms_on_changed()
+                return True
+            return None
 
     def _emulate_hardware_delay(self: SubrackSimulator) -> None:
         """
@@ -614,16 +620,17 @@ class SubrackSimulator(ObjectComponent):
         :return: whether successful, or None if there was nothing to do
         """
         self._check_tpm_id(logical_tpm_id)
-        tpm_data = self._tpm_data[logical_tpm_id - 1]
-        if tpm_data["power_mode"] == PowerMode.OFF:
-            if self._component_progress_changed_callback:
-                self._component_progress_changed_callback(0)
-                self._emulate_hardware_delay()
-                self._component_progress_changed_callback(100)
-            tpm_data["power_mode"] = PowerMode.ON
-            self._tpm_power_changed()
-            return True
-        return None
+        with self._tpm_data_lock:
+            tpm_data = self._tpm_data[logical_tpm_id - 1]
+            if not tpm_data["is_on"]:
+                if self._component_progress_changed_callback:
+                    self._component_progress_changed_callback(0)
+                    self._emulate_hardware_delay()  # TODO: we're still holding the lock
+                    self._component_progress_changed_callback(100)
+                tpm_data["is_on"] = True
+                self._are_tpms_on_changed()
+                return True
+            return None
 
     def turn_on_tpms(self: SubrackSimulator) -> bool | None:
         """
@@ -632,14 +639,15 @@ class SubrackSimulator(ObjectComponent):
         :return: whether successful, or None if there was nothing to do
         """
         changed = False
-        for (tpm_data, present) in zip(self._tpm_data, self._tpm_present):
-            if present and tpm_data["power_mode"] == PowerMode.OFF:
-                tpm_data["power_mode"] = PowerMode.ON
-                changed = True
-        if changed:
-            self._tpm_power_changed()
-            return True
-        return None
+        with self._tpm_data_lock:
+            for (tpm_data, present) in zip(self._tpm_data, self._tpm_present):
+                if present and not tpm_data["is_on"]:
+                    tpm_data["is_on"] = True
+                    changed = True
+            if changed:
+                self._are_tpms_on_changed()
+                return True
+            return None
 
     def turn_off_tpms(self: SubrackSimulator) -> bool | None:
         """
@@ -648,14 +656,15 @@ class SubrackSimulator(ObjectComponent):
         :return: whether successful, or None if there was nothing to do
         """
         changed = False
-        for (tpm_data, present) in zip(self._tpm_data, self._tpm_present):
-            if present and tpm_data["power_mode"] == PowerMode.ON:
-                tpm_data["power_mode"] = PowerMode.OFF
-                changed = True
-        if changed:
-            self._tpm_power_changed()
-            return True
-        return None
+        with self._tpm_data_lock:
+            for (tpm_data, present) in zip(self._tpm_data, self._tpm_present):
+                if present and tpm_data["is_on"]:
+                    tpm_data["is_on"] = False
+                    changed = True
+            if changed:
+                self._are_tpms_on_changed()
+                return True
+            return None
 
     def set_subrack_fan_speed(
         self: SubrackSimulator, fan_id: int, speed_percent: float
@@ -667,7 +676,7 @@ class SubrackSimulator(ObjectComponent):
         :param speed_percent: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
         """
         self._subrack_fan_speeds[fan_id - 1] = (
-            speed_percent / 100.0 * SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+            speed_percent / 100.0 * SubrackData.MAX_SUBRACK_FAN_SPEED
         )
 
     def set_subrack_fan_modes(

@@ -18,12 +18,14 @@ import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
+from ska_low_mccs import MccsDeviceProxy
+
 from ska_low_mccs.component import (
     CommunicationStatus,
-    DeviceComponentManager,
-    MccsComponentManager,
+    ExtendedPowerMode,
     MccsComponentManagerProtocol,
     MessageQueue,
+    MessageQueueComponentManager,
     ObjectComponentManager,
     SwitchingComponentManager,
     check_communicating,
@@ -447,176 +449,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
                 self.start_communicating()
 
 
-class _SubrackProxy(DeviceComponentManager):
-    """A component manager for a subrack's tile power control functionality."""
-
-    def __init__(
-        self: _SubrackProxy,
-        fqdn: str,
-        tpm_bay: int,
-        message_queue: MessageQueue,
-        logger: logging.Logger,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerMode], None],
-        tpm_power_mode_changed_callback: Callable[[PowerMode], None],
-    ) -> None:
-        """
-        Initialise a new subrack proxy instance.
-
-        :param fqdn: the FQDN of the subrack
-        :param tpm_bay: the position of the TPM in the subrack
-        :param message_queue: the message queue to be used by this
-            component manager
-        :param logger: the logger to be used by this object.
-        :param communication_status_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param tpm_power_mode_changed_callback: callback to be called
-            when the power mode of the TPM changes.
-
-        :raises AssertionError: if parameters are out of bounds
-        """
-        assert tpm_bay > 0, "An subrack's logical tile id must be positive integer."
-        self._tpm_bay = tpm_bay
-
-        self._tpm_change_registered = False
-
-        self._tpm_power_mode: Optional[PowerMode] = None
-        self._tpm_power_mode_changed_callback = tpm_power_mode_changed_callback
-
-        super().__init__(
-            fqdn,
-            message_queue,
-            logger,
-            communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            None,
-        )
-
-    def stop_communicating(self: _SubrackProxy) -> None:
-        """Cease communicating with the subrack device."""
-        super().stop_communicating()
-        self._tpm_change_registered = False
-        self._tpm_power_mode = None
-
-    @property
-    def tpm_power_mode(
-        self: _SubrackProxy,
-    ) -> Optional[PowerMode]:
-        """
-        Return the power mode of the APIU.
-
-        :return: the power mode of the APIU.
-        """
-        return self._tpm_power_mode
-
-    def update_tpm_power_mode(
-        self: _SubrackProxy,
-        tpm_power_mode: Optional[PowerMode],
-    ) -> None:
-        if self._tpm_power_mode != tpm_power_mode:
-            self._tpm_power_mode = tpm_power_mode
-            if self._tpm_power_mode is not None:
-                self._tpm_power_mode_changed_callback(self._tpm_power_mode)
-
-    @check_communicating
-    def power_off(self: _SubrackProxy) -> ResultCode | None:
-        """
-        Tell the subrack to power off this tile's TPM.
-
-        :return: a result code.
-        """
-        if self.tpm_power_mode == PowerMode.OFF:
-            return None
-        return self._power_off_tpm()
-
-    @enqueue
-    def _power_off_tpm(self: _SubrackProxy) -> ResultCode | None:
-        try:
-            assert self._proxy is not None  # for the type checker
-            ([result_code], [message]) = self._proxy.PowerOffTpm(self._tpm_bay)
-        except tango.DevFailed:
-            # HACK: If an upstream device Off command is turning off subracks and tiles
-            # all at once, the subrack might have been turned off since we last received
-            # an event notifying us that it is ON. Let's consume the exception in that
-            # case.
-            assert self._proxy is not None  # for the type checker
-            if self._proxy.state() == tango.DevState.OFF:
-                return None
-            raise
-        return result_code
-
-    @check_communicating
-    def power_on(self: _SubrackProxy) -> ResultCode | None:
-        """
-        Tell the subrack to power on this tile's TPM.
-
-        :return: a result code.
-        """
-        if self.tpm_power_mode == PowerMode.ON:
-            return None
-        return self._power_on_tpm()
-
-    @enqueue
-    def _power_on_tpm(self: _SubrackProxy) -> ResultCode:
-        assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.PowerOnTpm(self._tpm_bay)
-        return result_code
-
-    def _device_state_changed(
-        self: _SubrackProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        assert self._proxy is not None  # type-hint
-        assert (
-            event_name.lower() == "state"
-        ), "state changed callback called but event_name is {event_name}."
-
-        super()._device_state_changed(event_name, event_value, event_quality)
-        if event_value == tango.DevState.ON and not self._tpm_change_registered:
-            self._register_are_tpms_on_callback()
-
-    @enqueue
-    def _register_are_tpms_on_callback(self: _SubrackProxy) -> None:
-        assert self._proxy is not None  # for the type checker
-        self._proxy.add_change_event_callback(
-            "areTpmsOn",
-            self._tpm_power_mode_changed,
-            stateless=True,
-        )
-        self._tpm_change_registered = True
-
-    def _tpm_power_mode_changed(
-        self: _SubrackProxy,
-        event_name: str,
-        event_value: list[bool],
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        """
-        Handle change in tpm power mode.
-
-        This is a callback that is triggered by an event subscription
-        on the subrack device.
-
-        :param event_name: name of the event; will always be
-            "areTpmsOn" for this callback
-        :param event_value: the new attribute value
-        :param event_quality: the quality of the change event
-        """
-        assert event_name.lower() == "areTpmsOn".lower(), (
-            "subrack 'areTpmsOn' attribute changed callback called but "
-            f"event_name is {event_name}."
-        )
-        self.update_tpm_power_mode(
-            PowerMode.ON if event_value[self._tpm_bay - 1] else PowerMode.OFF
-        )
-
-
-class TileComponentManager(MccsComponentManager):
+class TileComponentManager(MessageQueueComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
     def __init__(
@@ -662,33 +495,25 @@ class TileComponentManager(MccsComponentManager):
             instead of creating one. This is provided for testing
             purposes only.
         """
-        self._subrack_power_mode = PowerMode.UNKNOWN
+        self._subrack_fqdn = subrack_fqdn
+        self._subrack_tpm_id = subrack_tpm_id
 
-        self._message_queue = MessageQueue(
+        self._subrack_proxy: Optional[MccsDeviceProxy] = None
+
+        message_queue = MessageQueue(
             logger,
             queue_size_callback=message_queue_size_callback,
         )
 
-        self._target_power_mode: Optional[PowerMode] = None
-
         self._subrack_communication_status = CommunicationStatus.DISABLED
         self._tpm_communication_status = CommunicationStatus.DISABLED
 
-        self._subrack_component_manager = _SubrackProxy(
-            subrack_fqdn,
-            subrack_tpm_id,
-            self._message_queue,
-            logger,
-            self._subrack_communication_status_changed,
-            self._subrack_power_mode_changed,
-            self.component_power_mode_changed,
-        )
         self._tpm_component_manager = (
             _tpm_component_manager
             or SwitchingTpmComponentManager(
                 initial_simulation_mode,
                 initial_test_mode,
-                self._message_queue,
+                message_queue,
                 logger,
                 tpm_ip,
                 tpm_cpld_port,
@@ -699,12 +524,12 @@ class TileComponentManager(MccsComponentManager):
         )
 
         self._tile_orchestrator = TileOrchestrator(
-            self._subrack_component_manager.start_communicating,
-            self._subrack_component_manager.stop_communicating,
+            self._start_communicating_with_subrack,
+            self._stop_communicating_with_subrack,
             self._start_communicating_with_tpm,
             self._stop_communicating_with_tpm,
-            self._subrack_component_manager.power_off,
-            self._subrack_component_manager.power_on,
+            self._turn_off_tpm,
+            self._turn_on_tpm,
             self.update_communication_status,
             self.update_component_power_mode,
             self.update_component_fault,
@@ -712,6 +537,7 @@ class TileComponentManager(MccsComponentManager):
         )
 
         super().__init__(
+            message_queue,
             logger,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
@@ -725,6 +551,35 @@ class TileComponentManager(MccsComponentManager):
     def stop_communicating(self: TileComponentManager) -> None:
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_offline()
+
+    @check_communicating  # TODO: orchestrator should handle this
+    def off(self: TileComponentManager) -> ResultCode:
+        """
+        Tell the upstream power supply proxy to turn the tpm off.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        return self._tile_orchestrator.desire_off()
+
+    @check_communicating  # TODO: orchestrator should handle this
+    def on(self: TileComponentManager) -> ResultCode:
+        """
+        Tell the upstream power supply proxy to turn the tpm off.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        return self._tile_orchestrator.desire_on()
+
+    def component_progress_changed(self: TileComponentManager, progress: int) -> None:
+        """
+        Handle notification that the component's progress value has changed.
+
+        This is a callback hook, to be passed to the managed component.
+
+        :param progress: The progress percentage of the long-running command
+        """
+        if self._component_progress_changed_callback is not None:
+            self._component_progress_changed_callback(progress)
 
     def _subrack_communication_status_changed(
         self: TileComponentManager,
@@ -740,66 +595,6 @@ class TileComponentManager(MccsComponentManager):
             communication_status
         )
 
-    def _tpm_communication_status_changed(
-        self: TileComponentManager,
-        communication_status: CommunicationStatus,
-    ) -> None:
-        """
-        Handle a change in status of communication with the tpm.
-
-        :param communication_status: the status of communication with
-            the tpm.
-        """
-        self._tile_orchestrator.update_tpm_communication_status(communication_status)
-
-    def component_progress_changed(self: TileComponentManager, progress: int) -> None:
-        """
-        Handle notification that the component's progress value has changed.
-
-        This is a callback hook, to be passed to the managed component.
-
-        :param progress: The progress percentage of the long-running command
-        """
-        if self._component_progress_changed_callback is not None:
-            self._component_progress_changed_callback(progress)
-
-    def component_power_mode_changed(
-        self: TileComponentManager,
-        power_mode: PowerMode,
-    ) -> None:
-        """
-        Handle a change in power mode of the tpm.
-
-        :param power_mode: the power mode of the tpm
-        """
-        self._tile_orchestrator.update_tpm_power_mode(power_mode)
-
-    @check_communicating
-    def off(self: TileComponentManager) -> ResultCode | None:
-        """
-        Tell the upstream power supply proxy to turn the tpm off.
-
-        :return: a result code, or None if there was nothing to do.
-        """
-        self._tile_orchestrator.desire_off()
-        return ResultCode.QUEUED
-
-    @check_communicating
-    def on(self: TileComponentManager) -> ResultCode | None:
-        """
-        Tell the upstream power supply proxy to turn the tpm off.
-
-        :return: a result code, or None if there was nothing to do.
-        """
-        self._tile_orchestrator.desire_on()
-        return ResultCode.QUEUED
-
-    def _subrack_power_mode_changed(
-        self: TileComponentManager,
-        subrack_power_mode: PowerMode,
-    ) -> None:
-        self._tile_orchestrator.update_subrack_power_mode(subrack_power_mode)
-
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,
         # so that self._tpm_component_manager is resolved when the
@@ -811,6 +606,101 @@ class TileComponentManager(MccsComponentManager):
         # so that self._tpm_component_manager is resolved when the
         # callback is called, not when it is registered.
         self._tpm_component_manager.stop_communicating()
+
+    @enqueue
+    def _start_communicating_with_subrack(self: TileComponentManager) -> None:
+        """
+        Establish communication with the subrack, then start monitoring.
+
+        This contains the actual communication logic that is enqueued to
+        be run asynchronously.
+
+        :raises ConnectionError: if the attempt to establish
+            communication with the channel fails.
+        """
+        self._subrack_proxy = MccsDeviceProxy(
+            self._subrack_fqdn, self._logger, connect=False
+        )
+        try:
+            self._subrack_proxy.connect()
+        except tango.DevFailed as dev_failed:
+            self._subrack_proxy = None
+            raise ConnectionError(
+                f"Could not connect to '{self._subrack_fqdn}'"
+            ) from dev_failed
+
+        self._subrack_proxy.add_change_event_callback(
+            f"tpm{self._subrack_tpm_id}PowerMode",
+            self._tpm_power_mode_change_event_received,
+        )
+        self._tile_orchestrator.update_subrack_communication_status(
+            CommunicationStatus.ESTABLISHED
+        )
+
+    def _tpm_power_mode_change_event_received(
+        self: TileComponentManager,
+        event_name: str,
+        event_value: ExtendedPowerMode,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle change in tpm power modes.
+
+        This is a callback that is triggered by an event subscription
+        on the subrack device.
+
+        :param event_name: name of the event; will always be
+            "areTpmsOn" for this callback
+        :param event_value: the new attribute value
+        :param event_quality: the quality of the change event
+        """
+        assert event_name.lower() == f"tpm{self._subrack_tpm_id}PowerMode".lower(), (
+            f"subrack 'tpm{self._subrack_tpm_id}PowerMode' attribute changed callback "
+            f"called but event_name is {event_name}."
+        )
+        self._tpm_power_mode_changed(event_value)
+
+    def _stop_communicating_with_subrack(self: TileComponentManager) -> None:
+        self._subrack_proxy = None
+        self._tile_orchestrator.update_subrack_communication_status(
+            CommunicationStatus.DISABLED
+        )
+
+    @enqueue
+    def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
+        assert self._subrack_proxy is not None  # for the type checker
+        ([result_code], [message]) = self._subrack_proxy.PowerOffTpm(
+            self._subrack_tpm_id
+        )
+        # TODO better handling of result code and exceptions.
+        return result_code
+
+    @enqueue
+    def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
+        assert self._subrack_proxy is not None  # for the type checker
+        ([result_code], [message]) = self._subrack_proxy.PowerOnTpm(
+            self._subrack_tpm_id
+        )
+        # TODO better handling of result code and exceptions.
+        return result_code
+
+    def _tpm_power_mode_changed(
+        self: TileComponentManager,
+        power_mode: ExtendedPowerMode,
+    ) -> None:
+        self._tile_orchestrator.update_tpm_power_mode(power_mode)
+
+    def _tpm_communication_status_changed(
+        self: TileComponentManager,
+        communication_status: CommunicationStatus,
+    ) -> None:
+        """
+        Handle a change in status of communication with the tpm.
+
+        :param communication_status: the status of communication with
+            the tpm.
+        """
+        self._tile_orchestrator.update_tpm_communication_status(communication_status)
 
     @property
     def simulation_mode(self: TileComponentManager) -> SimulationMode:

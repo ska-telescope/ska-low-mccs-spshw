@@ -19,8 +19,10 @@ from _pytest.fixtures import SubRequest
 
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
+from ska_low_mccs.component import ExtendedPowerMode
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
+    SubrackData,
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
@@ -130,16 +132,15 @@ class TestSubrackSimulatorCommon:
             (
                 "subrack_fan_speeds_percent",
                 [
-                    speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                    speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
             ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
-            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
+            ("tpm_count", SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_temperatures",
-                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_powers",
@@ -147,11 +148,11 @@ class TestSubrackSimulatorCommon:
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "power_supply_fan_speeds",
@@ -172,7 +173,7 @@ class TestSubrackSimulatorCommon:
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
             (
                 "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
             ),
         ),
     )
@@ -206,7 +207,6 @@ class TestSubrackSimulatorCommon:
     @pytest.mark.parametrize(
         "command_name",
         (
-            "are_tpms_on",
             "turn_on_tpms",
             "turn_off_tpms",
         ),
@@ -384,7 +384,7 @@ class TestSubrackDriverCommon:
             subrack_component_manager.test_mode = TestMode.NONE
             subrack_component_manager.start_communicating()
             subrack_component_manager.on()
-            time.sleep(0.1)
+            time.sleep(0.2)
             return subrack_component_manager
         raise ValueError("subrack fixture parametrized with unrecognised option")
 
@@ -401,24 +401,24 @@ class TestSubrackDriverCommon:
             (
                 "subrack_fan_speeds_percent",
                 [
-                    speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                    speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
             ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
-            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
-            ("tpm_temperatures", [0.0] * SubrackSimulator.TPM_BAY_COUNT),
+            ("tpm_count", SubrackData.TPM_BAY_COUNT),
+            ("tpm_temperatures", [0.0] * SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_powers",
                 [
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "power_supply_fan_speeds",
@@ -439,7 +439,7 @@ class TestSubrackDriverCommon:
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
             (
                 "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
             ),
         ),
     )
@@ -472,7 +472,6 @@ class TestSubrackDriverCommon:
     @pytest.mark.parametrize(
         "command_name",
         (
-            "are_tpms_on",
             "turn_on_tpms",
             "turn_off_tpms",
         ),
@@ -538,9 +537,10 @@ class TestSubrackComponentManager:
     """Tests of the subrack component manager."""
 
     @pytest.mark.parametrize("tpm_id", [1, 2])
-    def test_component_tpm_power_changed_callback(
+    def test_tpm_power_modes(
         self: TestSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
+        component_power_mode_changed_callback: MockCallable,
         component_tpm_power_changed_callback: MockCallable,
         tpm_id: int,
     ) -> None:
@@ -551,37 +551,67 @@ class TestSubrackComponentManager:
 
         :param subrack_component_manager: the subrack component manager under
             test
+        :param component_power_mode_changed_callback: callback to be
+            called when the component power mode changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of an tpm changes
         :param tpm_id: the number of the tpm to use in the test
         """
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        )
+
+        component_tpm_power_changed_callback.assert_not_called()
+
         subrack_component_manager.start_communicating()
+
+        component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
+        assert subrack_component_manager.power_mode == PowerMode.OFF
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        )
+
+        component_tpm_power_changed_callback.assert_not_called()
+
         subrack_component_manager.on()
 
-        time.sleep(0.1)
-
+        component_power_mode_changed_callback.assert_next_call(PowerMode.ON)
         assert subrack_component_manager.power_mode == PowerMode.ON
 
-        expected_are_tpms_on = [False] * subrack_component_manager.tpm_count
-        component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
-        assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
+        expected_tpm_power_modes = [ExtendedPowerMode.OFF] * SubrackData.TPM_BAY_COUNT
+        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
 
-        subrack_component_manager.turn_on_tpm(tpm_id)
-        expected_are_tpms_on[tpm_id - 1] = True
-        component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
-        assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
+        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
+        component_tpm_power_changed_callback.assert_not_called()
 
-        subrack_component_manager.turn_on_tpm(tpm_id)
+        assert subrack_component_manager.turn_on_tpm(tpm_id)
+        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerMode.ON
+        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
+        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
+
+        assert subrack_component_manager.turn_on_tpm(tpm_id) is None
         component_tpm_power_changed_callback.assert_not_called()
 
         assert subrack_component_manager.turn_off_tpm(tpm_id) is True
-        expected_are_tpms_on[tpm_id - 1] = False
-        component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
-        assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
-        assert subrack_component_manager.turn_off_tpm(tpm_id) is None
+        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerMode.OFF
+        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
+        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
 
-        subrack_component_manager.turn_off_tpm(tpm_id)
+        assert subrack_component_manager.turn_off_tpm(tpm_id) is None
         component_tpm_power_changed_callback.assert_not_called()
+
+        assert subrack_component_manager.off()
+        component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
+        assert subrack_component_manager.power_mode == PowerMode.OFF
+
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        )
+
+        subrack_component_manager.stop_communicating()
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        )
 
     def test_component_progress_changed_callback(
         self: TestSubrackComponentManager,

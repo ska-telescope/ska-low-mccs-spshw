@@ -11,6 +11,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import threading
 from typing import Any, Callable
 import unittest.mock
 
@@ -244,7 +245,10 @@ class MockDeviceBuilder:
                 mock_event_data.attr_value.name = attribute_name
                 mock_event_data.attr_value.value = attribute_value
                 mock_event_data.attr_value.quality = tango.AttrQuality.ATTR_VALID
-                callback(mock_event_data)
+
+                # Don't just invoke callback(mock_event_data): it's more realistic if
+                # the callback is fired asynchronously.
+                threading.Thread(target=callback, args=(mock_event_data,)).start()
             # TODO: if attribute_value is None, it might be better to call the callback
             # with a mock rather than not calling it at all.
 

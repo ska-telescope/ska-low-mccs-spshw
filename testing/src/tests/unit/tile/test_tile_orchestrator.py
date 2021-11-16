@@ -22,7 +22,7 @@ import yaml
 
 from ska_tango_base.control_model import PowerMode
 
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.tile.tile_orchestrator import (
     OperatorDesire,
     TileOrchestrator,
@@ -40,8 +40,7 @@ class TestTileOrchestrator:
         Tuple[
             OperatorDesire,
             CommunicationStatus,
-            Optional[PowerMode],
-            Optional[bool],
+            ExtendedPowerMode,
             CommunicationStatus,
             Stimulus,
         ],
@@ -69,10 +68,9 @@ class TestTileOrchestrator:
             (
                 OperatorDesire[state[0]],
                 CommunicationStatus[state[1]],
-                None if state[2] is None else PowerMode[state[2]],
-                state[3],
-                CommunicationStatus[state[4]],
-                Stimulus[state[5]],
+                ExtendedPowerMode[state[2]],
+                CommunicationStatus[state[3]],
+                Stimulus[state[4]],
             ): action
             for state, action in rules.items()
         }
@@ -101,58 +99,102 @@ class TestTileOrchestrator:
         """
         return {
             "do_nothing": ({}, {}),
-            "report_subrack_off": (
-                {"subrack_power_mode": PowerMode.OFF, "is_tpm_on": None},
-                {
-                    "component_power_mode_changed": [PowerMode.OFF],
-                    "communication_status_changed": [CommunicationStatus.ESTABLISHED],
-                },
-            ),
-            "report_subrack_on": ({"subrack_power_mode": PowerMode.ON}, {}),
-            "report_subrack_on_and_turn_tpm_on": (
-                {
-                    "subrack_power_mode": PowerMode.ON,
-                    "operator_desire": OperatorDesire.ONLINE,
-                },
-                {"turn_tpm_on": []},
-            ),
-            "report_subrack_unknown": (
-                {"subrack_power_mode": PowerMode.UNKNOWN},
+            "report_tpm_power_unknown": (
+                {"tpm_power_mode": ExtendedPowerMode.UNKNOWN},
                 {"component_power_mode_changed": [PowerMode.UNKNOWN]},
             ),
-            "report_tpm_off": (
-                {"is_tpm_on": False},
+            "report_tpm_no_power_supply_and_disable_tpm_communication": (
+                {"tpm_power_mode": ExtendedPowerMode.NO_SUPPLY},
                 {
                     "component_power_mode_changed": [PowerMode.OFF],
                     "stop_communicating_with_tpm": [],
                 },
             ),
+            "report_tpm_no_power_supply_when_tpm_communication_disabled": (
+                {"tpm_power_mode": ExtendedPowerMode.NO_SUPPLY},
+                {"component_power_mode_changed": [PowerMode.OFF]},
+            ),
+            "report_tpm_off_and_disable_tpm_communication": (
+                {"tpm_power_mode": ExtendedPowerMode.OFF},
+                {
+                    "component_power_mode_changed": [PowerMode.OFF],
+                    "stop_communicating_with_tpm": [],
+                },
+            ),
+            "report_tpm_off_when_tpm_communication_disabled": (
+                {"tpm_power_mode": ExtendedPowerMode.OFF},
+                {"component_power_mode_changed": [PowerMode.OFF]},
+            ),
             "report_tpm_off_and_turn_tpm_on": (
-                {"is_tpm_on": False, "operator_desire": OperatorDesire.ONLINE},
+                {
+                    "tpm_power_mode": ExtendedPowerMode.OFF,
+                    "operator_desire": OperatorDesire.ONLINE,
+                },
                 {
                     "component_power_mode_changed": [PowerMode.OFF],
                     "turn_tpm_on": [],
                 },
             ),
-            "report_tpm_on": (
-                {"is_tpm_on": True},
+            "report_tpm_on_and_establish_tpm_communication": (
+                {"tpm_power_mode": ExtendedPowerMode.ON},
                 {
-                    "start_communicating_with_tpm": [],
                     "component_power_mode_changed": [PowerMode.ON],
+                    "start_communicating_with_tpm": [],
                 },
             ),
             "set_desired_on": ({"operator_desire": OperatorDesire.ON}, {}),
             "set_subrack_communication_disabled": (
                 {
                     "subrack_communication_status": CommunicationStatus.DISABLED,
-                    "subrack_power_mode": None,
-                    "is_tpm_on": None,
+                    "tpm_power_mode": ExtendedPowerMode.UNKNOWN,
                 },
-                {},
+                {
+                    "component_power_mode_changed": [PowerMode.UNKNOWN],
+                },
             ),
             "set_subrack_communication_established": (
                 {"subrack_communication_status": CommunicationStatus.ESTABLISHED},
                 {"communication_status_changed": [CommunicationStatus.ESTABLISHED]},
+            ),
+            "set_subrack_communication_established_and_report_tpm_power_unknown": (
+                {
+                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
+                    "tpm_power_mode": ExtendedPowerMode.UNKNOWN,
+                },
+                {
+                    "communication_status_changed": [CommunicationStatus.ESTABLISHED],
+                    "component_power_mode_changed": [PowerMode.UNKNOWN],
+                },
+            ),
+            "set_subrack_communication_established_and_report_tpm_no_power_supply": (
+                {
+                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
+                    "tpm_power_mode": ExtendedPowerMode.NO_SUPPLY,
+                },
+                {
+                    "communication_status_changed": [CommunicationStatus.ESTABLISHED],
+                    "component_power_mode_changed": [PowerMode.OFF],
+                },
+            ),
+            "set_subrack_communication_established_and_report_tpm_off": (
+                {
+                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
+                    "tpm_power_mode": ExtendedPowerMode.OFF,
+                },
+                {
+                    "communication_status_changed": [CommunicationStatus.ESTABLISHED],
+                    "component_power_mode_changed": [PowerMode.OFF],
+                },
+            ),
+            "set_subrack_communication_established_and_report_tpm_on_and_establish_tpm_communication": (
+                {
+                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
+                    "tpm_power_mode": ExtendedPowerMode.ON,
+                },
+                {
+                    "component_power_mode_changed": [PowerMode.ON],
+                    "start_communicating_with_tpm": [],
+                },
             ),
             "set_tpm_communication_disabled": (
                 {"tpm_communication_status": CommunicationStatus.DISABLED},
@@ -178,7 +220,16 @@ class TestTileOrchestrator:
                     "start_communicating_with_subrack": [],
                 },
             ),
-            "stop_communicating": (
+            "stop_communicating_when_tpm_communication_not_established": (
+                {"operator_desire": OperatorDesire.OFFLINE},
+                {
+                    "communication_status_changed": [CommunicationStatus.DISABLED],
+                    "component_power_mode_changed": [None],
+                    "component_fault": [None],
+                    "stop_communicating_with_subrack": [],
+                },
+            ),
+            "stop_communicating_when_tpm_communication_established": (
                 {"operator_desire": OperatorDesire.OFFLINE},
                 {
                     "communication_status_changed": [CommunicationStatus.DISABLED],
@@ -253,12 +304,12 @@ class TestTileOrchestrator:
         """
         return request.param
 
-    @pytest.fixture(scope="session", params=[None] + list(PowerMode))
-    def subrack_power_mode(
+    @pytest.fixture(scope="session", params=list(ExtendedPowerMode))
+    def tpm_power_mode(
         self: TestTileOrchestrator, request: SubRequest
-    ) -> Optional[PowerMode]:
+    ) -> ExtendedPowerMode:
         """
-        Return the power mode of the subrack, or None if not yet known.
+        Return the power mode of the TPM according to the subrack.
 
         Note that PowerMode.UNKNOWN represents the case where the
         subrack device has reported that it does not know the power mode
@@ -273,24 +324,8 @@ class TestTileOrchestrator:
         :param request: A pytest object giving access to the requesting
             test context.
 
-        :return: the power mode of the subrack, or None if not yet
-            known.
-        """
-        return request.param
-
-    @pytest.fixture(scope="session", params=[None, False, True])
-    def is_tpm_on(self: TestTileOrchestrator, request: SubRequest) -> Optional[bool]:
-        """
-        Return whether the TPM is powered on, of None if unknown.
-
-        This fixture is parametrized to return each possible value. So
-        any test or fixture that uses this fixture will be run once for
-        each value.
-
-        :param request: A pytest object giving access to the requesting
-            test context.
-
-        :return: the status of communication with the subrack.
+        :return: the power mode of the TPM according to the subrack, or
+            None if not yet known.
         """
         return request.param
 
@@ -317,14 +352,12 @@ class TestTileOrchestrator:
         self: TestTileOrchestrator,
         operator_desire: OperatorDesire,
         subrack_communication_status: CommunicationStatus,
-        subrack_power_mode: Optional[PowerMode],
-        is_tpm_on: Optional[bool],
+        tpm_power_mode: ExtendedPowerMode,
         tpm_communication_status: CommunicationStatus,
     ) -> Tuple[
         OperatorDesire,
         CommunicationStatus,
-        Optional[PowerMode],
-        Optional[bool],
+        ExtendedPowerMode,
         CommunicationStatus,
     ]:
         """
@@ -351,11 +384,9 @@ class TestTileOrchestrator:
         :param subrack_communication_status: status of communications
             with the subrack (parametrized to return every possible
             value)
-        :param subrack_power_mode: power mode of the subrack, or None if
-            not yet known (parametrized to return every possible
-            value)
-        :param is_tpm_on: whether the TPM is turned on, or None if not
-            yet known (parametrized to return every possible value)
+        :param tpm_power_mode: the power mode of the TPM according to
+            the subrack, or None if not yet known (parametrized to
+            return every possible value)
         :param tpm_communication_status: status of communications with
             the TPM (parametrized to return every possible value)
 
@@ -365,8 +396,7 @@ class TestTileOrchestrator:
         return (
             operator_desire,
             subrack_communication_status,
-            subrack_power_mode,
-            is_tpm_on,
+            tpm_power_mode,
             tpm_communication_status,
         )
 
@@ -378,8 +408,7 @@ class TestTileOrchestrator:
         state: Tuple[
             OperatorDesire,
             CommunicationStatus,
-            Optional[PowerMode],
-            Optional[bool],
+            ExtendedPowerMode,
             CommunicationStatus,
         ],
     ) -> TileOrchestrator:
@@ -432,8 +461,7 @@ class TestTileOrchestrator:
             Tuple[
                 OperatorDesire,
                 CommunicationStatus,
-                Optional[PowerMode],
-                Optional[bool],
+                ExtendedPowerMode,
                 CommunicationStatus,
                 Stimulus,
             ],
@@ -443,8 +471,7 @@ class TestTileOrchestrator:
         state: Tuple[
             OperatorDesire,
             CommunicationStatus,
-            Optional[PowerMode],
-            Optional[bool],
+            ExtendedPowerMode,
             CommunicationStatus,
         ],
         stimulus: Stimulus,
@@ -488,8 +515,7 @@ class TestTileOrchestrator:
         state: Tuple[
             OperatorDesire,
             CommunicationStatus,
-            Optional[PowerMode],
-            Optional[bool],
+            ExtendedPowerMode,
             CommunicationStatus,
         ],
         stimulus: Stimulus,
@@ -528,17 +554,17 @@ class TestTileOrchestrator:
                 Stimulus.SUBRACK_COMMS_ESTABLISHED: lambda tc: tc.update_subrack_communication_status(
                     CommunicationStatus.ESTABLISHED
                 ),
-                Stimulus.SUBRACK_UNKNOWN: lambda tc: tc.update_subrack_power_mode(
-                    PowerMode.UNKNOWN
+                Stimulus.SUBRACK_SAYS_TPM_UNKNOWN: lambda tc: tc.update_tpm_power_mode(
+                    ExtendedPowerMode.UNKNOWN
                 ),
-                Stimulus.SUBRACK_OFF: lambda tc: tc.update_subrack_power_mode(
-                    PowerMode.OFF
+                Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY: lambda tc: tc.update_tpm_power_mode(
+                    ExtendedPowerMode.NO_SUPPLY
                 ),
-                Stimulus.SUBRACK_STANDBY: lambda tc: tc.update_subrack_power_mode(
-                    PowerMode.STANDBY
+                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(
+                    ExtendedPowerMode.OFF
                 ),
-                Stimulus.SUBRACK_ON: lambda tc: tc.update_subrack_power_mode(
-                    PowerMode.ON
+                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(
+                    ExtendedPowerMode.ON
                 ),
                 Stimulus.TPM_COMMS_DISABLED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.DISABLED
@@ -548,12 +574,6 @@ class TestTileOrchestrator:
                 ),
                 Stimulus.TPM_COMMS_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.ESTABLISHED
-                ),
-                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(
-                    PowerMode.OFF
-                ),
-                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(
-                    PowerMode.ON
                 ),
             }[stimulus](tile_orchestrator)
 
@@ -579,15 +599,13 @@ class TestTileOrchestrator:
                 tile_orchestrator._subrack_communication_status
                 == expected_state_changes.get("subrack_communication_status", state[1])
             )
-            assert tile_orchestrator._subrack_power_mode == expected_state_changes.get(
-                "subrack_power_mode", state[2]
-            )
-            assert tile_orchestrator._is_tpm_on == expected_state_changes.get(
-                "is_tpm_on", state[3]
+
+            assert tile_orchestrator._tpm_power_mode == expected_state_changes.get(
+                "tpm_power_mode", state[2]
             )
             assert (
                 tile_orchestrator._tpm_communication_status
-                == expected_state_changes.get("tpm_communication_status", state[4])
+                == expected_state_changes.get("tpm_communication_status", state[3])
             )
 
         def check_callbacks(**expected_args: list[Any]) -> None:

@@ -8,6 +8,7 @@
 
 __all__ = [
     "MccsSubrack",
+    "SubrackData",
     "SubrackSimulator",
     "TestingSubrackSimulator",
     "BaseSubrackSimulatorComponentManager",
@@ -19,6 +20,7 @@ __all__ = [
     "SubrackHealthModel",
 ]
 
+from .subrack_data import SubrackData
 from .subrack_simulator import SubrackSimulator
 from .testing_subrack_simulator import TestingSubrackSimulator
 from .subrack_driver import SubrackDriver

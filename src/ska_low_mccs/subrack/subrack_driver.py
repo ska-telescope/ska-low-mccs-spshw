@@ -29,15 +29,16 @@ import time
 import logging
 from typing import Callable, cast, List, Optional
 
-from ska_tango_base.control_model import PowerMode
-
 from ska_low_mccs.component import (
     ControlMode,
     CommunicationStatus,
+    ExtendedPowerMode,
     MessageQueue,
     MessageQueueComponentManager,
     WebHardwareClient,
 )
+from ska_low_mccs.subrack import SubrackData
+
 
 __all__ = ["SubrackDriver"]
 
@@ -61,7 +62,6 @@ class SubrackDriver(MessageQueueComponentManager):
     DEFAULT_SUBRACK_FAN_SPEED = [4999.0, 5000.0, 5001.0, 5002.0]
     MAX_SUBRACK_FAN_SPEED = 8000.0
     DEFAULT_SUBRACK_FAN_MODES = [ControlMode.AUTO] * 4
-    DEFAULT_TPM_POWER_MODES = [PowerMode.OFF] * 8
     DEFAULT_TPM_PRESENT = [True] * 8
     DEFAULT_POWER_SUPPLY_POWERS = [50.0, 70.0]
     DEFAULT_POWER_SUPPLY_VOLTAGES = [12.0, 12.1]
@@ -78,9 +78,7 @@ class SubrackDriver(MessageQueueComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
-        ],
+        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
         tpm_present: Optional[list[bool]] = None,
     ) -> None:
         """
@@ -120,9 +118,7 @@ class SubrackDriver(MessageQueueComponentManager):
             self._tpm_present = self.DEFAULT_TPM_PRESENT
         else:
             self._tpm_present = tpm_present
-        self._are_tpms_on = [
-            mode == PowerMode.ON for mode in self.DEFAULT_TPM_POWER_MODES
-        ]
+        self._tpm_power_modes = [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_count = self.DEFAULT_TPM_COUNT
         self._bay_count = self.DEFAULT_TPM_COUNT
 
@@ -165,7 +161,7 @@ class SubrackDriver(MessageQueueComponentManager):
         This is a helper method that calls the callback if it exists.
         """
         if self._component_tpm_power_changed_callback is not None:
-            self._component_tpm_power_changed_callback(self.are_tpms_on())
+            self._component_tpm_power_changed_callback(self.tpm_power_modes)
 
     @property
     def backplane_temperatures(self: SubrackDriver) -> list[float]:
@@ -408,7 +404,8 @@ class SubrackDriver(MessageQueueComponentManager):
             self._tpm_supply_fault = cast(List[int], response["value"])
         return self._tpm_supply_fault
 
-    def are_tpms_on(self: SubrackDriver) -> Optional[list[bool]]:
+    @property
+    def tpm_power_modes(self: SubrackDriver) -> list[ExtendedPowerMode]:
         """
         Return whether each TPM is powered or not.
 
@@ -418,8 +415,12 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         response = self._client.get_attribute("tpm_on_off")
         if response["status"] == "OK":
-            self._are_tpms_on = cast(List[bool], response["value"])
-        return self._are_tpms_on
+            are_tpms_on = cast(List[bool], response["value"])
+            self._tpm_power_modes = [
+                ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF
+                for is_tpm_on in are_tpms_on
+            ]
+        return self._tpm_power_modes
 
     def is_tpm_on(self: SubrackDriver, logical_tpm_id: int) -> Optional[bool]:
         """
@@ -432,7 +433,7 @@ class SubrackDriver(MessageQueueComponentManager):
             is off
         """
         self._check_tpm_id(logical_tpm_id)
-        return self._are_tpms_on[logical_tpm_id - 1]
+        return self.tpm_power_modes[logical_tpm_id - 1] == ExtendedPowerMode.ON
 
     def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """

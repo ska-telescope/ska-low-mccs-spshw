@@ -163,7 +163,7 @@ class SubrackDriver(MessageQueueComponentManager):
 
         This is a helper method that calls the callback if it exists.
         """
-        self.logger.debug("TPM power changed: " + str(self.are_tpms_on()))
+        self.logger.debug("TPM power changed: " + str(self.tpm_power_modes))
         if self._component_tpm_power_changed_callback is not None:
             self._component_tpm_power_changed_callback(self.tpm_power_modes)
 

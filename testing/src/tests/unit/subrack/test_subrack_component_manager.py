@@ -591,7 +591,7 @@ class TestSubrackComponentManager:
         component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
         assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
 
-        assert subrack_component_manager.turn_on_tpm(tpm_id) is None
+        assert subrack_component_manager.turn_on_tpm(tpm_id) is ResultCode.QUEUED
         component_tpm_power_changed_callback.assert_not_called()
 
         assert subrack_component_manager.turn_off_tpm(tpm_id) is ResultCode.QUEUED

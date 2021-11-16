@@ -378,16 +378,11 @@ class MccsSubarray(SKASubarray):
             subarray_beam.split("/")[-1].lstrip("0")
             for subarray_beam in resource_dict["subarray_beams"]
         ]
-        station_beams = [
-            station_beam.split("/")[-1].lstrip("0")
-            for station_beam in resource_dict["station_beams"]
-        ]
         channel_blocks = resource_dict["channel_blocks"]
         return json.dumps(
             {
-                "stations": stations,
-                "subarray_beams": subarray_beams,
-                "station_beams": station_beams,
+                "subarray_beam_ids": subarray_beams,
+                "station_ids": stations,                
                 "channel_blocks": channel_blocks,
             }
         )

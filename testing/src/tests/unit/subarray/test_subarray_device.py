@@ -284,9 +284,8 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.assignedResources == json.dumps(
             {
-                "stations": [[station_on_fqdn.split("/")[-1].lstrip("0")]],
-                "subarray_beams": [subarray_beam_on_fqdn.split("/")[-1].lstrip("0")],
-                "station_beams": [station_beam_on_fqdn.split("/")[-1].lstrip("0")],
+                "subarray_beam_ids": [subarray_beam_on_fqdn.split("/")[-1].lstrip("0")],
+                "station_ids": [[station_on_fqdn.split("/")[-1].lstrip("0")]],
                 "channel_blocks": channel_blocks,
             }
         )
@@ -297,9 +296,8 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.assignedResources == json.dumps(
             {
-                "stations": [],
-                "subarray_beams": [],
-                "station_beams": [],
+                "subarray_beam_ids": [],
+                "station_ids": [],                
                 "channel_blocks": [],
             }
         )

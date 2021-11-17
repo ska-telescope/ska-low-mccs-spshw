@@ -33,7 +33,6 @@ from ska_low_mccs.component import (
     MessageQueue,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
-    enqueue,
 )
 
 

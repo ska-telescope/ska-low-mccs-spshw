@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import contextlib
 import logging
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, ContextManager, Mapping, Optional, Union, Tuple, cast
 import unittest.mock
 
 import pytest
@@ -24,8 +25,9 @@ from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.tile.tile_orchestrator import (
-    OperatorDesire,
     TileOrchestrator,
+    StateStimulusTupleType,
+    StateTupleType,
     Stimulus,
 )
 
@@ -36,16 +38,7 @@ class TestTileOrchestrator:
     @pytest.fixture(scope="session")
     def rules(
         self: TestTileOrchestrator,
-    ) -> Mapping[
-        Tuple[
-            OperatorDesire,
-            CommunicationStatus,
-            ExtendedPowerMode,
-            CommunicationStatus,
-            Stimulus,
-        ],
-        str,
-    ]:
+    ) -> Mapping[StateStimulusTupleType, list[str]]:
         """
         Return a static dictionary of orchestrator rules.
 
@@ -64,21 +57,43 @@ class TestTileOrchestrator:
         with open(TileOrchestrator.RULES_PATH, "r") as stream:
             rules = yaml.load(stream, Loader=yaml.Loader)
 
-        return {
-            (
-                OperatorDesire[state[0]],
-                CommunicationStatus[state[1]],
-                ExtendedPowerMode[state[2]],
-                CommunicationStatus[state[3]],
-                Stimulus[state[4]],
-            ): action
-            for state, action in rules.items()
-        }
+        rules_table: dict[StateStimulusTupleType, list[str]] = {}
+        for state, actions in rules.items():
+            if len(state) == 2:
+                rules_table[
+                    (
+                        Stimulus[state[0]],
+                        CommunicationStatus[state[1]],
+                    )
+                ] = actions
+            elif len(state) == 4:
+                rules_table[
+                    (
+                        Stimulus[state[0]],
+                        CommunicationStatus[state[1]],
+                        state[2],
+                        ExtendedPowerMode[state[3]],
+                    )
+                ] = actions
+            else:
+                rules_table[
+                    (
+                        Stimulus[state[0]],
+                        CommunicationStatus[state[1]],
+                        state[2],
+                        ExtendedPowerMode[state[3]],
+                        CommunicationStatus[state[4]],
+                    )
+                ] = actions
+
+        return rules_table
 
     @pytest.fixture(scope="session")
     def checks(
         self: TestTileOrchestrator,
-    ) -> Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]]]]:
+    ) -> Mapping[
+        str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]
+    ]:
         """
         Return a static dictionary of orchestrator action checks.
 
@@ -98,155 +113,104 @@ class TestTileOrchestrator:
         :return: a static dictionary of choreography action checks.
         """
         return {
-            "do_nothing": ({}, {}),
+            "raise_cannot_turn_off_on_when_offline": (
+                {},
+                {},
+                pytest.raises(
+                    ConnectionError,
+                    match="TPM cannot be turned off / on when not online.",
+                ),
+            ),
+            "report_communication_disabled": (
+                {},
+                {"communication_status_changed": [CommunicationStatus.DISABLED]},
+                None,
+            ),
+            "report_communication_not_established": (
+                {},
+                {"communication_status_changed": [CommunicationStatus.NOT_ESTABLISHED]},
+                None,
+            ),
+            "report_communication_established": (
+                {},
+                {"communication_status_changed": [CommunicationStatus.ESTABLISHED]},
+                None,
+            ),
+            "report_tpm_off": (
+                {"tpm_power_mode": ExtendedPowerMode.OFF},
+                {"component_power_mode_changed": [PowerMode.OFF]},
+                None,
+            ),
+            "report_tpm_on": (
+                {"tpm_power_mode": ExtendedPowerMode.ON},
+                {"component_power_mode_changed": [PowerMode.ON]},
+                None,
+            ),
+            "report_tpm_no_power_supply": (
+                {"tpm_power_mode": ExtendedPowerMode.NO_SUPPLY},
+                {"component_power_mode_changed": [PowerMode.OFF]},
+                None,
+            ),
             "report_tpm_power_unknown": (
                 {"tpm_power_mode": ExtendedPowerMode.UNKNOWN},
                 {"component_power_mode_changed": [PowerMode.UNKNOWN]},
+                None,
             ),
-            "report_tpm_no_power_supply_and_disable_tpm_communication": (
-                {"tpm_power_mode": ExtendedPowerMode.NO_SUPPLY},
-                {
-                    "component_power_mode_changed": [PowerMode.OFF],
-                    "stop_communicating_with_tpm": [],
-                },
-            ),
-            "report_tpm_no_power_supply_when_tpm_communication_disabled": (
-                {"tpm_power_mode": ExtendedPowerMode.NO_SUPPLY},
-                {"component_power_mode_changed": [PowerMode.OFF]},
-            ),
-            "report_tpm_off_and_disable_tpm_communication": (
-                {"tpm_power_mode": ExtendedPowerMode.OFF},
-                {
-                    "component_power_mode_changed": [PowerMode.OFF],
-                    "stop_communicating_with_tpm": [],
-                },
-            ),
-            "report_tpm_off_when_tpm_communication_disabled": (
-                {"tpm_power_mode": ExtendedPowerMode.OFF},
-                {"component_power_mode_changed": [PowerMode.OFF]},
-            ),
-            "report_tpm_off_and_turn_tpm_on": (
-                {
-                    "tpm_power_mode": ExtendedPowerMode.OFF,
-                    "operator_desire": OperatorDesire.ONLINE,
-                },
-                {
-                    "component_power_mode_changed": [PowerMode.OFF],
-                    "turn_tpm_on": [],
-                },
-            ),
-            "report_tpm_on_and_establish_tpm_communication": (
-                {"tpm_power_mode": ExtendedPowerMode.ON},
-                {
-                    "component_power_mode_changed": [PowerMode.ON],
-                    "start_communicating_with_tpm": [],
-                },
-            ),
-            "set_desired_on": ({"operator_desire": OperatorDesire.ON}, {}),
-            "set_subrack_communication_disabled": (
-                {
-                    "subrack_communication_status": CommunicationStatus.DISABLED,
-                    "tpm_power_mode": ExtendedPowerMode.UNKNOWN,
-                },
-                {
-                    "component_power_mode_changed": [PowerMode.UNKNOWN],
-                },
-            ),
+            "set_desired_off": ({"operator_desire": False}, {}, None),
+            "set_desired_on": ({"operator_desire": True}, {}, None),
+            "set_no_desire": ({"operator_desire": None}, {}, None),
             "set_subrack_communication_established": (
                 {"subrack_communication_status": CommunicationStatus.ESTABLISHED},
-                {"communication_status_changed": [CommunicationStatus.ESTABLISHED]},
+                {},
+                None,
             ),
-            "set_subrack_communication_established_and_report_tpm_power_unknown": (
-                {
-                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
-                    "tpm_power_mode": ExtendedPowerMode.UNKNOWN,
-                },
-                {
-                    "communication_status_changed": [CommunicationStatus.ESTABLISHED],
-                    "component_power_mode_changed": [PowerMode.UNKNOWN],
-                },
+            "set_subrack_communication_disabled": (
+                {"subrack_communication_status": CommunicationStatus.DISABLED},
+                {},
+                None,
             ),
-            "set_subrack_communication_established_and_report_tpm_no_power_supply": (
-                {
-                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
-                    "tpm_power_mode": ExtendedPowerMode.NO_SUPPLY,
-                },
-                {
-                    "communication_status_changed": [CommunicationStatus.ESTABLISHED],
-                    "component_power_mode_changed": [PowerMode.OFF],
-                },
-            ),
-            "set_subrack_communication_established_and_report_tpm_off": (
-                {
-                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
-                    "tpm_power_mode": ExtendedPowerMode.OFF,
-                },
-                {
-                    "communication_status_changed": [CommunicationStatus.ESTABLISHED],
-                    "component_power_mode_changed": [PowerMode.OFF],
-                },
-            ),
-            "set_subrack_communication_established_and_report_tpm_on_and_establish_tpm_communication": (
-                {
-                    "subrack_communication_status": CommunicationStatus.ESTABLISHED,
-                    "tpm_power_mode": ExtendedPowerMode.ON,
-                },
-                {
-                    "component_power_mode_changed": [PowerMode.ON],
-                    "start_communicating_with_tpm": [],
-                },
+            "set_subrack_communication_not_established": (
+                {"subrack_communication_status": CommunicationStatus.NOT_ESTABLISHED},
+                {},
+                None,
             ),
             "set_tpm_communication_disabled": (
                 {"tpm_communication_status": CommunicationStatus.DISABLED},
                 {},
-            ),
-            "set_tpm_communication_not_established": (
-                {"tpm_communication_status": CommunicationStatus.NOT_ESTABLISHED},
-                {"communication_status_changed": [CommunicationStatus.NOT_ESTABLISHED]},
+                None,
             ),
             "set_tpm_communication_established": (
                 {"tpm_communication_status": CommunicationStatus.ESTABLISHED},
-                {"communication_status_changed": [CommunicationStatus.ESTABLISHED]},
+                {},
+                None,
+            ),
+            "set_tpm_communication_not_established": (
+                {"tpm_communication_status": CommunicationStatus.NOT_ESTABLISHED},
+                {},
+                None,
             ),
             "start_communicating_with_subrack": (
-                {
-                    "operator_desire": OperatorDesire.ONLINE,
-                    "subrack_communication_status": CommunicationStatus.NOT_ESTABLISHED,
-                },
-                {
-                    "communication_status_changed": [
-                        CommunicationStatus.NOT_ESTABLISHED
-                    ],
-                    "start_communicating_with_subrack": [],
-                },
+                {},
+                {"start_communicating_with_subrack": []},
+                None,
             ),
-            "stop_communicating_when_tpm_communication_not_established": (
-                {"operator_desire": OperatorDesire.OFFLINE},
-                {
-                    "communication_status_changed": [CommunicationStatus.DISABLED],
-                    "component_power_mode_changed": [None],
-                    "component_fault": [None],
-                    "stop_communicating_with_subrack": [],
-                },
+            "stop_communicating_with_subrack": (
+                {},
+                {"stop_communicating_with_subrack": []},
+                None,
             ),
-            "stop_communicating_when_tpm_communication_established": (
-                {"operator_desire": OperatorDesire.OFFLINE},
-                {
-                    "communication_status_changed": [CommunicationStatus.DISABLED],
-                    "component_power_mode_changed": [None],
-                    "component_fault": [None],
-                    "stop_communicating_with_tpm": [],
-                    "stop_communicating_with_subrack": [],
-                },
+            "start_communicating_with_tpm": (
+                {},
+                {"start_communicating_with_tpm": []},
+                None,
             ),
-            "turn_tpm_off": (
-                {"operator_desire": OperatorDesire.ONLINE},
-                {"turn_tpm_off": []},
+            "stop_communicating_with_tpm": (
+                {},
+                {"stop_communicating_with_tpm": []},
+                None,
             ),
-            "turn_tpm_on": (
-                {"operator_desire": OperatorDesire.ONLINE},
-                {"turn_tpm_on": []},
-            ),
+            "turn_tpm_off": ({}, {"turn_tpm_off": []}, None),
+            "turn_tpm_on": ({}, {"turn_tpm_on": []}, None),
         }
 
     @pytest.fixture()
@@ -263,107 +227,233 @@ class TestTileOrchestrator:
         """
         return defaultdict(mocker.Mock)
 
-    @pytest.fixture(scope="session", params=list(OperatorDesire))
-    def operator_desire(
-        self: TestTileOrchestrator, request: SubRequest
-    ) -> OperatorDesire:
-        """
-        Return what state the operator desires the orchestrator to be in.
-
-        For example, if the operator has called the On() command but the
-        orchestrator has not yet managed to turn the TPM on, then the
-        desired state is ON.
-
-        This fixture is parametrized to return each possible value. So
-        any test or fixture that uses this fixture will be run once for
-        each value.
-
-        :param request: A pytest object giving access to the requesting
-            test context.
-
-        :return: the state that the operator desires the orchestrator
-            to be in.
-        """
-        return request.param
-
-    @pytest.fixture(scope="session", params=list(CommunicationStatus))
-    def subrack_communication_status(
-        self: TestTileOrchestrator, request: SubRequest
-    ) -> CommunicationStatus:
-        """
-        Return the status of communication with the subrack.
-
-        This fixture is parametrized to return each possible value. So
-        any test or fixture that uses this fixture will be run once for
-        each value.
-
-        :param request: A pytest object giving access to the requesting
-            test context.
-
-        :return: the status of communication with the subrack.
-        """
-        return request.param
-
-    @pytest.fixture(scope="session", params=list(ExtendedPowerMode))
-    def tpm_power_mode(
-        self: TestTileOrchestrator, request: SubRequest
-    ) -> ExtendedPowerMode:
-        """
-        Return the power mode of the TPM according to the subrack.
-
-        Note that PowerMode.UNKNOWN represents the case where the
-        subrack device has reported that it does not know the power mode
-        of the subrack. ``None`` represents the case where we have not
-        yet asked the subrack device what its power mode is, or we have
-        asked but the subrack has not yet responded.
-
-        This fixture is parametrized to return each possible value. So
-        any test or fixture that uses this fixture will be run once for
-        each value.
-
-        :param request: A pytest object giving access to the requesting
-            test context.
-
-        :return: the power mode of the TPM according to the subrack, or
-            None if not yet known.
-        """
-        return request.param
-
-    @pytest.fixture(scope="session", params=list(CommunicationStatus))
-    def tpm_communication_status(
-        self: TestTileOrchestrator, request: SubRequest
-    ) -> CommunicationStatus:
-        """
-        Return the status of communication with the TPM.
-
-        This fixture is parametrized to return each possible value. So
-        any test or fixture that uses this fixture will be run once for
-        each value.
-
-        :param request: A pytest object giving access to the requesting
-            test context.
-
-        :return: the status of communication with the TPM.
-        """
-        return request.param
-
-    @pytest.fixture(scope="session")
+    @pytest.fixture(
+        scope="session",
+        params=[
+            (CommunicationStatus.DISABLED,),
+            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.NO_SUPPLY),
+            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerMode.NO_SUPPLY),
+            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.NO_SUPPLY),
+            (CommunicationStatus.ESTABLISHED, True, ExtendedPowerMode.NO_SUPPLY),
+            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.OFF),
+            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerMode.OFF),
+            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.OFF),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                False,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                False,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                False,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                False,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                False,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                False,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                True,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                True,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                True,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                False,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                False,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                False,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                True,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                True,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.NOT_ESTABLISHED,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                True,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.ESTABLISHED,
+            ),
+        ],
+        ids=[
+            "DISABLED",
+            "NOT_ESTABLISHED_NO_SUPPLY",
+            "NOT_ESTABLISHED_DESIRED_ON_NO_SUPPLY",
+            "ESTABLISHED_NO_SUPPLY",
+            "ESTABLISHED_DESIRED_ON_NO_SUPPLY",
+            "NOT_ESTABLISHED_OFF",
+            "NOT_ESTABLISHED_DESIRED_ON_OFF",
+            "ESTABLISHED_OFF",
+            "NOT_ESTABLISHED_ON_DISABLED",
+            "NOT_ESTABLISHED_ON_NOT_ESTABLISHED",
+            "NOT_ESTABLISHED_ON_ESTABLISHED",
+            "NOT_ESTABLISHED_DESIRED_OFF_ON_DISABLED",
+            "NOT_ESTABLISHED_DESIRED_OFF_ON_NOT_ESTABLISHED",
+            "NOT_ESTABLISHED_DESIRED_OFF_ON_ESTABLISHED",
+            "ESTABLISHED_ON_DISABLED",
+            "ESTABLISHED_ON_NOT_ESTABLISHED",
+            "ESTABLISHED_ON_ESTABLISHED",
+            "NOT_ESTABLISHED_UNKNOWN_DISABLED",
+            "NOT_ESTABLISHED_UNKNOWN_NOT_ESTABLISHED",
+            "NOT_ESTABLISHED_UNKNOWN_ESTABLISHED",
+            "NOT_ESTABLISHED_DESIRED_OFF_UNKNOWN_DISABLED",
+            "NOT_ESTABLISHED_DESIRED_OFF_UNKNOWN_NOT_ESTABLISHED",
+            "NOT_ESTABLISHED_DESIRED_OFF_UNKNOWN_ESTABLISHED",
+            "NOT_ESTABLISHED_DESIRED_ON_UNKNOWN_DISABLED",
+            "NOT_ESTABLISHED_DESIRED_ON_UNKNOWN_NOT_ESTABLISHED",
+            "NOT_ESTABLISHED_DESIRED_ON_UNKNOWN_ESTABLISHED",
+            "ESTABLISHED_UNKNOWN_DISABLED",
+            "ESTABLISHED_UNKNOWN_NOT_ESTABLISHED",
+            "ESTABLISHED_UNKNOWN_ESTABLISHED",
+            "ESTABLISHED_DESIRED_OFF_UNKNOWN_DISABLED",
+            "ESTABLISHED_DESIRED_OFF_UNKNOWN_NOT_ESTABLISHED",
+            "ESTABLISHED_DESIRED_OFF_UNKNOWN_ESTABLISHED",
+            "ESTABLISHED_DESIRED_ON_UNKNOWN_DISABLED",
+            "ESTABLISHED_DESIRED_ON_UNKNOWN_NOT_ESTABLISHED",
+            "ESTABLISHED_DESIRED_ON_UNKNOWN_ESTABLISHED",
+        ],
+    )
     def state(
-        self: TestTileOrchestrator,
-        operator_desire: OperatorDesire,
-        subrack_communication_status: CommunicationStatus,
-        tpm_power_mode: ExtendedPowerMode,
-        tpm_communication_status: CommunicationStatus,
-    ) -> Tuple[
-        OperatorDesire,
-        CommunicationStatus,
-        ExtendedPowerMode,
-        CommunicationStatus,
+        self: TestTileOrchestrator, request: SubRequest
+    ) -> Union[
+        Tuple[CommunicationStatus],
+        Tuple[
+            CommunicationStatus,
+            ExtendedPowerMode,
+            CommunicationStatus,
+            Optional[bool],
+        ],
     ]:
         """
-        Return a summary of the state of the orchestrator.
+        Return an orchestrator state.
 
-        The state is represented as a tuple containing:
+        The state is represented as a tuple containing some of:
 
         * what the operator desires the state of the orchestrator to
           be;
@@ -372,45 +462,20 @@ class TestTileOrchestrator:
         * whether the TPM is on (or None if unknown)
         * status of communication with the TPM
 
-        Note that each element in this tuple is provided by a
-        parametrized fixture. This fixture therefore returns the cross-
-        product of all these parametrizations. So any test or fixture
-        that sues this fixture will be run once for each possible state
-        i.e. hundreds of times.
-
-        :param operator_desire: what the operator desires the state of
-            the orchestrator to be (parametrized to return every
-            possible value)
-        :param subrack_communication_status: status of communications
-            with the subrack (parametrized to return every possible
-            value)
-        :param tpm_power_mode: the power mode of the TPM according to
-            the subrack, or None if not yet known (parametrized to
-            return every possible value)
-        :param tpm_communication_status: status of communications with
-            the TPM (parametrized to return every possible value)
+        :param request: A pytest object giving access to the requesting
+            test context.
 
         :return: a summary of the state of the orchestrator
             (parametrized to return every possible value)
         """
-        return (
-            operator_desire,
-            subrack_communication_status,
-            tpm_power_mode,
-            tpm_communication_status,
-        )
+        return request.param
 
     @pytest.fixture()
     def tile_orchestrator(
         self: TestTileOrchestrator,
         callbacks: Mapping[str, unittest.mock.Mock],
         logger: logging.Logger,
-        state: Tuple[
-            OperatorDesire,
-            CommunicationStatus,
-            ExtendedPowerMode,
-            CommunicationStatus,
-        ],
+        state: StateTupleType,
     ) -> TileOrchestrator:
         """
         Return the tile orchestrator under test.
@@ -435,7 +500,7 @@ class TestTileOrchestrator:
             _initial_state=state,
         )
 
-    @pytest.fixture(scope="session", params=list(Stimulus))
+    @pytest.fixture(scope="session", params=list(Stimulus), ids=lambda s: s.name)
     def stimulus(self: TestTileOrchestrator, request: SubRequest) -> Stimulus:
         """
         Return the name of a orchestrator stimulus.
@@ -457,25 +522,16 @@ class TestTileOrchestrator:
     @pytest.fixture(scope="session")
     def check(
         self: TestTileOrchestrator,
-        rules: Mapping[
-            Tuple[
-                OperatorDesire,
-                CommunicationStatus,
-                ExtendedPowerMode,
-                CommunicationStatus,
-                Stimulus,
-            ],
+        rules: Mapping[StateStimulusTupleType, str],
+        checks: Mapping[
             str,
+            Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],
         ],
-        checks: Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]]]],
-        state: Tuple[
-            OperatorDesire,
-            CommunicationStatus,
-            ExtendedPowerMode,
-            CommunicationStatus,
-        ],
+        state: StateTupleType,
         stimulus: Stimulus,
-    ) -> Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]]]]:
+    ) -> Optional[
+        Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]
+    ]:
         """
         Return checks to be performed as part of this test.
 
@@ -501,25 +557,32 @@ class TestTileOrchestrator:
 
         :return: the checks to be performed.
         """
-        action = rules.get(state + (stimulus,), None)
-        if action is None:
-            return None
-        if action not in checks:
-            raise KeyError(f"Test does not know how to handle action {action}.")
-        return checks[action]
+        changed: dict[str, Any] = {}
+        called: dict[str, list[Any]] = {}
+        context: Optional[ContextManager] = None
+
+        actions = rules[cast(StateStimulusTupleType, (stimulus,) + state)]
+        for action in actions:
+            if action not in checks:
+                raise KeyError(f"Test does not know how to handle action {action}.")
+
+            (this_changed, this_called, this_context) = checks[action]
+            changed.update(this_changed)
+            called.update(this_called)
+            if this_context is not None:
+                context = this_context  # TODO: support multiple contexts?
+
+        return (changed, called, context)
 
     def test_orchestrator_action(
         self: TestTileOrchestrator,
         tile_orchestrator: TileOrchestrator,
         callbacks: Mapping[str, unittest.mock.Mock],
-        state: Tuple[
-            OperatorDesire,
-            CommunicationStatus,
-            ExtendedPowerMode,
-            CommunicationStatus,
-        ],
+        state: StateTupleType,
         stimulus: Stimulus,
-        check: Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]]]],
+        check: Tuple[
+            Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]
+        ],
     ) -> None:
         """
         Test orchestrator actions.
@@ -592,21 +655,25 @@ class TestTileOrchestrator:
             :param expected_state_changes: keyword arguments that
                 specify state values that should have changed.
             """
-            assert tile_orchestrator._operator_desire == expected_state_changes.get(
-                "operator_desire", state[0]
-            )
             assert (
                 tile_orchestrator._subrack_communication_status
-                == expected_state_changes.get("subrack_communication_status", state[1])
+                == expected_state_changes.get("subrack_communication_status", state[0])
             )
-
-            assert tile_orchestrator._tpm_power_mode == expected_state_changes.get(
-                "tpm_power_mode", state[2]
-            )
-            assert (
-                tile_orchestrator._tpm_communication_status
-                == expected_state_changes.get("tpm_communication_status", state[3])
-            )
+            if len(state) > 1:
+                assert tile_orchestrator._operator_desire == expected_state_changes.get(
+                    "operator_desire", state[1]  # type: ignore[misc]
+                )
+            if len(state) > 2:
+                assert tile_orchestrator._tpm_power_mode == expected_state_changes.get(
+                    "tpm_power_mode", state[2]  # type: ignore[misc]
+                )
+            if len(state) > 3:
+                assert (
+                    tile_orchestrator._tpm_communication_status
+                    == expected_state_changes.get(
+                        "tpm_communication_status", state[3]  # type: ignore[misc]
+                    )
+                )
 
         def check_callbacks(**expected_args: list[Any]) -> None:
             """
@@ -632,14 +699,13 @@ class TestTileOrchestrator:
                 else:
                     callbacks[name].assert_not_called()
 
-        if check is None:
-            with pytest.raises(KeyError):
-                stimulate()
-            pytest.xfail("Unhandled case")
-        else:
-            (changed, called) = check
+        changed: Mapping[str, Any]  # for the type checker
+        called: Mapping[str, list[Any]]  # for the type checker
+        context: Optional[ContextManager]
+        (changed, called, context) = check
 
-            # Finally! It's time to test.
+        # Finally! It's time to test.
+        with context or contextlib.nullcontext():
             stimulate()
-            check_state(**changed)
-            check_callbacks(**called)
+        check_state(**changed)
+        check_callbacks(**called)

@@ -552,7 +552,6 @@ class TileComponentManager(MessageQueueComponentManager):
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_offline()
 
-    @check_communicating  # TODO: orchestrator should handle this
     def off(self: TileComponentManager) -> ResultCode:
         """
         Tell the upstream power supply proxy to turn the tpm off.
@@ -561,7 +560,6 @@ class TileComponentManager(MessageQueueComponentManager):
         """
         return self._tile_orchestrator.desire_off()
 
-    @check_communicating  # TODO: orchestrator should handle this
     def on(self: TileComponentManager) -> ResultCode:
         """
         Tell the upstream power supply proxy to turn the tpm off.
@@ -618,6 +616,9 @@ class TileComponentManager(MessageQueueComponentManager):
         :raises ConnectionError: if the attempt to establish
             communication with the channel fails.
         """
+        self._tile_orchestrator.update_subrack_communication_status(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
         self._subrack_proxy = MccsDeviceProxy(
             self._subrack_fqdn, self._logger, connect=False
         )

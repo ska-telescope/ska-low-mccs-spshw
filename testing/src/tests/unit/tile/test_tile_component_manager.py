@@ -249,7 +249,9 @@ class TestTileComponentManager:
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
         """
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="TPM cannot be turned off / on when not online."
+        ):
             tile_component_manager.on()
 
         tile_component_manager.start_communicating()

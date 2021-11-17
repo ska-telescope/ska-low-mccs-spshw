@@ -4,36 +4,13 @@ from __future__ import annotations
 import enum
 import logging
 import threading
-from typing import Any, Callable, Optional, Tuple, cast
+from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
 import yaml
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
-
-
-@enum.unique
-class OperatorDesire(enum.IntEnum):
-    """
-    An enumerated type for the operator's desired state for the tile.
-
-    TODO: This is only public because it is exposed for testing purposes
-    through the API, so sphinx needs it to be public when building the
-    docs. We should refactor so that we can hide this.
-    """
-
-    OFFLINE = 1
-    """The operator wants this device not to monitor its component."""
-
-    ONLINE = 2
-    """The operator wants this device to monitor its component"""
-
-    OFF = 3
-    """The operator wants this device to turn its component off (implies online)."""
-
-    ON = 4
-    """The operator wants this device to turn its component on (implies online)."""
 
 
 @enum.unique
@@ -94,8 +71,42 @@ class Stimulus(enum.IntEnum):
     TPM_COMMS_NOT_ESTABLISHED = 13
     """Communications with the TPM is not established."""
 
-    TPM_COMMS_ESTABLISHED = 16
+    TPM_COMMS_ESTABLISHED = 14
     """Communications with the TPM is established."""
+
+
+StateTupleType = Union[
+    Tuple[CommunicationStatus],
+    Tuple[
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+    ],
+    Tuple[
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+        CommunicationStatus,
+    ],
+]
+
+
+StateStimulusTupleType = Union[
+    Tuple[Stimulus, CommunicationStatus],
+    Tuple[
+        Stimulus,
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+    ],
+    Tuple[
+        Stimulus,
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+        CommunicationStatus,
+    ],
+]
 
 
 class TileOrchestrator:
@@ -143,14 +154,7 @@ class TileOrchestrator:
         power_mode_changed_callback: Callable[[Optional[PowerMode]], None],
         fault_callback: Callable[[Optional[bool]], None],
         logger: logging.Logger,
-        _initial_state: Optional[
-            Tuple[
-                OperatorDesire,
-                CommunicationStatus,
-                ExtendedPowerMode,
-                CommunicationStatus,
-            ]
-        ] = None,
+        _initial_state: Optional[StateTupleType] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -184,21 +188,15 @@ class TileOrchestrator:
         """
         self.__lock = threading.RLock()
 
-        self._start_communicating_with_subrack_callback = (
+        self._start_communicating_with_subrack = (
             start_communicating_with_subrack_callback
         )
-        self._stop_communicating_with_subrack_callback = (
-            stop_communicating_with_subrack_callback
-        )
-        self._start_communicating_with_tpm_callback = (
-            start_communicating_with_tpm_callback
-        )
-        self._stop_communicating_with_tpm_callback = (
-            stop_communicating_with_tpm_callback
-        )
+        self._stop_communicating_with_subrack = stop_communicating_with_subrack_callback
+        self._start_communicating_with_tpm = start_communicating_with_tpm_callback
+        self._stop_communicating_with_tpm = stop_communicating_with_tpm_callback
 
-        self._turn_tpm_off_callback = turn_tpm_off_callback
-        self._turn_tpm_on_callback = turn_tpm_on_callback
+        self._turn_tpm_off = turn_tpm_off_callback
+        self._turn_tpm_on = turn_tpm_on_callback
 
         self._communication_status_changed_callback = (
             communication_status_changed_callback
@@ -208,16 +206,25 @@ class TileOrchestrator:
 
         self._logger = logger
 
-        (
-            self._operator_desire,
-            self._subrack_communication_status,
-            self._tpm_power_mode,
-            self._tpm_communication_status,
-        ) = _initial_state or (
-            OperatorDesire.OFFLINE,
-            CommunicationStatus.DISABLED,
-            ExtendedPowerMode.UNKNOWN,
-            CommunicationStatus.DISABLED,
+        self._subrack_communication_status = (
+            _initial_state[0]
+            if _initial_state is not None and len(_initial_state) > 0
+            else CommunicationStatus.DISABLED
+        )
+        self._operator_desire = (
+            _initial_state[1]  # type: ignore[misc]
+            if _initial_state is not None and len(_initial_state) > 1
+            else None
+        )
+        self._tpm_power_mode = (
+            _initial_state[2]  # type: ignore[misc]
+            if _initial_state is not None and len(_initial_state) > 2
+            else ExtendedPowerMode.UNKNOWN
+        )
+        self._tpm_communication_status = (
+            _initial_state[3]  # type: ignore[misc]
+            if _initial_state is not None and len(_initial_state) > 3
+            else CommunicationStatus.DISABLED
         )
 
         with open(self.RULES_PATH, "r") as stream:
@@ -229,16 +236,36 @@ class TileOrchestrator:
                 )
                 raise
 
-        self._decision_table = {
-            (
-                OperatorDesire[state[0]],
-                CommunicationStatus[state[1]],
-                ExtendedPowerMode[state[2]],
-                CommunicationStatus[state[3]],
-                Stimulus[state[4]],
-            ): getattr(self, f"_{action}")
-            for state, action in rules.items()
-        }
+        self._decision_table: dict[
+            StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]
+        ] = {}
+
+        for state, actions in rules.items():
+            action_calls = [getattr(self, f"_{action}") for action in actions]
+            if len(state) == 2:
+                self._decision_table[
+                    Stimulus[state[0]],
+                    CommunicationStatus[state[1]],
+                ] = action_calls
+            elif len(state) == 4:
+                self._decision_table[
+                    (
+                        Stimulus[state[0]],
+                        CommunicationStatus[state[1]],
+                        state[2],
+                        ExtendedPowerMode[state[3]],
+                    )
+                ] = action_calls
+            else:
+                self._decision_table[
+                    (
+                        Stimulus[state[0]],
+                        CommunicationStatus[state[1]],
+                        state[2],
+                        ExtendedPowerMode[state[3]],
+                        CommunicationStatus[state[4]],
+                    )
+                ] = action_calls
 
     def desire_online(self: TileOrchestrator) -> None:
         """Advise that the operator desires the component manager to be online."""
@@ -343,163 +370,95 @@ class TileOrchestrator:
             else:
                 raise NotImplementedError()
 
+    def _get_state(self: TileOrchestrator) -> list:
+        state: list[Any] = [self._subrack_communication_status]
+        if self._subrack_communication_status == CommunicationStatus.DISABLED:
+            return state
+
+        state = state + [self._operator_desire, self._tpm_power_mode]
+        if self._tpm_power_mode in [ExtendedPowerMode.NO_SUPPLY, ExtendedPowerMode.OFF]:
+            return state
+
+        state = state + [self._tpm_communication_status]
+        return state
+
     def _act(self: TileOrchestrator, stimulus: Stimulus) -> Optional[ResultCode]:
-        key = (
-            self._operator_desire,
-            self._subrack_communication_status,
-            self._tpm_power_mode,
-            self._tpm_communication_status,
-            stimulus,
-        )
+        key = cast(StateStimulusTupleType, (stimulus,) + tuple(self._get_state()))
         try:
-            action = self._decision_table[key]
+            actions = self._decision_table[key]
         except KeyError:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
-        self._logger.debug(f"TileOrchestrator: {key} ==> {action}")
-        return action()
+        self._logger.debug(f"TileOrchestrator: {key} ==> {actions}")
 
-    def _start_communicating_with_subrack(self: TileOrchestrator) -> None:
-        self._operator_desire = OperatorDesire.ONLINE
-        self._subrack_communication_status = CommunicationStatus.NOT_ESTABLISHED
+        result_code = None
+        for action in actions:
+            action_result_code = action()
+            if result_code is None:
+                result_code = action_result_code
+        return result_code
 
+    def _raise_cannot_turn_off_on_when_offline(self: TileOrchestrator) -> NoReturn:
+        raise ConnectionError("TPM cannot be turned off / on when not online.")
+
+    def _report_communication_disabled(self: TileOrchestrator) -> None:
+        self._communication_status_changed_callback(CommunicationStatus.DISABLED)
+
+    def _report_communication_not_established(self: TileOrchestrator) -> None:
         self._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
-        self._start_communicating_with_subrack_callback()
 
-    def _stop_communicating_when_tpm_communication_not_established(
+    def _report_communication_established(self: TileOrchestrator) -> None:
+        self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
+
+    def _report_tpm_no_power_supply(
         self: TileOrchestrator,
     ) -> None:
-        self._operator_desire = OperatorDesire.OFFLINE
+        self._tpm_power_mode = ExtendedPowerMode.NO_SUPPLY
+        self._power_mode_changed_callback(PowerMode.OFF)
 
-        self._communication_status_changed_callback(CommunicationStatus.DISABLED)
-        self._power_mode_changed_callback(None)
-        self._fault_callback(None)
+    def _report_tpm_off(self: TileOrchestrator) -> None:
+        self._tpm_power_mode = ExtendedPowerMode.OFF
+        self._power_mode_changed_callback(PowerMode.OFF)
 
-        self._stop_communicating_with_subrack_callback()
+    def _report_tpm_on(self: TileOrchestrator) -> None:
+        self._tpm_power_mode = ExtendedPowerMode.ON
+        self._power_mode_changed_callback(PowerMode.ON)
 
-    def _stop_communicating_when_tpm_communication_established(
+    def _report_tpm_power_unknown(self: TileOrchestrator) -> None:
+        self._tpm_power_mode = ExtendedPowerMode.UNKNOWN
+        self._power_mode_changed_callback(PowerMode.UNKNOWN)
+
+    def _set_desired_off(self: TileOrchestrator) -> ResultCode:
+        self._operator_desire = False
+        return ResultCode.QUEUED
+
+    def _set_desired_on(self: TileOrchestrator) -> ResultCode:
+        self._operator_desire = True
+        return ResultCode.QUEUED
+
+    def _set_no_desire(self: TileOrchestrator) -> None:
+        self._operator_desire = None
+
+    def _set_subrack_communication_disabled(
         self: TileOrchestrator,
     ) -> None:
-        self._operator_desire = OperatorDesire.OFFLINE
-
-        self._communication_status_changed_callback(CommunicationStatus.DISABLED)
-        self._power_mode_changed_callback(None)
-        self._fault_callback(None)
-
-        self._stop_communicating_with_tpm_callback()
-        self._stop_communicating_with_subrack_callback()
-
-    def _do_nothing(self: TileOrchestrator) -> None:
-        pass
+        self._subrack_communication_status = CommunicationStatus.DISABLED
 
     def _set_subrack_communication_established(
         self: TileOrchestrator,
     ) -> None:
         self._subrack_communication_status = CommunicationStatus.ESTABLISHED
-        self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
 
-    def _set_subrack_communication_established_and_report_tpm_power_unknown(
+    def _set_subrack_communication_not_established(
         self: TileOrchestrator,
     ) -> None:
-        self._subrack_communication_status = CommunicationStatus.ESTABLISHED
-        self._tpm_power_mode = ExtendedPowerMode.UNKNOWN
-
-        self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
-        self._power_mode_changed_callback(PowerMode.UNKNOWN)
-
-    def _set_subrack_communication_established_and_report_tpm_no_power_supply(
-        self: TileOrchestrator,
-    ) -> None:
-        self._subrack_communication_status = CommunicationStatus.ESTABLISHED
-        self._tpm_power_mode = ExtendedPowerMode.NO_SUPPLY
-
-        self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
-        self._power_mode_changed_callback(PowerMode.OFF)
-
-    def _set_subrack_communication_established_and_report_tpm_off(
-        self: TileOrchestrator,
-    ) -> None:
-        self._subrack_communication_status = CommunicationStatus.ESTABLISHED
-        self._tpm_power_mode = ExtendedPowerMode.OFF
-
-        self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
-        self._power_mode_changed_callback(PowerMode.OFF)
-
-    def _set_subrack_communication_established_and_report_tpm_on_and_establish_tpm_communication(
-        self: TileOrchestrator,
-    ) -> None:
-        self._subrack_communication_status = CommunicationStatus.ESTABLISHED
-        self._tpm_power_mode = ExtendedPowerMode.ON
-
-        self._power_mode_changed_callback(PowerMode.ON)
-        self._start_communicating_with_tpm_callback()
-
-    def _set_subrack_communication_disabled(self: TileOrchestrator) -> None:
-        self._subrack_communication_status = CommunicationStatus.DISABLED
-        self._tpm_power_mode = ExtendedPowerMode.UNKNOWN
-        self._power_mode_changed_callback(PowerMode.UNKNOWN)
-
-    def _report_tpm_power_unknown(self: TileOrchestrator) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.UNKNOWN
-        self._power_mode_changed_callback(PowerMode.UNKNOWN)
-        # If we have established communication with our TPM, let's not
-        # break if off yet -- this might just be a network issue between
-        # the subrack Tango device and its subrack hardware.
-
-    def _report_tpm_no_power_supply_when_tpm_communication_disabled(
-        self: TileOrchestrator,
-    ) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.NO_SUPPLY
-        self._power_mode_changed_callback(PowerMode.OFF)
-
-    def _report_tpm_no_power_supply_and_disable_tpm_communication(
-        self: TileOrchestrator,
-    ) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.NO_SUPPLY
-        self._power_mode_changed_callback(PowerMode.OFF)
-        self._stop_communicating_with_tpm_callback()
-
-    def _report_tpm_off_when_tpm_communication_disabled(self: TileOrchestrator) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.OFF
-        self._power_mode_changed_callback(PowerMode.OFF)
-
-    def _report_tpm_off_and_disable_tpm_communication(self: TileOrchestrator) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.OFF
-        self._power_mode_changed_callback(PowerMode.OFF)
-        self._stop_communicating_with_tpm_callback()
-
-    def _report_tpm_off_and_turn_tpm_on(self: TileOrchestrator) -> ResultCode:
-        self._tpm_power_mode = ExtendedPowerMode.OFF
-        self._operator_desire = OperatorDesire.ONLINE
-        self._power_mode_changed_callback(PowerMode.OFF)
-        return self._turn_tpm_on_callback()
-
-    def _report_tpm_on_and_establish_tpm_communication(self: TileOrchestrator) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.ON
-        self._power_mode_changed_callback(PowerMode.ON)
-        self._start_communicating_with_tpm_callback()
+        self._subrack_communication_status = CommunicationStatus.NOT_ESTABLISHED
 
     def _set_tpm_communication_disabled(self: TileOrchestrator) -> None:
         self._tpm_communication_status = CommunicationStatus.DISABLED
-        # don't set communication status to disabled; this is now determined by status
-        # of subrack communication, which is still ESTABLISHED
 
     def _set_tpm_communication_not_established(self: TileOrchestrator) -> None:
         self._tpm_communication_status = CommunicationStatus.NOT_ESTABLISHED
-        self._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
 
     def _set_tpm_communication_established(self: TileOrchestrator) -> None:
         self._tpm_communication_status = CommunicationStatus.ESTABLISHED
-        self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
-
-    def _set_desired_on(self: TileOrchestrator) -> ResultCode:
-        self._operator_desire = OperatorDesire.ON
-        return ResultCode.QUEUED
-
-    def _turn_tpm_on(self: TileOrchestrator) -> ResultCode:
-        self._operator_desire = OperatorDesire.ONLINE
-        return self._turn_tpm_on_callback()
-
-    def _turn_tpm_off(self: TileOrchestrator) -> ResultCode:
-        self._operator_desire = OperatorDesire.ONLINE
-        return self._turn_tpm_off_callback()

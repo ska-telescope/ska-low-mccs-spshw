@@ -303,6 +303,7 @@ def mock_change_event_callback_factory() -> Callable[[str], MockChangeEventCallb
     """
     return MockChangeEventCallback
 
+
 @pytest.fixture()
 def lrc_result_changed_callback_factory(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],

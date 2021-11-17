@@ -38,7 +38,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_antenna_power_changed_callback: Optional[
@@ -51,6 +51,8 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -154,7 +156,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_antenna_power_changed_callback: Callable[[list[bool]], None],
@@ -166,6 +168,8 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
             component should start in
         :param antenna_count: number of antennas managed by this APIU
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param communication_status_changed_callback: callback to be
@@ -195,7 +199,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -210,6 +214,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

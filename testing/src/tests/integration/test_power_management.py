@@ -342,9 +342,7 @@ class TestPowerManagement:
         time.sleep(0.1)  # allow event system time to run
         initial_lrc_result = ("", "", "")
         assert controller.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(
-            initial_lrc_result
-        )
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
@@ -367,9 +365,6 @@ class TestPowerManagement:
 
         for device in devices:
             assert device.state() == tango.DevState.ON
-
-        # TODO: Remove forced failure for debug output
-        # assert False
 
     def _show_state_of_devices(
         self: TestPowerManagement,

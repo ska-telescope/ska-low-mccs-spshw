@@ -11,10 +11,8 @@ import logging
 from typing import Callable, Optional
 
 import tango
-from ska_low_mccs.utils import dbg
 from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerMode
-from ska_tango_base.base.task_queue_manager import QueueManager
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
@@ -34,7 +32,7 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -47,6 +45,8 @@ class DeviceComponentManager(MccsComponentManager):
 
         :param fqdn: the FQDN of the device
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -92,7 +92,6 @@ class DeviceComponentManager(MccsComponentManager):
 
     class ConnectToDevice(BaseCommand):
         """Base command class for connection to be enqueued."""
-        ...
 
         def do(  # type: ignore[override]
             self: DeviceComponentManager.ConnectToDevice,
@@ -105,19 +104,22 @@ class DeviceComponentManager(MccsComponentManager):
 
             :raises ConnectionError: if the attempt to establish
                 communication with the channel fails.
+            :return: a result code
             """
             target = self.target
             target._proxy = MccsDeviceProxy(target._fqdn, target._logger, connect=False)
             try:
                 target._proxy.connect()
             except tango.DevFailed as dev_failed:
-                proxy = None
+                target._proxy = None
                 raise ConnectionError(
                     f"Could not connect to '{target._fqdn}'"
                 ) from dev_failed
 
             target.update_communication_status(CommunicationStatus.ESTABLISHED)
-            target._proxy.add_change_event_callback("state", target._device_state_changed)
+            target._proxy.add_change_event_callback(
+                "state", target._device_state_changed
+            )
 
             if target._health_changed_callback is not None:
                 target._proxy.add_change_event_callback(
@@ -179,13 +181,12 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        dbg(self, "def off")
         if self.power_mode == PowerMode.OFF:
             return None  # already off
         off_command = self.DeviceProxyOffCommand(target=self)
         # Enqueue the off command.
         # This is a fire and forget command, so we don't need to keep unique ID.
-        uid, result_code = self.enqueue(off_command)
+        _, result_code = self.enqueue(off_command)
         return result_code
 
     class DeviceProxyOffCommand(BaseCommand):
@@ -350,7 +351,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         self: ObsDeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -364,6 +365,8 @@ class ObsDeviceComponentManager(DeviceComponentManager):
 
         :param fqdn: the FQDN of the device
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -397,7 +400,8 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         This contains the actual communication logic that is enqueued to
         be run asynchronously.
         """
-        super()._connect_to_device()
+        connect_command = self.ConnectToDevice(target=self)
+        connect_command()
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback("obsState", self._obs_state_changed)
 

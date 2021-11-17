@@ -22,7 +22,12 @@ import tango
 from ska_low_mccs.station_beam import StationBeamComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockChangeEventCallback
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
+
 
 @pytest.fixture()
 def component_device_health_changed_callback(
@@ -104,6 +109,8 @@ def station_beam_component_manager(
     :param tango_harness: a test harness for MCCS tango devices
     :param beam_id: a beam id for the station beam under test.
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes

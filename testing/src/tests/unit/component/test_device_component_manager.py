@@ -19,6 +19,7 @@ from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
+
 @pytest.fixture()
 def component_manager(
     tango_harness: TangoHarness,
@@ -37,6 +38,8 @@ def component_manager(
     :param fqdn: the FQDN of the device to be managed by this component
         manager.
     :param logger: a logger for the component manager to use.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes

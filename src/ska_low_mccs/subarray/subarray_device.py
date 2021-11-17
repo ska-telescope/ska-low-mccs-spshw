@@ -428,12 +428,7 @@ class MccsSubarray(SKASubarray):
             result_code = component_manager.assign(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
 
-    @command(
-        dtype_in="DevString",
-        doc_in="JSON-encoded string with the resources to add to subarray",
-        dtype_out="DevVarLongStringArray",
-        doc_out="([Command ResultCode], [Command result description])",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def AssignResources(self: MccsSubarray, argin):
         """
         Assign resources to this subarray.
@@ -600,7 +595,7 @@ class MccsSubarray(SKASubarray):
             )
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.ConfigureCommand, argin: dict
+            self: MccsSubarray.ConfigureCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
             Implement the functionality of the configure command.
@@ -608,7 +603,7 @@ class MccsSubarray(SKASubarray):
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Configure` command for this
             :py:class:`.MccsSubarray` device.
 
-            :param argin: JSON configuration specification
+            :param argin: JSON encoded string configuration specification
                 {
                 "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
                 "stations":[{"station_id": 1},{"station_id": 2}],
@@ -627,7 +622,8 @@ class MccsSubarray(SKASubarray):
                 information purpose only.
             """
             component_manager = self.target
-            result_code = component_manager.configure(argin)
+            config_spec = json.loads(argin)
+            result_code = component_manager.configure(config_spec)
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     class ScanCommand(SKASubarray.ScanCommand):

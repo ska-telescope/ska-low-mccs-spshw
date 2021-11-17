@@ -19,7 +19,6 @@ from typing import Callable, Hashable, Optional, Iterable
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
 from ska_tango_base.base.task_queue_manager import QueueManager
-from tango.server import Device
 from ska_low_mccs.utils import threadsafe
 
 from ska_low_mccs.component import (
@@ -43,7 +42,7 @@ class _StationProxy(DeviceComponentManager):
         fqdn: str,
         subarray_fqdns: Iterable[str],
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -58,6 +57,8 @@ class _StationProxy(DeviceComponentManager):
         :param subarray_fqdns: the FQDNs of subarrays which channel
             blocks can be assigned to.
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -166,6 +167,7 @@ class _StationProxy(DeviceComponentManager):
         self._resource_manager.deallocate_from(subarray_fqdn)
         self._channel_block_pool.free_resources(channel_blocks_to_release)
 
+
 class _SubrackProxy(DeviceComponentManager):
     """A controller's proxy to a subrack."""
 
@@ -184,6 +186,7 @@ class _SubrackProxy(DeviceComponentManager):
             logger=self.logger,
             push_change_event=self._push_change_event,
         )
+
 
 class _SubarrayProxy(DeviceComponentManager):
     """A controller's proxy to a subarray."""
@@ -228,14 +231,14 @@ class _SubarrayProxy(DeviceComponentManager):
         """
         assert self._proxy is not None
         args = json.dumps(
-                {
-                    "stations": sorted(station_fqdns),
-                    "subarray_beams": sorted(subarray_beam_fqdns),
-                    "station_beams": sorted(station_beam_fqdns),
-                    "channel_blocks": sorted(channel_blocks),
-                }
-            )
-        ([result_code], [desc]) = self._proxy.AssignResources(args)
+            {
+                "stations": sorted(station_fqdns),
+                "subarray_beams": sorted(subarray_beam_fqdns),
+                "station_beams": sorted(station_beam_fqdns),
+                "channel_blocks": sorted(channel_blocks),
+            }
+        )
+        ([result_code], _) = self._proxy.AssignResources(args)
         return result_code
 
     @check_communicating
@@ -420,7 +423,7 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_beam_fqdns: Iterable[str],
         station_beam_fqdns: Iterable[str],
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -435,19 +438,19 @@ class ControllerComponentManager(MccsComponentManager):
         """
         Initialise a new instance.
 
-        :param logger: the logger to be used by this object.
         :param subarray_fqdns: FQDNS of all subarray devices
         :param subrack_fqdns: FQDNS of all subrack devices
         :param station_fqdns: FQDNS of all station devices
         :param subarray_beam_fqdns: FQDNS of all subarray beam devices
         :param station_beam_fqdns: FQDNS of all station beam devices
+        :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
-        :param push_change_event: method to call when the base classes
-            want to send an event
         :param subrack_health_changed_callback: callback to be called
             when the health of one of this controller's subracks changes
         :param station_health_changed_callback: callback to be called

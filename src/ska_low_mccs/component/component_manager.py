@@ -150,7 +150,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
     def __init__(
         self: MccsComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
@@ -163,6 +163,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         Initialise a new instance.
 
         :param logger: a logger for this instance to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of communications between the
             component manager and its component changes.

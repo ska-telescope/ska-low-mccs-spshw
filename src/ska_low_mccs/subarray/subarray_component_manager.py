@@ -116,7 +116,7 @@ class SubarrayComponentManager(
     def __init__(
         self: SubarrayComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         assign_completed_callback: Callable[[], None],
         release_completed_callback: Callable[[], None],
@@ -140,6 +140,8 @@ class SubarrayComponentManager(
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -501,6 +503,7 @@ class SubarrayComponentManager(
         result_code = ResultCode.OK
         for (station_id, configuration) in station_configuration.items():
             station_fqdn = f"low-mccs/station/{station_id:03d}"
+            print(f"RCL: self._stations={self._stations}")
             station_proxy = self._stations[station_fqdn]
             proxy_result_code = station_proxy.configure(configuration)
             if proxy_result_code == ResultCode.FAILED:

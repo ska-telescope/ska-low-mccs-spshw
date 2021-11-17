@@ -13,7 +13,7 @@ from ska_low_mccs.component import (
     PowerSupplyProxySimulator,
 )
 
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 class TestPowerSupplyProxySimulator:
@@ -23,6 +23,7 @@ class TestPowerSupplyProxySimulator:
     def component_manager(
         self: TestPowerSupplyProxySimulator,
         logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
         communication_status_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
     ) -> PowerSupplyProxySimulator:
@@ -30,6 +31,8 @@ class TestPowerSupplyProxySimulator:
         Return a component manager for the component object.
 
         :param logger: a logger for the component manager to use
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -40,6 +43,7 @@ class TestPowerSupplyProxySimulator:
         """
         return PowerSupplyProxySimulator(
             logger,
+            lrc_result_changed_callback,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
         )

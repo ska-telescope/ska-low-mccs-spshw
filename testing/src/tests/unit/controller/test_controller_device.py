@@ -149,7 +149,9 @@ class TestMccsController:
         [[result_code], [uid]] = getattr(device_under_test, device_command)()
         assert uid == unique_id
         assert result_code == ResultCode.QUEUED
-        getattr(mock_component_manager, component_method).assert_called_once_with(mock_component_manager.handle)
+        getattr(mock_component_manager, component_method).assert_called_once_with(
+            mock_component_manager.handle
+        )
 
     @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(

@@ -38,6 +38,7 @@ from ska_low_mccs.testing.mock import (
     MockChangeEventCallback,
 )
 
+
 @pytest.fixture()
 def subarray_fqdns() -> list[str]:
     """
@@ -246,6 +247,8 @@ def controller_component_manager(
     :param subarray_beam_fqdns: FQDNS of all subarray beam devices
     :param station_beam_fqdns: FQDNS of all station beam devices
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -413,8 +416,13 @@ def subrack_proxies(
 
 @pytest.fixture
 def unique_id() -> str:
-    """A unique ID used to test Tango layer infrastructure."""
+    """
+    Return a unique ID used to test Tango layer infrastructure.
+
+    :return: a unique ID
+    """
     return "a unique id"
+
 
 @pytest.fixture()
 def mock_component_manager(
@@ -442,11 +450,21 @@ def mock_component_manager(
         mock._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
         mock._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
         mock._component_power_mode_changed_callback(PowerMode.OFF)
+
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
 
-    def _enqueue(mock: unittest.mock.Mock, handle) -> Tuple[str, ResultCode]:
+    def _enqueue(mock: unittest.mock.Mock, handle: Callable) -> Tuple[str, ResultCode]:
+        """
+        Side-effect method to assist in testing.
+
+        :param mock: a mock used to store the passed in handle
+        :param handle: handle (command) to be enqueued
+
+        :return: unique_id, result code
+        """
         mock.handle = handle
         return unique_id, ResultCode.QUEUED
+
     mock.enqueue.side_effect = lambda handle: _enqueue(mock, handle)
 
     return mock

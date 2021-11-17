@@ -11,20 +11,10 @@
 """Contains the tests for the MccsController Tango device_under_test prototype."""
 from __future__ import annotations
 
-import unittest
-
 import pytest
-import tango
 
-from ska_tango_base.control_model import (
-    AdminMode,
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
 from ska_tango_base.commands import ResultCode
-from ska_low_mccs import MccsController, MccsDeviceProxy, release
+from ska_low_mccs import MccsDeviceProxy, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -33,9 +23,6 @@ from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 def device_to_load() -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
-
-    :param patched_controller_device_class: a controller device class
-        that has been patched with a mock component manager
 
     :return: specification of the device to be loaded
     """
@@ -62,7 +49,7 @@ def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
 class TestMccsControllerLrc:
     """Tests of the MccsController device for long-running commands."""
 
-    def test_GetVersionInfo(
+    def test_get_version_info(
         self: TestMccsControllerLrc,
         device_under_test: MccsDeviceProxy,
         lrc_result_changed_callback: MockChangeEventCallback,
@@ -87,9 +74,7 @@ class TestMccsControllerLrc:
         )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(
-            initial_lrc_result
-        )
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         ([result_code], [unique_id]) = device_under_test.GetVersionInfo()
         assert result_code == ResultCode.QUEUED

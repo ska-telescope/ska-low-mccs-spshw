@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -164,7 +163,7 @@ class PowerSupplyProxySimulator(
     def __init__(
         self: PowerSupplyProxySimulator,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         supplied_power_mode_changed_callback: Callable[[PowerMode], None],
         initial_supplied_power_mode: PowerMode = PowerMode.OFF,
@@ -173,6 +172,8 @@ class PowerSupplyProxySimulator(
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -249,7 +250,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         hardware_component_manager: MccsComponentManagerProtocol,
         power_supply_component_manager: PowerSupplyProxyComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -263,6 +264,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param power_supply_component_manager: the component
             manager that manages supply of power to the hardware.
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

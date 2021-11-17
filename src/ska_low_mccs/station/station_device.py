@@ -179,7 +179,7 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO: return OK for now to be consistent with base classes
+            # TODO RCL: return OK for now to be consistent with base classes
             _ = self.target.on()
             message = "Station On command completed OK"
             return (ResultCode.OK, message)

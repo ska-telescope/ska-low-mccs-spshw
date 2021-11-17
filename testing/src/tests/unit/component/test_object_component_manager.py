@@ -14,6 +14,7 @@ from ska_low_mccs.component import (
 from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
+
 class TestObjectComponentManager:
     """Tests of the ObjectComponentManager class."""
 
@@ -47,6 +48,8 @@ class TestObjectComponentManager:
         :param component: the component to be managed by the component
             manager.
         :param logger: a logger for the component manager to use
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

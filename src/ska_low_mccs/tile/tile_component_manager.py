@@ -57,7 +57,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         self: _TpmSimulatorComponentManager,
         tpm_simulator: BaseTpmSimulator,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -67,6 +67,8 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         :param tpm_simulator: the TPM simulator component managed by
             this component manager
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -230,7 +232,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: StaticTpmSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -238,6 +240,8 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -261,7 +265,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: DynamicTpmSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -269,6 +273,8 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -301,7 +307,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
@@ -316,6 +322,8 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         :param initial_test_mode: the simulation mode that the component
             should start in
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -446,7 +454,7 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         tpm_bay: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         tpm_power_mode_changed_callback: Callable[[PowerMode], None],
@@ -457,6 +465,8 @@ class _SubrackProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         :param fqdn: the FQDN of the subrack
         :param tpm_bay: the position of the TPM in the subrack
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -589,7 +599,7 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
@@ -608,6 +618,8 @@ class TileComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param initial_test_mode: the test mode that the component
             should start in
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"

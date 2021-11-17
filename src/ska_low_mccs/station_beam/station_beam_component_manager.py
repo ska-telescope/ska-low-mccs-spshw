@@ -53,7 +53,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         station_health_changed_callback: Callable[[Optional[HealthState]], None],
@@ -64,6 +64,8 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :param beam_id: the beam id of this station beam
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

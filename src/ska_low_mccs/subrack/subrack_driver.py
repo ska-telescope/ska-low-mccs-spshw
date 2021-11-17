@@ -71,7 +71,7 @@ class SubrackDriver(MccsComponentManager):
     def __init__(
         self: SubrackDriver,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         ip: str,
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -86,6 +86,8 @@ class SubrackDriver(MccsComponentManager):
         Initialise a new instance and tries to connect to the given IP and port.
 
         :param logger: a logger for this driver to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param ip: IP address for hardware tile
         :param port: IP address for hardware control
         :param communication_status_changed_callback: callback to be

@@ -12,7 +12,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import tango
 import time
@@ -25,6 +25,8 @@ from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 import ska_low_mccs.release as release
+from ska_low_mccs import MccsDeviceProxy
+
 
 __all__ = ["MccsController", "main"]
 
@@ -160,7 +162,7 @@ class MccsController(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsController.OnCommand,
-        ):
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for On() command functionality.
 
@@ -172,7 +174,9 @@ class MccsController(SKABaseDevice):
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, "Controller failed to initiate On command")
 
-            def wait_until_on(device, timeout, period=0.5) -> List[ResultCode, str]:
+            def wait_until_on(
+                device: MccsDeviceProxy, timeout: float, period: float = 0.5
+            ) -> tuple[ResultCode, str]:
                 """
                 Wait until the device is on.
 

@@ -135,6 +135,8 @@ def subrack_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -172,6 +174,8 @@ def testing_subrack_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -211,6 +215,8 @@ def switching_subrack_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param communication_status_changed_callback: callback to be
@@ -259,6 +265,8 @@ def subrack_driver(
 
     :param monkeypatch: the pytest monkey-patching fixture
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param communication_status_changed_callback: callback to be
@@ -401,6 +409,8 @@ def subrack_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param communication_status_changed_callback: callback to be

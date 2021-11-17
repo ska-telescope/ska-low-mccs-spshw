@@ -9,7 +9,7 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Tuple, List
 
 import tango
 from tango.server import attribute, device_property, command
@@ -22,6 +22,8 @@ from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
 from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsAntenna", "main"]
+
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 class MccsAntenna(SKABaseDevice):
@@ -138,7 +140,7 @@ class MccsAntenna(SKABaseDevice):
         dtype_out="DevVarLongStringArray",
         doc_out="(ReturnType, 'informational message')",
     )
-    def Reset(self):
+    def Reset(self: MccsAntenna) -> DevVarLongStringArrayType:
         """
         Reset the device from the FAULT state.
 
@@ -148,11 +150,10 @@ class MccsAntenna(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("Reset")
         (result_code, message) = handler()
-        return [[result_code], [message]]
+        return ([result_code], [message])
 
     # --------------
     # Callback hooks
@@ -544,7 +545,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO: return OK for now to be consistent with base classes
+            # TODO RCL: return OK for now to be consistent with base classes
             _ = self.target.on()
             message = "Antenna On command completed OK"
             return (ResultCode.OK, message)

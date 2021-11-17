@@ -60,7 +60,7 @@ class TpmDriver(MccsComponentManager):
     def __init__(
         self: TpmDriver,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         ip: str,
         port: int,
         tpm_version: str,
@@ -73,6 +73,8 @@ class TpmDriver(MccsComponentManager):
         Tries to connect to the given IP and port.
 
         :param logger: a logger for this simulator to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param ip: IP address for hardware tile
         :param port: IP address for hardware tile control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast
+from typing import Any, Callable, cast, Optional
 
 from ska_low_mccs.subarray_beam import SubarrayBeam
 from ska_low_mccs.component import (
@@ -30,7 +30,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         is_configured_changed_callback: Callable[[bool], None],
@@ -39,6 +39,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

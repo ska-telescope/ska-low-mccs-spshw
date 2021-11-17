@@ -28,6 +28,7 @@ from ska_low_mccs.cluster_manager import (
 from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
+
 class TestClusterCommon:
     """
     Common tests.
@@ -421,7 +422,8 @@ class TestClusterComponentManager:
     """Contains tests specific to ClusterComponentManager."""
 
     def test_init_simulation_mode(
-        self: TestClusterComponentManager, logger: logging.Logger,
+        self: TestClusterComponentManager,
+        logger: logging.Logger,
         lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
@@ -429,6 +431,8 @@ class TestClusterComponentManager:
 
         :param logger: a logger for the ClusterComponentManager instance
             that this test will try to initialise.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         with pytest.raises(
             NotImplementedError,

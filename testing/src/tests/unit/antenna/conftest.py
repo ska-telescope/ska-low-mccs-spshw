@@ -32,7 +32,11 @@ from ska_low_mccs.antenna.antenna_component_manager import (
 from ska_low_mccs.component import CommunicationStatus
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockChangeEventCallback
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
 
 
 @pytest.fixture()
@@ -116,6 +120,8 @@ def antenna_apiu_proxy(
     :param apiu_fqdn: FQDN of the antenna's APIU device
     :param apiu_antenna_id: the id of the antenna in the APIU device
     :param logger: a loger for the antenna component manager to use
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -159,6 +165,8 @@ def antenna_tile_proxy(
     :param tile_fqdn: FQDN of the antenna's tile device
     :param tile_antenna_id: the id of the antenna in the tile device
     :param logger: a loger for the antenna component manager to use
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -199,6 +207,8 @@ def antenna_component_manager(
     :param tile_fqdn: FQDN of the antenna's tile device
     :param tile_antenna_id: the id of the antenna in the tile device
     :param logger: a loger for the antenna component manager to use
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes

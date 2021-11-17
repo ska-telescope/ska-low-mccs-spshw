@@ -42,7 +42,7 @@ class _TileProxy(DeviceComponentManager):
         station_id: int,
         logical_tile_id: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -58,6 +58,8 @@ class _TileProxy(DeviceComponentManager):
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -134,7 +136,7 @@ class StationComponentManager(MccsComponentManager):
         antenna_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
@@ -153,13 +155,13 @@ class StationComponentManager(MccsComponentManager):
         :param tile_fqdns: FQDNs of the Tango devices and manage this
             station's TPMs
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
-        :param push_change_event: method to call when the base classes
-            want to send an event
         :param apiu_health_changed_callback: callback to be called when
             the health of this station's APIU changes
         :param antenna_health_changed_callback: callback to be called when
@@ -408,7 +410,8 @@ class StationComponentManager(MccsComponentManager):
         """
         with self._power_mode_lock:
             if not all(
-                power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
+                power_mode == PowerMode.ON
+                for power_mode in self._tile_power_modes.values()
             ):
                 results = []
                 for proxy in self._tile_proxies:

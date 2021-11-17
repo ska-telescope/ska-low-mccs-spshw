@@ -34,6 +34,7 @@ from ska_low_mccs.pasd_bus import (
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
+
 @pytest.fixture()
 def pasd_config_path() -> str:
     """
@@ -179,6 +180,8 @@ def pasd_bus_simulator_component_manager(
     :param mock_pasd_bus_simulator: a mock PaSD bus simulator to be used
         by the PaSD bus simulator component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -211,6 +214,8 @@ def pasd_bus_component_manager(
         PaSD bus simulator component manager to be used by the PaSD bus
         component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes

@@ -38,7 +38,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -50,6 +50,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         :param fqdn: the FQDN of the APIU
         :param logical_antenna_id: this antenna's id within the APIU
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -243,7 +245,7 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -253,6 +255,8 @@ class _TileProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the Tile device
         :param logical_antenna_id: this antenna's id within the Tile
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -353,7 +357,7 @@ class AntennaComponentManager(MccsComponentManager):
         tile_fqdn: str,
         tile_antenna_id: int,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -368,6 +372,8 @@ class AntennaComponentManager(MccsComponentManager):
             antenna's tile.
         :param tile_antenna_id: the id of the antenna in the tile.
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -568,11 +574,17 @@ class AntennaComponentManager(MccsComponentManager):
 
             if self._apiu_power_mode != PowerMode.ON:
                 return ResultCode.QUEUED
-            if self.power_mode == PowerMode.OFF and self._target_power_mode == PowerMode.ON:
+            if (
+                self.power_mode == PowerMode.OFF
+                and self._target_power_mode == PowerMode.ON
+            ):
                 result_code = self._apiu_proxy.power_on()
                 self._target_power_mode = None
                 return result_code
-            if self.power_mode == PowerMode.ON and self._target_power_mode == PowerMode.OFF:
+            if (
+                self.power_mode == PowerMode.ON
+                and self._target_power_mode == PowerMode.OFF
+            ):
                 result_code = self._apiu_proxy.power_off()
                 self._target_power_mode = None
                 return result_code

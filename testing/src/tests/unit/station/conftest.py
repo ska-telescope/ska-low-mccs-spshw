@@ -26,7 +26,12 @@ from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockChangeEventCallback
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
+
 
 @pytest.fixture()
 def station_id() -> int:
@@ -275,6 +280,8 @@ def station_component_manager(
     :param tile_fqdns: FQDNs of the Tango devices that manage this
         station's tiles
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes

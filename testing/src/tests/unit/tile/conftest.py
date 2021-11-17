@@ -221,6 +221,8 @@ def tile_subrack_proxy(
     :param subrack_fqdn: FQDN of the tile's subrack device
     :param subrack_tpm_id: the id of the tile in the subrack device
     :param logger: a loger for the tile component manager to use
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -288,6 +290,8 @@ def tpm_driver(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -353,6 +357,8 @@ def static_tpm_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -382,6 +388,8 @@ def dynamic_tpm_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -419,6 +427,8 @@ def switching_tpm_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -470,6 +480,8 @@ def tile_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"

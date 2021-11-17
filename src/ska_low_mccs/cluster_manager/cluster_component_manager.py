@@ -31,7 +31,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: ClusterSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
@@ -175,7 +175,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
     def __init__(
         self: ClusterComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         initial_simulation_mode: SimulationMode,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
@@ -190,6 +190,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param communication_status_changed_callback: callback to be

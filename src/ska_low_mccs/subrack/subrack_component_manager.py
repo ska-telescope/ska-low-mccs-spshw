@@ -47,7 +47,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self: BaseSubrackSimulatorComponentManager,
         subrack_simulator: SubrackSimulator,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -60,6 +60,8 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
 
         :param subrack_simulator: a subrack simulator object to use
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -201,7 +203,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
     def __init__(
         self: SubrackSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -213,6 +215,8 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -240,7 +244,7 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
     def __init__(
         self: TestingSubrackSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -252,6 +256,8 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -281,7 +287,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -299,6 +305,8 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         :param initial_test_mode: the simulation mode that the component
             should start in
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
         :param initial_simulation_mode: the simulation mode that the
@@ -436,7 +444,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -456,6 +464,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param initial_test_mode: the simulation mode that the component
             should start in
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
         :param communication_status_changed_callback: callback to be

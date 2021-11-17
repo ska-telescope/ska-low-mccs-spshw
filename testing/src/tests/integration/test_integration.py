@@ -304,7 +304,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.OK
 
         # TODO: uncomment when this is fixed.
-        #assert subarray_1.obsState.name == "IDLE"
+        # assert subarray_1.obsState.name == "IDLE"
 
         # check that station_1 and only station_1 is allocated
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
@@ -456,7 +456,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.OK
 
         # TODO: uncomment when this is fixed.
-        #assert subarray_1.obsState.name == "IDLE"
+        # assert subarray_1.obsState.name == "IDLE"
 
         # allocate station 2 to subarray 2
         ([result_code], [_]) = call_with_json(

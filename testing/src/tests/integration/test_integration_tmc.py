@@ -474,7 +474,10 @@ class TestMccsIntegrationTmc:
         # crossed.
         time.sleep(0.5)
 
-        # TODO: Figure out why this fails later...
+        # TODO: We have a problem with the obs state after the Allocate command.
+        #       The subarray believes the obs state is RESOURCING. This will
+        #       prevent any further calls to subarray working correctly.
+        #       Technical debt: Fix this later.
         if False:
             # allocate station_1 to subarray_1
             ([result_code], [unique_id]) = call_with_json(
@@ -535,7 +538,9 @@ class TestMccsIntegrationTmc:
                 ObsState.READY
             )
 
-            ([result_code], [_]) = call_with_json(subarray_1.Scan, scan_id=1, start_time=4)
+            ([result_code], [_]) = call_with_json(
+                subarray_1.Scan, scan_id=1, start_time=4
+            )
             assert result_code == ResultCode.OK  # should be STARTED but base classes
 
             subarray_device_obs_state_changed_callback.assert_next_change_event(

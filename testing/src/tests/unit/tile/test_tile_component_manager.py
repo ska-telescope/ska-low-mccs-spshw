@@ -368,9 +368,7 @@ class TestStaticSimulatorCommon:
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
-        (
-            ("current", StaticTpmSimulator.CURRENT),
-        ),
+        (("current", StaticTpmSimulator.CURRENT),),
     )
     def test_read_attribute(
         self: TestStaticSimulatorCommon,

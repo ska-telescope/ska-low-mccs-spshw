@@ -160,7 +160,7 @@ class TestStationComponentManager:
         component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
         assert station_component_manager.power_mode == PowerMode.OFF
 
-    def test_tile_setup(
+    def test_tile_setup_Ross(
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
         station_id: int,
@@ -202,7 +202,8 @@ class TestStationComponentManager:
 
         for logical_tile_id, tile_fqdn in enumerate(tile_fqdns):
             tile_device_proxy = MccsDeviceProxy(tile_fqdn, logger)
-            print(f"RCL: {tile_device_proxy.stationId} == {station_id}")
+            print(f"RCL: {tile_device_proxy.stationId} == {station_id}       ")
+            print(f"RCL: {tile_device_proxy}     ")
             assert tile_device_proxy.stationId == station_id
             assert tile_device_proxy.logicalTileId == logical_tile_id
 

@@ -138,6 +138,8 @@ class TestMccsStation:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         # Subscribe to controller's LRC result attribute
         device_under_test.add_change_event_callback(
@@ -150,9 +152,7 @@ class TestMccsStation:
         )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(
-            initial_lrc_result
-        )
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         ([result_code], [unique_id]) = device_under_test.GetVersionInfo()
         assert result_code == ResultCode.QUEUED
@@ -165,7 +165,6 @@ class TestMccsStation:
             str([vinfo]),
         )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
-
 
     def test_versionId(
         self: TestMccsStation,

@@ -8,7 +8,6 @@
 ########################################################################
 """This module contains the tests for MccsSubarray."""
 from __future__ import annotations
-from enum import unique
 
 import json
 import pytest
@@ -175,6 +174,8 @@ class TestMccsSubarray:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         # Subscribe to controller's LRC result attribute
         device_under_test.add_change_event_callback(
@@ -187,9 +188,7 @@ class TestMccsSubarray:
         )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(
-            initial_lrc_result
-        )
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         ([result_code], [unique_id]) = device_under_test.GetVersionInfo()
         assert result_code == ResultCode.QUEUED
@@ -202,7 +201,6 @@ class TestMccsSubarray:
             str([vinfo]),
         )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
-
 
     def test_buildState(
         self: TestMccsSubarray,
@@ -270,6 +268,8 @@ class TestMccsSubarray:
         """
         Test for assignResources.
 
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -330,9 +330,7 @@ class TestMccsSubarray:
         time.sleep(0.1)  # allow event system time to run
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(
-            initial_lrc_result
-        )
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
         ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
         assert result_code == ResultCode.QUEUED
         assert "ReleaseAllResourcesCommand" in unique_id

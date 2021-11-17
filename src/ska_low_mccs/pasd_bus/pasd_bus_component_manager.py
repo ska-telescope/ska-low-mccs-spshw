@@ -28,7 +28,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: PasdBusSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         _simulator: Optional[PasdBusSimulator] = None,
@@ -38,6 +38,8 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -161,7 +163,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         self: PasdBusComponentManager,
         initial_simulation_mode: SimulationMode,
         logger: logging.Logger,
-        push_change_event,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         _simulator_component_manager: Optional[PasdBusSimulatorComponentManager] = None,
@@ -172,6 +174,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param communication_status_changed_callback: callback to be

@@ -26,6 +26,7 @@ from ska_low_mccs.subarray_beam import (
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
+
 @pytest.fixture()
 def component_is_beam_locked_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
@@ -86,6 +87,8 @@ def subarray_beam_component_manager(
     Return a subarray beam component manager.
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes

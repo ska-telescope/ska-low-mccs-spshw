@@ -102,7 +102,7 @@ class TestTileSubrackProxy:
         assert tile_subrack_proxy.power_mode == PowerMode.OFF
         assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
 
-        assert tile_subrack_proxy.on() == ResultCode.OK
+        assert tile_subrack_proxy.on() == ResultCode.QUEUED
         mock_subrack_device_proxy.On.assert_next_call()
 
         # Fake an event that tells this proxy that the subrack has been turned on.

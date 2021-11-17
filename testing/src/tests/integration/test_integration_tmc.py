@@ -576,9 +576,9 @@ class TestMccsIntegrationTmc:
         lrc_result = (
             unique_id,
             str(ResultCode.OK.value),
-            "Off command completed OK",
+            "Controller Off command completed OK",
         )
-        lrc_result_changed_callback.assert_last_change_event(lrc_result, do_assert=False)
+        lrc_result_changed_callback.assert_last_change_event(lrc_result, do_assert=True)
 
         devices = [
             controller,

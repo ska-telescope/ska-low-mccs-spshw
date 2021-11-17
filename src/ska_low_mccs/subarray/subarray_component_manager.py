@@ -260,7 +260,7 @@ class SubarrayComponentManager(
     @check_communicating
     def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resource_spec: dict[str, Sequence[Any]],
+        resource_spec: str,
     ) -> ResultCode:
         """
         Assign resources to this subarray.

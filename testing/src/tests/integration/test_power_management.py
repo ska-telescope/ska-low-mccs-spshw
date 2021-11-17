@@ -356,7 +356,7 @@ class TestPowerManagement:
             str(ResultCode.OK.value),
             "Controller On command completed OK",
         )
-        lrc_result_changed_callback.assert_last_change_event(lrc_result, do_assert=False)
+        lrc_result_changed_callback.assert_last_change_event(lrc_result, do_assert=True)
 
         self._show_state_of_devices(devices)
 

@@ -243,6 +243,7 @@ def switching_subrack_component_manager(
 def subrack_driver(
     monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
     logger: logging.Logger,
+    lrc_result_changed_callback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
@@ -370,6 +371,7 @@ def subrack_driver(
 
     return SubrackDriver(
         logger,
+        lrc_result_changed_callback,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,

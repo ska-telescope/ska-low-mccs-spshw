@@ -101,6 +101,7 @@ def antenna_apiu_proxy(
     apiu_fqdn: str,
     apiu_antenna_id: int,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -131,6 +132,7 @@ def antenna_apiu_proxy(
         apiu_fqdn,
         apiu_antenna_id,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
@@ -144,6 +146,7 @@ def antenna_tile_proxy(
     tile_fqdn: str,
     tile_antenna_id: int,
     logger: logging.Logger,
+    lrc_result_changed_callback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: Callable[[bool], None],
 ) -> _TileProxy:
@@ -168,6 +171,7 @@ def antenna_tile_proxy(
         tile_fqdn,
         tile_antenna_id,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )

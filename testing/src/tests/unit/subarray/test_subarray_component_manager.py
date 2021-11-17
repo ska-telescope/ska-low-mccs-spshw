@@ -60,14 +60,14 @@ class TestSubarrayComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [station_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        args = json.dumps(resource_spec)
+        result_code = subarray_component_manager.assign(args)
         assert result_code == ResultCode.OK
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
@@ -146,14 +146,14 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.assigned_resources == set()
 
         # Assignment from empty
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [station_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_off_fqdn],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        args = json.dumps(resource_spec)
+        result_code = subarray_component_manager.assign(args)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,
@@ -174,14 +174,14 @@ class TestSubarrayComponentManager:
         )
 
         # Further assign
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [station_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        args = json.dumps(resource_spec)
+        result_code = subarray_component_manager.assign(args)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,

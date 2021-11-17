@@ -130,7 +130,7 @@ class TestMccsStation:
     def test_GetVersionInfo(
         self: TestMccsStation,
         device_under_test: MccsDeviceProxy,
-        lrc_result_changed_callback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for GetVersionInfo.

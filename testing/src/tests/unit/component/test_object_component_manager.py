@@ -12,7 +12,7 @@ from ska_low_mccs.component import (
     ObjectComponentManager,
 )
 from ska_low_mccs.testing.mock import MockCallable
-
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 class TestObjectComponentManager:
     """Tests of the ObjectComponentManager class."""
@@ -36,7 +36,7 @@ class TestObjectComponentManager:
         self: TestObjectComponentManager,
         component: unittest.mock.Mock,
         logger: logging.Logger,
-        lrc_result_changed_callback,
+        lrc_result_changed_callback: MockChangeEventCallback,
         communication_status_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
         component_fault_callback: MockCallable,

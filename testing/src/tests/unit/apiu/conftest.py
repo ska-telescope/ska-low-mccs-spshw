@@ -31,7 +31,7 @@ from ska_low_mccs.apiu import (
 )
 from ska_low_mccs.component import CommunicationStatus
 
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -104,7 +104,7 @@ def apiu_simulator(
 def apiu_simulator_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_antenna_power_changed_callback: MockCallable,
@@ -140,7 +140,7 @@ def apiu_simulator_component_manager(
 def switching_apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: Callable[[bool], None],
     component_antenna_power_changed_callback: MockCallable,
@@ -177,7 +177,7 @@ def switching_apiu_component_manager(
 def apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,

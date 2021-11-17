@@ -167,7 +167,7 @@ class TestMccsSubarray:
     def test_GetVersionInfo(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
-        lrc_result_changed_callback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for GetVersionInfo.
@@ -259,7 +259,7 @@ class TestMccsSubarray:
 
     def test_assignResources(
         self: TestMccsSubarray,
-        lrc_result_changed_callback,
+        lrc_result_changed_callback: MockChangeEventCallback,
         device_under_test: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
         station_on_fqdn: str,

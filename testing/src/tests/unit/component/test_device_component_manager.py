@@ -17,14 +17,14 @@ from ska_low_mccs.component import (
 
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockCallable
-
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 @pytest.fixture()
 def component_manager(
     tango_harness: TangoHarness,
     fqdn: str,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,

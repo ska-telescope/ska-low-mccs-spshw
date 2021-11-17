@@ -33,6 +33,7 @@ from ska_low_mccs.subrack import (
 )
 
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -122,7 +123,7 @@ def testing_subrack_simulator(
 @pytest.fixture()
 def subrack_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_progress_changed_callback: MockCallable,
@@ -159,7 +160,7 @@ def subrack_simulator_component_manager(
 @pytest.fixture()
 def testing_subrack_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_progress_changed_callback: MockCallable,
@@ -196,7 +197,7 @@ def testing_subrack_simulator_component_manager(
 @pytest.fixture()
 def switching_subrack_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
@@ -243,7 +244,7 @@ def switching_subrack_component_manager(
 def subrack_driver(
     monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
@@ -384,7 +385,7 @@ def subrack_driver(
 @pytest.fixture()
 def subrack_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,

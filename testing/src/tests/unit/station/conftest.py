@@ -26,8 +26,7 @@ from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
-
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockChangeEventCallback
 
 @pytest.fixture()
 def station_id() -> int:
@@ -256,7 +255,7 @@ def station_component_manager(
     antenna_fqdns: list[str],
     tile_fqdns: list[str],
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     apiu_health_changed_callback: MockCallable,

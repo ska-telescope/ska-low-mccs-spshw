@@ -26,6 +26,7 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulator,
 )
 from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -59,7 +60,7 @@ def cluster_simulator() -> ClusterSimulator:
 @pytest.fixture()
 def cluster_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
@@ -97,7 +98,7 @@ def cluster_simulator_component_manager(
 @pytest.fixture()
 def cluster_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],

@@ -24,8 +24,7 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs.subarray import SubarrayComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
-
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockChangeEventCallback
 
 @pytest.fixture()
 def assign_completed_callback(
@@ -257,7 +256,7 @@ def station_beam_health_changed_callback(
 def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     assign_completed_callback: MockCallable,
     release_completed_callback: MockCallable,

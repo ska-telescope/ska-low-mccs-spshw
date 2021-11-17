@@ -26,7 +26,7 @@ from ska_low_mccs.cluster_manager import (
 )
 
 from ska_low_mccs.testing.mock import MockCallable
-
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 class TestClusterCommon:
     """
@@ -422,7 +422,7 @@ class TestClusterComponentManager:
 
     def test_init_simulation_mode(
         self: TestClusterComponentManager, logger: logging.Logger,
-        lrc_result_changed_callback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that we can't create a cluster manager that's not in simulation mode.

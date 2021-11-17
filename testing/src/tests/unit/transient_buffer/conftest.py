@@ -23,6 +23,7 @@ from ska_low_mccs.transient_buffer import (
 )
 
 from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -40,7 +41,7 @@ def transient_buffer_component(logger: logging.Logger) -> TransientBuffer:
 @pytest.fixture()
 def transient_buffer_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
 ) -> TransientBufferComponentManager:
     """

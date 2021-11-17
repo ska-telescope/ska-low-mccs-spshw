@@ -32,8 +32,7 @@ from ska_low_mccs.pasd_bus import (
 )
 
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.testing.mock import MockCallable
-
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 @pytest.fixture()
 def pasd_config_path() -> str:
@@ -168,7 +167,7 @@ def mock_pasd_bus_simulator(
 def pasd_bus_simulator_component_manager(
     mock_pasd_bus_simulator: unittest.mock.Mock,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> PasdBusSimulatorComponentManager:
@@ -201,7 +200,7 @@ def pasd_bus_simulator_component_manager(
 def pasd_bus_component_manager(
     pasd_bus_simulator_component_manager: PasdBusSimulatorComponentManager,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: MockCallable,
 ) -> PasdBusComponentManager:

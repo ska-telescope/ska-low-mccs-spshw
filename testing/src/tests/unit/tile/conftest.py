@@ -207,7 +207,7 @@ def tile_subrack_proxy(
     subrack_fqdn: str,
     subrack_tpm_id: int,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     tile_power_mode_changed_callback: MockCallable,
@@ -275,7 +275,7 @@ def tpm_version() -> str:
 @pytest.fixture()
 def tpm_driver(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -343,7 +343,7 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 @pytest.fixture()
 def static_tpm_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> StaticTpmSimulatorComponentManager:
@@ -372,7 +372,7 @@ def static_tpm_simulator_component_manager(
 @pytest.fixture()
 def dynamic_tpm_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> DynamicTpmSimulatorComponentManager:
@@ -403,7 +403,7 @@ def switching_tpm_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -450,7 +450,7 @@ def tile_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,

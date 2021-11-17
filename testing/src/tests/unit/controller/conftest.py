@@ -35,8 +35,8 @@ from ska_low_mccs.testing.mock import (
     MockCallable,
     MockDeviceBuilder,
     MockSubarrayBuilder,
+    MockChangeEventCallback,
 )
-
 
 @pytest.fixture()
 def subarray_fqdns() -> list[str]:
@@ -228,7 +228,7 @@ def controller_component_manager(
     subarray_beam_fqdns: Iterable[str],
     station_beam_fqdns: Iterable[str],
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     subrack_health_changed_callback: MockCallable,

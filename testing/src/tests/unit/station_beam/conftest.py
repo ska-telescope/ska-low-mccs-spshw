@@ -22,8 +22,7 @@ import tango
 from ska_low_mccs.station_beam import StationBeamComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
-
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockChangeEventCallback
 
 @pytest.fixture()
 def component_device_health_changed_callback(
@@ -93,7 +92,7 @@ def station_beam_component_manager(
     tango_harness: TangoHarness,
     beam_id: int,
     logger: logging.Logger,
-    lrc_result_changed_callback,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_is_beam_locked_changed_callback: MockCallable,
     component_device_health_changed_callback: MockCallable,

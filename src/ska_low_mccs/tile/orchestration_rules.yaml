@@ -1,0 +1,60 @@
+# This file provides rules for how the tile orchestrator should act in response to
+# given stimuli in given states.
+#
+# Each line is a single key-value pair. The key describes a state and a
+# stimulus; the value names an action to take when the given stimulus
+# occurs when in the given state.
+#
+# The structure of a key is
+#     [
+#         ONLINE,  # State: the operator desires this device to be online
+#         ESTABLISHED,  # State: communication with the subrack is established
+#         OFF,  # State: the subrack is powered on but NOT supplying power to the TPM
+#         DISABLED,  # State: Communication with the TPM is disabled
+#         DESIRE_ON,  # Stimulus: the operator has invoked the On() command
+#     ]
+#
+!!python/tuple [OFFLINE, DISABLED, UNKNOWN, DISABLED, DESIRE_ONLINE]: start_communicating_with_subrack
+!!python/tuple [OFFLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, NO_SUPPLY, DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "OFF", DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "ON", DISABLED, SUBRACK_COMMS_DISABLED]: set_subrack_communication_disabled
+!!python/tuple [OFFLINE, ESTABLISHED, "ON", ESTABLISHED, TPM_COMMS_DISABLED]: set_tpm_communication_disabled
+!!python/tuple [ONLINE, NOT_ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_COMMS_ESTABLISHED]: set_subrack_communication_established 
+!!python/tuple [ONLINE, NOT_ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_UNKNOWN]: set_subrack_communication_established_and_report_tpm_power_unknown # rare case where we receive an event from the subrack before we even know we have established a connection
+!!python/tuple [ONLINE, NOT_ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_NO_SUPPLY]: set_subrack_communication_established_and_report_tpm_no_power_supply # rare case where we receive an event from the subrack before we even know we have established a connection
+!!python/tuple [ONLINE, NOT_ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_OFF]: set_subrack_communication_established_and_report_tpm_off # rare case where we receive an event from the subrack before we even know we have established a connection
+!!python/tuple [ONLINE, NOT_ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_ON]: set_subrack_communication_established_and_report_tpm_on_and_establish_tpm_communication # rare case where we receive an event from the subrack before we even know we have established a connection
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, DESIRE_OFFLINE]: stop_communicating_when_tpm_communication_not_established
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_UNKNOWN]: do_nothing  # we already knew that
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_NO_SUPPLY]: report_tpm_no_power_supply_when_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_when_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_ON]: report_tpm_on_and_establish_tpm_communication
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, DESIRE_OFF]: do_nothing  # already off (because subrack is off)
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, DESIRE_ON]: set_desired_on
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, DESIRE_OFFLINE]: stop_communicating_when_tpm_communication_not_established
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, SUBRACK_COMMS_ESTABLISHED]: do_nothing  # rare case where we had already received an event and inferred communication to be established
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, SUBRACK_SAYS_TPM_UNKNOWN]: report_tpm_power_unknown
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, SUBRACK_SAYS_TPM_NO_SUPPLY]: do_nothing  # we already knew that
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_when_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, SUBRACK_SAYS_TPM_ON]: report_tpm_on_and_establish_tpm_communication
+!!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, ESTABLISHED, TPM_COMMS_DISABLED]: set_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, DESIRE_OFFLINE]: stop_communicating_when_tpm_communication_not_established
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, SUBRACK_COMMS_ESTABLISHED]: do_nothing  # rare case where we had already received an event and inferred communication to be established
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, DESIRE_OFF]: do_nothing  # already off
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, DESIRE_ON]: turn_tpm_on
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, SUBRACK_SAYS_TPM_UNKNOWN]: report_tpm_power_unknown
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, SUBRACK_SAYS_TPM_NO_SUPPLY]: report_tpm_no_power_supply_when_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_when_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", DISABLED, SUBRACK_SAYS_TPM_ON]: report_tpm_on_and_establish_tpm_communication
+!!python/tuple [ONLINE, ESTABLISHED, "OFF", ESTABLISHED, TPM_COMMS_DISABLED]: set_tpm_communication_disabled
+!!python/tuple [ONLINE, ESTABLISHED, "ON", DISABLED, TPM_COMMS_NOT_ESTABLISHED]: set_tpm_communication_not_established
+!!python/tuple [ONLINE, ESTABLISHED, "ON", NOT_ESTABLISHED, TPM_COMMS_ESTABLISHED]: set_tpm_communication_established
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, SUBRACK_COMMS_ESTABLISHED]: do_nothing  # rare case where we had already received an event and inferred communication to be established
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, DESIRE_OFF]: turn_tpm_off
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, DESIRE_OFFLINE]: stop_communicating_when_tpm_communication_established
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, SUBRACK_SAYS_TPM_UNKNOWN]: report_tpm_power_unknown
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, SUBRACK_SAYS_TPM_NO_SUPPLY]: report_tpm_no_power_supply_and_disable_tpm_communication
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_and_disable_tpm_communication
+!!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, SUBRACK_SAYS_TPM_ON]: do_nothing  # we already knew that
+!!python/tuple ["ON", ESTABLISHED, NO_SUPPLY, DISABLED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_and_turn_tpm_on

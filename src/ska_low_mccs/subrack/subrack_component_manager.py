@@ -11,12 +11,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Optional, Tuple
+from typing import Any, Callable, cast, Tuple
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.subrack import (
+    SubrackData,
     SubrackDriver,
     SubrackSimulator,
     TestingSubrackSimulator,
@@ -26,6 +27,7 @@ from ska_low_mccs.component import (
     check_on,
     CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
+    ExtendedPowerMode,
     SwitchingComponentManager,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
@@ -51,9 +53,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
-        ],
+        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -80,16 +80,22 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             None,
             component_fault_callback,
         )
+        self._tpm_power_modes = [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._component_tpm_power_changed_callback = (
             component_tpm_power_changed_callback
         )
+        self._component_tpm_power_changed_callback(self._tpm_power_modes)
+
         self._component_progress_changed_callback = component_progress_changed_callback
 
     def start_communicating(self: BaseSubrackSimulatorComponentManager) -> None:
         """Establish communication with the subrack simulator."""
+        if self.communication_status != CommunicationStatus.DISABLED:
+            return
+
         super().start_communicating()
-        cast(SubrackSimulator, self._component).set_tpm_power_changed_callback(
-            self._component_tpm_power_changed_callback
+        cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(
+            self._are_tpms_on_changed
         )
         cast(SubrackSimulator, self._component).set_progress_changed_callback(
             self._component_progress_changed_callback
@@ -97,9 +103,35 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
 
     def stop_communicating(self: BaseSubrackSimulatorComponentManager) -> None:
         """Break off communication with the subrack simulator."""
-        super().stop_communicating()
-        cast(SubrackSimulator, self._component).set_tpm_power_changed_callback(None)
+        if self.communication_status == CommunicationStatus.DISABLED:
+            return
+
+        cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(None)
         cast(SubrackSimulator, self._component).set_progress_changed_callback(None)
+        super().stop_communicating()
+
+    def _are_tpms_on_changed(
+        self: BaseSubrackSimulatorComponentManager, are_tpms_on: list[bool]
+    ) -> None:
+        tpm_power_modes = [
+            ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF
+            for is_tpm_on in are_tpms_on
+        ]
+        if self._tpm_power_modes == tpm_power_modes:
+            return
+        self._tpm_power_modes = tpm_power_modes
+        self._component_tpm_power_changed_callback(tpm_power_modes)
+
+    @property
+    def tpm_power_modes(
+        self: BaseSubrackSimulatorComponentManager,
+    ) -> list[ExtendedPowerMode]:
+        """
+        Return the power modes of the TPMs.
+
+        :return: the power modes of each TPM.
+        """
+        return list(self._tpm_power_modes)
 
     def __getattr__(
         self: BaseSubrackSimulatorComponentManager,
@@ -154,7 +186,6 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
-            "are_tpms_on",
             "turn_off_tpm",
             "turn_on_tpm",
             "turn_on_tpms",
@@ -207,9 +238,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
-        ],
+        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -248,9 +277,7 @@ class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManag
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
-        ],
+        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -293,9 +320,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
-        ],
+        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -451,9 +476,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Optional[
-            Callable[[Optional[list[bool]]], None]
-        ],
+        tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
         _initial_power_mode: PowerMode = PowerMode.OFF,
     ) -> None:
         """
@@ -477,13 +500,17 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component faults (or stops faulting)
         :param component_progress_changed_callback: callback to be called when the
             component command progress values changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of an tpm changes
+        :param tpm_power_changed_callback: callback to be called when
+            the power mode of an tpm changes
         :param _initial_power_mode: the initial power mode of the power
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
             device.
         """
+        self._tpm_power_modes = [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_changed_callback = tpm_power_changed_callback
+        self._tpm_power_changed_callback(self._tpm_power_modes)
+
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
             initial_test_mode,
@@ -494,7 +521,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self._hardware_communication_status_changed,
             self.component_fault_changed,
             self.component_progress_changed,
-            component_tpm_power_changed_callback,
+            self._tpm_power_changed,
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
@@ -514,6 +541,81 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component_fault_callback,
             component_progress_changed_callback,
         )
+
+    @property
+    def tpm_power_modes(self: SubrackComponentManager) -> list[ExtendedPowerMode]:
+        """
+        Return the power modes of the TPMs.
+
+        :return: the power modes of each TPM.
+        """
+        return list(self._tpm_power_modes)
+
+    def _tpm_power_changed(
+        self: SubrackComponentManager, tpm_power_modes: list[ExtendedPowerMode]
+    ) -> None:
+        """
+        Handle change in TPM power.
+
+        This is a callback, provided to the underlying hardware
+        component manager, to be called whenever the power mode of any
+        TPM changes.
+
+        :param tpm_power_modes: the power modes of all TPMs
+        """
+        self._update_tpm_power_modes(tpm_power_modes)
+
+    def _update_tpm_power_modes(
+        self: SubrackComponentManager, tpm_power_modes: list[ExtendedPowerMode]
+    ) -> None:
+        """
+        Update the power modes of the TPMs, ensuring that the callback is called.
+
+        This is a helper method, responsible for updating this component
+        manager's record of the TPM power modes, and ensuring that the
+        callback is called as required.
+
+        :param tpm_power_modes: the power mode of each TPM
+        """
+        if self._tpm_power_modes == tpm_power_modes:
+            return
+        self._tpm_power_modes = list(tpm_power_modes)
+        self._tpm_power_changed_callback(tpm_power_modes)
+
+    def _power_supply_communication_status_changed(
+        self: SubrackComponentManager,
+        communication_status: CommunicationStatus,
+    ) -> None:
+        """
+        Handle a change in status of communication with the hardware.
+
+        :param communication_status: the status of communication with
+            the hardware.
+        """
+        super()._power_supply_communication_status_changed(communication_status)
+        if communication_status == CommunicationStatus.DISABLED:
+            self._update_tpm_power_modes(
+                [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            )
+
+    def component_power_mode_changed(
+        self: SubrackComponentManager, power_mode: PowerMode
+    ) -> None:
+        """
+        Handle a change in power mode of the hardware.
+
+        :param power_mode: the power mode of the hardware
+        """
+        if power_mode == PowerMode.UNKNOWN:
+            self._update_tpm_power_modes(
+                [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            )
+        elif power_mode == PowerMode.OFF:
+            self._update_tpm_power_modes(
+                [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+            )
+
+        super().component_power_mode_changed(power_mode)
 
     @property
     def simulation_mode(self: SubrackComponentManager) -> SimulationMode:
@@ -570,10 +672,44 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
+        result_code = super().off()
         cast(
             SwitchingSubrackComponentManager, self._hardware_component_manager
         ).turn_off_tpms()
-        return super().off()
+        return result_code
+
+    @check_communicating
+    def turn_off_tpm(self: SubrackComponentManager, logical_tpm_id: int) -> bool | None:
+        """
+        Turn off a TPM.
+
+        TODO: This method is implemented with a temporary measure to
+        handle a common race condition. When ``MccsController.Off()`` is
+        called, both ``MccsTile`` and ``MccsSubrack`` may end up being
+        told to turn off at roughly the same time. This can result in
+        ``MccsTile`` telling its subrack to turn off its TPM when the
+        subrack has itself just been turned off. For now, we handle this
+        by accepting the command (and doing nothing) when the subrack is
+        off. In future, we should review this behaviour in case there is
+        a better way to handle it.
+
+        :param logical_tpm_id: this subrack's internal id for the
+            TPM to be turned off
+
+        :return: whether successful, or None if there was nothing to do
+
+        :raises ConnectionError: if the subrack is neither off not on
+            (when on, we can turn the TPM off, when off, there's nothing
+            to do here.)
+        """
+        if self.power_mode == PowerMode.OFF:
+            return None
+        elif self.power_mode == PowerMode.ON:
+            return cast(
+                SwitchingSubrackComponentManager, self._hardware_component_manager
+            ).turn_off_tpm(logical_tpm_id)
+        else:
+            raise ConnectionError("Component is not turned on.")
 
     def __getattr__(
         self: SubrackComponentManager,
@@ -628,8 +764,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
-            "are_tpms_on",
-            "turn_off_tpm",
             "turn_on_tpm",
             "turn_on_tpms",
             "turn_off_tpms",

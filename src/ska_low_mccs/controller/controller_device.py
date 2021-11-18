@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 
 import tango
 import time
-from tango.server import attribute, command, device_property
+from tango.server import command, device_property
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -321,14 +321,6 @@ class MccsController(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    @attribute(dtype="DevString")
-    def assignedResources(self: MccsController) -> str:
-        """
-        Return the assigned resources attribute.
-
-        :return: assignedResources attribute
-        """
-        return self.component_manager.assigned_resources
 
     # --------
     # Commands

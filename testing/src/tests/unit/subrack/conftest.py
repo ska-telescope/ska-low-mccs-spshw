@@ -23,6 +23,7 @@ import requests
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.subrack import (
+    SubrackData,
     SubrackDriver,
     SubrackSimulator,
     TestingSubrackSimulator,
@@ -292,11 +293,11 @@ def subrack_driver(
             "board_current": SubrackSimulator.DEFAULT_BOARD_CURRENT,
             "subrack_fan_speeds": SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS,
             "subrack_fan_speeds_percent": [
-                speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                 for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
             ],
             "subrack_fan_modes": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES,
-            "tpm_count": SubrackSimulator.TPM_BAY_COUNT,
+            "tpm_count": SubrackData.TPM_BAY_COUNT,
             #  "tpm_temperatures" is not implemented in driver
             "tpm_powers": [
                 SubrackSimulator.DEFAULT_TPM_VOLTAGE

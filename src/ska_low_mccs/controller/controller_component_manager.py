@@ -688,6 +688,12 @@ class ControllerComponentManager(MccsComponentManager):
                     or power_mode in self._station_power_modes.values()
                 ):
                     break
+            self.logger.info(
+                "In ControllerComponentManager._evaluatePowerMode with:\n"
+                f"\tsubracks: {self._subrack_power_modes}\n"
+                f"\tstations: {self._station_power_modes}\n"
+                f"\tresult: {str(power_mode)}"
+            )
             self.update_component_power_mode(power_mode)
 
     def _subarray_health_changed(

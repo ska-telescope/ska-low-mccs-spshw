@@ -1442,7 +1442,7 @@ class MccsTile(SKABaseDevice):
             self: MccsTile.SetChanneliserTruncationCommand, argin: list[int]
         ) -> Tuple[ResultCode, str]:
             """
-            Implement: py:meth:`.MccsTile.SetChanneliserTruncation` commands.
+            Implement :py:meth:`.MccsTile.SetChanneliserTruncation` commands.
 
             :param argin: a truncation array
 

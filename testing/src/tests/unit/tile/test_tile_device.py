@@ -178,13 +178,8 @@ class TestMccsTile:
         device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
         device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
 
-        tile_device.MockSubrackOn()
-        time.sleep(0.1)
-
-        with pytest.raises(tango.DevFailed, match="Component is not turned on."):
-            _ = getattr(tile_device, attribute)
-
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
+        device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
 
         assert getattr(tile_device, attribute) == initial_value
 
@@ -390,15 +385,13 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
-        time.sleep(0.1)
-
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
 
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = getattr(tile_device, device_command)(*args)
 
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         with pytest.raises(tango.DevFailed, match="NotImplementedError"):
             _ = getattr(tile_device, device_command)(*args)
@@ -443,7 +436,7 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
 
         [[result_code], [message]] = tile_device.On()
@@ -453,7 +446,7 @@ class TestMccsTileCommands:
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
         # At this point the subrack should turn the TPM on, then fire a change event.
         # so let's fake that.
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
         assert tile_device.state() == tango.DevState.ON
 
     def test_Initialise(
@@ -487,13 +480,13 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
 
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = tile_device.Initialise()
 
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         [[result_code], [message]] = tile_device.Initialise()
         assert result_code == ResultCode.OK
@@ -535,13 +528,13 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
 
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = tile_device.GetFirmwareAvailable()
 
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         firmware_available_str = tile_device.GetFirmwareAvailable()
         firmware_available = json.loads(firmware_available_str)
@@ -585,9 +578,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         assert not tile_device.isProgrammed
         bitfile = "testing/data/Vivado_test_firmware_bitfile.bit"
@@ -628,9 +621,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         assert not tile_device.isProgrammed
         invalid_bitfile_path = "this/folder/and/file/doesnt/exist.bit"
@@ -669,9 +662,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         assert tile_device.GetRegisterList() == list(
             StaticTpmSimulator.REGISTER_MAP[0].keys()
@@ -705,9 +698,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         num_values = 4
         arg = {
@@ -756,9 +749,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         arg = {
             "RegisterName": "test-reg1",
@@ -808,9 +801,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         address = 0xF
         nvalues = 10
@@ -853,9 +846,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         [[result_code], [message]] = tile_device.WriteAddress([20, 1, 2, 3])
         assert result_code == ResultCode.OK
@@ -896,9 +889,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         config_1 = {
             "CoreID": 1,
@@ -981,9 +974,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         array: list[float] = (
             [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
@@ -1024,9 +1017,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         antenna = float(2)
         complex_coefficients = [
@@ -1073,9 +1066,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         antenna = 2
         beam = 0
@@ -1135,9 +1128,9 @@ class TestMccsTileCommands:
 
         time.sleep(0.1)
 
-        tile_device.MockSubrackOn()
+        tile_device.MockTpmOff()
         time.sleep(0.1)
-        tile_device.MockTilePoweredOn()
+        tile_device.MockTpmOn()
 
         assert not tile_device.isBeamformerRunning
         args = {"StartTime": start_time, "Duration": duration}

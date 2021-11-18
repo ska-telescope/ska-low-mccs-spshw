@@ -12,13 +12,14 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
+import threading
 from typing import List, Optional, Tuple
 
 import tango
 from tango.server import attribute, command, device_property
 
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
+from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import (
     HealthState,
     PowerMode,
@@ -26,8 +27,12 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 
-from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.subrack import SubrackComponentManager, SubrackHealthModel
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
+from ska_low_mccs.subrack import (
+    SubrackComponentManager,
+    SubrackData,
+    SubrackHealthModel,
+)
 
 
 __all__ = ["MccsSubrack", "main"]
@@ -102,6 +107,10 @@ class MccsSubrack(SKABaseDevice):
 
         :return: a component manager for this device.
         """
+        # InitCommand.do() would do this too late
+        self._tpm_power_modes_lock = threading.Lock()
+        self._tpm_power_modes = [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+
         return SubrackComponentManager(
             SimulationMode.TRUE,
             TestMode.NONE,
@@ -113,7 +122,7 @@ class MccsSubrack(SKABaseDevice):
             self._component_power_mode_changed,
             self._component_fault,
             self._component_progress_changed,
-            self.are_tpms_on_changed,
+            self._tpm_power_modes_changed,
         )
 
     def init_command_objects(self: MccsSubrack) -> None:
@@ -121,7 +130,6 @@ class MccsSubrack(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, command_object) in [
-            ("IsTpmOn", self.IsTpmOnCommand),
             ("PowerOnTpm", self.PowerOnTpmCommand),
             ("PowerOffTpm", self.PowerOffTpmCommand),
             ("PowerUpTpms", self.PowerUpTpmsCommand),
@@ -154,8 +162,8 @@ class MccsSubrack(SKABaseDevice):
 
             device = self.target
 
-            device._are_tpms_on = None
-            device.set_change_event("areTpmsOn", True, False)
+            for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
+                device.set_change_event(f"tpm{tpm_number}PowerMode", True, False)
 
             # The health model updates our health, but then the base class super().do()
             # overwrites it with OK, so we need to update this again.
@@ -268,23 +276,23 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
-    def are_tpms_on_changed(
-        self: MccsSubrack, are_tpms_on: Optional[list[bool]]
+    def _tpm_power_modes_changed(
+        self: MccsSubrack, tpm_power_modes: list[ExtendedPowerMode]
     ) -> None:
         """
-        Call this method whenever power to the TPMs changes.
+        Update the power mode of a specified TPM.
 
-        It is responsible for updating the tango side of things,
-        i.e. making sure the attribute is up to date,
-        and events are pushed.
+        This is a callback provided to the component manager. The
+        component manager will call it whenever the power mode of any of
+        its TPMs changes.
 
-        :param are_tpms_on: whether each TPM is powered
+        :param tpm_power_modes: the power modes of the TPMs
         """
-        self._are_tpms_on: Optional[list[bool]]  # for typehint only
-        if self._are_tpms_on == are_tpms_on:
-            return
-        self._are_tpms_on = are_tpms_on
-        self.push_change_event("areTpmsOn", self._are_tpms_on)
+        with self._tpm_power_modes_lock:
+            for i in range(SubrackData.TPM_BAY_COUNT):
+                if self._tpm_power_modes[i] != tpm_power_modes[i]:
+                    self._tpm_power_modes[i] = tpm_power_modes[i]
+                    self.push_change_event(f"tpm{i+1}PowerMode", tpm_power_modes[i])
 
     # ----------
     # Attributes
@@ -489,19 +497,101 @@ class MccsSubrack(SKABaseDevice):
         """
         return self.component_manager.tpm_count
 
-    @attribute(dtype=(bool,), max_dim_x=256, label="Are TPMs On")
-    def areTpmsOn(self: MccsSubrack) -> tuple[bool]:
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 1 power mode",
+    )
+    def tpm1PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
-        Return whether each TPM is powered or not.
+        Return the power mode of TPM bay 1.
 
-        The main reason this attribute exists is so that individual Tile
-        devices can subscribe to change events on it. From this they can
-        figure out when the subrack has turned off/on power to their
-        TPM.
-
-        :return: whether each TPM is powered or not
+        :return: the power mode of TPM bay 1.
         """
-        return self.component_manager.are_tpms_on()
+        return self._tpm_power_modes[0]
+
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 2 power mode",
+    )
+    def tpm2PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
+        """
+        Return the power mode of TPM bay 2.
+
+        :return: the power mode of TPM bay 2.
+        """
+        return self._tpm_power_modes[1]
+
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 3 power mode",
+    )
+    def tpm3PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
+        """
+        Return the power mode of TPM bay 3.
+
+        :return: the power mode of TPM bay 3.
+        """
+        return self._tpm_power_modes[2]
+
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 4 power mode",
+    )
+    def tpm4PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
+        """
+        Return the power mode of TPM bay 4.
+
+        :return: the power mode of TPM bay 4.
+        """
+        return self._tpm_power_modes[3]
+
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 5 power mode",
+    )
+    def tpm5PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
+        """
+        Return the power mode of TPM bay 5.
+
+        :return: the power mode of TPM bay 5.
+        """
+        return self._tpm_power_modes[4]
+
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 6 power mode",
+    )
+    def tpm6PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
+        """
+        Return the power mode of TPM bay 6.
+
+        :return: the power mode of TPM bay 6.
+        """
+        return self._tpm_power_modes[5]
+
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 7 power mode",
+    )
+    def tpm7PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
+        """
+        Return the power mode of TPM bay 7.
+
+        :return: the power mode of TPM bay 7.
+        """
+        return self._tpm_power_modes[6]
+
+    @attribute(
+        dtype=ExtendedPowerMode,
+        label="TPM bay 8 power mode",
+    )
+    def tpm8PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
+        """
+        Return the power mode of TPM bay 8.
+
+        :return: the power mode of TPM bay 8.
+        """
+        return self._tpm_power_modes[7]
 
     @attribute(dtype=("DevFloat",), max_dim_x=3, label="power supply fan speed")
     def powerSupplyFanSpeeds(self: MccsSubrack) -> tuple[float]:
@@ -544,56 +634,6 @@ class MccsSubrack(SKABaseDevice):
     # --------
     # Commands
     # --------
-    class IsTpmOnCommand(BaseCommand):
-        """The command class for the IsTpmOn command."""
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.IsTpmOnCommand, argin: int
-        ) -> Optional[bool]:
-            """
-            Implement :py:meth:`.MccsSubrack.IsTpmOn` command functionality.
-
-            :param argin: the logical tpm id of the TPM to check if power is on
-
-            :return: whether the specified TPM is on or not
-            """
-            component_manager = self.target
-            try:
-                return component_manager.is_tpm_on(argin)
-            except ValueError:
-                # The subrack itself is not on. We don't want o
-                return None
-
-        def is_allowed(self: MccsSubrack.IsTpmOnCommand) -> bool:
-            """
-            Whether this command is allowed to run.
-
-            :returns: whether this command is allowed to run
-            """
-            return self.target.power_mode in [PowerMode.OFF, PowerMode.ON]
-
-    def is_IsTpmOn_allowed(self: MccsSubrack) -> bool:
-        """
-        Whether the ``IsTpmOn()`` command is allowed to be run in the current state.
-
-        :returns: whether the ``IsTpmOn()`` command is allowed to be run in the
-            current state
-        """
-        handler = self.get_command_object("IsTpmOn")
-        return handler.is_allowed()
-
-    @command(dtype_in="DevULong", dtype_out=bool)
-    def IsTpmOn(self: MccsSubrack, argin: int) -> bool:
-        """
-        Check Power up the TPM.
-
-        :param argin: the logical TPM id of the TPM to check
-
-        :return: whether the specified TPM is on or not
-        """
-        handler = self.get_command_object("IsTpmOn")
-        return handler(argin)
-
     class PowerOnTpmCommand(ResponseCommand):
         """
         The command class for the PowerOnTpm command.
@@ -894,7 +934,7 @@ class MccsSubrack(SKABaseDevice):
             self: MccsSubrack.SetSubrackFanModeCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
-            Implement py:meth:`.MccsSubrack.SetSubrackFanMode` command.
+            Implement :py:meth:`.MccsSubrack.SetSubrackFanMode` command.
 
             :param argin: a JSON-encoded dictionary of arguments
 
@@ -951,7 +991,7 @@ class MccsSubrack(SKABaseDevice):
             self: MccsSubrack.SetPowerSupplyFanSpeedCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
-            Implement py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command.
+            Implement :py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command.
 
             :param argin: a JSON-encoded dictionary of arguments
 

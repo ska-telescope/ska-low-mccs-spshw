@@ -355,11 +355,20 @@ class StationComponentManager(MccsComponentManager):
                 + list(self._tile_power_modes.values())
             )
             if all(power_mode == PowerMode.ON for power_mode in power_modes):
-                self.update_component_power_mode(PowerMode.ON)
+                evaluated_power_mode = PowerMode.ON
             elif all(power_mode == PowerMode.OFF for power_mode in power_modes):
-                self.update_component_power_mode(PowerMode.OFF)
+                evaluated_power_mode = PowerMode.OFF
             else:
-                self.update_component_power_mode(PowerMode.UNKNOWN)
+                evaluated_power_mode = PowerMode.UNKNOWN
+
+            self.logger.info(
+                "In StationComponentManager._evaluatePowerMode with:\n"
+                f"\tapiu: {self._apiu_power_mode}\n"
+                f"\tantennas: {self._antenna_power_modes}\n"
+                f"\tiles: {self._tile_power_modes}\n"
+                f"\tresult: {str(evaluated_power_mode)}"
+            )
+            self.update_component_power_mode(evaluated_power_mode)
 
     @check_communicating
     def off(

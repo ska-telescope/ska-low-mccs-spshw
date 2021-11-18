@@ -262,14 +262,14 @@ class SubarrayComponentManager(
     @check_communicating
     def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resource_spec: str,
+        argin: str,
     ) -> ResultCode:
         """
         Assign resources to this subarray.
 
         This is just for communication and health roll-up, resource management is done by controller.
 
-        :param resource_spec: a resource specification; for example
+        :param argin: a JSON encoded resource specification; for example
 
             .. code-block:: python
 
@@ -282,7 +282,7 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        resource_spec = json.loads(resource_spec)
+        resource_spec = json.loads(argin)
 
         station_fqdns: Sequence[str] = resource_spec.get("stations", [])
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
@@ -503,7 +503,6 @@ class SubarrayComponentManager(
         result_code = ResultCode.OK
         for (station_id, configuration) in station_configuration.items():
             station_fqdn = f"low-mccs/station/{station_id:03d}"
-            print(f"RCL: self._stations={self._stations}")
             station_proxy = self._stations[station_fqdn]
             proxy_result_code = station_proxy.configure(configuration)
             if proxy_result_code == ResultCode.FAILED:

@@ -94,7 +94,8 @@ class _TileProxy(DeviceComponentManager):
         Overridden here to write initial tile configuration values
         relative to this station.
         """
-        super()._connect_to_device()
+        connect_command = self.ConnectToDevice(target=self)
+        connect_command()
         self._connecting = True
 
     def _device_state_changed(

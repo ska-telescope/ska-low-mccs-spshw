@@ -11,7 +11,6 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 from typing import Any, List, Optional, Tuple
-import json
 
 import tango
 from tango.server import attribute, command
@@ -429,7 +428,7 @@ class MccsSubarray(SKASubarray):
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def AssignResources(self: MccsSubarray, argin):
+    def AssignResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
         """
         Assign resources to this subarray.
 
@@ -441,7 +440,7 @@ class MccsSubarray(SKASubarray):
         # TODO Call assign resources directly - DON'T USE LRC - for now.
         handler = self.get_command_object("AssignResources")
         (rc, desc) = handler(argin)
-        return [[rc], [desc]]
+        return ([rc], [desc])
 
     class ReleaseResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand
@@ -595,7 +594,8 @@ class MccsSubarray(SKASubarray):
             )
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.ConfigureCommand, argin: str
+            self: MccsSubarray.ConfigureCommand,
+            argin: dict,
         ) -> tuple[ResultCode, str]:
             """
             Implement the functionality of the configure command.
@@ -622,8 +622,7 @@ class MccsSubarray(SKASubarray):
                 information purpose only.
             """
             component_manager = self.target
-            config_spec = json.loads(argin)
-            result_code = component_manager.configure(config_spec)
+            result_code = component_manager.configure(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     class ScanCommand(SKASubarray.ScanCommand):

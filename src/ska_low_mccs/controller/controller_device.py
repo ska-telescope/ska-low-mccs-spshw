@@ -192,8 +192,6 @@ class MccsController(SKABaseDevice):
                     if device.get_state() == tango.DevState.ON:
                         message = "Controller On command completed OK"
                         return (ResultCode.OK, message)
-                    else:
-                        print(f"RCLx: Waiting for controller ON...{elapsed_time}")
                     time.sleep(period)
                     elapsed_time += period
                 message = (
@@ -203,7 +201,7 @@ class MccsController(SKABaseDevice):
 
             # Wait for conditions on component manager to unblock
             result_code, message = wait_until_on(self.target, timeout=2.0)
-            self.logger.info(message)
+            self.target.logger.info(message)
             return (result_code, message)
 
     class OffCommand(SKABaseDevice.OffCommand):
@@ -211,7 +209,7 @@ class MccsController(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsController.OffCommand,
-        ):
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for Off() command functionality.
 
@@ -223,7 +221,9 @@ class MccsController(SKABaseDevice):
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, "Controller failed to initiate Off command")
 
-            def wait_until_off(device, timeout, period=0.5) -> List[ResultCode, str]:
+            def wait_until_off(
+                device: MccsDeviceProxy, timeout: float, period: float = 0.5
+            ) -> tuple[ResultCode, str]:
                 """
                 Wait until the device is off.
 
@@ -248,7 +248,7 @@ class MccsController(SKABaseDevice):
 
             # Wait for conditions on component manager to unblock
             result_code, message = wait_until_off(self.target, timeout=10.0)
-            self.logger.info(message)
+            self.target.logger.info(message)
             return (result_code, message)
 
     # ----------
@@ -416,10 +416,10 @@ class MccsController(SKABaseDevice):
                 )
             )
         """
-        # TODO Call Allocate directly - DON'T USE LRC - for now.
+        # TODO RCL Call Allocate directly - DON'T USE LRC - for now.
         handler = self.get_command_object("Allocate")
         (result_code, message) = handler(argin)
-        return [[result_code], [message]]
+        return ([result_code], [message])
 
     class AllocateCommand(ResponseCommand):
         """

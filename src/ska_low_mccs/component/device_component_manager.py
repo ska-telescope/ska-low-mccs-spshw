@@ -168,7 +168,7 @@ class DeviceComponentManager(MccsComponentManager):
                 assert self.target._proxy is not None  # for the type checker
                 ([result_code], _) = self.target._proxy.On()  # Fire and forget
             except TypeError as type_error:
-                self._logger.fatal(
+                self.target._logger.fatal(
                     f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
                 )
                 result_code = ResultCode.FAILED
@@ -204,7 +204,7 @@ class DeviceComponentManager(MccsComponentManager):
                 assert self.target._proxy is not None  # for the type checker
                 ([result_code], _) = self.target._proxy.Off()  # Fire and forget
             except TypeError as type_error:
-                self._logger.fatal(
+                self.target._logger.fatal(
                     f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
                 )
                 result_code = ResultCode.FAILED

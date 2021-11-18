@@ -199,7 +199,6 @@ class TestStationComponentManager:
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
         time.sleep(0.1)
-        time.sleep(4.1)
 
         def _show_state_of_devices(
             devices: list[MccsDeviceProxy],

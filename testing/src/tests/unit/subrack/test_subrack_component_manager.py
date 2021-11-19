@@ -16,6 +16,7 @@ from typing import Any, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
+from ska_tango_base.commands import ResultCode
 
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
@@ -600,7 +601,7 @@ class TestSubrackComponentManager:
         assert subrack_component_manager.turn_off_tpm(tpm_id) is None
         component_tpm_power_changed_callback.assert_not_called()
 
-        assert subrack_component_manager.off()
+        assert subrack_component_manager.off() == ResultCode.OK
         component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
         assert subrack_component_manager.power_mode == PowerMode.OFF
 

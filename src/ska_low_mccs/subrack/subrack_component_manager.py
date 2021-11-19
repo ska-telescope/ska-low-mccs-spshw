@@ -672,10 +672,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        result_code = super().off()
         cast(
             SwitchingSubrackComponentManager, self._hardware_component_manager
         ).turn_off_tpms()
+        result_code = super().off()
         return result_code
 
     @check_communicating

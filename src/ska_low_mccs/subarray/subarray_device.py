@@ -260,6 +260,7 @@ class MccsSubarray(SKASubarray):
             to this subarray
         """
         if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
+            print(f"RCL: _resources_changed! current obsState={self.obsState}")
             self.obs_state_model.perform_action("component_resourced")
         else:
             self.obs_state_model.perform_action("component_unresourced")
@@ -440,6 +441,7 @@ class MccsSubarray(SKASubarray):
         # TODO Call assign resources directly - DON'T USE LRC - for now.
         handler = self.get_command_object("AssignResources")
         (rc, desc) = handler(argin)
+        print(f"RCL: def AssignResources completes with: rc={rc} desc={desc}")
         return ([rc], [desc])
 
     class ReleaseResourcesCommand(

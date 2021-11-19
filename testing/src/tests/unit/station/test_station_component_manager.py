@@ -255,14 +255,20 @@ class TestStationComponentManager:
         station_component_manager._apiu_proxy._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
+        time.sleep(0.5)
         for tile_proxy in station_component_manager._tile_proxies:
+            time.sleep(0.1)
             tile_proxy._device_state_changed(
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
+        time.sleep(0.5)
         for antenna_proxy in station_component_manager._antenna_proxies:
+            time.sleep(0.1)
             antenna_proxy._device_state_changed(
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
+        # Allow time for component manager state to propagate
+        time.sleep(0.5)
 
         station_component_manager.apply_pointing(pointing_delays)
         for tile_fqdn in tile_fqdns:

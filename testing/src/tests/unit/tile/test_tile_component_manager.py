@@ -19,7 +19,7 @@ import pytest_mock
 from _pytest.fixtures import SubRequest
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import SimulationMode, TestMode
+from ska_tango_base.control_model import SimulationMode, TestMode, PowerMode
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.tile import (
@@ -411,10 +411,6 @@ class TestStaticSimulatorCommon:
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         assert getattr(tile, attribute_name) == expected_value
 
     @pytest.mark.parametrize(
@@ -452,10 +448,6 @@ class TestStaticSimulatorCommon:
             any type, but the test of the attribute is a simple "=="
             equality test.
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         assert getattr(tile, attribute_name) == initial_value
 
         for value in values_to_write:
@@ -520,10 +512,6 @@ class TestStaticSimulatorCommon:
         :param command_name: the name of the command under test
         :param num_args: the number of args the command takes
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         args = [mocker.Mock()] * num_args
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)
@@ -542,10 +530,6 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         assert not tile.is_programmed
         tile.initialise()
         assert tile.is_programmed
@@ -571,10 +555,6 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         :param mocker: fixture that wraps unittest.mock
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
         tile.download_firmware(mock_bitfile)
@@ -701,10 +681,6 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         assert not tile.is_beamformer_running
         tile.start_beamformer()
         assert tile.is_beamformer_running
@@ -729,11 +705,6 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
-
         assert tile.get_40g_configuration(-1, 0) == []
         assert tile.get_40g_configuration(9) is None
 
@@ -889,10 +860,6 @@ class TestDynamicSimulatorCommon:
         :param tile: the tile class object under test.
         :param attribute_name: the name of the attribute under test
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         attribute_value = getattr(tile, attribute_name)
         assert attribute_value is not None
         time.sleep(1.1)
@@ -936,10 +903,6 @@ class TestDynamicSimulatorCommon:
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
-        # For the TileComponentManager we need to satisfy the decorators
-        if type(tile) == TileComponentManager:
-            tile.start_communicating()
-            tile.update_component_power_mode(PowerMode.ON)
         assert getattr(tile, attribute_name) == expected_value
 
 

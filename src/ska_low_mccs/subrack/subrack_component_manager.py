@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Tuple
+from typing import Any, Callable, cast, Tuple, Optional
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode

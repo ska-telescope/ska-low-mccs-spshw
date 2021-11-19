@@ -166,49 +166,6 @@ def tile_power_mode_changed_callback(subrack_tpm_id: int) -> MockChangeEventCall
 
 
 @pytest.fixture()
-def tile_subrack_proxy(
-    tango_harness: TangoHarness,
-    subrack_fqdn: str,
-    subrack_tpm_id: int,
-    logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    tile_power_mode_changed_callback: MockCallable,
-) -> _SubrackProxy:
-    """
-    Return an tile subrack proxy for testing.
-
-    This is a pytest fixture.
-
-    :param tango_harness: a test harness for MCCS tango devices
-    :param subrack_fqdn: FQDN of the tile's subrack device
-    :param subrack_tpm_id: the id of the tile in the subrack device
-    :param logger: a loger for the tile component manager to use
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be called
-        when the status of the communications channel between the
-        component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be called
-        when the component power mode changes
-    :param tile_power_mode_changed_callback: the callback to be called
-        when the power mode of an antenna changes
-
-    :return: an tile subrack proxy
-    """
-    return _SubrackProxy(
-        subrack_fqdn,
-        subrack_tpm_id,
-        logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        tile_power_mode_changed_callback,
-    )
-
-
-@pytest.fixture()
 def tpm_ip() -> str:
     """
     Return the IP address of the TPM.

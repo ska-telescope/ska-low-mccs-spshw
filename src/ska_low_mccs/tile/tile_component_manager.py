@@ -446,6 +446,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
             if communicating:
                 self.start_communicating()
 
+
 class TileComponentManager(MccsComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
@@ -526,7 +527,6 @@ class TileComponentManager(MccsComponentManager):
             self.update_component_power_mode,
             self.update_component_fault,
             logger,
-            # TODO RCL: May need push_change_event injected in?
         )
 
         super().__init__(
@@ -600,7 +600,13 @@ class TileComponentManager(MccsComponentManager):
         # callback is called, not when it is registered.
         self._tpm_component_manager.stop_communicating()
 
-    @enqueue
+    # TODO RCL: Convert this to a LRC. This doesn't need to be done right now.
+    #           This needs an instantitation of a new class derived from
+    #           DeviceComponentManager that provides its own message queue.
+    #           That allows the proxy call to other Tango devices to be queued
+    #           rather than blocking until the call to the Tango device has been
+    #           issued and queued in that device. This becomes increasing
+    #           important when we have many Tango devices.
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """
         Establish communication with the subrack, then start monitoring.
@@ -659,7 +665,8 @@ class TileComponentManager(MccsComponentManager):
             CommunicationStatus.DISABLED
         )
 
-    @enqueue
+    # TODO RCL: Convert this to a LRC
+    # @enqueue
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], [message]) = self._subrack_proxy.PowerOffTpm(
@@ -668,7 +675,8 @@ class TileComponentManager(MccsComponentManager):
         # TODO better handling of result code and exceptions.
         return result_code
 
-    @enqueue
+    # TODO RCL: Convert this to a LRC
+    # @enqueue
     def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], [message]) = self._subrack_proxy.PowerOnTpm(

@@ -30,6 +30,7 @@
 !!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_NO_SUPPLY]: report_tpm_no_power_supply_when_tpm_communication_disabled
 !!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_when_tpm_communication_disabled
 !!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_SAYS_TPM_ON]: report_tpm_on_and_establish_tpm_communication
+!!python/tuple [ONLINE, ESTABLISHED, UNKNOWN, DISABLED, SUBRACK_COMMS_ESTABLISHED]: do_nothing  # we already knew that
 !!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, DESIRE_OFF]: do_nothing  # already off (because subrack is off)
 !!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, DESIRE_ON]: set_desired_on
 !!python/tuple [ONLINE, ESTABLISHED, NO_SUPPLY, DISABLED, DESIRE_OFFLINE]: stop_communicating_when_tpm_communication_not_established

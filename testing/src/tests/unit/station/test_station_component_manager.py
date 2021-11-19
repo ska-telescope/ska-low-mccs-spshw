@@ -211,15 +211,10 @@ class TestStationComponentManager:
             for device in devices:
                 print(f"Device: {device.name} = {device.state()}")
 
-        devices = []
-        for tile_proxy in station_component_manager._tile_proxies:
-            devices.append(tile_proxy._proxy)
-        _show_state_of_devices(devices)
-
         for logical_tile_id, tile_fqdn in enumerate(tile_fqdns):
             tile_device_proxy = MccsDeviceProxy(tile_fqdn, logger)
             # TODO RCL: We have an issue here because nothing has written to
-            #      tile_device_proxy.stationId and the comparison fails     
+            #      tile_device_proxy.stationId and the comparison fails
             assert tile_device_proxy.stationId == station_id
             assert tile_device_proxy.logicalTileId == logical_tile_id
 

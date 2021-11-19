@@ -87,16 +87,27 @@ class _TileProxy(DeviceComponentManager):
             health_changed_callback,
         )
 
-    def _connect_to_device(self: _TileProxy) -> None:
+    class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
         """
-        Establish communication with the component, then start monitoring.
+        General connection command class.
 
-        Overridden here to write initial tile configuration values
-        relative to this station.
+        Class that can be overridden by a derived class or instantiated
+        at the DeviceComponentManager level.
         """
-        connect_command = self.ConnectToDevice(target=self)
-        connect_command()
-        self._connecting = True
+        def do(  # type: ignore[override]
+            self: _TileProxy.ConnectToDevice,
+        ) -> ResultCode:
+            """
+            Establish communication with the component, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :return: a result code
+            """
+            self.target._connecting = True
+            result_code = super().do()
+            return result_code
 
     def _device_state_changed(
         self: _TileProxy,

@@ -90,11 +90,11 @@ class DeviceComponentManager(MccsComponentManager):
         # Enqueue the connect command
         _ = self.enqueue(connect_command)
 
-    class ConnectToDevice(BaseCommand):
+    class ConnectToDeviceBase(BaseCommand):
         """Base command class for connection to be enqueued."""
 
         def do(  # type: ignore[override]
-            self: DeviceComponentManager.ConnectToDevice,
+            self: DeviceComponentManager.ConnectToDeviceBase,
         ) -> ResultCode:
             """
             Establish communication with the component, then start monitoring.
@@ -129,6 +129,15 @@ class DeviceComponentManager(MccsComponentManager):
                     "adminMode", target._device_admin_mode_changed
                 )
             return ResultCode.OK
+
+    class ConnectToDevice(ConnectToDeviceBase):
+        """
+        General connection command class.
+
+        Class that can be overridden by a derived class or instantiated
+        at the DeviceComponentManager level.
+        """
+        ...
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
@@ -393,15 +402,28 @@ class ObsDeviceComponentManager(DeviceComponentManager):
             health_changed_callback,
         )
 
-    def _connect_to_device(self: ObsDeviceComponentManager) -> None:
+    class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
         """
-        Establish communication with the component, then start monitoring.
+        General connection command class.
+
+        Class that can be overridden by a derived class or instantiated
+        at the DeviceComponentManager level.
         """
-        # TODO RCL: Currently synchronous
-        connect_command = self.ConnectToDevice(target=self)
-        connect_command()
-        assert self._proxy is not None  # for the type checker
-        self._proxy.add_change_event_callback("obsState", self._obs_state_changed)
+        def do(  # type: ignore[override]
+            self: ObsDeviceComponentManager.ConnectToDevice,
+        ) -> ResultCode:
+            """
+            Establish communication with the component, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :return: a result code
+            """
+            result_code = super().do()
+            assert self.target._proxy is not None  # for the type checker
+            self.target._proxy.add_change_event_callback("obsState", self.target._obs_state_changed)
+            return result_code
 
     def _obs_state_changed(
         self: ObsDeviceComponentManager,

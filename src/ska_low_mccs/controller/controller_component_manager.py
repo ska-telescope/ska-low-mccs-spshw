@@ -18,8 +18,6 @@ from typing import Callable, Hashable, Optional, Iterable
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
-from ska_tango_base.base.task_queue_manager import QueueManager
-from ska_low_mccs.utils import threadsafe
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -131,6 +129,7 @@ class _StationProxy(DeviceComponentManager):
 
 class _SubrackProxy(DeviceComponentManager):
     """A controller's proxy to a subrack."""
+
     ...
 
 

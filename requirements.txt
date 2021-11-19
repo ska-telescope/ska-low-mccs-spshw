@@ -8,32 +8,5 @@ pyfabil-1.0-py3-none-any.whl
 pytango >= 9.3.3
 requests
 scipy
-# ska-tango-base == 0.11.3
 ska-tango-base == 0.12.0
-#
-# Starting point on main = d7aa5acb
-# git+https://gitlab.com/ska-telescope/ska-tango-base@d7aa5acb#egg=ska-tango-base
-#
-# MR for Johan modification - subsequently backed-out
-# git+https://gitlab.com/ska-telescope/ska-tango-base@c45e0ca46669ffdc3c61fc767127533fe6e7d9ec#egg=ska-tango-base
-#
-# 2nd MR from Johan for a fix to events
-# git+https://gitlab.com/ska-telescope/ska-tango-base@a5523737#egg=ska-tango-base
-#
-# OK, let's use main...
-# git+https://gitlab.com/ska-telescope/ska-tango-base@main#egg=ska-tango-base
-#
-# OK, the latest MR - branch sar-286_lrc_one_subarry_command
-# git+https://gitlab.com/ska-telescope/ska-tango-base@7159f3d3#egg=ska-tango-base
-# FAILED TO FIND THIS VERSION! Command errored out with exit status 1:
-# git checkout -q 7159f3d3 Check the logs for full command output.
-#
-# Now try latest on branch sar-286_lrc_one_subarry_command
-# git+https://gitlab.com/ska-telescope/ska-tango-base@main#egg=ska-tango-base
-#
-# Latest code from Karoo - containing EnqueueSuspend
-# git+https://gitlab.com/ska-telescope/ska-tango-base@sar_302-POC_await_sub_device_state#egg=ska-tango-base
-#
-# Try __init__.py changes
-# git+https://gitlab.com/ska-telescope/ska-tango-base@sar-303-restore-lrc-docs#egg=ska-tango-base
 transitions

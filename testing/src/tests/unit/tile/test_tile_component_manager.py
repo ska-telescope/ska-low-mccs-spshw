@@ -19,7 +19,7 @@ import pytest_mock
 from _pytest.fixtures import SubRequest
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import SimulationMode, TestMode, PowerMode
+from ska_tango_base.control_model import SimulationMode, TestMode
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.tile import (

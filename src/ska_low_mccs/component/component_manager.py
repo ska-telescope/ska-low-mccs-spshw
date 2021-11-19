@@ -16,7 +16,7 @@ from typing_extensions import Protocol
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 from ska_tango_base.base import BaseComponentManager
-from ska_tango_base.base.task_queue_manager import QueueManager
+from ska_tango_base.base.task_queue_manager import QueueManager  # type: ignore
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 

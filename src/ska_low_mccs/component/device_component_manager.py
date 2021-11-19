@@ -137,6 +137,7 @@ class DeviceComponentManager(MccsComponentManager):
         Class that can be overridden by a derived class or instantiated
         at the DeviceComponentManager level.
         """
+
         ...
 
     def stop_communicating(self: DeviceComponentManager) -> None:
@@ -409,6 +410,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         Class that can be overridden by a derived class or instantiated
         at the DeviceComponentManager level.
         """
+
         def do(  # type: ignore[override]
             self: ObsDeviceComponentManager.ConnectToDevice,
         ) -> ResultCode:
@@ -422,7 +424,9 @@ class ObsDeviceComponentManager(DeviceComponentManager):
             """
             result_code = super().do()
             assert self.target._proxy is not None  # for the type checker
-            self.target._proxy.add_change_event_callback("obsState", self.target._obs_state_changed)
+            self.target._proxy.add_change_event_callback(
+                "obsState", self.target._obs_state_changed
+            )
             return result_code
 
     def _obs_state_changed(

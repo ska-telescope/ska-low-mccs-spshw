@@ -18,7 +18,6 @@ import tango
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
-from ska_tango_base.base.task_queue_manager import QueueManager
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -94,6 +93,7 @@ class _TileProxy(DeviceComponentManager):
         Class that can be overridden by a derived class or instantiated
         at the DeviceComponentManager level.
         """
+
         def do(  # type: ignore[override]
             self: _TileProxy.ConnectToDevice,
         ) -> ResultCode:

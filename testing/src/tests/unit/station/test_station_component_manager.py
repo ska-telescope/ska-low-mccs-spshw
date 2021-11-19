@@ -200,17 +200,6 @@ class TestStationComponentManager:
             )
         time.sleep(0.1)
 
-        def _show_state_of_devices(
-            devices: list[MccsDeviceProxy],
-        ) -> None:
-            """
-            Show the state of the requested devices.
-
-            :param devices: list of MCCS device proxies
-            """
-            for device in devices:
-                print(f"Device: {device.name} = {device.state()}")
-
         for logical_tile_id, tile_fqdn in enumerate(tile_fqdns):
             tile_device_proxy = MccsDeviceProxy(tile_fqdn, logger)
             # TODO RCL: We have an issue here because nothing has written to

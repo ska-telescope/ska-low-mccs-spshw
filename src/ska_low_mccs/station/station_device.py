@@ -179,7 +179,12 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO RCL: return OK for now to be consistent with base classes
+            # It's fine to complete this long-running command here
+            # (returning ResultCode.ON), even though the component manager
+            # may not actually be finished turning everything on.
+            # The completion of the original On command to MccsController
+            # is waiting for the various power mode callbacks to be received
+            # rather than completion of the various long-running commands.
             _ = self.target.on()
             message = "Station On command completed OK"
             return (ResultCode.OK, message)

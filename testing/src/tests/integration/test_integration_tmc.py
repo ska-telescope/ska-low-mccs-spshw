@@ -518,56 +518,54 @@ class TestMccsIntegrationTmc:
         assert result_code == ResultCode.QUEUED
         assert "ConfigureCommand" in unique_id
 
-        if True:
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.CONFIGURING
-            )
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.READY
-            )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.CONFIGURING
+        )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.READY
+        )
 
-            ([result_code], [unique_id]) = call_with_json(
-                subarray_1.Scan, scan_id=1, start_time=4
-            )
-            assert result_code == ResultCode.QUEUED
-            assert "ScanCommand" in unique_id
+        ([result_code], [unique_id]) = call_with_json(
+            subarray_1.Scan, scan_id=1, start_time=4
+        )
+        assert result_code == ResultCode.QUEUED
+        assert "ScanCommand" in unique_id
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.SCANNING
-            )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.SCANNING
+        )
 
-            ([result_code], [unique_id]) = subarray_1.EndScan()
-            assert result_code == ResultCode.QUEUED
-            assert "EndScanCommand" in unique_id
+        ([result_code], [unique_id]) = subarray_1.EndScan()
+        assert result_code == ResultCode.QUEUED
+        assert "EndScanCommand" in unique_id
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.READY
-            )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.READY
+        )
 
-            ([result_code], [unique_id]) = subarray_1.End()
-            assert result_code == ResultCode.QUEUED
-            assert "EndCommand" in unique_id
+        ([result_code], [unique_id]) = subarray_1.End()
+        assert result_code == ResultCode.QUEUED
+        assert "EndCommand" in unique_id
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.IDLE
-            )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.IDLE
+        )
 
-        # TODO RCL: Need to get Release as a LRC - currently short
-        if False:
-            ([result_code], [unique_id]) = call_with_json(
-                controller.Release,
-                subarray_id=1,
-                release_all=True,
-            )
-            assert result_code == ResultCode.QUEUED
-            assert "ReleaseCommand" in unique_id
+        # TODO RCL: Currently short running, but calls a LRC in Subarray!
+        ([result_code], [message]) = call_with_json(
+            controller.Release,
+            subarray_id=1,
+            release_all=True,
+        )
+        assert result_code == ResultCode.QUEUED
+        assert "Release command queued" in message
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.RESOURCING
-            )
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.EMPTY
-            )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.RESOURCING
+        )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.EMPTY
+        )
 
         ([result_code], [unique_id]) = controller.Off()
         assert result_code == ResultCode.QUEUED

@@ -396,10 +396,8 @@ class ObsDeviceComponentManager(DeviceComponentManager):
     def _connect_to_device(self: ObsDeviceComponentManager) -> None:
         """
         Establish communication with the component, then start monitoring.
-
-        This contains the actual communication logic that is enqueued to
-        be run asynchronously.
         """
+        # TODO RCL: Currently synchronous
         connect_command = self.ConnectToDevice(target=self)
         connect_command()
         assert self._proxy is not None  # for the type checker

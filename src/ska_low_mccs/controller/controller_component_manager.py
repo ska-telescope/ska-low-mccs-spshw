@@ -88,44 +88,6 @@ class _StationProxy(DeviceComponentManager):
             health_changed_callback,
         )
 
-    @threadsafe
-    def update_component_power_mode(
-        self: _StationProxy, power_mode: Optional[PowerMode]
-    ) -> None:
-        """
-        Update the power mode, calling callbacks as required.
-
-        This is a helper method for use by subclasses.
-
-        :param power_mode: the new power mode of the component. This can
-            be None, in which case the internal value is updated but no
-            callback is called. This is useful to ensure that the
-            callback is called next time a real value is pushed.
-        """
-        if self._power_mode != power_mode:
-            self._power_mode = power_mode
-            if (
-                self._component_power_mode_changed_callback is not None
-                and power_mode is not None
-            ):
-                self._component_power_mode_changed_callback(power_mode)
-
-    def create_queue_manager(self: _StationProxy) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
-        )
-
     def allocate(
         self: _StationProxy, subarray_fqdn: str, channel_blocks: int
     ) -> ResultCode:
@@ -169,42 +131,11 @@ class _StationProxy(DeviceComponentManager):
 
 class _SubrackProxy(DeviceComponentManager):
     """A controller's proxy to a subrack."""
-
-    def create_queue_manager(self: _SubrackProxy) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
-        )
+    ...
 
 
 class _SubarrayProxy(DeviceComponentManager):
     """A controller's proxy to a subarray."""
-
-    def create_queue_manager(self: _SubarrayProxy) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
-        )
 
     @check_communicating
     @check_on
@@ -272,22 +203,6 @@ class _SubarrayProxy(DeviceComponentManager):
 class _SubarrayBeamProxy(DeviceComponentManager):
     """A controller's proxy to a subarray beam."""
 
-    def create_queue_manager(self: _SubarrayBeamProxy) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
-        )
-
     @check_communicating
     @check_on
     def write_station_ids(
@@ -314,22 +229,6 @@ class _SubarrayBeamProxy(DeviceComponentManager):
 
 class _StationBeamProxy(DeviceComponentManager):
     """A controller's proxy to a station beam."""
-
-    def create_queue_manager(self: _StationBeamProxy) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
-        )
 
     @check_communicating
     @check_on
@@ -566,22 +465,6 @@ class ControllerComponentManager(MccsComponentManager):
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
-        )
-
-    def create_queue_manager(self: ControllerComponentManager) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
         )
 
     def start_communicating(self: ControllerComponentManager) -> None:

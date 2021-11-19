@@ -303,11 +303,27 @@ class TestMccsIntegration:
         )
         assert result_code == ResultCode.OK
 
-        # TODO: uncomment when this is fixed.
+        # TODO RCL: uncomment when the underlying obs state is fixed.
         # assert subarray_1.obsState.name == "IDLE"
 
         # check that station_1 and only station_1 is allocated
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
+        assert list(station_fqdns) == [station_1.dev_name()]
+        assert subarray_2.stationFQDNs is None
+
+        # allocating station_1 to subarray 2 should fail, because it is already
+        # allocated to subarray 1
+        with pytest.raises(tango.DevFailed, match="Cannot allocate resources"):
+            _ = call_with_json(
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[[1]],
+                subarray_beam_ids=[1],
+                channel_blocks=[2],
+            )
+
+        # check no side-effects
+        station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
         assert list(station_fqdns) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
 
@@ -316,22 +332,6 @@ class TestMccsIntegration:
         #       prevent any further calls to subarray working correctly.
         #       Technical debt: Fix this later.
         if False:
-            # allocating station_1 to subarray 2 should fail, because it is already
-            # allocated to subarray 1
-            with pytest.raises(tango.DevFailed, match="Cannot allocate resources"):
-                _ = call_with_json(
-                    controller.Allocate,
-                    subarray_id=2,
-                    station_ids=[[1]],
-                    subarray_beam_ids=[1],
-                    channel_blocks=[2],
-                )
-
-            # check no side-effects
-            station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
-            assert list(station_fqdns) == [station_1.dev_name()]
-            assert subarray_2.stationFQDNs is None
-
             # allocating stations 1 and 2 to subarray 1 should succeed,
             # because the already allocated station is allocated to the same
             # subarray, BUT we must remember that the subarray cannot reallocate

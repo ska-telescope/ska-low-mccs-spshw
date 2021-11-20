@@ -142,6 +142,12 @@ class TileOrchestrator:
     RULES_PATH = "src/ska_low_mccs/tile/orchestration_rules.yaml"
     """Path to the rules file that specifies behaviour of this choreographer."""
 
+    # Do this slow I/O once for the whole class, instead of doing it every time we
+    # initialise an instance.
+    with open(RULES_PATH, "r") as stream:
+        RULES = yaml.load(stream, Loader=yaml.Loader) or {}
+        # we've no logger so there's no point catching any exceptions.
+
     def __init__(
         self: TileOrchestrator,
         start_communicating_with_subrack_callback: Callable[[], None],
@@ -152,7 +158,6 @@ class TileOrchestrator:
         turn_tpm_on_callback: Callable[[], Any],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         power_mode_changed_callback: Callable[[Optional[PowerMode]], None],
-        fault_callback: Callable[[Optional[bool]], None],
         logger: logging.Logger,
         _initial_state: Optional[StateTupleType] = None,
     ) -> None:
@@ -176,15 +181,10 @@ class TileOrchestrator:
             communication between the component manager and its TPM
         :param power_mode_changed_callback: callback to be called in
             order to indicate a change in the power mode of the TPM
-        :param fault_callback: callback to be called in order to
-            indicate a change in the fault status of the TPM
         :param logger: a logger to be used by this orchestrator.
         :param _initial_state: set the initial state of this tile
             orchestrator. This is provided for unit testing purposes
             and should not be used outside of unit tests.
-
-        :raises yaml.YAMLError: if the configuration couldn't be loaded
-            from file.
         """
         self.__lock = threading.RLock()
 
@@ -202,7 +202,6 @@ class TileOrchestrator:
             communication_status_changed_callback
         )
         self._power_mode_changed_callback = power_mode_changed_callback
-        self._fault_callback = fault_callback
 
         self._logger = logger
 
@@ -227,20 +226,11 @@ class TileOrchestrator:
             else CommunicationStatus.DISABLED
         )
 
-        with open(self.RULES_PATH, "r") as stream:
-            try:
-                rules = yaml.load(stream, Loader=yaml.Loader) or {}
-            except yaml.YAMLError as exception:
-                self._logger.error(
-                    f"Tile orchestrator could not load configuration: {exception}."
-                )
-                raise
-
         self._decision_table: dict[
             StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]
         ] = {}
 
-        for state, actions in rules.items():
+        for state, actions in self.RULES.items():
             action_calls = [getattr(self, f"_{action}") for action in actions]
             if len(state) == 2:
                 self._decision_table[

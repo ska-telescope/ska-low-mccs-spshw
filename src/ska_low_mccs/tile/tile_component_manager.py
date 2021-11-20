@@ -532,7 +532,6 @@ class TileComponentManager(MessageQueueComponentManager):
             self._turn_on_tpm,
             self.update_communication_status,
             self.update_component_power_mode,
-            self.update_component_fault,
             logger,
         )
 

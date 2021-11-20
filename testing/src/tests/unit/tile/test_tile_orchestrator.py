@@ -495,7 +495,6 @@ class TestTileOrchestrator:
             callbacks["turn_tpm_on"],
             callbacks["communication_status_changed"],
             callbacks["component_power_mode_changed"],
-            callbacks["component_fault"],
             logger,
             _initial_state=state,
         )

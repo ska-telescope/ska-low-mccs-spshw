@@ -65,6 +65,7 @@ def obs_state_changed_callback_factory(
 
     return _factory
 
+
 @pytest.fixture()
 def controller_device_state_changed_callback(
     state_changed_callback_factory: Callable[[], MockChangeEventCallback],

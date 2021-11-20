@@ -303,9 +303,7 @@ class TestMccsIntegration:
         # crossed.
         time.sleep(0.1)
 
-        subarray_1_obs_state_changed_callback.assert_last_change_event(
-            ObsState.EMPTY
-        )
+        subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.EMPTY)
         assert subarray_1.obsState.name == "EMPTY"
 
         # check initial state
@@ -322,9 +320,7 @@ class TestMccsIntegration:
         )
         assert result_code == ResultCode.OK
 
-        subarray_1_obs_state_changed_callback.assert_last_change_event(
-            ObsState.IDLE
-        )
+        subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.IDLE)
         assert subarray_1.obsState.name == "IDLE"
 
         # check that station_1 and only station_1 is allocated

@@ -386,7 +386,23 @@ class TestStaticSimulatorCommon:
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
-        (("current", StaticTpmSimulator.CURRENT),),
+        (
+            ("current", StaticTpmSimulator.CURRENT),
+            ("voltage", StaticTpmSimulator.VOLTAGE),
+            ("board_temperature", StaticTpmSimulator.BOARD_TEMPERATURE),
+            ("fpga1_temperature", StaticTpmSimulator.FPGA1_TEMPERATURE),
+            ("fpga2_temperature", StaticTpmSimulator.FPGA2_TEMPERATURE),
+            ("adc_rms", StaticTpmSimulator.ADC_RMS),
+            ("fpgas_time", StaticTpmSimulator.FPGAS_TIME),
+            (
+                "current_tile_beamformer_frame",
+                StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+            ),
+            ("pps_delay", StaticTpmSimulator.PPS_DELAY),
+            ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
+            ("arp_table", StaticTpmSimulator.ARP_TABLE),
+            ("register_list", list(StaticTpmSimulator.REGISTER_MAP[0].keys())),
+        ),
     )
     def test_read_attribute(
         self: TestStaticSimulatorCommon,

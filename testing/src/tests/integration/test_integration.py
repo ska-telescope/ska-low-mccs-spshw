@@ -475,9 +475,7 @@ class TestMccsIntegration:
             channel_blocks=[1],
         )
         assert result_code == ResultCode.OK
-
-        # TODO: uncomment when this is fixed.
-        # assert subarray_1.obsState.name == "IDLE"
+        assert subarray_1.obsState.name == "IDLE"
 
         # allocate station 2 to subarray 2
         ([result_code], [_]) = call_with_json(

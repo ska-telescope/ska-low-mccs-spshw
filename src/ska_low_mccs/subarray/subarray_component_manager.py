@@ -262,14 +262,14 @@ class SubarrayComponentManager(
     @check_communicating
     def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        argin: str,
+        resource_spec: dict,
     ) -> ResultCode:
         """
         Assign resources to this subarray.
 
         This is just for communication and health roll-up, resource management is done by controller.
 
-        :param argin: a JSON encoded resource specification; for example
+        :param resource_spec: resource specification; for example
 
             .. code-block:: python
 
@@ -282,8 +282,6 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        resource_spec = json.loads(argin)
-
         station_fqdns: Sequence[str] = resource_spec.get("stations", [])
         subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
         station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])

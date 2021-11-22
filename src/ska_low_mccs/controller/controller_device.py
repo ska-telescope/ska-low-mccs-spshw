@@ -408,7 +408,6 @@ class MccsController(SKABaseDevice):
                 )
             )
         """
-        # TODO RCL Call Allocate directly - DON'T USE LRC - for now.
         handler = self.get_command_object("Allocate")
         (result_code, message) = handler(argin)
         return ([result_code], [message])

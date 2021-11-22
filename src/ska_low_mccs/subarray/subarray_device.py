@@ -11,6 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 from typing import Any, List, Optional, Tuple
+import json
 
 import tango
 from tango.server import attribute, command
@@ -371,7 +372,8 @@ class MccsSubarray(SKASubarray):
         """
         # TODO Call assign resources directly - DON'T USE LRC - for now.
         handler = self.get_command_object("AssignResources")
-        (rc, desc) = handler(argin)
+        args = json.loads(argin)
+        (rc, desc) = handler(args)
         return ([rc], [desc])
 
     class ReleaseResourcesCommand(
@@ -535,7 +537,7 @@ class MccsSubarray(SKASubarray):
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Configure` command for this
             :py:class:`.MccsSubarray` device.
 
-            :param argin: JSON encoded string configuration specification
+            :param argin: configuration specification
                 {
                 "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
                 "stations":[{"station_id": 1},{"station_id": 2}],

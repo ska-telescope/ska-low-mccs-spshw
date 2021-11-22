@@ -600,7 +600,7 @@ class SubrackSimulator(ObjectComponent):
         :raises AssertionError: if method is called in unit test environment
         """
         # Safeguard against deployment in unit testing environment
-        if "PYTEST_CURRENT_TEST" not in os.environ:
+        if "PYTEST_CURRENT_TEST" in os.environ:
             raise AssertionError(
                 "Hardware delay emulation not allowed in unit test environment"
             )

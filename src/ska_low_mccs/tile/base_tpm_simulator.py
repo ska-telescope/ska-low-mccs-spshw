@@ -435,13 +435,13 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_port: port of the destination
         """
         core_dict = {
-            "CoreID": core_id,
-            "ArpTableEntry": arp_table_entry,
-            "SrcMac": src_mac,
-            "SrcIP": src_ip,
-            "SrcPort": src_port,
-            "DstIP": dst_ip,
-            "DstPort": dst_port,
+            "core_id": core_id,
+            "arp_table_entry": arp_table_entry,
+            "src_mac": src_mac,
+            "src_ip": src_ip,
+            "src_port": src_port,
+            "dst_ip": dst_ip,
+            "dst_port": dst_port,
         }
         self._forty_gb_core_list.append(core_dict)
 
@@ -463,7 +463,7 @@ class BaseTpmSimulator(ObjectComponent):
         if core_id == -1:
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
-            if item.get("CoreID") == core_id:
+            if item.get("core_id") == core_id:
                 return item
         return None
 

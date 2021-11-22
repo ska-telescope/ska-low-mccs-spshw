@@ -90,6 +90,7 @@ def we_have_mvplow_running_an_instance_of(
     controller.add_change_event_callback(
         "state", controller_device_state_changed_callback
     )
+    controller.adminMode = AdminMode.OFFLINE
     controller_device_state_changed_callback.assert_next_change_event(
         tango.DevState.DISABLE
     )

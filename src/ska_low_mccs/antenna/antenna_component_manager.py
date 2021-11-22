@@ -108,8 +108,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         """
         if self.supplied_power_mode == PowerMode.ON:
             return None
-        rc = self._power_up_antenna()
-        return rc
+        return self._power_up_antenna()
 
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker

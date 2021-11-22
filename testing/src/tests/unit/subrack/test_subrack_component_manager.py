@@ -27,8 +27,6 @@ from ska_low_mccs.subrack import (
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
-    TestingSubrackSimulator,
-    TestingSubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
 )
 
@@ -54,25 +52,16 @@ class TestSubrackSimulatorCommon:
 
     @pytest.fixture(
         params=[
-            "testing_subrack_simulator",
-            "testing_subrack_simulator_component_manager",
             "switching_subrack_component_manager",
             "subrack_component_manager",
         ]
     )
     def subrack(
         self: TestSubrackSimulatorCommon,
-        testing_subrack_simulator: TestingSubrackSimulator,
-        testing_subrack_simulator_component_manager: TestingSubrackSimulatorComponentManager,
         switching_subrack_component_manager: SwitchingSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
         request: SubRequest,
-    ) -> Union[
-        TestingSubrackSimulator,
-        TestingSubrackSimulatorComponentManager,
-        SwitchingSubrackComponentManager,
-        SubrackComponentManager,
-    ]:
+    ) -> Union[SwitchingSubrackComponentManager, SubrackComponentManager]:
         """
         Return the subrack class under test.
 
@@ -90,9 +79,6 @@ class TestSubrackSimulatorCommon:
         So any test that relies on this fixture will be run four times:
         once for each of the above classes.
 
-        :param testing_subrack_simulator: the testing subrack simulator to return
-        :param testing_subrack_simulator_component_manager: the testing subrack
-            simulator component manager to return
         :param switching_subrack_component_manager:
             a component manager that switches between subrack simulator
             and driver (in simulation mode)
@@ -105,12 +91,7 @@ class TestSubrackSimulatorCommon:
 
         :return: the subrack class object under test
         """
-        if request.param == "testing_subrack_simulator":
-            return testing_subrack_simulator
-        elif request.param == "testing_subrack_simulator_component_manager":
-            testing_subrack_simulator_component_manager.start_communicating()
-            return testing_subrack_simulator_component_manager
-        elif request.param == "switching_subrack_component_manager":
+        if request.param == "switching_subrack_component_manager":
             switching_subrack_component_manager.start_communicating()
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":

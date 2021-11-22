@@ -20,7 +20,6 @@ from ska_low_mccs.subrack import (
     SubrackData,
     SubrackDriver,
     SubrackSimulator,
-    TestingSubrackSimulator,
 )
 from ska_low_mccs.component import (
     check_communicating,
@@ -37,7 +36,6 @@ from ska_low_mccs.component import (
 __all__ = [
     "BaseSubrackSimulatorComponentManager",
     "SubrackSimulatorComponentManager",
-    "TestingSubrackSimulatorComponentManager",
     "SubrackComponentManager",
 ]
 
@@ -267,45 +265,6 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         )
 
 
-class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
-    """A component manager for a subrack simulator."""
-
-    def __init__(
-        self: TestingSubrackSimulatorComponentManager,
-        logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param communication_status_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of an tpm changes
-        """
-        super().__init__(
-            TestingSubrackSimulator(),
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
-            component_tpm_power_changed_callback,
-        )
-
-
 class SwitchingSubrackComponentManager(SwitchingComponentManager):
     """A component manager that switches between subrack simulator(x2) and a driver."""
 
@@ -364,14 +323,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             component_progress_changed_callback,
             component_tpm_power_changed_callback,
         )
-        testing_subrack_simulator = TestingSubrackSimulatorComponentManager(
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
-            component_tpm_power_changed_callback,
-        )
         super().__init__(
             {
                 (SimulationMode.FALSE, TestMode.NONE): subrack_driver,
@@ -380,10 +331,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
                     SimulationMode.TRUE,
                     TestMode.NONE,
                 ): subrack_simulator,
-                (
-                    SimulationMode.TRUE,
-                    TestMode.TEST,
-                ): testing_subrack_simulator,
             },
             (initial_simulation_mode, initial_test_mode),
         )

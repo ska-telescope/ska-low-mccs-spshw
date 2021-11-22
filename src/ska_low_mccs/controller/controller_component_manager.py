@@ -127,12 +127,6 @@ class _StationProxy(DeviceComponentManager):
         self._channel_block_pool.free_resources(channel_blocks_to_release)
 
 
-class _SubrackProxy(DeviceComponentManager):
-    """A controller's proxy to a subrack."""
-
-    ...
-
-
 class _SubarrayProxy(DeviceComponentManager):
     """A controller's proxy to a subarray."""
 
@@ -408,8 +402,8 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_fqdns
         }
-        self._subracks: dict[str, _SubrackProxy] = {
-            fqdn: _SubrackProxy(
+        self._subracks: dict[str, DeviceComponentManager] = {
+            fqdn: DeviceComponentManager(
                 fqdn,
                 logger,
                 push_change_event,

@@ -26,9 +26,7 @@ from ska_low_mccs.subrack import (
     SubrackData,
     SubrackDriver,
     SubrackSimulator,
-    TestingSubrackSimulator,
     SubrackSimulatorComponentManager,
-    TestingSubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
     SubrackComponentManager,
 )
@@ -103,25 +101,6 @@ def subrack_simulator(
 
 
 @pytest.fixture()
-def testing_subrack_simulator(
-    component_progress_changed_callback: Callable[[int], None],
-) -> TestingSubrackSimulator:
-    """
-    Fixture that returns a testing subrack simulator.
-
-    :param component_progress_changed_callback: callback to be
-        called when the progress value changes
-
-    :return: a testing subrack simulator
-    """
-    testing_subrack_simulator = TestingSubrackSimulator()
-    testing_subrack_simulator.set_progress_changed_callback(
-        component_progress_changed_callback
-    )
-    return testing_subrack_simulator
-
-
-@pytest.fixture()
 def subrack_simulator_component_manager(
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
@@ -151,45 +130,6 @@ def subrack_simulator_component_manager(
     :return: a subrack simulator component manager.
     """
     return SubrackSimulatorComponentManager(
-        logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
-        component_progress_changed_callback,
-        component_tpm_power_changed_callback,
-    )
-
-
-@pytest.fixture()
-def testing_subrack_simulator_component_manager(
-    logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    component_progress_changed_callback: MockCallable,
-    component_tpm_power_changed_callback: MockCallable,
-) -> TestingSubrackSimulatorComponentManager:
-    """
-    Return a testing subrack simulator component manager.
-
-    (This is a pytest fixture.)
-
-    :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_progress_changed_callback: callback to be
-        called when the progress value changes
-    :param component_tpm_power_changed_callback: callback to be
-        called when the power mode of an tpm changes
-
-    :return: a testing subrack simulator component manager.
-    """
-    return TestingSubrackSimulatorComponentManager(
         logger,
         lrc_result_changed_callback,
         communication_status_changed_callback,

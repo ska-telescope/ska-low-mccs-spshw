@@ -596,14 +596,10 @@ class SubrackSimulator(ObjectComponent):
         Specialist implementation to emulate a real hardware delay.
 
         To be used specifically in a K8s deployment i.e. TestMode.NONE.
-
-        :raises AssertionError: if method is called in unit test environment
         """
         # Safeguard against deployment in unit testing environment
-        if "PYTEST_CURRENT_TEST" not in os.environ:
-            raise AssertionError(
-                "Hardware delay emulation not allowed in unit test environment"
-            )
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return
 
         for i in range(1, 5):
             if self._component_progress_changed_callback:

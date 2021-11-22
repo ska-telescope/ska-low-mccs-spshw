@@ -47,7 +47,7 @@ class _StationProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        [[result_code], _] = self._proxy.Configure(configuration_str)
+        ([result_code], _) = self._proxy.Configure(configuration_str)
         return result_code
 
 

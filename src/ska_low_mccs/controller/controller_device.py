@@ -345,6 +345,9 @@ class MccsController(SKABaseDevice):
             Implements the functionality of the
             :py:meth:`.MccsController.StandbyFull` command.
 
+            :todo: For now, StandbyLow and StandbyHigh simply implement
+                a general "standby".
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

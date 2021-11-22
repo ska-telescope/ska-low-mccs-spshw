@@ -195,12 +195,12 @@ class MccsController(SKABaseDevice):
                     time.sleep(period)
                     elapsed_time += period
                 message = (
-                    "Controller On command didn't complete within {timeout} seconds"
+                    f"Controller On command didn't complete within {timeout} seconds"
                 )
                 return (ResultCode.FAILED, message)
 
             # Wait for conditions on component manager to unblock
-            result_code, message = wait_until_on(self.target, timeout=2.0)
+            result_code, message = wait_until_on(self.target, timeout=10.0)
             self.target.logger.info(message)
             return (result_code, message)
 
@@ -242,7 +242,7 @@ class MccsController(SKABaseDevice):
                     time.sleep(period)
                     elapsed_time += period
                 message = (
-                    "Controller Off command didn't complete within {timeout} seconds"
+                    f"Controller Off command didn't complete within {timeout} seconds"
                 )
                 return (ResultCode.FAILED, message)
 

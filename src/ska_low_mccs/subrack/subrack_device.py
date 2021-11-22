@@ -113,7 +113,6 @@ class MccsSubrack(SKABaseDevice):
 
         return SubrackComponentManager(
             SimulationMode.TRUE,
-            TestMode.NONE,
             self.logger,
             self.push_change_event,
             self.SubrackIp,

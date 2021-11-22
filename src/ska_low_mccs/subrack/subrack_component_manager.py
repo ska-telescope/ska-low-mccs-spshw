@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Tuple, Optional
+from typing import Any, Callable, cast, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.subrack import (
     SubrackData,
@@ -271,7 +271,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
     def __init__(
         self: SwitchingSubrackComponentManager,
         initial_simulation_mode: SimulationMode,
-        initial_test_mode: TestMode,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         subrack_ip: str,
@@ -286,8 +285,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
 
         :param initial_simulation_mode: the simulation mode that the
             component should start in
-        :param initial_test_mode: the simulation mode that the component
-            should start in
         :param logger: a logger for this object to use
         :param push_change_event: method to call when the base classes
             want to send an event
@@ -325,14 +322,10 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         )
         super().__init__(
             {
-                (SimulationMode.FALSE, TestMode.NONE): subrack_driver,
-                (SimulationMode.FALSE, TestMode.TEST): subrack_driver,
-                (
-                    SimulationMode.TRUE,
-                    TestMode.NONE,
-                ): subrack_simulator,
+                (SimulationMode.FALSE): subrack_driver,
+                (SimulationMode.TRUE): subrack_simulator,
             },
-            (initial_simulation_mode, initial_test_mode),
+            (initial_simulation_mode),
         )
 
     @property
@@ -344,7 +337,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         """
         simulation_mode: SimulationMode  # typehint only
 
-        (simulation_mode, _) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
+        simulation_mode = cast(SimulationMode, self.switcher_mode)
         return simulation_mode
 
     @simulation_mode.setter
@@ -358,52 +351,13 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         :param required_simulation_mode: the new value for the simulation mode.
         """
         simulation_mode: SimulationMode  # typehints only
-        test_mode: TestMode  # typehints only
 
-        (simulation_mode, test_mode) = cast(
-            Tuple[SimulationMode, TestMode], self.switcher_mode
-        )
+        (simulation_mode) = cast(SimulationMode, self.switcher_mode)
         if simulation_mode != required_simulation_mode:
             communicating = self.is_communicating
             if communicating:
                 self.stop_communicating()
-            self.switcher_mode = (required_simulation_mode, test_mode)
-            if communicating:
-                self.start_communicating()
-
-    @property
-    def test_mode(self: SwitchingSubrackComponentManager) -> TestMode:
-        """
-        Return the test mode.
-
-        :return: the test mode
-        """
-        test_mode: TestMode  # typehint only
-        (_, test_mode) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
-        return cast(TestMode, test_mode)
-
-    @test_mode.setter
-    def test_mode(
-        self: SwitchingSubrackComponentManager,
-        required_test_mode: TestMode,
-    ) -> None:
-        """
-        Set the test mode.
-
-        :param required_test_mode: the new value for the test mode.
-        """
-        simulation_mode: SimulationMode  # typehint only
-        test_mode: TestMode  # typehint only
-
-        (simulation_mode, test_mode) = cast(
-            Tuple[SimulationMode, TestMode], self.switcher_mode
-        )
-
-        if test_mode != required_test_mode:
-            communicating = self.is_communicating
-            if communicating:
-                self.stop_communicating()
-            self.switcher_mode = (simulation_mode, required_test_mode)
+            self.switcher_mode = required_simulation_mode
             if communicating:
                 self.start_communicating()
 
@@ -414,7 +368,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def __init__(
         self: SubrackComponentManager,
         initial_simulation_mode: SimulationMode,
-        initial_test_mode: TestMode,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         subrack_ip: str,
@@ -431,8 +384,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param initial_simulation_mode: the simulation mode that the
             component should start in
-        :param initial_test_mode: the simulation mode that the component
-            should start in
         :param logger: a logger for this object to use
         :param push_change_event: method to call when the base classes
             want to send an event
@@ -460,7 +411,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
-            initial_test_mode,
             logger,
             push_change_event,
             subrack_ip,
@@ -585,28 +535,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         cast(
             SwitchingSubrackComponentManager, self._hardware_component_manager
         ).simulation_mode = mode
-
-    @property
-    def test_mode(self: SubrackComponentManager) -> TestMode:
-        """
-        Return the test mode of this component manager.
-
-        :return: the test mode of this component manager.
-        """
-        return cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).test_mode
-
-    @test_mode.setter
-    def test_mode(self: SubrackComponentManager, mode: TestMode) -> None:
-        """
-        Set the test mode of this component manager.
-
-        :param mode: the new test mode of this component manager
-        """
-        cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).test_mode = mode
 
     def off(self: SubrackComponentManager) -> ResultCode | None:
         """

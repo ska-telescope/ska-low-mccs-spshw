@@ -95,16 +95,6 @@ class MccsSubarray(SKASubarray):
         super().init_command_objects()
 
         self.register_command_object(
-            "AssignResources",
-            self.AssignResourcesCommand(
-                self.component_manager,
-                self.op_state_model,
-                self.obs_state_model,
-                self.logger,
-            ),
-        )
-
-        self.register_command_object(
             "SendTransientBuffer",
             self.SendTransientBufferCommand(
                 self.component_manager,
@@ -260,7 +250,6 @@ class MccsSubarray(SKASubarray):
             to this subarray
         """
         if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
-            print(f"RCL: _resources_changed! current obsState={self.obsState}")
             self.obs_state_model.perform_action("component_resourced")
         else:
             self.obs_state_model.perform_action("component_unresourced")
@@ -370,64 +359,6 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    class AssignResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
-        """
-        A class for MccsSubarray's AssignResources() command.
-
-        TODO: Can this now inherit from SKASubarray.AssignResourcesCommand?
-        Overrides SKASubarray.AssignResourcesCommand because that is a
-        CompletionCommand, which is misimplemented and assumes
-        synchronous completion.
-        """
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "AssignResources command completed OK",
-            ResultCode.QUEUED: "AssignResources command queued",
-            ResultCode.FAILED: "AssignResources command failed",
-        }
-
-        def __init__(
-            self: MccsSubarray.AssignResourcesCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param target: the object that this command acts upon; for
-                example, the device's component manager
-            :param op_state_model: the op state model that this command
-                uses to check that it is allowed to run
-            :param obs_state_model: the observation state model that
-                 this command uses to check that it is allowed to run,
-                 and that it drives with actions.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            super().__init__(
-                target, obs_state_model, "assign", op_state_model, logger=logger
-            )
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.AssignResourcesCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for AssignResources() command functionality.
-
-            :param argin: The resources to be assigned
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.assign(argin)
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def AssignResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
         """
@@ -441,7 +372,6 @@ class MccsSubarray(SKASubarray):
         # TODO Call assign resources directly - DON'T USE LRC - for now.
         handler = self.get_command_object("AssignResources")
         (rc, desc) = handler(argin)
-        print(f"RCL: def AssignResources completes with: rc={rc} desc={desc}")
         return ([rc], [desc])
 
     class ReleaseResourcesCommand(

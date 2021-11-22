@@ -20,7 +20,7 @@ import unittest.mock
 import pytest
 import requests
 
-from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.subrack import (
     SubrackData,
@@ -174,7 +174,6 @@ def switching_subrack_component_manager(
     """
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
-        TestMode.TEST,
         logger,
         lrc_result_changed_callback,
         subrack_ip,
@@ -372,7 +371,6 @@ def subrack_component_manager(
     """
     return SubrackComponentManager(
         SimulationMode.TRUE,
-        TestMode.TEST,
         logger,
         lrc_result_changed_callback,
         subrack_ip,

@@ -350,13 +350,11 @@ class TestPowerManagement:
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id
 
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            "Controller On command completed OK",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message="Controller On command completed OK",
         )
-        lrc_result_changed_callback.assert_last_change_event(lrc_result, do_assert=True)
-
         self._show_state_of_devices(devices)
 
         # Double check that the controller fired a state change event

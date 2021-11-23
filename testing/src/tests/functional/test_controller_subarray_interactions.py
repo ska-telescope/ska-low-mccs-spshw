@@ -183,8 +183,9 @@ def tmc_tells_mccs_controller_to_turn_on(
 
     # Wait for the On command to complete
     controller_device_lrc_changed_callback.assert_long_running_command_result_change_event(
-        unique_id,
+        unique_id=unique_id,
         expected_result_code=ResultCode.OK,
+        expected_message="Controller On command completed OK",
         timeout=30.0,
     )
 

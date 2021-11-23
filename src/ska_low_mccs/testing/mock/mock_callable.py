@@ -276,6 +276,7 @@ class MockChangeEventCallback(MockCallable):
         self: MockChangeEventCallback,
         unique_id: str,
         expected_result_code: ResultCode = ResultCode.OK,
+        expected_message: str = None,
         timeout: float = 10.0,
         do_assert: bool = True,
     ) -> None:
@@ -314,10 +315,18 @@ class MockChangeEventCallback(MockCallable):
                     failure_message = (
                         f"Callback for unique_id '{unique_id}' called, "
                         f"but resultcode '{int(call_value[1])}' "
-                        f"didn't match expected '{expected_result_code}' "
-                        f"result message '{call_value[2]}'"
+                        f"didn't match expected '{expected_result_code}'"
                     )
                     called_mock = None
+                else:
+                    if expected_message and call_value[2] != expected_message:
+                        failure_message = (
+                            f"Callback for unique_id '{unique_id}' called "
+                            f"with expected resultcode '{int(call_value[1])}', "
+                            f"but message '{call_value[2]}' "
+                            f"didn't match expected '{expected_message}'"
+                        )
+                        called_mock = None
                 break
 
         if called_mock is None and do_assert:

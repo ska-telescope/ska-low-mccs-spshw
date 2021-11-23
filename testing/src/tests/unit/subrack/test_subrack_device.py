@@ -191,34 +191,31 @@ class TestMccsSubrack:
         [[result_code], [unique_id]] = device_under_test.On()
         assert result_code == ResultCode.QUEUED
         assert "_OnCommand" in unique_id
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            "On command completed OK",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"On command completed OK",
         )
-        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
         tpm_id = 1
         [[result_code], [unique_id]] = device_under_test.PowerOnTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOnTpmCommand" in unique_id
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            f"Subrack TPM {tpm_id} power-on successful",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"Subrack TPM {tpm_id} power-on successful",
         )
-        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
         # Issue redundant power on TPM command
         [[result_code], [unique_id]] = device_under_test.PowerOnTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOnTpmCommand" in unique_id
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            f"Subrack TPM {tpm_id} power-on is redundant",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"Subrack TPM {tpm_id} power-on is redundant",
         )
-        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
     def test_PowerOffTpm(
         self: TestMccsSubrack,
@@ -251,40 +248,36 @@ class TestMccsSubrack:
         [[result_code], [unique_id]] = device_under_test.On()
         assert result_code == ResultCode.QUEUED
         assert "_OnCommand" in unique_id
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            "On command completed OK",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message="On command completed OK",
         )
-        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
         tpm_id = 1
         [[result_code], [unique_id]] = device_under_test.PowerOffTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOffTpmCommand" in unique_id
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            f"Subrack TPM {tpm_id} power-off is redundant",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"Subrack TPM {tpm_id} power-off is redundant",
         )
-        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
         [[result_code], [unique_id]] = device_under_test.PowerOnTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOnTpmCommand" in unique_id
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            f"Subrack TPM {tpm_id} power-on successful",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"Subrack TPM {tpm_id} power-on successful",
         )
-        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
-        [[result_code], [unique_id]] = device_under_test.PowerOffTpm(1)
+        [[result_code], [unique_id]] = device_under_test.PowerOffTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOffTpmCommand" in unique_id
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            f"Subrack TPM {tpm_id} power-off successful",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"Subrack TPM {tpm_id} power-off successful",
         )
-        lrc_result_changed_callback.assert_next_change_event(lrc_result)

@@ -17,6 +17,7 @@ import pytest
 from tango import DevState
 
 from ska_tango_base.control_model import AdminMode
+from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import ExtendedPowerMode
@@ -55,6 +56,7 @@ class TestSubrackTileIntegration:
         tango_harness: TangoHarness,
         subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
         tile_device_admin_mode_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test the integration of tile within subrack.
@@ -73,6 +75,8 @@ class TestSubrackTileIntegration:
         :param tile_device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         tile_device = tango_harness.get_device("low-mccs/tile/0001")
         subrack_device = tango_harness.get_device("low-mccs/subrack/01")
@@ -95,6 +99,19 @@ class TestSubrackTileIntegration:
         )
         assert subrack_device.state() == DevState.DISABLE
         assert subrack_device.tpm1PowerMode == ExtendedPowerMode.UNKNOWN
+
+        # Subscribe to subrack's LRC result attribute
+        subrack_device.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in subrack_device._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert subrack_device.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         tile_device.adminMode = AdminMode.ONLINE
         tile_device_admin_mode_changed_callback.assert_next_change_event(
@@ -148,7 +165,16 @@ class TestSubrackTileIntegration:
         # It fires a change event, which is received by the tile device.
         assert tile_device.state() == DevState.ON
 
-        subrack_device.PowerOffTpm(1)
+        tpm_id = 1
+        [[result_code], [unique_id]] = subrack_device.PowerOffTpm(tpm_id)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOffTpmCommand" in unique_id
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"Subrack TPM {tpm_id} power-off successful",
+        )
+
         # A third party has told the subrack device to turn the TPM off. The subrack
         # device tells the subrack to turn the TPM off. The subrack device detects that
         # the TPM is off.

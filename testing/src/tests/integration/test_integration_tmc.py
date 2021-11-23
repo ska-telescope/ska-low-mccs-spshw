@@ -450,12 +450,11 @@ class TestMccsIntegrationTmc:
         station_2.FakeSubservientDevicesPowerMode(PowerMode.ON)
 
         # Wait for command to complete
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            "Controller On command completed OK",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message="Controller On command completed OK",
         )
-        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
@@ -572,12 +571,11 @@ class TestMccsIntegrationTmc:
         assert "OffCommand" in unique_id
 
         # Wait for command to complete
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            "Controller Off command completed OK",
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message="Controller Off command completed OK",
         )
-        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         devices = [
             controller,

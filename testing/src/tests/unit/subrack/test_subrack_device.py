@@ -163,6 +163,7 @@ class TestMccsSubrack:
     def test_PowerOnTpm(
         self: TestMccsSubrack,
         device_under_test: MccsDeviceProxy,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for PowerOnTpm.
@@ -170,23 +171,59 @@ class TestMccsSubrack:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
+        # Subscribe to subrack's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+
         device_under_test.adminMode = AdminMode.ONLINE
-        device_under_test.On()
-        time.sleep(0.1)
+        [[result_code], [unique_id]] = device_under_test.On()
+        assert result_code == ResultCode.QUEUED
+        assert "_OnCommand" in unique_id
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            "On command completed OK",
+        )
+        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
-        [[result_code], [message]] = device_under_test.PowerOnTpm(1)
-        assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 1 power-on successful"
-        time.sleep(0.1)
+        tpm_id = 1
+        [[result_code], [unique_id]] = device_under_test.PowerOnTpm(tpm_id)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOnTpmCommand" in unique_id
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            f"Subrack TPM {tpm_id} power-on successful",
+        )
+        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
-        [[result_code], [message]] = device_under_test.PowerOnTpm(1)
-        assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 1 power-on is redundant"
+        # Issue redundant power on TPM command
+        [[result_code], [unique_id]] = device_under_test.PowerOnTpm(tpm_id)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOnTpmCommand" in unique_id
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            f"Subrack TPM {tpm_id} power-on is redundant",
+        )
+        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
     def test_PowerOffTpm(
         self: TestMccsSubrack,
         device_under_test: MccsDeviceProxy,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for PowerOffTpm.
@@ -194,19 +231,60 @@ class TestMccsSubrack:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
+        # Subscribe to subrack's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+
         device_under_test.adminMode = AdminMode.ONLINE
-        device_under_test.On()
-        time.sleep(0.1)
+        [[result_code], [unique_id]] = device_under_test.On()
+        assert result_code == ResultCode.QUEUED
+        assert "_OnCommand" in unique_id
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            "On command completed OK",
+        )
+        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
-        [[result_code], [message]] = device_under_test.PowerOffTpm(1)
-        assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 1 power-off is redundant"
-        time.sleep(0.1)
+        tpm_id = 1
+        [[result_code], [unique_id]] = device_under_test.PowerOffTpm(tpm_id)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOffTpmCommand" in unique_id
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            f"Subrack TPM {tpm_id} power-off is redundant",
+        )
+        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
-        _ = device_under_test.PowerOnTpm(1)
-        time.sleep(0.1)
+        [[result_code], [unique_id]] = device_under_test.PowerOnTpm(tpm_id)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOnTpmCommand" in unique_id
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            f"Subrack TPM {tpm_id} power-on successful",
+        )
+        lrc_result_changed_callback.assert_next_change_event(lrc_result)
 
-        [[result_code], [message]] = device_under_test.PowerOffTpm(1)
-        assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 1 power-off successful"
+        [[result_code], [unique_id]] = device_under_test.PowerOffTpm(1)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOffTpmCommand" in unique_id
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            f"Subrack TPM {tpm_id} power-off successful",
+        )
+        lrc_result_changed_callback.assert_next_change_event(lrc_result)

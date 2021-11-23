@@ -665,7 +665,7 @@ class TileComponentManager(MccsComponentManager):
             CommunicationStatus.DISABLED
         )
 
-    # TODO RCL: Convert this to a LRC
+    # TODO RCL: Convert this to a LRC, but lower priority
     # @enqueue
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker

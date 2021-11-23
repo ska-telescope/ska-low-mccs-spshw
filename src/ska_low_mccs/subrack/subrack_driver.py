@@ -437,8 +437,6 @@ class SubrackDriver(MccsComponentManager):
         self._check_tpm_id(logical_tpm_id)
         return self.tpm_power_modes[logical_tpm_id - 1] == ExtendedPowerMode.ON
 
-    # TODO RCL: Need to make this long-running or Gianni's work will be affected!
-    # @enqueue
     def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn off a specified TPM.
@@ -468,8 +466,6 @@ class SubrackDriver(MccsComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    # TODO RCL: Need to make this long-running or Gianni's work will be affected!
-    # @enqueue
     def turn_on_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn on a specified TPM.
@@ -499,8 +495,6 @@ class SubrackDriver(MccsComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    # TODO RCL: Need to make this long-running or Gianni's work will be affected!
-    # @enqueue
     def turn_on_tpms(self: SubrackDriver) -> bool:
         """
         Turn on all TPMs.
@@ -526,8 +520,6 @@ class SubrackDriver(MccsComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    # TODO RCL: Need to make this long-running or Gianni's work will be affected!
-    # @enqueue
     def turn_off_tpms(self: SubrackDriver) -> bool:
         """
         Turn off all TPMs.

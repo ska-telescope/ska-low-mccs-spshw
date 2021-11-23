@@ -694,8 +694,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerOnTpm")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler, argin)
+        return ([return_code], [unique_id])
 
     class PowerOffTpmCommand(ResponseCommand):
         """The command class for the PowerOffTpm command."""
@@ -754,8 +754,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerOffTpm")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler, argin)
+        return ([return_code], [unique_id])
 
     class PowerUpTpmsCommand(ResponseCommand):
         """The command class for the PowerUpTpms command."""
@@ -808,8 +808,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUpTpms")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler)
+        return ([return_code], [unique_id])
 
     class PowerDownTpmsCommand(ResponseCommand):
         """The command class for the PowerDownTpms command."""
@@ -860,8 +860,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerDownTpms")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler)
+        return ([return_code], [unique_id])
 
     class SetSubrackFanSpeedCommand(ResponseCommand):
         """

@@ -194,7 +194,7 @@ class TestMccsSubrack:
         lrc_result_changed_callback.assert_long_running_command_result_change_event(
             unique_id=unique_id,
             expected_result_code=ResultCode.OK,
-            expected_message=f"On command completed OK",
+            expected_message="On command completed OK",
         )
 
         tpm_id = 1

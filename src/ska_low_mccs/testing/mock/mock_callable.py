@@ -275,8 +275,8 @@ class MockChangeEventCallback(MockCallable):
     def assert_long_running_command_result_change_event(
         self: MockChangeEventCallback,
         unique_id: str,
-        expected_result_code: ResultCode = ResultCode.OK,
-        expected_message: str = None,
+        expected_result_code: ResultCode,
+        expected_message: str,
         timeout: float = 10.0,
         do_assert: bool = True,
     ) -> None:
@@ -285,6 +285,7 @@ class MockChangeEventCallback(MockCallable):
 
         :param unique_id: the unique ID of the event to wait for.
         :param expected_result_code: the expected result of the command with unique ID.
+        :param expected_message: the expected message from the event.
         :param timeout: timeout for each queue get.
         :param do_assert: option to not perform an assert (useful for debugging).
 
@@ -319,7 +320,7 @@ class MockChangeEventCallback(MockCallable):
                     )
                     called_mock = None
                 else:
-                    if expected_message and call_value[2] != expected_message:
+                    if call_value[2] != expected_message:
                         failure_message = (
                             f"Callback for unique_id '{unique_id}' called "
                             f"with expected resultcode '{int(call_value[1])}', "

@@ -20,6 +20,7 @@ from _pytest.fixtures import SubRequest
 from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
 
 from ska_low_mccs.component import ExtendedPowerMode
+
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
     SubrackData,

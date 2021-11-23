@@ -11,10 +11,8 @@
 """This module contains integration tests of tile-subrack interactions in MCCS."""
 from __future__ import annotations
 
-import time
-
 import pytest
-from tango import DevState
+import tango
 
 from ska_tango_base.control_model import AdminMode
 
@@ -38,11 +36,9 @@ def devices_to_load() -> DevicesToLoadType:
         "devices": [
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy},
-            # TODO: commented out as they are not used at present and to
-            # help diagnose the intermittent test failure.
-            # {"name": "tile_0002", "proxy": MccsDeviceProxy},
-            # {"name": "tile_0003", "proxy": MccsDeviceProxy},
-            # {"name": "tile_0004", "proxy": MccsDeviceProxy},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy},
+            {"name": "tile_0003", "proxy": MccsDeviceProxy},
+            {"name": "tile_0004", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -54,7 +50,9 @@ class TestSubrackTileIntegration:
         self: TestSubrackTileIntegration,
         tango_harness: TangoHarness,
         subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
+        subrack_device_state_changed_callback: MockChangeEventCallback,
         tile_device_admin_mode_changed_callback: MockChangeEventCallback,
+        tile_device_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test the integration of tile within subrack.
@@ -70,9 +68,13 @@ class TestSubrackTileIntegration:
         :param subrack_device_admin_mode_changed_callback: a callback
             that we can use to subscribe to admin mode changes on the
             subrack device
+        :param subrack_device_state_changed_callback: a callback that we
+            can use to subscribe to state changes on the subrack device.
         :param tile_device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
+        :param tile_device_state_changed_callback: a callback that we
+            can use to subscribe to state changes on the tile device.
         """
         tile_device = tango_harness.get_device("low-mccs/tile/0001")
         subrack_device = tango_harness.get_device("low-mccs/subrack/01")
@@ -84,7 +86,14 @@ class TestSubrackTileIntegration:
         tile_device_admin_mode_changed_callback.assert_next_change_event(
             AdminMode.OFFLINE
         )
-        assert tile_device.state() == DevState.DISABLE
+
+        tile_device.add_change_event_callback(
+            "state",
+            tile_device_state_changed_callback,
+        )
+        tile_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
 
         subrack_device.add_change_event_callback(
             "adminMode",
@@ -93,10 +102,19 @@ class TestSubrackTileIntegration:
         subrack_device_admin_mode_changed_callback.assert_next_change_event(
             AdminMode.OFFLINE
         )
-        assert subrack_device.state() == DevState.DISABLE
+
+        subrack_device.add_change_event_callback(
+            "state",
+            subrack_device_state_changed_callback,
+        )
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
+
         assert subrack_device.tpm1PowerMode == ExtendedPowerMode.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
+
         tile_device_admin_mode_changed_callback.assert_next_change_event(
             AdminMode.ONLINE
         )
@@ -105,48 +123,65 @@ class TestSubrackTileIntegration:
         # its subrack whether the TPM is event turned on. So it subscribes to change
         # events on the state of its subrack Tango device. The subrack device advises it
         # that it is OFFLINE. Therefore tile remains in UNKNOWN state.
-        assert tile_device.state() == DevState.UNKNOWN
+        tile_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        assert tile_device.state() == tango.DevState.UNKNOWN
 
         subrack_device.adminMode = AdminMode.ONLINE
         subrack_device_admin_mode_changed_callback.assert_next_change_event(
             AdminMode.ONLINE
         )
 
-        # The subrack device connects to its subrack and finds that the
-        # subrack is turned off, so it transitions to OFF state
-        assert subrack_device.state() == DevState.OFF
+        # The subrack device tries to establish a connection to its upstream power
+        # supply device. Until this connection is established, it is in UNKNOWN state.
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+
+        # The subrack device connects to its upstream power supply device and finds that
+        # the subrack is turned off, so it transitions to OFF state
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )
         assert subrack_device.tpm1PowerMode == ExtendedPowerMode.NO_SUPPLY
 
-        time.sleep(0.1)
         # The tile device receives a change event. Since the event indicates that the
         # subrack hardware is OFF, the tile has established that its TPM is not powered,
         # so it transitions to OFF state.
-        assert tile_device.state() == DevState.OFF
+        tile_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
+        assert tile_device.state() == tango.DevState.OFF
 
         subrack_device.On()
-        # The subrack device tells the subrack to power on. Once the subrack has powered
-        # on, the subrack device detects that change of state, and transitions to ON
+        # The subrack device tells the upstream power supply to power the subrack on.
+        # Once the upstream power supply has powered the subrack on, the subrack device
+        # tries to establish a connection to the subrack. Until that connection is
+        # established, it is in UNKNOWN state.
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+
+        # Once the subrack device is connected to its subrack, it transitions to ON
         # state.
-        time.sleep(0.1)
-        assert subrack_device.state() == DevState.ON
+        subrack_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        )
         assert subrack_device.tpm1PowerMode == ExtendedPowerMode.OFF
 
-        time.sleep(0.1)
         # The tile device is notified that its subrack is on. It now has communication
         # with its TPM. The first thing it does is subscribe to change events on the
         # power mode of its TPM. It is informed that the TPM is turned off, so it
-        # transitions to OFF
-        assert tile_device.state() == DevState.OFF
+        # remains in OFF state
+        tile_device_state_changed_callback.assert_not_called()
+        assert tile_device.state() == tango.DevState.OFF
 
         tile_device.On()
         # The tile device tells the subrack device to tell its subrack to power on its
         # TPM. This is done. The subrack device detects that the TPM is now on.
-        time.sleep(0.1)
-        assert subrack_device.tpm1PowerMode == ExtendedPowerMode.ON
 
-        time.sleep(0.1)
-        # It fires a change event, which is received by the tile device.
-        assert tile_device.state() == DevState.ON
+        tile_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+        assert tile_device.state() == tango.DevState.ON
+        assert subrack_device.tpm1PowerMode == ExtendedPowerMode.ON
 
         subrack_device.PowerOffTpm(1)
         # A third party has told the subrack device to turn the TPM off. The subrack
@@ -154,6 +189,5 @@ class TestSubrackTileIntegration:
         # the TPM is off.
         assert subrack_device.tpm1PowerMode == ExtendedPowerMode.OFF
 
-        time.sleep(0.1)
-        # It fires a change event, which is received by the tile device.
-        assert tile_device.state() == DevState.OFF
+        tile_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+        assert tile_device.state() == tango.DevState.OFF

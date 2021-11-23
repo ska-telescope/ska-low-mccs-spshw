@@ -10,8 +10,8 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import functools
+import importlib.resources
 import json
-import pkg_resources
 import threading
 from types import FunctionType
 from typing import Any, Callable, Optional
@@ -90,7 +90,7 @@ class json_input:  # noqa: N801
         self.schema = None
 
         if schema_path is not None:
-            schema_string = pkg_resources.resource_string(
+            schema_string = importlib.resources.read_text(
                 "ska_low_mccs.schemas", schema_path
             )
             self.schema = json.loads(schema_string)

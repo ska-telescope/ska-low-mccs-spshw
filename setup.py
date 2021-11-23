@@ -22,7 +22,6 @@ setuptools.setup(
     license=release_module["license"],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    package_data={"": ["schemas/*.json"]},
     url=release_module["url"],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -59,5 +58,6 @@ setuptools.setup(
         "fire",
         "requests",
     ],
+    include_package_data=True,
     zip_safe=False,
 )

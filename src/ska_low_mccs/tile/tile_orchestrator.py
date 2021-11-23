@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import enum
+import importlib.resources
 import logging
 import threading
 from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
@@ -139,14 +140,22 @@ class TileOrchestrator:
         :language: yaml
     """
 
-    RULES_PATH = "src/ska_low_mccs/tile/orchestration_rules.yaml"
-    """Path to the rules file that specifies behaviour of this choreographer."""
+    RULES: Optional[
+        dict[tuple, list]
+    ] = None  # This will be populated the first time the class gets instantiated.
 
-    # Do this slow I/O once for the whole class, instead of doing it every time we
-    # initialise an instance.
-    with open(RULES_PATH, "r") as stream:
-        RULES = yaml.load(stream, Loader=yaml.Loader) or {}
-        # we've no logger so there's no point catching any exceptions.
+    @classmethod
+    def _load_rules(cls) -> dict[tuple, list]:
+        # Do this slow I/O once for the whole class, instead of doing it every time we
+        # initialise an instance. (We can't hardcode a relative path here, because
+        # sphinx-build imports this with a different current directory.)
+        if cls.RULES is None:
+            rules_string = importlib.resources.read_text(
+                __package__, "orchestration_rules.yaml"
+            )
+            cls.RULES = yaml.load(rules_string, Loader=yaml.Loader) or {}
+            # we've no logger so there's no point catching any exceptions.
+        return cls.RULES
 
     def __init__(
         self: TileOrchestrator,
@@ -230,7 +239,7 @@ class TileOrchestrator:
             StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]
         ] = {}
 
-        for state, actions in self.RULES.items():
+        for state, actions in self._load_rules().items():
             action_calls = [getattr(self, f"_{action}") for action in actions]
             if len(state) == 2:
                 self._decision_table[

@@ -19,7 +19,6 @@ import unittest.mock
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-import yaml
 
 from ska_tango_base.control_model import PowerMode
 
@@ -54,11 +53,8 @@ class TestTileOrchestrator:
 
         :return: a static dictionary of orchestrator actions
         """
-        with open(TileOrchestrator.RULES_PATH, "r") as stream:
-            rules = yaml.load(stream, Loader=yaml.Loader)
-
         rules_table: dict[StateStimulusTupleType, list[str]] = {}
-        for state, actions in rules.items():
+        for state, actions in TileOrchestrator._load_rules().items():
             if len(state) == 2:
                 rules_table[
                     (

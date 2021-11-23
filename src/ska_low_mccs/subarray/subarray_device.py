@@ -416,7 +416,7 @@ class MccsSubarray(SKASubarray):
             component_manager = self.target
             result_code = component_manager.assign(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
-            
+
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def AssignResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
         """

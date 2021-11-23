@@ -180,7 +180,7 @@ class MccsStation(SKAObsDevice):
                 information purpose only.
             """
             # It's fine to complete this long-running command here
-            # (returning ResultCode.ON), even though the component manager
+            # (returning ResultCode.OK), even though the component manager
             # may not actually be finished turning everything on.
             # The completion of the original On command to MccsController
             # is waiting for the various power mode callbacks to be received

@@ -109,7 +109,10 @@ def check_on(func: Wrapped) -> Wrapped:
         :return: whatever the wrapped function returns
         """
         if component_manager.power_mode != PowerMode.ON:
-            raise ConnectionError("Component is not turned on.")
+            raise ConnectionError(
+                f"Cannot execute {type(component_manager).__name__}.{func.__name__}. "
+                "Component is not turned on."
+            )
         return func(component_manager, *args, **kwargs)
 
     return cast(Wrapped, _wrapper)

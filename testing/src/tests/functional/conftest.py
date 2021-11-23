@@ -132,6 +132,24 @@ def controller_device_state_changed_callback(
 
 
 @pytest.fixture()
+def controller_device_lrc_changed_callback(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for controller device state change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback to be registered with the
+        controller device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return mock_change_event_callback_factory("longRunningCommandResult")
+
+
+@pytest.fixture()
 def mock_callback_called_timeout() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is expected.

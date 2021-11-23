@@ -13,6 +13,7 @@ from __future__ import annotations  # allow forward references in type hints
 import queue
 from typing import Any, Optional, Sequence, Tuple
 import unittest.mock
+from ska_tango_base.commands import ResultCode
 
 import tango
 
@@ -270,6 +271,57 @@ class MockChangeEventCallback(MockCallable):
         assert (
             call_quality == quality
         ), f"Call quality {call_quality} does not match expected quality {quality}"
+
+    def assert_long_running_command_result_change_event(
+        self: MockChangeEventCallback,
+        unique_id: str,
+        expected_result_code: ResultCode = ResultCode.OK,
+        timeout: float = 10.0,
+        do_assert: bool = True,
+    ) -> None:
+        """
+        Assert the arguments of the event with matching unique ID.
+
+        :param unique_id: the unique ID of the event to wait for.
+        :param expected_result_code: the expected result of the command with unique ID.
+        :param timeout: timeout for each queue get.
+        :param do_assert: option to not perform an assert (useful for debugging).
+
+        :raises AssertionError: if the callback for command with unique ID has not been called.
+        """
+        called_mock = None
+        failure_message = f"Callback for unique_id '{unique_id}' has not been called"
+
+        while True:
+            try:
+                called_mock = self._queue.get(timeout=timeout)
+            except queue.Empty:
+                break
+
+            (args, _) = called_mock.call_args
+            (call_name, call_value, _) = args
+
+            if call_name.lower() != self._event_name:
+                failure_message = (
+                    f"Event name '{call_name.lower()}' does not match expected name "
+                    f"'{self._event_name}'"
+                )
+                called_mock = None
+                continue
+
+            if call_value[0] == unique_id:
+                if int(call_value[1]) != expected_result_code:
+                    failure_message = (
+                        f"Callback for unique_id '{unique_id}' called, "
+                        f"but resultcode '{int(call_value[1])}' "
+                        f"didn't match expected '{expected_result_code}' "
+                        f"result message '{call_value[2]}'"
+                    )
+                    called_mock = None
+                break
+
+        if called_mock is None and do_assert:
+            raise AssertionError(failure_message)
 
     def assert_last_change_event(
         self: MockChangeEventCallback,

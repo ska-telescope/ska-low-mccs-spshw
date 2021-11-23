@@ -5,10 +5,10 @@ Background:
     And we have mvplow running an instance of mccs
 
 @XTP-1170 @needs_tangodb
-Scenario: MCCS Start up low telescope
-    Given tmc is ready to issue a startup command
-    And mccs is ready to receive a startup command
-    When tmc tells mccs controller to start up
+Scenario: MCCS Turn on low telescope
+    Given tmc is ready to issue on command
+    And mccs is ready to receive on command
+    When tmc tells mccs controller to turn on
     Then mccs controller state is on
     And all mccs station states are on
 

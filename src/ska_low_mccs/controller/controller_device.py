@@ -200,7 +200,7 @@ class MccsController(SKABaseDevice):
                 return (ResultCode.FAILED, message)
 
             # Wait for conditions on component manager to unblock
-            result_code, message = wait_until_on(self.target, timeout=10.0)
+            result_code, message = wait_until_on(self.target, timeout=30.0)
             self.target.logger.info(message)
             return (result_code, message)
 

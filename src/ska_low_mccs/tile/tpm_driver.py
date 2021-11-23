@@ -28,7 +28,8 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
 )
-from ska_low_mccs.tile import HwTile, Tile12
+from pyaavs.tile_wrapper import Tile as HwTile
+from pyaavs.tile import Tile as Tile12
 
 
 class TpmDriver(MccsComponentManager):
@@ -47,11 +48,11 @@ class TpmDriver(MccsComponentManager):
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "itpm_v1_6.bit"
-    FIRMWARE_LIST = {
-        "cpld": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-        "fpga1": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-        "fpga2": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-    }
+    FIRMWARE_LIST = [
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+    ]
     REGISTER_MAP: dict[int, dict[str, dict]] = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
         1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
@@ -156,17 +157,14 @@ class TpmDriver(MccsComponentManager):
         self.tile.tpm = None
 
     @property
-    def firmware_available(self: TpmDriver) -> dict[str, dict[str, Any]]:
+    def firmware_available(self: TpmDriver) -> list[dict[str, Any]]:
         """
         Return the list of the firmware loaded in the system.
 
         :return: the firmware list
         """
         self.logger.debug("TpmDriver: firmware_available")
-        firmware_list = self.tile.get_firmware_list()
-        self._firmware_list["cpld"] = firmware_list[0]
-        self._firmware_list["fpga1"] = firmware_list[1]
-        self._firmware_list["fpga2"] = firmware_list[2]
+        self._firmware_list = self.tile.get_firmware_list()
         return copy.deepcopy(self._firmware_list)
 
     @property
@@ -187,8 +185,7 @@ class TpmDriver(MccsComponentManager):
         :return: firmware version (major.minor)
         """
         self.logger.debug("TpmDriver: firmware_version")
-        self.firmware_available
-        firmware = self._firmware_list["fpga1"]
+        firmware = self.firmware_available[0]
         return (
             "Ver."
             + str(firmware["major"])
@@ -835,7 +832,7 @@ class TpmDriver(MccsComponentManager):
         :param seconds: delay with respect to timestamp, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_raw_data")
-        self.tile.send_raw_data(sync, timestamp, seconds)
+        self.tile.send_raw_data(sync=sync, timestamp=timestamp, seconds=seconds)
 
     def send_channelised_data(
         self: TpmDriver,
@@ -856,11 +853,11 @@ class TpmDriver(MccsComponentManager):
         """
         self.logger.debug("TpmDriver: send_channelised_data")
         self.tile.send_channelised_data(
-            number_of_samples,
-            first_channel,
-            last_channel,
-            timestamp,
-            seconds,
+            number_of_samples=number_of_samples,
+            first_channel=first_channel,
+            last_channel=last_channel,
+            timestamp=timestamp,
+            seconds=seconds,
         )
 
     def send_channelised_data_continuous(
@@ -884,7 +881,11 @@ class TpmDriver(MccsComponentManager):
         """
         self.logger.debug("TpmDriver: send_channelised_data_continuous")
         self.tile.send_channelised_data_continuous(
-            channel_id, number_of_samples, wait_seconds, timestamp, seconds
+            channel_id,
+            number_of_samples=number_of_samples,
+            wait_seconds=wait_seconds,
+            timestamp=timestamp,
+            seconds=seconds,
         )
 
     def send_beam_data(
@@ -897,7 +898,7 @@ class TpmDriver(MccsComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_beam_data")
-        self.tile.send_beam_data(timestamp, seconds)
+        self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
 
     def stop_data_transmission(self: TpmDriver) -> None:
         """Stop data transmission for send_channelised_data_continuous."""

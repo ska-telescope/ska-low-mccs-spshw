@@ -5,6 +5,7 @@ future
 jsonschema >= 3.2.0
 numpy == 1.19.2
 pyfabil-1.0-py3-none-any.whl
+aavs_system-1.0-py3-none-any.whl
 pytango >= 9.3.3
 requests
 scipy

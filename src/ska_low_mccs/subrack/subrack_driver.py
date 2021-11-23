@@ -35,6 +35,7 @@ from ska_low_mccs.component import (
     MccsComponentManager,
     ExtendedPowerMode,
     WebHardwareClient,
+    enqueue,
 )
 from ska_low_mccs.subrack import SubrackData
 
@@ -144,6 +145,7 @@ class SubrackDriver(MccsComponentManager):
         connected = self._client.connect()
         if connected:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self.logger.info("Connected to " + self._ip + ":" + str(self._port))
         else:
             self.logger.error("status:ERROR")
             self.logger.info("info: Not connected")
@@ -152,6 +154,7 @@ class SubrackDriver(MccsComponentManager):
         """Stop communicating with the subrack."""
         super().stop_communicating()
         self._client.disconnect()
+        self.logger.info("Disconnected")
 
     def _tpm_power_changed(self: SubrackDriver) -> None:
         """
@@ -159,6 +162,7 @@ class SubrackDriver(MccsComponentManager):
 
         This is a helper method that calls the callback if it exists.
         """
+        self.logger.debug("TPM power changed: " + str(self.tpm_power_modes))
         if self._component_tpm_power_changed_callback is not None:
             self._component_tpm_power_changed_callback(self.tpm_power_modes)
 
@@ -434,6 +438,7 @@ class SubrackDriver(MccsComponentManager):
         self._check_tpm_id(logical_tpm_id)
         return self.tpm_power_modes[logical_tpm_id - 1] == ExtendedPowerMode.ON
 
+    @enqueue
     def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn off a specified TPM.
@@ -463,6 +468,7 @@ class SubrackDriver(MccsComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
+    @enqueue
     def turn_on_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn on a specified TPM.
@@ -492,6 +498,7 @@ class SubrackDriver(MccsComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
+    @enqueue
     def turn_on_tpms(self: SubrackDriver) -> bool:
         """
         Turn on all TPMs.
@@ -517,6 +524,7 @@ class SubrackDriver(MccsComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
+    @enqueue
     def turn_off_tpms(self: SubrackDriver) -> bool:
         """
         Turn off all TPMs.

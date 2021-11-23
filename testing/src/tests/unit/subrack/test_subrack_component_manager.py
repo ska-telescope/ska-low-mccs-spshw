@@ -21,6 +21,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.component import ExtendedPowerMode
+
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
     SubrackData,

@@ -255,7 +255,7 @@ class TestMccsSubarray:
         """
         assert device_under_test.stationFQDNs is None
 
-    def test_assignResources(
+    def test_assignResources_Ross(
         self: TestMccsSubarray,
         lrc_result_changed_callback: MockChangeEventCallback,
         device_under_test: MccsDeviceProxy,
@@ -297,8 +297,10 @@ class TestMccsSubarray:
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         assert device_under_test.state() == DevState.ON
+        assert device_under_test.obsState == ObsState.EMPTY
+        time.sleep(0.1)
 
-        ([result_code], [message]) = device_under_test.AssignResources(
+        ([result_code], _) = device_under_test.AssignResources(
             json.dumps(
                 {
                     "stations": [station_on_fqdn],
@@ -343,7 +345,7 @@ class TestMccsSubarray:
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
         assert device_under_test.assignedResources is None
 
-    def test_configure(
+    def test_configure_Ross(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
@@ -385,9 +387,11 @@ class TestMccsSubarray:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
+        assert device_under_test.state() == DevState.ON
         assert device_under_test.obsState == ObsState.EMPTY
+        time.sleep(0.1)
 
-        ([result_code], [message]) = device_under_test.AssignResources(
+        ([result_code], _) = device_under_test.AssignResources(
             json.dumps(
                 {
                     "stations": [station_on_fqdn],
@@ -401,7 +405,7 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.obsState == ObsState.IDLE
 
-        ([result_code], [message]) = device_under_test.Configure(
+        ([result_code], _) = device_under_test.Configure(
             json.dumps(
                 {
                     "stations": [{"station_id": station_on_id}],

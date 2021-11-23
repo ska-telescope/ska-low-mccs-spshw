@@ -669,7 +669,7 @@ class TileComponentManager(MccsComponentManager):
     # @enqueue
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
-        ([result_code], [message]) = self._subrack_proxy.PowerOffTpm(
+        ([result_code], _) = self._subrack_proxy.PowerOffTpm(
             self._subrack_tpm_id
         )
         # TODO better handling of result code and exceptions.
@@ -679,7 +679,7 @@ class TileComponentManager(MccsComponentManager):
     # @enqueue
     def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
-        ([result_code], [message]) = self._subrack_proxy.PowerOnTpm(
+        ([result_code], _) = self._subrack_proxy.PowerOnTpm(
             self._subrack_tpm_id
         )
         # TODO better handling of result code and exceptions.

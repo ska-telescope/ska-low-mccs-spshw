@@ -112,7 +112,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.PowerUpAntenna(
+        ([result_code], _) = self._proxy.PowerUpAntenna(
             self._logical_antenna_id
         )
         return result_code
@@ -130,7 +130,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
     def _power_down_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.PowerDownAntenna(
+        ([result_code], _) = self._proxy.PowerDownAntenna(
             self._logical_antenna_id
         )
         return result_code

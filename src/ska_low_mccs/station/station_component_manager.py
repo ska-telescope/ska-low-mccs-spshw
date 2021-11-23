@@ -134,7 +134,7 @@ class _TileProxy(DeviceComponentManager):
         :return: a result code
         """
         assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.SetPointingDelay(delays)
+        ([result_code], _) = self._proxy.SetPointingDelay(delays)
         return result_code
 
 

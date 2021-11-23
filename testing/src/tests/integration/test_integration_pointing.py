@@ -253,7 +253,7 @@ class TestMccsIntegration:
         mock_tile_3.SetPointingDelay.assert_not_called()
         mock_tile_4.SetPointingDelay.assert_not_called()
 
-        ([result_code], [message]) = stationbeam_2.ApplyPointing()
+        ([result_code], _) = stationbeam_2.ApplyPointing()
         assert result_code == ResultCode.OK
 
         (args, kwargs) = mock_tile_1.SetPointingDelay.get_next_call()
@@ -280,7 +280,7 @@ class TestMccsIntegration:
         mock_tile_3.SetPointingDelay.assert_not_called()
         mock_tile_4.SetPointingDelay.assert_not_called()
 
-        ([result_code], [message]) = stationbeam_3.ApplyPointing()
+        ([result_code], _) = stationbeam_3.ApplyPointing()
         assert result_code == ResultCode.OK
 
         mock_tile_1.SetPointingDelay.assert_not_called()
@@ -307,7 +307,7 @@ class TestMccsIntegration:
             BEAM_3_DELAY_RATE_ELEVATION,
         ]
 
-        ([result_code], [message]) = stationbeam_4.ApplyPointing()
+        ([result_code], _) = stationbeam_4.ApplyPointing()
         assert result_code == ResultCode.OK
 
         mock_tile_1.SetPointingDelay.assert_not_called()

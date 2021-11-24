@@ -11,8 +11,6 @@
 """This module contains the tests for MccsSubrack."""
 from __future__ import annotations
 
-import time
-
 import pytest
 from tango import DevState
 

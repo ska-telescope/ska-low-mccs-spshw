@@ -222,7 +222,7 @@ class MccsTile(SKABaseDevice):
             self: MccsTile.OnCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for Off() command functionality.
+            Stateless hook for On() command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -235,7 +235,7 @@ class MccsTile(SKABaseDevice):
 
     def is_On_allowed(self: MccsTile) -> bool:
         """
-        Check if command `Off` is allowed in the current device state.
+        Check if command `On` is allowed in the current device state.
 
         :return: ``True`` if the command is allowed
         """

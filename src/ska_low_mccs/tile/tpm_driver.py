@@ -17,10 +17,14 @@ case, or a NotImplementedError exception raised.
 
 from __future__ import annotations  # allow forward references in type hints
 
+import time
 import copy
 import logging
+import threading
 import numpy as np
 from typing import Any, Callable, cast, List, Optional
+
+# from contextlib import contextmanager
 
 from pyfabil.base.definitions import Device
 
@@ -32,6 +36,32 @@ from ska_low_mccs.component import (
 )
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
+
+
+# @contextmanager
+# def _tpmlock(lock: threading.Lock) -> Generator:
+#    """
+#    Check whether the hardware is locked for methods that cannot wait.
+#
+#    Allows to have a fallback for immediate methods if the hardware
+#    is locked. Long running commands can be enqueued using standard
+#    "with self.__hardware_lock:" syntax. E.g. to read a register or
+#    to use the existing last stored value To be used as:
+#
+#    with _tpmlock(self._hardware_lock) as locked:
+#
+#    then test "locked" to select between hardware access and fallback.
+#
+#    :param lock: Lock to check and use
+#    :yields locked: lock status
+#    """
+#    locked = lock.acquire(False)
+#    try:
+#        yield locked
+#    finally:
+#        if locked:
+#            lock.release()
+#
 
 
 class TpmDriver(MessageQueueComponentManager):
@@ -87,6 +117,7 @@ class TpmDriver(MessageQueueComponentManager):
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
         """
+        self._hardware_lock = threading.RLock()
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
@@ -141,12 +172,28 @@ class TpmDriver(MessageQueueComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         super().start_communicating()
-        self.enqueue(self._connect_to_tile)
+        #self.enqueue(self._connect_to_tile)
+        self._connect_to_tile()
 
     def _connect_to_tile(self: TpmDriver) -> None:
-        self.tile.connect()
+        self.logger.debug("Trying to connect to tile")
+        with self._hardware_lock:
+            self.tile.connect()
+        timeout = 0
+        max_time = 100  # 50 seconds
+        while self.tile.tpm is None:
+            time.sleep(0.5)
+            with self._hardware_lock:
+                self.tile.connect()
+            timeout = timeout + 1
+            if timeout > max_time:
+                break
         if self.tile.tpm is not None:
+            self.logger.debug("Connected to tile")
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        else:
+            self.logger.error(f"Connection to tile failed after {timeout/0.5} seconds")
+            self.update_communication_status(CommunicationStatus.DISABLED)
 
     def stop_communicating(self: TpmDriver) -> None:
         """
@@ -217,8 +264,9 @@ class TpmDriver(MessageQueueComponentManager):
 
         :param bitfile: a binary firmware blob
         """
-        self.logger.debug("TpmDriver: download_firmware")
-        self.tile.program_fpgas(bitfile)
+        with self._hardware_lock:
+            self.logger.debug("TpmDriver: download_firmware")
+            self.tile.program_fpgas(bitfile)
         self._firmware_name = bitfile
         self._is_programmed = True
 
@@ -237,15 +285,16 @@ class TpmDriver(MessageQueueComponentManager):
     @enqueue
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initializes tile."""
-        assert self.tile.tpm is not None  # for the type checker
-        self.logger.debug("TpmDriver: initialise")
-        if self.tile.tpm is None or not self.tile.tpm.is_programmed():
-            self.tile.program_fpgas(self._firmware_name)
-        if self.tile.tpm.is_programmed():
-            self._is_programmed = True
-            self.tile.initialise()
-        else:
-            self.logger.error("TpmDriver: Cannot initialise board")
+        with self._hardware_lock:
+            self.logger.debug("TpmDriver: initialise")
+            if self.tile.is_programmed() is False:
+                self.tile.program_fpgas(self._firmware_name)
+        with self._hardware_lock:
+            if self.tile.is_programmed():
+                self._is_programmed = True
+                self.tile.initialise()
+            else:
+                self.logger.error("TpmDriver: Cannot initialise board")
 
     @property
     def tile_id(self: TpmDriver) -> int:
@@ -315,7 +364,8 @@ class TpmDriver(MessageQueueComponentManager):
         :return: the current of the TPM
         """
         self.logger.debug("TpmDriver: current")
-        self._current = self.tile.get_current()
+        # not implemented
+        self._current = 1.0
         return self._current
 
     @property

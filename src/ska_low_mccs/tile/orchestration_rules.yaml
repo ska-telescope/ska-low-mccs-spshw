@@ -50,6 +50,7 @@
 !!python/tuple [ONLINE, ESTABLISHED, "OFF", ESTABLISHED, TPM_COMMS_DISABLED]: set_tpm_communication_disabled
 !!python/tuple [ONLINE, ESTABLISHED, "ON", DISABLED, TPM_COMMS_NOT_ESTABLISHED]: set_tpm_communication_not_established
 !!python/tuple [ONLINE, ESTABLISHED, "ON", NOT_ESTABLISHED, TPM_COMMS_ESTABLISHED]: set_tpm_communication_established
+!!python/tuple [ONLINE, ESTABLISHED, "ON", NOT_ESTABLISHED, SUBRACK_SAYS_TPM_OFF]: report_tpm_off_when_tpm_communication_disabled
 !!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, SUBRACK_COMMS_ESTABLISHED]: do_nothing  # rare case where we had already received an event and inferred communication to be established
 !!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, DESIRE_OFF]: turn_tpm_off
 !!python/tuple [ONLINE, ESTABLISHED, "ON", ESTABLISHED, DESIRE_OFFLINE]: stop_communicating_when_tpm_communication_established

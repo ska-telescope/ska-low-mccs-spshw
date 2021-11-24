@@ -194,10 +194,25 @@ class MccsSubrack(SKABaseDevice):
             CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
+        self.logger.debug(
+            "Component communication status changed to " + str(communication_status)
+       )
+
 
         action = action_map[communication_status]
         if action is not None:
             self.op_state_model.perform_action(action)
+            else:
+            self.logger.debug("Switch component according to " + str(self.adminMode))
+            if self.admin_mode_model.admin_mode in [
+                AdminMode.ONLINE,
+                AdminMode.MAINTENANCE,
+            ]:
+                self.op_state_model.perform_action(
+                    "component_on"
+                )  # if it can connect, it is ON
+            else:
+                self.op_state_model.perform_action("component_unknown")
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED

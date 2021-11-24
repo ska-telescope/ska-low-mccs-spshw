@@ -22,7 +22,6 @@ setuptools.setup(
     license=release_module["license"],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    package_data={"": ["schemas/*.json"]},
     url=release_module["url"],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -53,11 +52,12 @@ setuptools.setup(
         ]
     },
     install_requires=[
-        "ska-tango-base >= 0.9.1",
+        "ska-tango-base == 0.11.3",
         "pytango >= 9.3.3",
         "jsonschema >= 3.2.0",
         "fire",
         "requests",
     ],
+    include_package_data=True,
     zip_safe=False,
 )

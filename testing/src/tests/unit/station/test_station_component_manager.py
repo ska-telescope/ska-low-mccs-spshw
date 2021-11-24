@@ -212,6 +212,7 @@ class TestStationComponentManager:
         logger: logging.Logger,
         pointing_delays: unittest.mock.Mock,
         communication_status_changed_callback: MockCallable,
+        component_power_mode_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -229,14 +230,23 @@ class TestStationComponentManager:
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param component_power_mode_changed_callback: callback to be
+            called when the component power mode changes
         """
         station_component_manager.start_communicating()
+
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
+
+        # TODO: Using "last" instead of "next" here is a sneaky way of forcing a delay
+        # so that we don't start faking receipt of events below until the real events
+        # have all been received.
+        component_power_mode_changed_callback.assert_last_call(PowerMode.UNKNOWN)
+        assert station_component_manager.power_mode == PowerMode.UNKNOWN
 
         # Tell this station each of its components is on, so that it thinks it is on
         station_component_manager._apiu_proxy._device_state_changed(
@@ -256,6 +266,9 @@ class TestStationComponentManager:
             )
         # Allow time for component manager state to propagate
         time.sleep(1.0)
+
+        component_power_mode_changed_callback.assert_last_call(PowerMode.ON)
+        assert station_component_manager.power_mode == PowerMode.ON
 
         station_component_manager.apply_pointing(pointing_delays)
         for tile_fqdn in tile_fqdns:

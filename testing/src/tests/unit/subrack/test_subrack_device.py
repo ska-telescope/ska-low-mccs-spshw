@@ -106,6 +106,7 @@ class TestMccsSubrack:
     def test_attributes(
         self: TestMccsSubrack,
         device_under_test: MccsDeviceProxy,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test of attributes.
@@ -113,10 +114,31 @@ class TestMccsSubrack:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
+        # Subscribe to subrack's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+
         device_under_test.adminMode = AdminMode.ONLINE
-        device_under_test.On()
-        time.sleep(0.1)
+        [[result_code], [unique_id]] = device_under_test.On()
+        assert result_code == ResultCode.QUEUED
+        assert "_OnCommand" in unique_id
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message="On command completed OK",
+        )
 
         assert (
             list(device_under_test.backplaneTemperatures)

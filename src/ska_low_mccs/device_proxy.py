@@ -359,7 +359,7 @@ class MccsDeviceProxy:
         :return: the attribute value data
         """
         if event.err:
-            self._logger.warn(
+            self._logger.warning(
                 f"Received failed change event: error stack is {event.errors}."
             )
             return None
@@ -370,7 +370,7 @@ class MccsDeviceProxy:
                 f"{event.errors}."
             )
             warnings.warn(UserWarning(warning_message))
-            self._logger.warn(warning_message)
+            self._logger.warning(warning_message)
             return self._read(event.attr_name)
         else:
             return event.attr_value

@@ -385,6 +385,7 @@ class TileOrchestrator:
         key = cast(StateStimulusTupleType, (stimulus,) + tuple(self._get_state()))
         try:
             actions = self._decision_table[key]
+            print(f"RCL: key = {key}, actions = {actions}")
         except KeyError:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise

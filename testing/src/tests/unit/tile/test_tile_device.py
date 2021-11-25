@@ -28,6 +28,7 @@ from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_low_mccs.tile import StaticTpmSimulator
+from ska_low_mccs.component import (CommunicationStatus)
 
 
 @pytest.fixture()
@@ -496,6 +497,7 @@ class TestMccsTileCommands:
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test if firmware available.
@@ -511,6 +513,8 @@ class TestMccsTileCommands:
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
+        :param device_state_changed_callback: a callback that we can use
+            to subscribe to state changes on the tile device
         """
         tile_device.add_change_event_callback(
             "adminMode",
@@ -519,22 +523,34 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
+        tile_device.add_change_event_callback(
+            "state",
+            device_state_changed_callback,
+        )
+        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        assert tile_device.state() == tango.DevState.DISABLE
+
         with pytest.raises(tango.DevFailed, match="Not connected"):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+        device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
-        time.sleep(0.1)
+        # We are still not connected as the Tile waits for a power mode update
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = tile_device.GetFirmwareAvailable()
 
         tile_device.MockTpmOff()
-        time.sleep(0.1)
+        time.sleep(0.1)  # Allow time for connection
 
+        # At this point, the component should be connected, but not turned on
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.MockTpmOn()
+        device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
 
         firmware_available_str = tile_device.GetFirmwareAvailable()
         firmware_available = json.loads(firmware_available_str)

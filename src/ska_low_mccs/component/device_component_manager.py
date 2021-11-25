@@ -229,9 +229,6 @@ class DeviceComponentManager(MccsComponentManager):
         """
         if self.power_mode == PowerMode.STANDBY:
             return None  # already standby
-        return self._standby()
-
-    def _standby(self: DeviceComponentManager) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.Standby()
         return result_code
@@ -245,9 +242,6 @@ class DeviceComponentManager(MccsComponentManager):
         """
         if self._faulty:
             return None  # no point resetting a device that isn't faulty.
-        return self._reset()
-
-    def _reset(self: DeviceComponentManager) -> ResultCode:
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.Reset()
         return result_code

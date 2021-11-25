@@ -161,7 +161,7 @@ def mock_callback_called_timeout() -> float:
     :return: the time to wait for a mock callback to be called when a
         call is asserted.
     """
-    return 10.0
+    return 30.0
 
 
 @pytest.fixture(scope="module")

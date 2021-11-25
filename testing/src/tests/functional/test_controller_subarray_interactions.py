@@ -186,7 +186,6 @@ def tmc_tells_mccs_controller_to_turn_on(
         unique_id=unique_id,
         expected_result_code=ResultCode.OK,
         expected_message="Controller On command completed OK",
-        timeout=30.0,
     )
 
 

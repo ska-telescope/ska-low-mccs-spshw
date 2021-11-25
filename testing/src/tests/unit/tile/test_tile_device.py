@@ -28,7 +28,6 @@ from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_low_mccs.tile import StaticTpmSimulator
-from ska_low_mccs.component import (CommunicationStatus)
 
 
 @pytest.fixture()

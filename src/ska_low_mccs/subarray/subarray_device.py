@@ -780,7 +780,9 @@ class MccsSubarray(SKASubarray):
                 information purpose only.
             """
             component_manager = self.target
-            result_code = component_manager.obs_reset()
+            result_code = (
+                component_manager.obs_reset()
+            )  # RCL: Should probably be .restart()
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     class SendTransientBufferCommand(ResponseCommand):

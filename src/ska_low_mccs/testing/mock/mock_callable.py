@@ -260,7 +260,8 @@ class MockChangeEventCallback(MockCallable):
 
         :raises AssertionError: if the callback has not been called.
         """
-        (args, _) = self.get_next_call()
+        (args, kwargs) = self.get_next_call()
+        assert not kwargs
         (call_name, call_value, call_quality) = args
         assert (
             call_name.lower() == self._event_name
@@ -277,7 +278,6 @@ class MockChangeEventCallback(MockCallable):
         unique_id: str,
         expected_result_code: ResultCode,
         expected_message: str,
-        timeout: float = 10.0,
         do_assert: bool = True,
     ) -> None:
         """
@@ -286,7 +286,6 @@ class MockChangeEventCallback(MockCallable):
         :param unique_id: the unique ID of the event to wait for.
         :param expected_result_code: the expected result of the command with unique ID.
         :param expected_message: the expected message from the event.
-        :param timeout: timeout for each queue get.
         :param do_assert: option to not perform an assert (useful for debugging).
 
         :raises AssertionError: if the callback for command with unique ID has not been called.
@@ -296,7 +295,7 @@ class MockChangeEventCallback(MockCallable):
 
         while True:
             try:
-                called_mock = self._queue.get(timeout=timeout)
+                called_mock = self._queue.get(timeout=self._called_timeout)
             except queue.Empty:
                 break
 

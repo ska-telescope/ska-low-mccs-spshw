@@ -252,20 +252,14 @@ class TestStationComponentManager:
         station_component_manager._apiu_proxy._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        time.sleep(1.0)
         for tile_proxy in station_component_manager._tile_proxies:
-            time.sleep(0.2)
             tile_proxy._device_state_changed(
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
-        time.sleep(1.0)
         for antenna_proxy in station_component_manager._antenna_proxies:
-            time.sleep(0.2)
             antenna_proxy._device_state_changed(
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
-        # Allow time for component manager state to propagate
-        time.sleep(1.0)
 
         component_power_mode_changed_callback.assert_last_call(PowerMode.ON)
         assert station_component_manager.power_mode == PowerMode.ON

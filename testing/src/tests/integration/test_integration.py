@@ -304,7 +304,7 @@ class TestMccsIntegration:
         time.sleep(0.1)
 
         subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.EMPTY)
-        assert subarray_1.obsState.name == "EMPTY"
+        assert subarray_1.obsState == ObsState.EMPTY
 
         # check initial state
         assert subarray_1.stationFQDNs is None
@@ -464,7 +464,7 @@ class TestMccsIntegration:
         # crossed.
         time.sleep(1.0)
 
-        assert subarray_1.obsState.name == "EMPTY"
+        assert subarray_1.obsState == ObsState.EMPTY
 
         # allocate station_1 to subarray_1
         ([result_code], [_]) = call_with_json(

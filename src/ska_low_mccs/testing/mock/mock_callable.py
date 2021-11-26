@@ -278,7 +278,7 @@ class MockChangeEventCallback(MockCallable):
         unique_id: str,
         expected_result_code: ResultCode,
         expected_message: str,
-        do_assert: bool = True,
+        _do_assert: bool = True,
     ) -> None:
         """
         Assert the arguments of the event with matching unique ID.
@@ -286,7 +286,7 @@ class MockChangeEventCallback(MockCallable):
         :param unique_id: the unique ID of the event to wait for.
         :param expected_result_code: the expected result of the command with unique ID.
         :param expected_message: the expected message from the event.
-        :param do_assert: option to not perform an assert (useful for debugging).
+        :param _do_assert: option to not perform an assert (useful for debugging).
 
         :raises AssertionError: if the callback for command with unique ID has not been called.
         """
@@ -308,7 +308,7 @@ class MockChangeEventCallback(MockCallable):
                     f"'{self._event_name}'"
                 )
                 called_mock = None
-                continue
+                break
 
             if call_value[0] == unique_id:
                 if int(call_value[1]) != expected_result_code:
@@ -329,13 +329,13 @@ class MockChangeEventCallback(MockCallable):
                         called_mock = None
                 break
 
-        if called_mock is None and do_assert:
+        if called_mock is None and _do_assert:
             raise AssertionError(failure_message)
 
     def assert_last_change_event(
         self: MockChangeEventCallback,
         value: Any,
-        do_assert: bool = True,
+        _do_assert: bool = True,
         quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
     ) -> None:
         """
@@ -354,7 +354,7 @@ class MockChangeEventCallback(MockCallable):
         :param value: the asserted value of the change event
         :param quality: the asserted quality of the change event. This
             is optional, with a default of ATTR_VALID.
-        :param do_assert: option to not perform an assert (useful for debugging).
+        :param _do_assert: option to not perform an assert (useful for debugging).
 
         :raises AssertionError: if the callback has not been called.
         """
@@ -398,5 +398,5 @@ class MockChangeEventCallback(MockCallable):
                 called_mock = None
                 continue
 
-        if called_mock is None and do_assert:
+        if called_mock is None and _do_assert:
             raise AssertionError(failure_message)

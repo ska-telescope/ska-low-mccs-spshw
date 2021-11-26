@@ -103,7 +103,7 @@ class TestAntennaApiuProxy:
         assert antenna_apiu_proxy.power_mode == PowerMode.OFF
         assert antenna_apiu_proxy.supplied_power_mode == PowerMode.OFF
 
-        antenna_apiu_proxy.on() == ResultCode.QUEUED
+        assert antenna_apiu_proxy.on() == ResultCode.QUEUED
         mock_apiu_device_proxy.On.assert_next_call()
 
         # Fake an event that tells this proxy that the APIU has been turned on.

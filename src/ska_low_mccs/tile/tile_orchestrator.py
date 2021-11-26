@@ -36,19 +36,16 @@ class Stimulus(enum.IntEnum):
     DESIRE_OFF = 4
     """The tile device has been asked to turn off the TPM."""
 
-    SUBRACK_COMMS_DISABLED = 5
-    """Communications with the subrack device is disabled."""
-
-    SUBRACK_COMMS_NOT_ESTABLISHED = 6
+    SUBRACK_COMMS_NOT_ESTABLISHED = 5
     """Communications with the subrack device is not established."""
 
-    SUBRACK_COMMS_ESTABLISHED = 7
+    SUBRACK_COMMS_ESTABLISHED = 6
     """Communications with the subrack device is established."""
 
-    SUBRACK_SAYS_TPM_UNKNOWN = 8
+    SUBRACK_SAYS_TPM_UNKNOWN = 7
     """The subrack reports that power mode of the TPM is unknown."""
 
-    SUBRACK_SAYS_TPM_NO_SUPPLY = 9
+    SUBRACK_SAYS_TPM_NO_SUPPLY = 8
     """
     The subrack reports that the TPM has no power supply.
 
@@ -56,23 +53,20 @@ class Stimulus(enum.IntEnum):
     cannot be commanded on
     """
 
-    SUBRACK_SAYS_TPM_OFF = 10
+    SUBRACK_SAYS_TPM_OFF = 9
     """
     The subrack reports that the TPM is off.
 
     However the subrack itself is on, so the TPM can be commanded on.
     """
 
-    SUBRACK_SAYS_TPM_ON = 11
+    SUBRACK_SAYS_TPM_ON = 10
     """The subrack reports that the TPM is powered on."""
 
-    TPM_COMMS_DISABLED = 12
-    """Communications with the TPM is disabled."""
-
-    TPM_COMMS_NOT_ESTABLISHED = 13
+    TPM_COMMS_NOT_ESTABLISHED = 11
     """Communications with the TPM is not established."""
 
-    TPM_COMMS_ESTABLISHED = 14
+    TPM_COMMS_ESTABLISHED = 12
     """Communications with the TPM is established."""
 
 
@@ -314,7 +308,11 @@ class TileOrchestrator:
         """
         with self.__lock:
             if communication_status == CommunicationStatus.DISABLED:
-                self._act(Stimulus.SUBRACK_COMMS_DISABLED)
+                pass
+                # This will only occur as a result of the orchestrator calling
+                # stop_communicating_with_subrack, which is synchronous and
+                # deterministic, so the orchestrator already knows that communication
+                # has been disabled.
             elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
                 self._act(Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED)
             elif communication_status == CommunicationStatus.ESTABLISHED:
@@ -337,7 +335,11 @@ class TileOrchestrator:
         """
         with self.__lock:
             if communication_status == CommunicationStatus.DISABLED:
-                self._act(Stimulus.TPM_COMMS_DISABLED)
+                pass
+                # This will only occur as a result of the orchestrator calling
+                # stop_communicating_with_tpm, which is synchronous and deterministic,
+                # so the orchestrator already knows that # communication has been
+                # disabled.
             elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
                 self._act(Stimulus.TPM_COMMS_NOT_ESTABLISHED)
             elif communication_status == CommunicationStatus.ESTABLISHED:

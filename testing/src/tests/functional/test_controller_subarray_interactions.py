@@ -41,14 +41,14 @@ def test_turn_on_low_telescope(
     # controller_device_state_changed_callback.assert_last_change_event(
     #     tango.DevState.OFF
     # )
-    # 
+    #
     # assert controller.state() == tango.DevState.OFF
-    # 
+    #
     # assert subarrays[1].state() == tango.DevState.ON
     # assert subarrays[2].state() == tango.DevState.ON
     # assert subarrays[1].stationFQDNs is None or subarrays[1].stationFQDNs == ()
     # assert subarrays[2].stationFQDNs is None or subarrays[2].stationFQDNs == ()
-    # 
+    #
     # assert stations[1].state() == tango.DevState.OFF
     # assert stations[2].state() == tango.DevState.OFF
     pass

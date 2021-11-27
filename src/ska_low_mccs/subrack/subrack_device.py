@@ -202,7 +202,7 @@ class MccsSubrack(SKABaseDevice):
         action = action_map[communication_status]
         if action is not None:
             self.op_state_model.perform_action(action)
-            else:
+        else:
             self.logger.debug("Switch component according to " + str(self.adminMode))
             if self.admin_mode_model.admin_mode in [
                 AdminMode.ONLINE,

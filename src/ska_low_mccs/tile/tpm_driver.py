@@ -172,7 +172,7 @@ class TpmDriver(MessageQueueComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         super().start_communicating()
-        #self.enqueue(self._connect_to_tile)
+        # self.enqueue(self._connect_to_tile)
         self._connect_to_tile()
 
     def _connect_to_tile(self: TpmDriver) -> None:

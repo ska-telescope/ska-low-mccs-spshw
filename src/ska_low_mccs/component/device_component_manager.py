@@ -138,7 +138,7 @@ class DeviceComponentManager(MccsComponentManager):
         at the DeviceComponentManager level.
         """
 
-        ...
+        pass
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""

@@ -36,6 +36,7 @@ from ska_low_mccs.component import (
     ExtendedPowerMode,
     WebHardwareClient,
 )
+from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_low_mccs.subrack import SubrackData
 
 
@@ -138,16 +139,33 @@ class SubrackDriver(MccsComponentManager):
     def start_communicating(self: SubrackDriver) -> None:
         """Establish communication with the subrack."""
         super().start_communicating()
-        self._connect_to_subrack()
+        connect_command = self.ConnectToSubrack(target=self)
+        _ = self.enqueue(connect_command)
 
-    def _connect_to_subrack(self: SubrackDriver) -> None:
-        connected = self._client.connect()
-        if connected:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
-            self.logger.info("Connected to " + self._ip + ":" + str(self._port))
-        else:
-            self.logger.error("status:ERROR")
-            self.logger.info("info: Not connected")
+    class ConnectToSubrack(BaseCommand):
+        """Connect to subrack class."""
+
+        def do(  # type: ignore[override]
+            self: SubrackDriver.ConnectToSubrack,
+        ) -> ResultCode:
+            """
+            Establish communication with the subrack, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :return: a result code
+            """
+            target = self.target
+            connected = target._client.connect()
+            if connected:
+                target.update_communication_status(CommunicationStatus.ESTABLISHED)
+                target.logger.info("Connected to " + target._ip + ":" + str(target._port))
+                return ResultCode.OK
+
+            target.logger.error("status:ERROR")
+            target.logger.info("info: Not connected")
+            return ResultCode.FAILED
 
     def stop_communicating(self: SubrackDriver) -> None:
         """Stop communicating with the subrack."""

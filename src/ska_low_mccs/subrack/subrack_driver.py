@@ -143,7 +143,7 @@ class SubrackDriver(MccsComponentManager):
         _ = self.enqueue(connect_command)
 
     class ConnectToSubrack(BaseCommand):
-        """Connect to subrack class."""
+        """Connect to subrack command class."""
 
         def do(  # type: ignore[override]
             self: SubrackDriver.ConnectToSubrack,
@@ -160,7 +160,9 @@ class SubrackDriver(MccsComponentManager):
             connected = target._client.connect()
             if connected:
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
-                target.logger.info("Connected to " + target._ip + ":" + str(target._port))
+                target.logger.info(
+                    "Connected to " + target._ip + ":" + str(target._port)
+                )
                 return ResultCode.OK
 
             target.logger.error("status:ERROR")

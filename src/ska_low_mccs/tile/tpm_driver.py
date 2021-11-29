@@ -24,6 +24,7 @@ from typing import Any, Callable, cast, List, Optional
 
 from pyfabil.base.definitions import Device
 
+from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
@@ -139,12 +140,30 @@ class TpmDriver(MccsComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         super().start_communicating()
-        self._connect_to_tile()
+        connect_to_tile_command = self.ConnectToTile(target=self)
+        self.enqueue(connect_to_tile_command)
 
-    def _connect_to_tile(self: TpmDriver) -> None:
-        self.tile.connect()
-        if self.tile.tpm is not None:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+    class ConnectToTile(BaseCommand):
+        """Connect to Tile command class."""
+
+        def do(  # type: ignore[override]
+            self: TpmDriver.ConnectToTile,
+        ) -> ResultCode:
+            """
+            Establish communication with the tile, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :return: a result code
+            """
+            target = self.target
+            target.tile.connect()
+            if target.tile.tpm is not None:
+                target.update_communication_status(CommunicationStatus.ESTABLISHED)
+                return ResultCode.OK
+
+            return ResultCode.FAILED
 
     def stop_communicating(self: TpmDriver) -> None:
         """

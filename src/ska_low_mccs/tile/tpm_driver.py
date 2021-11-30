@@ -172,13 +172,16 @@ class TpmDriver(MessageQueueComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         super().start_communicating()
-        # self.enqueue(self._connect_to_tile)
-        self._connect_to_tile()
+        self.enqueue(self._connect_to_tile)
+        # self._connect_to_tile()
 
     def _connect_to_tile(self: TpmDriver) -> None:
         self.logger.debug("Trying to connect to tile")
         with self._hardware_lock:
             self.tile.connect()
+        if self.tile.tpm is None:
+            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+
         timeout = 0
         max_time = 100  # 50 seconds
         while self.tile.tpm is None:
@@ -193,7 +196,7 @@ class TpmDriver(MessageQueueComponentManager):
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
         else:
             self.logger.error(f"Connection to tile failed after {timeout/0.5} seconds")
-            self.update_communication_status(CommunicationStatus.DISABLED)
+            # self.update_communication_status(CommunicationStatus.DISABLED)
 
     def stop_communicating(self: TpmDriver) -> None:
         """

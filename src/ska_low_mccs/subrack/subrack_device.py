@@ -25,6 +25,7 @@ from ska_tango_base.control_model import (
     PowerMode,
     SimulationMode,
     TestMode,
+    AdminMode,
 )
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
@@ -194,23 +195,33 @@ class MccsSubrack(SKABaseDevice):
             CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
+        power_map = {
+            PowerMode.UNKNOWN: "component_unknown",
+            PowerMode.STANDBY: "component_standby",
+            PowerMode.OFF: "component_off",
+            PowerMode.ON: "component_on",
+        }
         self.logger.debug(
             "Component communication status changed to " + str(communication_status)
-       )
-
+        )
 
         action = action_map[communication_status]
         if action is not None:
             self.op_state_model.perform_action(action)
         else:
-            self.logger.debug("Switch component according to " + str(self.adminMode))
+            power_supply_status = (
+                self.component_manager._power_supply_component_manager.supplied_power_mode
+            )
             if self.admin_mode_model.admin_mode in [
                 AdminMode.ONLINE,
                 AdminMode.MAINTENANCE,
-            ]:
-                self.op_state_model.perform_action(
-                    "component_on"
-                )  # if it can connect, it is ON
+            ] and power_supply_status is not None:
+                action = power_map[power_supply_status]
+                self.logger.debug(
+                    "Switch component according to power supply status"
+                    + str(power_supply_status)
+                )
+                self.op_state_model.perform_action(action)
             else:
                 self.op_state_model.perform_action("component_unknown")
 

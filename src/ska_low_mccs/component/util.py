@@ -62,7 +62,10 @@ def check_communicating(func: Wrapped) -> Wrapped:
         :return: whatever the wrapped function returns
         """
         if component_manager.communication_status != CommunicationStatus.ESTABLISHED:
-            raise ConnectionError("Not connected")
+            raise ConnectionError(
+                f"Cannot execute '{type(component_manager).__name__}.{func.__name__}'. "
+                "Communication with component is not established."
+            )
         return func(component_manager, *args, **kwargs)
 
     return cast(Wrapped, _wrapper)

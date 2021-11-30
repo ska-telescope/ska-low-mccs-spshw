@@ -173,7 +173,9 @@ class TestObjectComponentManager:
         """
         setattr(component, command, MockCallable())
 
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, command)()
         getattr(component, command).assert_not_called()
 

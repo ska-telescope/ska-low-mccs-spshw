@@ -212,10 +212,14 @@ class MccsSubrack(SKABaseDevice):
             power_supply_status = (
                 self.component_manager._power_supply_component_manager.supplied_power_mode
             )
-            if self.admin_mode_model.admin_mode in [
-                AdminMode.ONLINE,
-                AdminMode.MAINTENANCE,
-            ] and power_supply_status is not None:
+            if (
+                self.admin_mode_model.admin_mode
+                in [
+                    AdminMode.ONLINE,
+                    AdminMode.MAINTENANCE,
+                ]
+                and power_supply_status is not None
+            ):
                 action = power_map[power_supply_status]
                 self.logger.debug(
                     "Switch component according to power supply status"

@@ -497,6 +497,7 @@ class TestContextTangoHarness(BaseTangoHarness):
                 process=process,
                 host=self._host,
                 port=self._port,
+                timeout=10,  # because some devices do slow I/O during initialisation
                 # debug=5,
                 # uncomment this to get debug info, including cppTango debugging symbols
                 # when run against a 'Debug' cppTango build.

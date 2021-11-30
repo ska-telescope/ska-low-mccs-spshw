@@ -24,6 +24,7 @@ from ska_tango_base.control_model import SimulationMode, TestMode
 
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.component import ExtendedPowerMode
+
 from ska_low_mccs.tile import (
     TpmDriver,
     DynamicTpmSimulator,

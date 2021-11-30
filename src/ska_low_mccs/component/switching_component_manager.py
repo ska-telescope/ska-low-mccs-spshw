@@ -83,8 +83,8 @@ class Switcher:
         :param initial_switcher_mode: the mode that this ``Switcher``
             should start in.
         """
-        self.__options = dict(switcher_options)
-        self.switcher_mode = initial_switcher_mode
+        self.__dict__["__options"] = dict(switcher_options)
+        self.__dict__["__mode"] = initial_switcher_mode
 
     @property
     def switcher_mode(self) -> Hashable:
@@ -130,7 +130,20 @@ class Switcher:
 
         :return: the requested attribute
         """
-        return getattr(self.__options[self.__mode], name, default_value)
+        return getattr(
+            self.__dict__["__options"][self.__dict__["__mode"]], name, default_value
+        )
+
+    def __setattr__(self: Switcher, name: str, value: Any) -> None:
+        """
+        Set value of an attribute not found in the usual ways.
+
+        The request is passed down to the underlying component manager.
+
+        :param name: name of the requested attribute
+        :param value: value to set if the attribute is not found
+        """
+        setattr(self.__dict__["__options"][self.__dict__["__mode"]], name, value)
 
 
 class SwitchingComponentManager(Switcher):
@@ -151,7 +164,7 @@ class SwitchingComponentManager(Switcher):
 
     * Implement a component manager for the hardware driver;
     * Implement a component manager for the simulator;
-    * Use this ``SwitchingBaseComponentManager`` as a component manager
+    * Use this ``SwitchingComponentManager`` as a component manager
       that uses a simulation mode setting to switch between hardware
       driver and simulator.
 

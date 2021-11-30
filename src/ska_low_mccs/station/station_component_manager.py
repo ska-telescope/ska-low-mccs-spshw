@@ -105,9 +105,9 @@ class _TileProxy(DeviceComponentManager):
 
             :return: a result code
             """
+            result_code, message = super().do()
             self.target._connecting = True
-            result_code = super().do()
-            return result_code
+            return result_code, message
 
     def _device_state_changed(
         self: _TileProxy,

@@ -141,7 +141,7 @@ class TpmDriver(MccsComponentManager):
         """Establish communication with the TPM."""
         super().start_communicating()
         connect_to_tile_command = self.ConnectToTile(target=self)
-        self.enqueue(connect_to_tile_command)
+        _ = self.enqueue(connect_to_tile_command)
 
     class ConnectToTile(BaseCommand):
         """Connect to Tile command class."""
@@ -161,9 +161,9 @@ class TpmDriver(MccsComponentManager):
             target.tile.connect()
             if target.tile.tpm is not None:
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
-                return ResultCode.OK
+                return ResultCode.OK, "Connected to Tile"
 
-            return ResultCode.FAILED
+            return ResultCode.FAILED, "Could not connect to Tile"
 
     def stop_communicating(self: TpmDriver) -> None:
         """

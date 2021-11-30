@@ -128,7 +128,7 @@ class DeviceComponentManager(MccsComponentManager):
                 target._proxy.add_change_event_callback(
                     "adminMode", target._device_admin_mode_changed
                 )
-            return ResultCode.OK
+            return ResultCode.OK, f"Connected to '{target._fqdn}'"
 
     class ConnectToDevice(ConnectToDeviceBase):
         """
@@ -137,7 +137,6 @@ class DeviceComponentManager(MccsComponentManager):
         Class that can be overridden by a derived class or instantiated
         at the DeviceComponentManager level.
         """
-
         pass
 
     def stop_communicating(self: DeviceComponentManager) -> None:
@@ -416,12 +415,12 @@ class ObsDeviceComponentManager(DeviceComponentManager):
 
             :return: a result code
             """
-            result_code = super().do()
+            result_code, message = super().do()
             assert self.target._proxy is not None  # for the type checker
             self.target._proxy.add_change_event_callback(
                 "obsState", self.target._obs_state_changed
             )
-            return result_code
+            return result_code, message
 
     def _obs_state_changed(
         self: ObsDeviceComponentManager,

@@ -991,8 +991,19 @@ class TestDriverCommon:
             return switching_tpm_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 
+    @pytest.fixture()
+    def aavs_tile_mock(self: TestDriverCommon) -> unittest.mock.Mock:
+        """
+        Provide a mock for the AAVS tile.
+
+        :return: An AAVS tile mock
+        """
+        return unittest.mock.Mock()
+
     def test_communication_fails(
-        self: TestDriverCommon, tile: Union[TpmDriver, SwitchingTpmComponentManager]
+        self: TestDriverCommon,
+        tile: Union[TpmDriver, SwitchingTpmComponentManager],
+        aavs_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
         Test was can create the driver but not start communication with the component.
@@ -1003,9 +1014,47 @@ class TestDriverCommon:
         harness).
 
         :param tile: the tile class object under test.
+        :param aavs_tile_mock: An AAVS tile mock
         """
+        setattr(tile, "tile", aavs_tile_mock)
+        aavs_tile_mock.tpm = None
         assert tile.communication_status == CommunicationStatus.DISABLED
         tile.start_communicating()
         assert tile.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        # Wait for the message to execute
         time.sleep(0.1)
+        aavs_tile_mock.connect.assert_called_once()
+        assert "_ConnectToTile" in tile._queue_manager._task_result[0]
+        assert tile._queue_manager._task_result[1] == str(ResultCode.FAILED.value)
+        assert tile._queue_manager._task_result[2] == "Could not connect to Tile"
         assert tile.communication_status == CommunicationStatus.NOT_ESTABLISHED
+
+    def test_communication(
+        self: TestDriverCommon,
+        tile: Union[TpmDriver, SwitchingTpmComponentManager],
+        aavs_tile_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test was can create the driver but not start communication with the component.
+
+        We can create the tile class object under test, but will not be
+        able to use it to establish communication with the component
+        (which is a hardware TPM that does not exist in this test
+        harness).
+
+        :param tile: the tile class object under test.
+        :param aavs_tile_mock: An AAVS tile mock
+        """
+        setattr(tile, "tile", aavs_tile_mock)
+        aavs_tile_mock.tpm = True
+        assert tile.communication_status == CommunicationStatus.DISABLED
+        tile.start_communicating()
+        assert tile.communication_status == CommunicationStatus.NOT_ESTABLISHED
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        aavs_tile_mock.connect.assert_called_once()
+        assert "_ConnectToTile" in tile._queue_manager._task_result[0]
+        assert tile._queue_manager._task_result[1] == str(ResultCode.OK.value)
+        assert tile._queue_manager._task_result[2] == "Connected to Tile"
+        assert tile.communication_status == CommunicationStatus.ESTABLISHED

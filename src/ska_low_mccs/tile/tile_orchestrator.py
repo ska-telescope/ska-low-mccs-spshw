@@ -194,9 +194,13 @@ class TileOrchestrator:
         self._start_communicating_with_subrack = (
             start_communicating_with_subrack_callback
         )
-        self._stop_communicating_with_subrack = stop_communicating_with_subrack_callback
+        self._stop_communicating_with_subrack_callback = (
+            stop_communicating_with_subrack_callback
+        )
         self._start_communicating_with_tpm = start_communicating_with_tpm_callback
-        self._stop_communicating_with_tpm = stop_communicating_with_tpm_callback
+        self._stop_communicating_with_tpm_callback = (
+            stop_communicating_with_tpm_callback
+        )
 
         self._turn_tpm_off = turn_tpm_off_callback
         self._turn_tpm_on = turn_tpm_on_callback
@@ -391,6 +395,7 @@ class TileOrchestrator:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
         self._logger.debug(f"TileOrchestrator: {key} ==> {actions}")
+        print(f"TileOrchestrator: {key} ==> {actions}")
 
         result_code = None
         for action in actions:
@@ -440,10 +445,11 @@ class TileOrchestrator:
     def _set_no_desire(self: TileOrchestrator) -> None:
         self._operator_desire = None
 
-    def _set_subrack_communication_disabled(
+    def _stop_communicating_with_subrack(
         self: TileOrchestrator,
     ) -> None:
         self._subrack_communication_status = CommunicationStatus.DISABLED
+        self._stop_communicating_with_subrack_callback()
 
     def _set_subrack_communication_established(
         self: TileOrchestrator,
@@ -455,8 +461,9 @@ class TileOrchestrator:
     ) -> None:
         self._subrack_communication_status = CommunicationStatus.NOT_ESTABLISHED
 
-    def _set_tpm_communication_disabled(self: TileOrchestrator) -> None:
+    def _stop_communicating_with_tpm(self: TileOrchestrator) -> None:
         self._tpm_communication_status = CommunicationStatus.DISABLED
+        self._stop_communicating_with_tpm_callback()
 
     def _set_tpm_communication_not_established(self: TileOrchestrator) -> None:
         self._tpm_communication_status = CommunicationStatus.NOT_ESTABLISHED

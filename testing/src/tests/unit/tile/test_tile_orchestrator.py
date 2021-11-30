@@ -160,18 +160,8 @@ class TestTileOrchestrator:
                 {},
                 None,
             ),
-            "set_subrack_communication_disabled": (
-                {"subrack_communication_status": CommunicationStatus.DISABLED},
-                {},
-                None,
-            ),
             "set_subrack_communication_not_established": (
                 {"subrack_communication_status": CommunicationStatus.NOT_ESTABLISHED},
-                {},
-                None,
-            ),
-            "set_tpm_communication_disabled": (
-                {"tpm_communication_status": CommunicationStatus.DISABLED},
                 {},
                 None,
             ),
@@ -191,7 +181,7 @@ class TestTileOrchestrator:
                 None,
             ),
             "stop_communicating_with_subrack": (
-                {},
+                {"subrack_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_subrack": []},
                 None,
             ),
@@ -201,7 +191,7 @@ class TestTileOrchestrator:
                 None,
             ),
             "stop_communicating_with_tpm": (
-                {},
+                {"tpm_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_tpm": []},
                 None,
             ),

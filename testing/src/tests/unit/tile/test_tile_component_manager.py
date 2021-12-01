@@ -1035,12 +1035,11 @@ class TestDriverCommon:
         aavs_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
-        Test was can create the driver but not start communication with the component.
+        Test was can create the driver and start communication with the component.
 
-        We can create the tile class object under test, but will not be
-        able to use it to establish communication with the component
-        (which is a hardware TPM that does not exist in this test
-        harness).
+        We can create the tile class object under test, and we will mock
+        the underlying component (which is a hardware TPM that does not exist
+        in this test harness).
 
         :param tile: the tile class object under test.
         :param aavs_tile_mock: An AAVS tile mock

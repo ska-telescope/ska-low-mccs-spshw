@@ -96,14 +96,14 @@ class _TileProxy(DeviceComponentManager):
 
         def do(  # type: ignore[override]
             self: _TileProxy.ConnectToDevice,
-        ) -> ResultCode:
+        ) -> tuple[ResultCode, str]:
             """
             Establish communication with the component, then start monitoring.
 
             This contains the actual communication logic that is enqueued to
             be run asynchronously.
 
-            :return: a result code
+            :return: a result code and message
             """
             result_code, message = super().do()
             self.target._connecting = True

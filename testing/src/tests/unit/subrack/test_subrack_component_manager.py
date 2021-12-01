@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import time
 from typing import Any, Union
+import unittest
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -20,7 +21,7 @@ from ska_tango_base.commands import ResultCode
 
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
-from ska_low_mccs.component import ExtendedPowerMode
+from ska_low_mccs.component import ExtendedPowerMode, CommunicationStatus
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -368,6 +369,75 @@ class TestSubrackDriverCommon:
             time.sleep(0.2)
             return subrack_component_manager
         raise ValueError("subrack fixture parametrized with unrecognised option")
+
+    @pytest.fixture()
+    def client_mock(self: TestSubrackDriverCommon) -> unittest.mock.Mock:
+        """
+        Provide a mock for the subrack driver client.
+
+        :return: A subrack client mock
+        """
+        return unittest.mock.Mock()
+
+    def test_communication(
+        self: TestSubrackDriverCommon,
+        subrack_driver: SubrackDriver,
+        client_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Create the subrack driver and start communication with the component.
+
+        :param subrack_driver: the subrack driver under test.
+        :param client_mock: a mock provided for the client member of the subrack driver.
+        """
+        setattr(subrack_driver, "_client", client_mock)
+        client_mock.connect.return_value = True
+        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        subrack_driver.start_communicating()
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        client_mock.connect.assert_called_once()
+        assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
+        assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
+        assert "Connected to " in subrack_driver._queue_manager._task_result[2]
+        assert subrack_driver.communication_status == CommunicationStatus.ESTABLISHED
+
+    def test_communication_fails(
+        self: TestSubrackDriverCommon,
+        subrack_driver: SubrackDriver,
+        client_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Create the subrack driver and start communication with the component.
+
+        Failure to communicate with the underlying client must be handled correctly.
+
+        :param subrack_driver: the subrack driver under test.
+        :param client_mock: a mock provided for the client member of the subrack driver.
+        """
+        setattr(subrack_driver, "_client", client_mock)
+        client_mock.connect.return_value = False
+        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        subrack_driver.start_communicating()
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        client_mock.connect.assert_called_once()
+        assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
+        assert subrack_driver._queue_manager._task_result[1] == str(
+            ResultCode.FAILED.value
+        )
+        assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),

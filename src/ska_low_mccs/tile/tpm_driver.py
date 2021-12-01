@@ -148,14 +148,14 @@ class TpmDriver(MccsComponentManager):
 
         def do(  # type: ignore[override]
             self: TpmDriver.ConnectToTile,
-        ) -> ResultCode:
+        ) -> tuple[ResultCode, str]:
             """
             Establish communication with the tile, then start monitoring.
 
             This contains the actual communication logic that is enqueued to
             be run asynchronously.
 
-            :return: a result code
+            :return: a result code and message
             """
             target = self.target
             target.tile.connect()

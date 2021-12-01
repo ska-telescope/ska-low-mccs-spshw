@@ -95,7 +95,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         def do(  # type: ignore[override]
             self: DeviceComponentManager.ConnectToDeviceBase,
-        ) -> ResultCode:
+        ) -> tuple[ResultCode, str]:
             """
             Establish communication with the component, then start monitoring.
 
@@ -104,7 +104,7 @@ class DeviceComponentManager(MccsComponentManager):
 
             :raises ConnectionError: if the attempt to establish
                 communication with the channel fails.
-            :return: a result code
+            :return: a result code and message
             """
             target = self.target
             target._proxy = MccsDeviceProxy(target._fqdn, target._logger, connect=False)
@@ -137,6 +137,7 @@ class DeviceComponentManager(MccsComponentManager):
         Class that can be overridden by a derived class or instantiated
         at the DeviceComponentManager level.
         """
+
         pass
 
     def stop_communicating(self: DeviceComponentManager) -> None:
@@ -406,14 +407,14 @@ class ObsDeviceComponentManager(DeviceComponentManager):
 
         def do(  # type: ignore[override]
             self: ObsDeviceComponentManager.ConnectToDevice,
-        ) -> ResultCode:
+        ) -> tuple[ResultCode, str]:
             """
             Establish communication with the component, then start monitoring.
 
             This contains the actual communication logic that is enqueued to
             be run asynchronously.
 
-            :return: a result code
+            :return: a result code and message
             """
             result_code, message = super().do()
             assert self.target._proxy is not None  # for the type checker

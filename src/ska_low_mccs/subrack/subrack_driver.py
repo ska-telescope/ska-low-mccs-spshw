@@ -147,27 +147,28 @@ class SubrackDriver(MccsComponentManager):
 
         def do(  # type: ignore[override]
             self: SubrackDriver.ConnectToSubrack,
-        ) -> ResultCode:
+        ) -> tuple[ResultCode, str]:
             """
             Establish communication with the subrack, then start monitoring.
 
             This contains the actual communication logic that is enqueued to
             be run asynchronously.
 
-            :return: a result code
+            :return: a result code and message
             """
             target = self.target
             connected = target._client.connect()
+            target_connection = f"{target._ip}:{str(target._port)}"
             if connected:
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
-                target.logger.info(
-                    "Connected to " + target._ip + ":" + str(target._port)
-                )
-                return ResultCode.OK
+                message = f"Connected to {target_connection}"
+                target.logger.info(message)
+                return ResultCode.OK, message
 
             target.logger.error("status:ERROR")
-            target.logger.info("info: Not connected")
-            return ResultCode.FAILED
+            message = f"Failed to connect to {target_connection}"
+            target.logger.info(message)
+            return ResultCode.FAILED, message
 
     def stop_communicating(self: SubrackDriver) -> None:
         """Stop communicating with the subrack."""

@@ -331,7 +331,6 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
                 self._component_power_mode_changed_callback is not None
                 and power_mode is not None
             ):
-                print(f"RCL: update_component_power_mode({power_mode})\n\nself={self}")
                 self._component_power_mode_changed_callback(power_mode)
 
     def component_power_mode_changed(

@@ -328,7 +328,6 @@ class MccsDeviceProxy:
                 for callback in self._change_event_callbacks[
                     attribute_data.name.lower()
                 ]:
-                    print(f"RCL: _call_callback({callback}, {attribute_data})")
                     self._call_callback(callback, attribute_data)
 
     def _call_callback(

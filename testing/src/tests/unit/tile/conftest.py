@@ -14,16 +14,16 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Type
+from typing import Type, Optional, Callable
 
 import pytest
 from tango.server import command
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import SimulationMode, TestMode
-
+    
 from ska_low_mccs import MccsDeviceProxy, MccsTile
-from ska_low_mccs.component import ExtendedPowerMode
+from ska_low_mccs.component import ExtendedPowerMode, CommunicationStatus
 
 from ska_low_mccs.tile import (
     TpmDriver,
@@ -235,6 +235,72 @@ def tpm_driver(
         component_fault_callback,
     )
 
+
+@pytest.fixture()
+def aavs_tile_mock_patched() -> unittest.mock.Mock:
+    """
+    Provide a mock for the AAVS tile.
+
+    :return: An AAVS tile mock
+    """
+    return unittest.mock.Mock()
+
+
+class TpmDriverPatched(TpmDriver):
+    def __init__(
+        self: TpmDriver,
+        logger: logging.Logger,
+        push_change_event: Optional[Callable],
+        ip: str,
+        port: int,
+        tpm_version: str,
+        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        component_fault_callback: Callable[[bool], None],
+        aavs_tile: unittest.mock.Mock,
+    ) -> None:
+        super().__init__(logger, push_change_event, ip, port, tpm_version, communication_status_changed_callback, component_fault_callback)
+        self.tile = aavs_tile
+
+
+@pytest.fixture()
+def tpm_driver_patched(
+    logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
+    tpm_ip: str,
+    tpm_cpld_port: int,
+    tpm_version: str,
+    communication_status_changed_callback: MockCallable,
+    component_fault_callback: MockCallable,
+    aavs_tile_mock_patched: unittest.mock.Mock,
+) -> TpmDriverPatched:
+    """
+    Return a patched TPM driver.
+
+    :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
+    :param tpm_ip: the IP address of the tile
+    :param tpm_cpld_port: the port at which the tile is accessed for control
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param communication_status_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_fault_callback: callback to be called when the
+        component faults (or stops faulting)
+    :param aavs_tile_mock_patched: a mock of the AAVS tile
+
+    :return: a patched TPM driver
+    """
+    return TpmDriverPatched(
+        logger,
+        lrc_result_changed_callback,
+        tpm_ip,
+        tpm_cpld_port,
+        tpm_version,
+        communication_status_changed_callback,
+        component_fault_callback,
+        aavs_tile_mock_patched,
+    )
 
 @pytest.fixture()
 def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:

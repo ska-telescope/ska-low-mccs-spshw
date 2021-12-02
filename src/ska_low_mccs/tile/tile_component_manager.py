@@ -357,9 +357,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
             communication_status_changed_callback,
             component_fault_callback,
         )
-        print(
-            f"RCL: Tile CM consrtuctor {initial_simulation_mode}, {initial_test_mode}"
-        )
+
         super().__init__(
             {
                 (SimulationMode.FALSE, TestMode.NONE): tpm_driver,
@@ -687,7 +685,6 @@ class TileComponentManager(MccsComponentManager):
         self: TileComponentManager,
         power_mode: ExtendedPowerMode,
     ) -> None:
-        print(f"RCL: _tpm_power_mode_changed({power_mode})")
         self._tile_orchestrator.update_tpm_power_mode(power_mode)
 
     def _tpm_communication_status_changed(

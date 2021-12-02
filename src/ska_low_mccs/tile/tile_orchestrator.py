@@ -369,7 +369,6 @@ class TileOrchestrator:
             elif power_mode == ExtendedPowerMode.NO_SUPPLY:
                 self._act(Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY)
             elif power_mode == ExtendedPowerMode.OFF:
-                print(f"RCL: update_tpm_power_mode({power_mode})")
                 self._act(Stimulus.SUBRACK_SAYS_TPM_OFF)
             elif power_mode == ExtendedPowerMode.ON:
                 self._act(Stimulus.SUBRACK_SAYS_TPM_ON)

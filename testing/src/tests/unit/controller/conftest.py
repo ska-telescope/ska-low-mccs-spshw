@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 import unittest
 
 import pytest
@@ -466,6 +466,9 @@ def patched_controller_device_class(
 
             :return: a mock component manager
             """
+            self._communication_status: Optional[CommunicationStatus] = None
+            self._component_power_mode: Optional[PowerMode] = None
+
             mock_component_manager._communication_status_changed_callback = (
                 self._communication_status_changed
             )

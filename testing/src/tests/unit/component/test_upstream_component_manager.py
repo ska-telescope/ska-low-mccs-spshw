@@ -159,7 +159,9 @@ class TestPowerSupplyProxySimulator:
         """
         assert component_manager.supplied_power_mode is None
 
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, command)()
         time.sleep(0.1)
         assert component_manager.supplied_power_mode is None

@@ -170,7 +170,9 @@ class TestMccsTile:
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(tile_device, attribute)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -378,7 +380,9 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         args = [] if arg is None else [arg]
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(tile_device, device_command)(*args)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -471,7 +475,9 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = tile_device.Initialise()
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -519,7 +525,9 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.adminMode = AdminMode.ONLINE

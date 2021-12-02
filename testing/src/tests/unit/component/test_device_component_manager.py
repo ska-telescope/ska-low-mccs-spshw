@@ -119,7 +119,9 @@ class TestDeviceComponentManager:
         :param device_command: the name of the command that is expected
             to be called on the device.
         """
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, component_manager_command)()
         getattr(mock_proxy, device_command).assert_not_called()
 

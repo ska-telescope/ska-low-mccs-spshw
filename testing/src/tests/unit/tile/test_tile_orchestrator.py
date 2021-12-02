@@ -160,18 +160,8 @@ class TestTileOrchestrator:
                 {},
                 None,
             ),
-            "set_subrack_communication_disabled": (
-                {"subrack_communication_status": CommunicationStatus.DISABLED},
-                {},
-                None,
-            ),
             "set_subrack_communication_not_established": (
                 {"subrack_communication_status": CommunicationStatus.NOT_ESTABLISHED},
-                {},
-                None,
-            ),
-            "set_tpm_communication_disabled": (
-                {"tpm_communication_status": CommunicationStatus.DISABLED},
                 {},
                 None,
             ),
@@ -191,7 +181,7 @@ class TestTileOrchestrator:
                 None,
             ),
             "stop_communicating_with_subrack": (
-                {},
+                {"subrack_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_subrack": []},
                 None,
             ),
@@ -201,7 +191,7 @@ class TestTileOrchestrator:
                 None,
             ),
             "stop_communicating_with_tpm": (
-                {},
+                {"tpm_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_tpm": []},
                 None,
             ),
@@ -603,9 +593,6 @@ class TestTileOrchestrator:
                 Stimulus.DESIRE_OFFLINE: lambda tc: tc.desire_offline(),
                 Stimulus.DESIRE_ON: lambda tc: tc.desire_on(),
                 Stimulus.DESIRE_OFF: lambda tc: tc.desire_off(),
-                Stimulus.SUBRACK_COMMS_DISABLED: lambda tc: tc.update_subrack_communication_status(
-                    CommunicationStatus.DISABLED
-                ),
                 Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_subrack_communication_status(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
@@ -623,9 +610,6 @@ class TestTileOrchestrator:
                 ),
                 Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(
                     ExtendedPowerMode.ON
-                ),
-                Stimulus.TPM_COMMS_DISABLED: lambda tc: tc.update_tpm_communication_status(
-                    CommunicationStatus.DISABLED
                 ),
                 Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.NOT_ESTABLISHED

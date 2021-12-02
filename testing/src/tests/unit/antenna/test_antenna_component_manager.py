@@ -88,7 +88,7 @@ class TestAntennaApiuProxy:
         """
         with pytest.raises(
             ConnectionError,
-            match="Not connected",
+            match="Communication with component is not established",
         ):
             antenna_apiu_proxy.on()
 

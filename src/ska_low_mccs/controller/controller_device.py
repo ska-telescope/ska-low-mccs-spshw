@@ -79,6 +79,9 @@ class MccsController(SKABaseDevice):
 
         :return: a component manager for this device.
         """
+        self._communication_status: Optional[CommunicationStatus] = None
+        self._component_power_mode: Optional[PowerMode] = None
+
         return ControllerComponentManager(
             self.MccsSubarrays,
             self.MccsSubracks,
@@ -268,15 +271,37 @@ class MccsController(SKABaseDevice):
         :param communication_status: the status of communications
             between the component manager and its component.
         """
-        action_map = {
-            CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
-            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
-        }
+        # TODO: This method and the next are implemented to work around
+        # the following issue:
+        # * The controller component manager's communication status
+        #   depends on the status of communication with all subservient
+        #   devices.
+        # * But at present its power mode depends only on the power mode
+        #   of subracks and stations.
+        # Once communication with the subrack and stations is
+        # established, these start reporting power mode, and if they all
+        # report their power mode before communications with all other
+        # devices is established, then the component manager ends up
+        # publishing a power mode change *before* is has announced that
+        # comms is established. This leads to problems.
+        # Eventually we should figure out a more elegant way to handle
+        # this.
+        self._communication_status = communication_status
 
-        action = action_map[communication_status]
-        if action is not None:
-            self.op_state_model.perform_action(action)
+        if communication_status == CommunicationStatus.DISABLED:
+            self.op_state_model.perform_action("component_disconnected")
+        elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
+            self.op_state_model.perform_action("component_unknown")
+        elif self._component_power_mode == PowerMode.OFF:
+            self.op_state_model.perform_action("component_off")
+        elif self._component_power_mode == PowerMode.STANDBY:
+            self.op_state_model.perform_action("component_standby")
+        elif self._component_power_mode == PowerMode.ON:
+            self.op_state_model.perform_action("component_on")
+        elif self._component_power_mode == PowerMode.UNKNOWN:
+            self.op_state_model.perform_action("component_unknown")
+        else:  # self._component_power_mode is None
+            pass  # wait for a power mode update
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
@@ -295,14 +320,17 @@ class MccsController(SKABaseDevice):
 
         :param power_mode: the power mode of the component.
         """
-        action_map = {
-            PowerMode.OFF: "component_off",
-            PowerMode.STANDBY: "component_standby",
-            PowerMode.ON: "component_on",
-            PowerMode.UNKNOWN: "component_unknown",
-        }
+        self._component_power_mode = power_mode
 
-        self.op_state_model.perform_action(action_map[power_mode])
+        if self._communication_status == CommunicationStatus.ESTABLISHED:
+            action_map = {
+                PowerMode.OFF: "component_off",
+                PowerMode.STANDBY: "component_standby",
+                PowerMode.ON: "component_on",
+                PowerMode.UNKNOWN: "component_unknown",
+            }
+
+            self.op_state_model.perform_action(action_map[power_mode])
 
     def health_changed(self: MccsController, health: HealthState) -> None:
         """

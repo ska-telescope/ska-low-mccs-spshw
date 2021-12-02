@@ -162,7 +162,9 @@ class TestMccsAntenna:
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.voltage
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -218,7 +220,9 @@ class TestMccsAntenna:
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.current
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -274,7 +278,9 @@ class TestMccsAntenna:
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.temperature
 
         device_under_test.adminMode = AdminMode.ONLINE

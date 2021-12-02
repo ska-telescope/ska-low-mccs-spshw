@@ -2,9 +2,10 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-"""This subpackage implemeents APIU functionality for MCCS."""
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""This subpackage implements APIU functionality for MCCS."""
 
 
 __all__ = [

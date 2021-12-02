@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="MccsStation" pogoRevision="9.6">
-    <description description="MccsStation is the Tango device class for the MCCS Station prototype." title="MCCS Station" sourcePath="/home/drew/ska-low-mccs/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
+    <description description="MccsStation is the Tango device class for the MCCS Station prototype." title="MCCS Station" sourcePath="/home/drew/ska-low-mccs/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="BSD-3" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="SKAObsDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
       <identification contact="at csiro.au - drew.devereux" author="drew.devereux" emailDomain="csiro.au" classFamily="OtherInstruments" siteSpecific="" platform="All Platforms" bus="Not Applicable" manufacturer="none" reference=""/>

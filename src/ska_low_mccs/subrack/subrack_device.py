@@ -287,6 +287,7 @@ class MccsSubrack(SKABaseDevice):
 
         :param tpm_power_modes: the power modes of the TPMs
         """
+        print("RCL: Does this get hit???")
         with self._tpm_power_modes_lock:
             for i in range(SubrackData.TPM_BAY_COUNT):
                 if self._tpm_power_modes[i] != tpm_power_modes[i]:

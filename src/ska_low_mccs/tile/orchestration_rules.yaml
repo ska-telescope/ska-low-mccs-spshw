@@ -465,7 +465,7 @@
 !!python/tuple [SUBRACK_COMMS_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, DISABLED]: []  # we already knew that
 !!python/tuple [SUBRACK_SAYS_TPM_UNKNOWN, ESTABLISHED, ~, UNKNOWN, DISABLED]: []  # we already knew that
 !!python/tuple [SUBRACK_SAYS_TPM_NO_SUPPLY, ESTABLISHED, ~, UNKNOWN, DISABLED]: [report_tpm_no_power_supply]
-!!python/tuple [SUBRACK_SAYS_TPM_OFF, ESTABLISHED, ~, UNKNOWN, DISABLED]: [report_tpm_off]
+!!python/tuple [SUBRACK_SAYS_TPM_OFF, ESTABLISHED, ~, UNKNOWN, DISABLED]: [report_communication_established, report_tpm_off]  # RCL:
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, UNKNOWN, DISABLED]: [report_tpm_on, set_tpm_communication_not_established, report_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_not_established, report_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_established, report_communication_established]

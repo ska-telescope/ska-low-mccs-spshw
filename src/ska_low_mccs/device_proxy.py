@@ -295,7 +295,7 @@ class MccsDeviceProxy:
         not ready, in which case subscription will fail and a
         :py:class:`tango.DevFailed` exception will be raised. Here, we
         attempt subscription in a backoff-retry, and only raise the
-        exception one our retries are exhausted. (The alternative option
+        exception once our retries are exhausted. (The alternative option
         of subscribing with "stateless=True" could not be made to work.)
 
         :param attribute_name: the name of the attribute for which
@@ -328,6 +328,7 @@ class MccsDeviceProxy:
                 for callback in self._change_event_callbacks[
                     attribute_data.name.lower()
                 ]:
+                    print(f"RCL: _call_callback({callback}, {attribute_data})")
                     self._call_callback(callback, attribute_data)
 
     def _call_callback(

@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements functionality for switching between component managers."""
 from __future__ import annotations  # allow forward references in type hints
 
@@ -83,8 +84,8 @@ class Switcher:
         :param initial_switcher_mode: the mode that this ``Switcher``
             should start in.
         """
-        self.__dict__["__options"] = dict(switcher_options)
-        self.__dict__["__mode"] = initial_switcher_mode
+        self.__options = dict(switcher_options)
+        self.switcher_mode = initial_switcher_mode
 
     @property
     def switcher_mode(self) -> Hashable:
@@ -130,20 +131,7 @@ class Switcher:
 
         :return: the requested attribute
         """
-        return getattr(
-            self.__dict__["__options"][self.__dict__["__mode"]], name, default_value
-        )
-
-    def __setattr__(self: Switcher, name: str, value: Any) -> None:
-        """
-        Set value of an attribute not found in the usual ways.
-
-        The request is passed down to the underlying component manager.
-
-        :param name: name of the requested attribute
-        :param value: value to set if the attribute is not found
-        """
-        setattr(self.__dict__["__options"][self.__dict__["__mode"]], name, value)
+        return getattr(self.__options[self.__mode], name, default_value)
 
 
 class SwitchingComponentManager(Switcher):
@@ -164,7 +152,7 @@ class SwitchingComponentManager(Switcher):
 
     * Implement a component manager for the hardware driver;
     * Implement a component manager for the simulator;
-    * Use this ``SwitchingComponentManager`` as a component manager
+    * Use this ``SwitchingBaseComponentManager`` as a component manager
       that uses a simulation mode setting to switch between hardware
       driver and simulator.
 

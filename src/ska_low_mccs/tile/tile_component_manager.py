@@ -357,7 +357,9 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
             communication_status_changed_callback,
             component_fault_callback,
         )
-
+        print(
+            f"RCL: Tile CM consrtuctor {initial_simulation_mode}, {initial_test_mode}"
+        )
         super().__init__(
             {
                 (SimulationMode.FALSE, TestMode.NONE): tpm_driver,
@@ -631,6 +633,7 @@ class TileComponentManager(MccsComponentManager):
             f"tpm{self._subrack_tpm_id}PowerMode",
             self._tpm_power_mode_change_event_received,
         )
+
         self._tile_orchestrator.update_subrack_communication_status(
             CommunicationStatus.ESTABLISHED
         )
@@ -655,6 +658,9 @@ class TileComponentManager(MccsComponentManager):
         assert event_name.lower() == f"tpm{self._subrack_tpm_id}PowerMode".lower(), (
             f"subrack 'tpm{self._subrack_tpm_id}PowerMode' attribute changed callback "
             f"called but event_name is {event_name}."
+        )
+        print(
+            f"RCL: _tpm_power_mode_change_event_received({event_name}, {event_value})\n"
         )
         self._tpm_power_mode_changed(event_value)
 
@@ -681,6 +687,7 @@ class TileComponentManager(MccsComponentManager):
         self: TileComponentManager,
         power_mode: ExtendedPowerMode,
     ) -> None:
+        print(f"RCL: _tpm_power_mode_changed({power_mode})")
         self._tile_orchestrator.update_tpm_power_mode(power_mode)
 
     def _tpm_communication_status_changed(

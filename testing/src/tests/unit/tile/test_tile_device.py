@@ -23,6 +23,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     HealthState,
+    TestMode,
 )
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -157,6 +158,7 @@ class TestMccsTile:
         :param initial_value: expected initial value of the attribute
         :param write_value: value to be written as part of the test.
         """
+        tile_device.testMode = TestMode.TEST
         tile_device.add_change_event_callback(
             "adminMode",
             device_admin_mode_changed_callback,
@@ -546,7 +548,9 @@ class TestMccsTileCommands:
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
         # We are still not connected as the Tile waits for a power mode update
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.MockTpmOff()

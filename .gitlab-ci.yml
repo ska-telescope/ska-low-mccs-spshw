@@ -53,7 +53,7 @@ test:
   tags:
     - k8srunner
   script:
-    - tox -e test
+    - tox -e py
   artifacts:
     paths:
       - ./build

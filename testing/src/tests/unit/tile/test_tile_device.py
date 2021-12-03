@@ -544,15 +544,6 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.ONLINE
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
-        # We are still not connected as the Tile waits for a power mode update
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
-            _ = tile_device.GetFirmwareAvailable()
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)  # Allow time for connection
-
         # At this point, the component should be connected, but not turned on
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = tile_device.GetFirmwareAvailable()
@@ -908,6 +899,7 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.adminMode = AdminMode.ONLINE
+        time.sleep(0.1)  # Just a settle time require so become ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 

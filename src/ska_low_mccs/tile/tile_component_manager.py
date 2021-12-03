@@ -655,9 +655,6 @@ class TileComponentManager(MccsComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerMode' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-        print(
-            f"RCL: _tpm_power_mode_change_event_received({event_name}, {event_value})\n"
-        )
         self._tpm_power_mode_changed(event_value)
 
     def _stop_communicating_with_subrack(self: TileComponentManager) -> None:

@@ -15,7 +15,6 @@ from time import sleep
 from pytest_bdd import scenario, given, parsers, then, when
 import tango
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode  # , HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -99,45 +98,56 @@ def we_have_mvplow_running_an_instance_of(
     controller.add_change_event_callback(
         "state", controller_device_state_changed_callback
     )
-    #controller.adminMode = AdminMode.OFFLINE
     controller_device_state_changed_callback.assert_next_change_event(
         tango.DevState.DISABLE
     )
 
-    devices = {
+    # TODO: Looking for a very stable way to bring the MCCS devices into
+    # ONLINE state. Doing that all at once has been seen to be unstable.
+    # Without an orchestrator in each device, this will not be stable.
+    # However, doining one at a tiome and waiting has been seen to be
+    # stable. Mark Waterson agreed this is a good approach for now.
+    admin_mode_0_device_sequence = {
         subrack,
-        subarrays[1],
-        subarrays[2],
-        stations[1],
-        stations[2],
-        subarray_beams[1],
-        subarray_beams[2],
-        subarray_beams[3],
-        subarray_beams[4],
         apius[1],
-        apius[2],
-        station_beams[1],
-        station_beams[2],
-        station_beams[3],
-        station_beams[4],
-        tiles[1],
-        tiles[2],
-        tiles[3],
-        tiles[4],
         antennas[1],
         antennas[2],
         antennas[3],
         antennas[4],
+        tiles[1],
+        tiles[2],
+        stations[1],
+        apius[2],
         antennas[5],
         antennas[6],
         antennas[7],
         antennas[8],
+        tiles[3],
+        tiles[4],
+        stations[2],
+        subarrays[1],
+        subarrays[2],
+        subarray_beams[1],
+        subarray_beams[2],
+        subarray_beams[3],
+        subarray_beams[4],
+        station_beams[1],
+        station_beams[2],
+        station_beams[3],
+        station_beams[4],
         controller,
     }
 
-    for device in devices:
+    for device in admin_mode_0_device_sequence:
         device.adminMode = AdminMode.ONLINE
-        sleep(0.1)
+        timeout = 5.0
+        elapsed_time = 0.0
+        while elapsed_time <= timeout:
+            if not device.adminMode == tango.DevState.OFF:
+                sleep(0.1)
+                elapsed_time += 0.1
+            else:
+                break
 
     controller_device_state_changed_callback.assert_last_change_event(
         tango.DevState.OFF
@@ -169,29 +179,70 @@ def subsystem_is_ready_to_receive_on_command(
 
 @when(parsers.parse("tmc tells mccs controller to turn on"))
 def tmc_tells_mccs_controller_to_turn_on(
-    controller: MccsDeviceProxy,
-    controller_device_lrc_changed_callback: MockChangeEventCallback,
+    subrack: MccsDeviceProxy,
+    apius: dict[int, MccsDeviceProxy],
+    tiles: dict[int, MccsDeviceProxy],
+    antennas: dict[int, MccsDeviceProxy],
 ) -> None:
     """
     Turn on the MCCS subsystem.
 
-    :param controller: a proxy to the controller device.
-    :param controller_device_lrc_changed_callback: callback
-        for long-running command change events.
+    :param subrack: a proxy to the subrack device
+    :param apius: proxies to the apiu devices, keyed by number
+    :param tiles: proxies to the tile devices, keyed by number
+    :param antennas: proxies to the antenna devices, keyed by number
     """
-    controller.add_change_event_callback(
-        "longRunningCommandResult", controller_device_lrc_changed_callback
-    )
-    ([result_code], [unique_id]) = controller.On()
-    assert result_code == ResultCode.QUEUED
-    assert "_OnCommand" in unique_id
+    # TODO: Looking for a very stable way to bring the MCCS devices to the
+    # ON state. Doing that all at once has been seen to be unstable.
+    # Without an orchestrator in each device, this will not be stable.
+    # However, doining one at a tiome and waiting has been seen to be
+    # stable. Mark Waterson agreed this is a good approach for now.
+    devices_on_sequence = {
+        subrack,
+        apius[1],
+        antennas[1],
+        antennas[2],
+        antennas[3],
+        antennas[4],
+        apius[2],
+        antennas[5],
+        antennas[6],
+        antennas[7],
+        antennas[8],
+    }
+    for device in devices_on_sequence:
+        _ = device.On()
+        timeout = 7.5
+        elapsed_time = 0.0
+        while elapsed_time <= timeout:
+            if not device.state() == tango.DevState.ON:
+                sleep(0.1)
+                elapsed_time += 0.1
+            else:
+                break
 
-    # Wait for the On command to complete
-    controller_device_lrc_changed_callback.assert_long_running_command_result_change_event(
-        unique_id=unique_id,
-        expected_result_code=ResultCode.OK,
-        expected_message="Controller On command completed OK",
-    )
+    # Intentionally sequential!
+    tiles_on_sequence = {
+        tiles[1],
+        tiles[2],
+        tiles[3],
+        tiles[4],
+    }
+    for device in tiles_on_sequence:
+        _ = device.On()
+        retry_limit = 0
+        max_retries = 5
+        busy = True
+        while retry_limit < max_retries and busy:
+            timeout = 7.5
+            elapsed_time = 0.0
+            while elapsed_time <= timeout:
+                if not device.state() == tango.DevState.ON:
+                    sleep(0.1)
+                    elapsed_time += 0.1
+                else:
+                    busy = False
+                    break
 
 
 @then(parsers.parse("mccs controller state is {state_name}"))

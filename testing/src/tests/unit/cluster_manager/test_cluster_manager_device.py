@@ -1,13 +1,10 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for the MCCS cluster manager device."""
 from __future__ import annotations
 
@@ -143,7 +140,9 @@ class TestMccsClusterManagerDevice:
         :param attribute_value: expected value of the attribute under
             test.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(device_under_test, attribute_name)
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -161,7 +160,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.memoryAvail
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.memoryAvail == pytest.approx(
@@ -179,7 +180,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.nodesAvail
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.nodesAvail == pytest.approx(
@@ -197,7 +200,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.masterCpusAllocatedPercent
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.masterCpusAllocatedPercent == pytest.approx(
@@ -215,7 +220,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.masterDiskPercent
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.masterDiskPercent == pytest.approx(
@@ -233,7 +240,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.masterMemPercent
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.masterMemPercent == pytest.approx(
@@ -251,7 +260,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.shadowMasterPoolNodeIds
         device_under_test.adminMode = AdminMode.ONLINE
         assert (
@@ -270,7 +281,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.shadowMasterPoolStatus
         device_under_test.adminMode = AdminMode.ONLINE
         assert tuple(device_under_test.shadowMasterPoolStatus) == (
@@ -292,7 +305,7 @@ class TestMccsClusterManagerDevice:
             next(iter(ClusterSimulator.OPEN_JOBS))
         )
         assert result_code == ResultCode.FAILED
-        assert message == "Not connected"
+        assert "Communication with component is not established" in message
 
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -328,7 +341,7 @@ class TestMccsClusterManagerDevice:
             next(iter(ClusterSimulator.OPEN_JOBS))
         )
         assert result_code == ResultCode.FAILED
-        assert message == "Not connected"
+        assert "Communication with component is not established" in message
 
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -354,7 +367,9 @@ class TestMccsClusterManagerDevice:
         """
         job_config = json.dumps({"mock_key": "mock_value"})
 
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.SubmitJob(job_config)
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -372,7 +387,9 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(DevFailed, match="Not connected"):
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -392,7 +409,7 @@ class TestMccsClusterManagerDevice:
         """
         ([result_code], [message]) = device_under_test.ClearJobStats()
         assert result_code == ResultCode.FAILED
-        assert message == "Not connected"
+        assert "Communication with component is not established" in message
 
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -415,7 +432,7 @@ class TestMccsClusterManagerDevice:
         """
         ([result_code], [message]) = device_under_test.PingMasterPool()
         assert result_code == ResultCode.FAILED
-        assert message == "Not connected"
+        assert "Communication with component is not established" in message
 
         device_under_test.adminMode = AdminMode.ONLINE
 

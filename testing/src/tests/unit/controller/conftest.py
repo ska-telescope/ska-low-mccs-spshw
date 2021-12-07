@@ -1,19 +1,15 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defines a pytest harness for testing the MCCS controller module."""
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 import unittest
 
 import pytest
@@ -466,6 +462,9 @@ def patched_controller_device_class(
 
             :return: a mock component manager
             """
+            self._communication_status: Optional[CommunicationStatus] = None
+            self._component_power_mode: Optional[PowerMode] = None
+
             mock_component_manager._communication_status_changed_callback = (
                 self._communication_status_changed
             )

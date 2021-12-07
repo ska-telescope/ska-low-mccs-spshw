@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for the MccsAntenna."""
 from __future__ import annotations
 
@@ -152,7 +148,9 @@ class TestMccsAntenna:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.voltage
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -194,7 +192,9 @@ class TestMccsAntenna:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.current
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -236,7 +236,9 @@ class TestMccsAntenna:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.temperature
 
         device_under_test.adminMode = AdminMode.ONLINE

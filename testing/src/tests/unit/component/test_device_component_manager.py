@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains tests of the device_component_manager module."""
 from __future__ import annotations
 
@@ -119,7 +126,9 @@ class TestDeviceComponentManager:
         :param device_command: the name of the command that is expected
             to be called on the device.
         """
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, component_manager_command)()
         getattr(mock_proxy, device_command).assert_not_called()
 

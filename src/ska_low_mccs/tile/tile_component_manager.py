@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements component management for tiles."""
 from __future__ import annotations
 
@@ -615,9 +613,8 @@ class TileComponentManager(MessageQueueComponentManager):
         :raises ConnectionError: if the attempt to establish
             communication with the channel fails.
         """
-        self._tile_orchestrator.update_subrack_communication_status(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
+        # Don't set comms NOT_ESTABLISHED here. It should already have been handled
+        # synchronously by the orchestator.
         self._subrack_proxy = MccsDeviceProxy(
             self._subrack_fqdn, self._logger, connect=False
         )
@@ -662,9 +659,6 @@ class TileComponentManager(MessageQueueComponentManager):
 
     def _stop_communicating_with_subrack(self: TileComponentManager) -> None:
         self._subrack_proxy = None
-        self._tile_orchestrator.update_subrack_communication_status(
-            CommunicationStatus.DISABLED
-        )
 
     @enqueue
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:

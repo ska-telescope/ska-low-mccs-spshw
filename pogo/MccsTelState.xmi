@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="MccsTelState" pogoRevision="9.6">
-    <description description="MccsTelState TANGO device class for the MccsTelState prototype" title="MccsTelState Tango device prototype" sourcePath="/home/button/PycharmProjects/ska-low-mccs/pogo" language="PythonHL" filestogenerate="XMI   file" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
+    <description description="MccsTelState TANGO device class for the MccsTelState prototype" title="MccsTelState Tango device prototype" sourcePath="/home/button/PycharmProjects/ska-low-mccs/pogo" language="PythonHL" filestogenerate="XMI   file" license="BSD-3" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="SKABaseDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
       <inheritances classname="SKATelState" sourcePath="/home/lmc-base-classes/pogo"/>

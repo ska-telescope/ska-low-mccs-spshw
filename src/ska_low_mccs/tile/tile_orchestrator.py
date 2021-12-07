@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module provides a orchestrator for the tile component manager."""
 from __future__ import annotations
 
@@ -36,19 +43,16 @@ class Stimulus(enum.IntEnum):
     DESIRE_OFF = 4
     """The tile device has been asked to turn off the TPM."""
 
-    SUBRACK_COMMS_DISABLED = 5
-    """Communications with the subrack device is disabled."""
-
-    SUBRACK_COMMS_NOT_ESTABLISHED = 6
+    SUBRACK_COMMS_NOT_ESTABLISHED = 5
     """Communications with the subrack device is not established."""
 
-    SUBRACK_COMMS_ESTABLISHED = 7
+    SUBRACK_COMMS_ESTABLISHED = 6
     """Communications with the subrack device is established."""
 
-    SUBRACK_SAYS_TPM_UNKNOWN = 8
+    SUBRACK_SAYS_TPM_UNKNOWN = 7
     """The subrack reports that power mode of the TPM is unknown."""
 
-    SUBRACK_SAYS_TPM_NO_SUPPLY = 9
+    SUBRACK_SAYS_TPM_NO_SUPPLY = 8
     """
     The subrack reports that the TPM has no power supply.
 
@@ -56,23 +60,20 @@ class Stimulus(enum.IntEnum):
     cannot be commanded on
     """
 
-    SUBRACK_SAYS_TPM_OFF = 10
+    SUBRACK_SAYS_TPM_OFF = 9
     """
     The subrack reports that the TPM is off.
 
     However the subrack itself is on, so the TPM can be commanded on.
     """
 
-    SUBRACK_SAYS_TPM_ON = 11
+    SUBRACK_SAYS_TPM_ON = 10
     """The subrack reports that the TPM is powered on."""
 
-    TPM_COMMS_DISABLED = 12
-    """Communications with the TPM is disabled."""
-
-    TPM_COMMS_NOT_ESTABLISHED = 13
+    TPM_COMMS_NOT_ESTABLISHED = 11
     """Communications with the TPM is not established."""
 
-    TPM_COMMS_ESTABLISHED = 14
+    TPM_COMMS_ESTABLISHED = 12
     """Communications with the TPM is established."""
 
 
@@ -200,9 +201,13 @@ class TileOrchestrator:
         self._start_communicating_with_subrack = (
             start_communicating_with_subrack_callback
         )
-        self._stop_communicating_with_subrack = stop_communicating_with_subrack_callback
+        self._stop_communicating_with_subrack_callback = (
+            stop_communicating_with_subrack_callback
+        )
         self._start_communicating_with_tpm = start_communicating_with_tpm_callback
-        self._stop_communicating_with_tpm = stop_communicating_with_tpm_callback
+        self._stop_communicating_with_tpm_callback = (
+            stop_communicating_with_tpm_callback
+        )
 
         self._turn_tpm_off = turn_tpm_off_callback
         self._turn_tpm_on = turn_tpm_on_callback
@@ -314,7 +319,11 @@ class TileOrchestrator:
         """
         with self.__lock:
             if communication_status == CommunicationStatus.DISABLED:
-                self._act(Stimulus.SUBRACK_COMMS_DISABLED)
+                pass
+                # This will only occur as a result of the orchestrator calling
+                # stop_communicating_with_subrack, which is synchronous and
+                # deterministic, so the orchestrator already knows that communication
+                # has been disabled.
             elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
                 self._act(Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED)
             elif communication_status == CommunicationStatus.ESTABLISHED:
@@ -337,7 +346,11 @@ class TileOrchestrator:
         """
         with self.__lock:
             if communication_status == CommunicationStatus.DISABLED:
-                self._act(Stimulus.TPM_COMMS_DISABLED)
+                pass
+                # This will only occur as a result of the orchestrator calling
+                # stop_communicating_with_tpm, which is synchronous and deterministic,
+                # so the orchestrator already knows that # communication has been
+                # disabled.
             elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
                 self._act(Stimulus.TPM_COMMS_NOT_ESTABLISHED)
             elif communication_status == CommunicationStatus.ESTABLISHED:
@@ -389,6 +402,7 @@ class TileOrchestrator:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
         self._logger.debug(f"TileOrchestrator: {key} ==> {actions}")
+        print(f"TileOrchestrator: {key} ==> {actions}")
 
         result_code = None
         for action in actions:
@@ -438,10 +452,11 @@ class TileOrchestrator:
     def _set_no_desire(self: TileOrchestrator) -> None:
         self._operator_desire = None
 
-    def _set_subrack_communication_disabled(
+    def _stop_communicating_with_subrack(
         self: TileOrchestrator,
     ) -> None:
         self._subrack_communication_status = CommunicationStatus.DISABLED
+        self._stop_communicating_with_subrack_callback()
 
     def _set_subrack_communication_established(
         self: TileOrchestrator,
@@ -453,8 +468,9 @@ class TileOrchestrator:
     ) -> None:
         self._subrack_communication_status = CommunicationStatus.NOT_ESTABLISHED
 
-    def _set_tpm_communication_disabled(self: TileOrchestrator) -> None:
+    def _stop_communicating_with_tpm(self: TileOrchestrator) -> None:
         self._tpm_communication_status = CommunicationStatus.DISABLED
+        self._stop_communicating_with_tpm_callback()
 
     def _set_tpm_communication_not_established(self: TileOrchestrator) -> None:
         self._tpm_communication_status = CommunicationStatus.NOT_ESTABLISHED

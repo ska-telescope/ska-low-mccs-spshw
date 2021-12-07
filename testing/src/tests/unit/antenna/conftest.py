@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defined a pytest test harness for testing the MCCS antenna module."""
 from __future__ import annotations
 

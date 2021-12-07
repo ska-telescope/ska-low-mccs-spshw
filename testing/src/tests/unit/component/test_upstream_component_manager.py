@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains tests of the object_component_manager module."""
 from __future__ import annotations
 
@@ -159,7 +166,9 @@ class TestPowerSupplyProxySimulator:
         """
         assert component_manager.supplied_power_mode is None
 
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, command)()
         time.sleep(0.1)
         assert component_manager.supplied_power_mode is None

@@ -1,13 +1,10 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for MccsTelState."""
 from __future__ import annotations
 from typing import Any
@@ -107,7 +104,9 @@ class TestMccsTelState:
             attribute.
         :param write_value: a value to write to check that it sticks
         """
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(device_under_test, attribute)
 
         device_under_test.adminMode = AdminMode.ONLINE

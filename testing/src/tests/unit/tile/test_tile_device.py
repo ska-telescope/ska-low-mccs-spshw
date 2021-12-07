@@ -1106,7 +1106,6 @@ class TestMccsTileCommands:
         with pytest.raises(tango.DevFailed, match="ValueError"):
             _ = tile_device.LoadCalibrationCurve(coefficients[0:17])
 
-    @pytest.mark.skip(reason="Too unstable")
     @pytest.mark.parametrize("start_time", (None, 0))
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(

@@ -225,7 +225,6 @@ class TestTileComponentManager:
         mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
         tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
-    @pytest.mark.skip(reason="Too unstable")
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,

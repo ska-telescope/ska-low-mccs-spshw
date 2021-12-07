@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable, Tuple, Optional
+from typing import Callable, Iterable, Optional
 import unittest
 
 import pytest
@@ -449,19 +449,7 @@ def mock_component_manager(
 
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
 
-    def _enqueue(mock: unittest.mock.Mock, handle: Callable) -> Tuple[str, ResultCode]:
-        """
-        Side-effect method to assist in testing.
-
-        :param mock: a mock used to store the passed in handle
-        :param handle: handle (command) to be enqueued
-
-        :return: unique_id, result code
-        """
-        mock.handle = handle
-        return unique_id, ResultCode.QUEUED
-
-    mock.enqueue.side_effect = lambda handle: _enqueue(mock, handle)
+    mock.enqueue.return_value = unique_id, ResultCode.QUEUED
 
     return mock
 

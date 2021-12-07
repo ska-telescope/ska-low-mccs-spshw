@@ -315,10 +315,10 @@ def station_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     :return: station beams by number
     """
     return {
-        1: tango_harness.get_device("low-mccs/beam/001"),
-        2: tango_harness.get_device("low-mccs/beam/002"),
-        3: tango_harness.get_device("low-mccs/beam/003"),
-        4: tango_harness.get_device("low-mccs/beam/004"),
+        1: tango_harness.get_device("low-mccs/beam/01"),
+        2: tango_harness.get_device("low-mccs/beam/02"),
+        3: tango_harness.get_device("low-mccs/beam/03"),
+        4: tango_harness.get_device("low-mccs/beam/04"),
     }
 
 

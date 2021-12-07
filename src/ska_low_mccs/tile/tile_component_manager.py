@@ -596,7 +596,7 @@ class TileComponentManager(MccsComponentManager):
         self._tpm_component_manager.stop_communicating()
 
     # TODO RCL: Convert this to a LRC. This doesn't need to be done right now.
-    #           This needs an instantitation of a new class derived from
+    #           This needs an instantiation of a new class derived from
     #           DeviceComponentManager that provides its own message queue.
     #           That allows the proxy call to other Tango devices to be queued
     #           rather than blocking until the call to the Tango device has been

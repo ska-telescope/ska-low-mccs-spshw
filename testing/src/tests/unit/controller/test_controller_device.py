@@ -148,7 +148,7 @@ class TestMccsController:
         assert result_code == ResultCode.QUEUED
         method = getattr(mock_component_manager, component_method)
         method.assert_called_once()
-        assert len(method.call_args.args) == 3
+        assert len(method.call_args[0]) == 1
 
     @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(

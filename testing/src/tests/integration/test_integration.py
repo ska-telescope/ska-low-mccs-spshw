@@ -318,7 +318,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.OK
 
         subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.IDLE)
-        assert subarray_1.obsState.name == "IDLE"
+        assert subarray_1.obsState == ObsState.IDLE
 
         # check that station_1 and only station_1 is allocated
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
@@ -361,7 +361,7 @@ class TestMccsIntegration:
             subarray_1_obs_state_changed_callback.assert_last_change_event(
                 ObsState.IDLE
             )
-            assert subarray_1.obsState.name == "IDLE"
+            assert subarray_1.obsState == ObsState.IDLE
 
             station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
             assert list(station_fqdns) == [
@@ -472,7 +472,7 @@ class TestMccsIntegration:
             channel_blocks=[1],
         )
         assert result_code == ResultCode.OK
-        assert subarray_1.obsState.name == "IDLE"
+        assert subarray_1.obsState == ObsState.IDLE
 
         # allocate station 2 to subarray 2
         ([result_code], [_]) = call_with_json(

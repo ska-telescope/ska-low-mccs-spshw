@@ -37,32 +37,6 @@ from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
 
 
-# @contextmanager
-# def _tpmlock(lock: threading.Lock) -> Generator:
-#    """
-#    Check whether the hardware is locked for methods that cannot wait.
-#
-#    Allows to have a fallback for immediate methods if the hardware
-#    is locked. Long running commands can be enqueued using standard
-#    "with self.__hardware_lock:" syntax. E.g. to read a register or
-#    to use the existing last stored value To be used as:
-#
-#    with _tpmlock(self._hardware_lock) as locked:
-#
-#    then test "locked" to select between hardware access and fallback.
-#
-#    :param lock: Lock to check and use
-#    :yields locked: lock status
-#    """
-#    locked = lock.acquire(False)
-#    try:
-#        yield locked
-#    finally:
-#        if locked:
-#            lock.release()
-#
-
-
 class TpmDriver(MessageQueueComponentManager):
     """Hardware driver for a TPM."""
 

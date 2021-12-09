@@ -506,62 +506,61 @@ class TestMccsIntegrationTmc:
         # TODO: This section of the integration test is too unstable at the moment
         #       We have a combination of Long and short running commands that
         #       are not playing nicely.
-        if False:
-            time.sleep(0.2)  # TODO: to give subarray beams time to turn on
+        #  time.sleep(0.2)  # TODO: to give subarray beams time to turn on
 
-            # configure subarray
-            ([result_code], [unique_id]) = call_with_json(
-                subarray_1.Configure,
-                stations=[{"station_id": 1}, {"station_id": 2}],
-                subarray_beams=[
-                    {
-                        "subarray_beam_id": 1,
-                        "station_ids": [1, 2],
-                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
-                        "update_rate": 0.0,
-                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
-                        "antenna_weights": [1.0, 1.0, 1.0],
-                        "phase_centre": [0.0, 0.0],
-                    }
-                ],
-            )
-            assert result_code == ResultCode.QUEUED
-            assert "ConfigureCommand" in unique_id
+        # # configure subarray
+        # ([result_code], [unique_id]) = call_with_json(
+        #     subarray_1.Configure,
+        #     stations=[{"station_id": 1}, {"station_id": 2}],
+        #     subarray_beams=[
+        #         {
+        #             "subarray_beam_id": 1,
+        #             "station_ids": [1, 2],
+        #             "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+        #             "update_rate": 0.0,
+        #             "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+        #             "antenna_weights": [1.0, 1.0, 1.0],
+        #             "phase_centre": [0.0, 0.0],
+        #         }
+        #     ],
+        # )
+        # assert result_code == ResultCode.QUEUED
+        # assert "ConfigureCommand" in unique_id
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.CONFIGURING
-            )
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.READY
-            )
+        # subarray_device_obs_state_changed_callback.assert_next_change_event(
+        #     ObsState.CONFIGURING
+        # )
+        # subarray_device_obs_state_changed_callback.assert_next_change_event(
+        #     ObsState.READY
+        # )
 
-            ([result_code], [unique_id]) = call_with_json(
-                subarray_1.Scan, scan_id=1, start_time=4
-            )
-            assert result_code == ResultCode.QUEUED
-            assert "ScanCommand" in unique_id
+        # ([result_code], [unique_id]) = call_with_json(
+        #     subarray_1.Scan, scan_id=1, start_time=4
+        # )
+        # assert result_code == ResultCode.QUEUED
+        # assert "ScanCommand" in unique_id
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.SCANNING
-            )
+        # subarray_device_obs_state_changed_callback.assert_next_change_event(
+        #     ObsState.SCANNING
+        # )
 
-            ([result_code], [unique_id]) = subarray_1.EndScan()
-            assert result_code == ResultCode.QUEUED
-            assert "EndScanCommand" in unique_id
+        # ([result_code], [unique_id]) = subarray_1.EndScan()
+        # assert result_code == ResultCode.QUEUED
+        # assert "EndScanCommand" in unique_id
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.READY
-            )
+        # subarray_device_obs_state_changed_callback.assert_next_change_event(
+        #     ObsState.READY
+        # )
 
-            ([result_code], [unique_id]) = subarray_1.End()
-            assert result_code == ResultCode.QUEUED
-            assert "EndCommand" in unique_id
+        # ([result_code], [unique_id]) = subarray_1.End()
+        # assert result_code == ResultCode.QUEUED
+        # assert "EndCommand" in unique_id
 
-            subarray_device_obs_state_changed_callback.assert_next_change_event(
-                ObsState.IDLE
-            )
+        # subarray_device_obs_state_changed_callback.assert_next_change_event(
+        #     ObsState.IDLE
+        # )
 
-        # TODO RCL: Currently short running, but calls a LRC in Subarray!
+        # TODO: Currently short running, but calls a LRC in Subarray!
         ([result_code], [message]) = call_with_json(
             controller.Release,
             subarray_id=1,

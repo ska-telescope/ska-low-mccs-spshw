@@ -578,14 +578,13 @@ class TestStaticSimulatorCommon:
         tile.download_firmware(mock_bitfile)
         assert tile.is_programmed
 
-    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
-    @pytest.mark.parametrize("device", (0, 1))
+    @pytest.mark.parametrize("device", (1,))
     @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
-    @pytest.mark.parametrize("read_offset", (0, 2))
-    @pytest.mark.parametrize("read_length", (0, 4))
-    @pytest.mark.parametrize("write_offset", (0, 3))
+    @pytest.mark.parametrize("read_offset", (2,))
+    @pytest.mark.parametrize("read_length", (4,))
+    @pytest.mark.parametrize("write_offset", (3,))
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
-    def disabled_test_read_and_write_register(
+    def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
         tile: Union[
             StaticTpmSimulator,
@@ -626,12 +625,16 @@ class TestStaticSimulatorCommon:
             == expected_read
         )
 
-    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
-    @pytest.mark.parametrize("write_address", [9, 11])
+    @pytest.mark.parametrize(
+        "write_address",
+        [
+            9,
+        ],
+    )
     @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
     @pytest.mark.parametrize("read_address", [10])
     @pytest.mark.parametrize("read_length", [0, 4])
-    def disabled_test_read_and_write_address(
+    def test_read_and_write_address(
         self: TestStaticSimulatorCommon,
         tile: Union[
             StaticTpmSimulator,
@@ -952,11 +955,11 @@ class TestDriverCommon:
         return SimulationMode.FALSE
 
     @pytest.fixture()
-    def aavs_tile_mock(self: TestDriverCommon) -> unittest.mock.Mock:
+    def hardware_tile_mock(self: TestDriverCommon) -> unittest.mock.Mock:
         """
-        Provide a mock for the AAVS tile.
+        Provide a mock for the hardware tile.
 
-        :return: An AAVS tile mock
+        :return: An hardware tile mock
         """
         return unittest.mock.Mock()
 
@@ -990,7 +993,7 @@ class TestDriverCommon:
                 the component manager and its component changes
             :param component_fault_callback: callback to be called when the
                 component faults (or stops faulting)
-            :param aavs_tile: a mock of the AAVS tile
+            :param aavs_tile: a mock of the hardware tile
             """
             super().__init__(
                 logger,
@@ -1013,7 +1016,7 @@ class TestDriverCommon:
         tpm_version: str,
         communication_status_changed_callback: MockCallable,
         component_fault_callback: MockCallable,
-        aavs_tile_mock: unittest.mock.Mock,
+        hardware_tile_mock: unittest.mock.Mock,
     ) -> PatchedTpmDriver:
         """
         Return a patched TPM driver.
@@ -1029,7 +1032,7 @@ class TestDriverCommon:
             the component manager and its component changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
-        :param aavs_tile_mock: a mock of the AAVS tile
+        :param hardware_tile_mock: a mock of the hardware tile
 
         :return: a patched TPM driver
         """
@@ -1041,13 +1044,13 @@ class TestDriverCommon:
             tpm_version,
             communication_status_changed_callback,
             component_fault_callback,
-            aavs_tile_mock,
+            hardware_tile_mock,
         )
 
     def test_communication_fails(
         self: TestDriverCommon,
         patched_tpm_driver: PatchedTpmDriver,
-        aavs_tile_mock: unittest.mock.Mock,
+        hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
         Test we can create the driver but not start communication with the component.
@@ -1058,9 +1061,9 @@ class TestDriverCommon:
         harness).
 
         :param patched_tpm_driver: the patched tpm driver under test.
-        :param aavs_tile_mock: An AAVS tile mock
+        :param hardware_tile_mock: An hardware tile mock
         """
-        aavs_tile_mock.tpm = None
+        hardware_tile_mock.tpm = None
         assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
@@ -1069,7 +1072,7 @@ class TestDriverCommon:
         )
         # Wait for the message to execute
         time.sleep(0.1)
-        aavs_tile_mock.connect.assert_called_once()
+        hardware_tile_mock.connect.assert_called_once()
         assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
         assert patched_tpm_driver._queue_manager._task_result[1] == str(
             ResultCode.FAILED.value
@@ -1086,7 +1089,7 @@ class TestDriverCommon:
     def test_communication(
         self: TestDriverCommon,
         patched_tpm_driver: PatchedTpmDriver,
-        aavs_tile_mock: unittest.mock.Mock,
+        hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
         Test we can create the driver and start communication with the component.
@@ -1096,9 +1099,9 @@ class TestDriverCommon:
         in this test harness).
 
         :param patched_tpm_driver: the patched tpm driver under test.
-        :param aavs_tile_mock: An AAVS tile mock
+        :param hardware_tile_mock: An hardware tile mock
         """
-        aavs_tile_mock.tpm = True
+        hardware_tile_mock.tpm = True
         assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
@@ -1108,7 +1111,7 @@ class TestDriverCommon:
 
         # Wait for the message to execute
         time.sleep(0.1)
-        aavs_tile_mock.connect.assert_called_once()
+        hardware_tile_mock.connect.assert_called_once()
         assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
         assert patched_tpm_driver._queue_manager._task_result[1] == str(
             ResultCode.OK.value

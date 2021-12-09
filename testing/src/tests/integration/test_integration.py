@@ -197,6 +197,7 @@ def initial_mocks(
 class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
+    @pytest.mark.timeout(19)
     def test_controller_allocate_subarray(
         self: TestMccsIntegration,
         tango_harness: TangoHarness,
@@ -345,30 +346,29 @@ class TestMccsIntegration:
         #       The subarray complains with:
         #       "Action component_resourced is not allowed in obs state RESOURCING."
         #       Technical debt: Fix this later.
-        if False:
-            # allocating stations 1 and 2 to subarray 1 should succeed,
-            # because the already allocated station is allocated to the same
-            # subarray, BUT we must remember that the subarray cannot reallocate
-            # the same subarray_beam.
-            ([result_code], [_]) = call_with_json(
-                controller.Allocate,
-                subarray_id=1,
-                station_ids=[[1, 2]],
-                subarray_beam_ids=[2],
-                channel_blocks=[2],
-            )
-            assert result_code == ResultCode.OK
-            subarray_1_obs_state_changed_callback.assert_last_change_event(
-                ObsState.IDLE
-            )
-            assert subarray_1.obsState == ObsState.IDLE
+        # allocating stations 1 and 2 to subarray 1 should succeed,
+        # ecause the already allocated station is allocated to the same
+        # subarray, BUT we must remember that the subarray cannot reallocate
+        # the same subarray_beam.
+        # ([result_code], [_]) = call_with_json(
+        #     controller.Allocate,
+        #     subarray_id=1,
+        #     station_ids=[[1, 2]],
+        #     subarray_beam_ids=[2],
+        #     channel_blocks=[2],
+        # )
+        # assert result_code == ResultCode.OK
+        # subarray_1_obs_state_changed_callback.assert_last_change_event(
+        #     ObsState.IDLE
+        # )
+        # assert subarray_1.obsState == ObsState.IDLE
 
-            station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
-            assert list(station_fqdns) == [
-                station_1.dev_name(),
-                station_2.dev_name(),
-            ]
-            assert subarray_2.stationFQDNs is None
+        # station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
+        # assert list(station_fqdns) == [
+        #     station_1.dev_name(),
+        #     station_2.dev_name(),
+        # ]
+        # assert subarray_2.stationFQDNs is None
 
     # TODO This test is an extension from the test above, which is only
     #      half working due to an obs state issue with subarray.

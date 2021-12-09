@@ -429,9 +429,9 @@ class MccsSubarray(SKASubarray):
         """
         # TODO Call assign resources directly - DON'T USE LRC - for now.
         handler = self.get_command_object("AssignResources")
-        args = json.loads(argin)
-        (rc, desc) = handler(args)
-        return ([rc], [desc])
+        params = json.loads(argin)
+        (return_code, message) = handler(params)
+        return ([return_code], [message])
 
     class ReleaseResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand

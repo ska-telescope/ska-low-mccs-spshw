@@ -150,6 +150,7 @@ class MccsAntenna(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
+        # TODO Call Reset directly - DON'T USE LRC - for now.
         handler = self.get_command_object("Reset")
         (result_code, message) = handler()
         return ([result_code], [message])

@@ -13,7 +13,8 @@ from typing import Any, Callable
 import unittest.mock
 
 import pytest
-from ska_tango_base.commands import ResultCode
+
+# from ska_tango_base.commands import ResultCode
 import tango
 
 from ska_tango_base.control_model import AdminMode, HealthState
@@ -342,26 +343,25 @@ class TestPowerManagement:
 
         # TODO: This next call causes a segmentation fault so is unstable
         #       for inclusion in our unit tests. Investigation required.
-        if False:
-            # Message queue length is non-zero so command is queued
-            ([result_code], [unique_id]) = controller.On()
-            assert result_code == ResultCode.QUEUED
-            assert "OnCommand" in unique_id
+        # # Message queue length is non-zero so command is queued
+        # ([result_code], [unique_id]) = controller.On()
+        # assert result_code == ResultCode.QUEUED
+        # assert "OnCommand" in unique_id
 
-            lrc_result_changed_callback.assert_long_running_command_result_change_event(
-                unique_id=unique_id,
-                expected_result_code=ResultCode.OK,
-                expected_message="Controller On command completed OK",
-            )
-            self._show_state_of_devices(devices)
+        # lrc_result_changed_callback.assert_long_running_command_result_change_event(
+        #     unique_id=unique_id,
+        #     expected_result_code=ResultCode.OK,
+        #     expected_message="Controller On command completed OK",
+        # )
+        # self._show_state_of_devices(devices)
 
-            # Double check that the controller fired a state change event
-            controller_device_state_changed_callback.assert_last_change_event(
-                tango.DevState.ON
-            )
+        # # Double check that the controller fired a state change event
+        # controller_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.ON
+        # )
 
-            for device in devices:
-                assert device.state() == tango.DevState.ON
+        # for device in devices:
+        #     assert device.state() == tango.DevState.ON
 
     def _show_state_of_devices(
         self: TestPowerManagement,

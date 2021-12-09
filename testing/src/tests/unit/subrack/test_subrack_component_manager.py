@@ -368,27 +368,28 @@ class TestSubrackDriverCommon:
         raise ValueError("subrack fixture parametrized with unrecognised option")
 
     @pytest.fixture()
-    def client_mock(self: TestSubrackDriverCommon) -> unittest.mock.Mock:
+    def web_hardware_client_mock(self: TestSubrackDriverCommon) -> unittest.mock.Mock:
         """
-        Provide a mock for the subrack driver client.
+        Provide a mock for the web hardware client.
 
-        :return: A subrack client mock
+        :return: A web hardware client mock
         """
         return unittest.mock.Mock()
 
     def test_communication(
         self: TestSubrackDriverCommon,
         subrack_driver: SubrackDriver,
-        client_mock: unittest.mock.Mock,
+        web_hardware_client_mock: unittest.mock.Mock,
     ) -> None:
         """
         Create the subrack driver and start communication with the component.
 
         :param subrack_driver: the subrack driver under test.
-        :param client_mock: a mock provided for the client member of the subrack driver.
+        :param web_hardware_client_mock: a mock provided for the
+            web hardare client member of the subrack driver.
         """
-        setattr(subrack_driver, "_client", client_mock)
-        client_mock.connect.return_value = True
+        setattr(subrack_driver, "_client", web_hardware_client_mock)
+        web_hardware_client_mock.connect.return_value = True
         assert subrack_driver.communication_status == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
         assert (
@@ -397,7 +398,7 @@ class TestSubrackDriverCommon:
 
         # Wait for the message to execute
         time.sleep(0.1)
-        client_mock.connect.assert_called_once()
+        web_hardware_client_mock.connect.assert_called_once()
         assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
         assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
         assert "Connected to " in subrack_driver._queue_manager._task_result[2]
@@ -406,7 +407,7 @@ class TestSubrackDriverCommon:
     def test_communication_fails(
         self: TestSubrackDriverCommon,
         subrack_driver: SubrackDriver,
-        client_mock: unittest.mock.Mock,
+        web_hardware_client_mock: unittest.mock.Mock,
     ) -> None:
         """
         Create the subrack driver and start communication with the component.
@@ -414,10 +415,11 @@ class TestSubrackDriverCommon:
         Failure to communicate with the underlying client must be handled correctly.
 
         :param subrack_driver: the subrack driver under test.
-        :param client_mock: a mock provided for the client member of the subrack driver.
+        :param web_hardware_client_mock: a mock provided for the
+            web hardare client member of the subrack driver.
         """
-        setattr(subrack_driver, "_client", client_mock)
-        client_mock.connect.return_value = False
+        setattr(subrack_driver, "_client", web_hardware_client_mock)
+        web_hardware_client_mock.connect.return_value = False
         assert subrack_driver.communication_status == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
         assert (
@@ -426,7 +428,7 @@ class TestSubrackDriverCommon:
 
         # Wait for the message to execute
         time.sleep(0.1)
-        client_mock.connect.assert_called_once()
+        web_hardware_client_mock.connect.assert_called_once()
         assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
         assert subrack_driver._queue_manager._task_result[1] == str(
             ResultCode.FAILED.value

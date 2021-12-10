@@ -157,6 +157,7 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 
 # run helm test
 functional-test helm-test test: ## test the application on K8s
+	@echo "Run functional test on K8s"
 	@rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
 	helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
 	test_retcode=$$?; \
@@ -183,6 +184,12 @@ wait:
 	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=${MAX_WAIT} $$jobs
 	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_WAIT} -l 'app=$(PROJECT)' pods || exit 1
 	@date
+
+wait_for_taranta_pod:
+	@echo "Wait for Taranta pod to report low CPU utilisation"
+	@while [ `kubectl top pods -n mccs | grep taranta-ska-taranta-test-0 | awk '{print substr($$2, 1, length($$2)-1)}'` -gt 250 ]; do \
+		sleep 2; \
+	done
 
 bounce:
 	@echo "stopping ..."; \

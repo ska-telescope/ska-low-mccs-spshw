@@ -20,8 +20,6 @@ __all__ = [
     "PowerSupplyProxySimulator",
     "MccsComponentManager",
     "MccsComponentManagerProtocol",
-    "MessageQueue",
-    "MessageQueueComponentManager",
     "ObjectComponent",
     "ObjectComponentManager",
     "ObsDeviceComponentManager",
@@ -29,7 +27,6 @@ __all__ = [
     "WebHardwareClient",
     "check_communicating",
     "check_on",
-    "enqueue",
 ]
 
 from .component_manager import (
@@ -40,11 +37,6 @@ from .component_manager import (
     MccsComponentManagerProtocol,
 )
 from .util import check_communicating, check_on
-from .message_queue_component_manager import (
-    MessageQueue,
-    MessageQueueComponentManager,
-    enqueue,
-)
 from .object_component import ObjectComponent
 from .object_component_manager import ObjectComponentManager
 from .device_component_manager import DeviceComponentManager, ObsDeviceComponentManager

@@ -20,7 +20,11 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs.subarray import SubarrayComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
 
 
 @pytest.fixture()
@@ -253,8 +257,8 @@ def station_beam_health_changed_callback(
 def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
-    message_queue_size_callback: Callable[[int], None],
     assign_completed_callback: MockCallable,
     release_completed_callback: MockCallable,
     configure_completed_callback: MockCallable,
@@ -274,11 +278,11 @@ def subarray_component_manager(
 
     :param tango_harness: a test harness for MCCS tango devices
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
     :param assign_completed_callback: callback to be called when the
         component completes a resource assignment.
     :param release_completed_callback: callback to be called when
@@ -312,8 +316,8 @@ def subarray_component_manager(
     """
     return SubarrayComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
-        message_queue_size_callback,
         assign_completed_callback,
         release_completed_callback,
         configure_completed_callback,
@@ -486,7 +490,7 @@ def mock_station_off() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.OFF)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -499,7 +503,7 @@ def mock_station_on() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -512,7 +516,7 @@ def mock_subarray_beam_off() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.OFF)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -525,8 +529,8 @@ def mock_subarray_beam_on() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
-    builder.add_result_command("Scan", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
+    builder.add_result_command("Scan", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -539,7 +543,7 @@ def mock_station_beam_off() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.OFF)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 
@@ -552,7 +556,7 @@ def mock_station_beam_on() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    builder.add_result_command("Configure", result_code=ResultCode.OK)
+    builder.add_result_command("Configure", result_code=ResultCode.QUEUED)
     return builder()
 
 

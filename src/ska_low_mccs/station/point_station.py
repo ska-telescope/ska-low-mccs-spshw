@@ -266,7 +266,7 @@ class Pointing(object):
                 Time(pointing_time),
                 self._reference_antenna_loc,
             )
-            # TODO: This code need investigation
+            # TODO: This code needs investigation
             self._delay_rates = (
                 self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
             )

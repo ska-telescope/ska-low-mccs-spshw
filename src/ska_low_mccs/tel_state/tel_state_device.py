@@ -59,8 +59,8 @@ class MccsTelState(SKATelState):
         """
         return TelStateComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
-            self._message_queue_size_changed,
         )
 
     class InitCommand(SKATelState.InitCommand):
@@ -121,19 +121,6 @@ class MccsTelState(SKATelState):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-
-    def _message_queue_size_changed(
-        self: MccsTelState,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsTelState, health: HealthState) -> None:
         """

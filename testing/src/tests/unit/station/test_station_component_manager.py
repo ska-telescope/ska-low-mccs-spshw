@@ -61,7 +61,6 @@ class TestStationComponentManager:
             station_component_manager.communication_status
             == CommunicationStatus.ESTABLISHED
         )
-        return
 
         is_configured_changed_callback.assert_next_call(False)
 

@@ -21,10 +21,8 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
-    MessageQueue,
     check_communicating,
     check_on,
-    enqueue,
 )
 from ska_low_mccs.utils import threadsafe
 
@@ -40,8 +38,8 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logical_tile_id: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -56,9 +54,9 @@ class _TileProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -78,23 +76,36 @@ class _TileProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
             health_changed_callback,
         )
 
-    def _connect_to_device(self: _TileProxy) -> None:
+    class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
         """
-        Establish communication with the component, then start monitoring.
+        General connection command class.
 
-        Overridden here to write initial tile configuration values
-        relative to this station.
+        Class that can be overridden by a derived class or instantiated
+        at the DeviceComponentManager level.
         """
-        super()._connect_to_device()
-        self._connecting = True
+
+        def do(  # type: ignore[override]
+            self: _TileProxy.ConnectToDevice,
+        ) -> tuple[ResultCode, str]:
+            """
+            Establish communication with the component, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :return: a result code and message
+            """
+            self.target._connecting = True
+            result_code, message = super().do()
+            return result_code, message
 
     def _device_state_changed(
         self: _TileProxy,
@@ -111,7 +122,6 @@ class _TileProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def set_pointing_delay(self: _TileProxy, delays: list[float]) -> ResultCode:
         """
         Set the tile's pointing delays.
@@ -122,7 +132,7 @@ class _TileProxy(DeviceComponentManager):
         :return: a result code
         """
         assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.SetPointingDelay(delays)
+        ([result_code], _) = self._proxy.SetPointingDelay(delays)
         return result_code
 
 
@@ -136,9 +146,9 @@ class StationComponentManager(MccsComponentManager):
         antenna_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        message_queue_size_callback: Callable[[int], None],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -155,13 +165,13 @@ class StationComponentManager(MccsComponentManager):
         :param tile_fqdns: FQDNs of the Tango devices and manage this
             station's TPMs
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param apiu_health_changed_callback: callback to be called when
             the health of this station's APIU changes
         :param antenna_health_changed_callback: callback to be called when
@@ -183,20 +193,14 @@ class StationComponentManager(MccsComponentManager):
             for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
         }
 
-        self._power_mode_lock = threading.Lock()
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._antenna_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in antenna_fqdns}
         self._tile_power_modes = {fqdn: PowerMode.UNKNOWN for fqdn in tile_fqdns}
 
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
-            self._message_queue,
             logger,
+            push_change_event,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
             self._apiu_power_mode_changed,
             None,
@@ -205,8 +209,8 @@ class StationComponentManager(MccsComponentManager):
         self._antenna_proxies = [
             DeviceComponentManager(
                 antenna_fqdn,
-                self._message_queue,
                 logger,
+                push_change_event,
                 functools.partial(
                     self._device_communication_status_changed, antenna_fqdn
                 ),
@@ -221,8 +225,8 @@ class StationComponentManager(MccsComponentManager):
                 tile_fqdn,
                 station_id,
                 logical_tile_id,
-                self._message_queue,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
                 functools.partial(self._tile_power_mode_changed, tile_fqdn),
                 None,
@@ -233,6 +237,7 @@ class StationComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
@@ -309,7 +314,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_mode_lock:
             self._antenna_power_modes[fqdn] = power_mode
-            self._evaluate_power_mode()
+        self._evaluate_power_mode()
 
     @threadsafe
     def _tile_power_mode_changed(
@@ -319,7 +324,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_mode_lock:
             self._tile_power_modes[fqdn] = power_mode
-            self._evaluate_power_mode()
+        self._evaluate_power_mode()
 
     @threadsafe
     def _apiu_power_mode_changed(
@@ -328,34 +333,35 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_mode_lock:
             self._apiu_power_mode = power_mode
-            self._evaluate_power_mode()
-            if power_mode is PowerMode.ON and self._on_called:
-                self._on_called = False
-                _ = self._turn_on_tiles_and_antennas()
+        self._evaluate_power_mode()
+        if power_mode is PowerMode.ON and self._on_called:
+            self._on_called = False
+            _ = self._turn_on_tiles_and_antennas()
 
     def _evaluate_power_mode(
         self: StationComponentManager,
     ) -> None:
-        power_modes = (
-            [self._apiu_power_mode]
-            + list(self._antenna_power_modes.values())
-            + list(self._tile_power_modes.values())
-        )
-        if all(power_mode == PowerMode.ON for power_mode in power_modes):
-            evaluated_power_mode = PowerMode.ON
-        elif all(power_mode == PowerMode.OFF for power_mode in power_modes):
-            evaluated_power_mode = PowerMode.OFF
-        else:
-            evaluated_power_mode = PowerMode.UNKNOWN
+        with self._power_mode_lock:
+            power_modes = (
+                [self._apiu_power_mode]
+                + list(self._antenna_power_modes.values())
+                + list(self._tile_power_modes.values())
+            )
+            if all(power_mode == PowerMode.ON for power_mode in power_modes):
+                evaluated_power_mode = PowerMode.ON
+            elif all(power_mode == PowerMode.OFF for power_mode in power_modes):
+                evaluated_power_mode = PowerMode.OFF
+            else:
+                evaluated_power_mode = PowerMode.UNKNOWN
 
-        self.logger.info(
-            "In StationComponentManager._evaluatePowerMode with:\n"
-            f"\tapiu: {self._apiu_power_mode}"
-            f"\antennas: {self._antenna_power_modes}\n"
-            f"\tiles: {self._tile_power_modes}\n"
-            f"\tresult: {str(evaluated_power_mode)}"
-        )
-        self.update_component_power_mode(evaluated_power_mode)
+            self.logger.info(
+                "In StationComponentManager._evaluatePowerMode with:\n"
+                f"\tapiu: {self._apiu_power_mode}\n"
+                f"\tantennas: {self._antenna_power_modes}\n"
+                f"\tiles: {self._tile_power_modes}\n"
+                f"\tresult: {str(evaluated_power_mode)}"
+            )
+            self.update_component_power_mode(evaluated_power_mode)
 
     @check_communicating
     def off(
@@ -405,20 +411,25 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        if not all(
-            power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()
-        ):
-            results = [proxy.on() for proxy in self._tile_proxies]
-            if ResultCode.FAILED in results:
-                return ResultCode.FAILED
-        if not all(
-            power_mode == PowerMode.ON
-            for power_mode in self._antenna_power_modes.values()
-        ):
-            results = [proxy.on() for proxy in self._antenna_proxies]
-            if ResultCode.FAILED in results:
-                return ResultCode.FAILED
-        return ResultCode.QUEUED
+        with self._power_mode_lock:
+            if not all(
+                power_mode == PowerMode.ON
+                for power_mode in self._tile_power_modes.values()
+            ):
+                results = []
+                for proxy in self._tile_proxies:
+                    result_code = proxy.on()
+                    results.append(result_code)
+                if ResultCode.FAILED in results:
+                    return ResultCode.FAILED
+            if not all(
+                power_mode == PowerMode.ON
+                for power_mode in self._antenna_power_modes.values()
+            ):
+                results = [proxy.on() for proxy in self._antenna_proxies]
+                if ResultCode.FAILED in results:
+                    return ResultCode.FAILED
+            return ResultCode.QUEUED
 
     @check_communicating
     @check_on

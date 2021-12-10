@@ -30,19 +30,18 @@ from typing import Callable, cast, List, Optional
 from ska_low_mccs.component import (
     ControlMode,
     CommunicationStatus,
+    MccsComponentManager,
     ExtendedPowerMode,
-    MessageQueue,
-    MessageQueueComponentManager,
     WebHardwareClient,
-    enqueue,
 )
+from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_low_mccs.subrack import SubrackData
 
 
 __all__ = ["SubrackDriver"]
 
 
-class SubrackDriver(MessageQueueComponentManager):
+class SubrackDriver(MccsComponentManager):
     """
     A driver for a subrack management board.
 
@@ -70,8 +69,8 @@ class SubrackDriver(MessageQueueComponentManager):
 
     def __init__(
         self: SubrackDriver,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         ip: str,
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -83,9 +82,9 @@ class SubrackDriver(MessageQueueComponentManager):
         """
         Initialise a new instance and tries to connect to the given IP and port.
 
-        :param message_queue: the message queue to be used by this
-            driver
         :param logger: a logger for this driver to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param ip: IP address for hardware tile
         :param port: IP address for hardware control
         :param communication_status_changed_callback: callback to be
@@ -128,8 +127,8 @@ class SubrackDriver(MessageQueueComponentManager):
         )
         self._component_progress_changed_callback = component_progress_changed_callback
         super().__init__(
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -138,16 +137,36 @@ class SubrackDriver(MessageQueueComponentManager):
     def start_communicating(self: SubrackDriver) -> None:
         """Establish communication with the subrack."""
         super().start_communicating()
-        self.enqueue(self._connect_to_subrack)
+        connect_command = self.ConnectToSubrack(target=self)
+        _ = self.enqueue(connect_command)
 
-    def _connect_to_subrack(self: SubrackDriver) -> None:
-        connected = self._client.connect()
-        if connected:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
-            self.logger.info("Connected to " + self._ip + ":" + str(self._port))
-        else:
-            self.logger.error("status:ERROR")
-            self.logger.info("info: Not connected")
+    class ConnectToSubrack(BaseCommand):
+        """Connect to subrack command class."""
+
+        def do(  # type: ignore[override]
+            self: SubrackDriver.ConnectToSubrack,
+        ) -> tuple[ResultCode, str]:
+            """
+            Establish communication with the subrack, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :return: a result code and message
+            """
+            target = self.target
+            connected = target._client.connect()
+            target_connection = f"{target._ip}:{str(target._port)}"
+            if connected:
+                target.update_communication_status(CommunicationStatus.ESTABLISHED)
+                message = f"Connected to {target_connection}"
+                target.logger.info(message)
+                return ResultCode.OK, message
+
+            target.logger.error("status:ERROR")
+            message = f"Failed to connect to {target_connection}"
+            target.logger.info(message)
+            return ResultCode.FAILED, message
 
     def stop_communicating(self: SubrackDriver) -> None:
         """Stop communicating with the subrack."""
@@ -437,7 +456,6 @@ class SubrackDriver(MessageQueueComponentManager):
         self._check_tpm_id(logical_tpm_id)
         return self.tpm_power_modes[logical_tpm_id - 1] == ExtendedPowerMode.ON
 
-    @enqueue
     def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn off a specified TPM.
@@ -467,7 +485,6 @@ class SubrackDriver(MessageQueueComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    @enqueue
     def turn_on_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """
         Turn on a specified TPM.
@@ -497,7 +514,6 @@ class SubrackDriver(MessageQueueComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    @enqueue
     def turn_on_tpms(self: SubrackDriver) -> bool:
         """
         Turn on all TPMs.
@@ -523,7 +539,6 @@ class SubrackDriver(MessageQueueComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    @enqueue
     def turn_off_tpms(self: SubrackDriver) -> bool:
         """
         Turn off all TPMs.

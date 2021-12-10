@@ -18,7 +18,11 @@ import tango
 from ska_low_mccs.station_beam import StationBeamComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
 
 
 @pytest.fixture()
@@ -89,8 +93,8 @@ def station_beam_component_manager(
     tango_harness: TangoHarness,
     beam_id: int,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
-    message_queue_size_callback: Callable[[int], None],
     component_is_beam_locked_changed_callback: MockCallable,
     component_device_health_changed_callback: MockCallable,
     component_device_fault_changed_callback: MockCallable,
@@ -101,11 +105,11 @@ def station_beam_component_manager(
     :param tango_harness: a test harness for MCCS tango devices
     :param beam_id: a beam id for the station beam under test.
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
     :param component_is_beam_locked_changed_callback: a callback to be
         called when whether the beam is locked changes.
     :param component_device_health_changed_callback: a callback to be
@@ -120,8 +124,8 @@ def station_beam_component_manager(
     return StationBeamComponentManager(
         beam_id,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
-        message_queue_size_callback,
         component_is_beam_locked_changed_callback,
         component_device_health_changed_callback,
         component_device_fault_changed_callback,

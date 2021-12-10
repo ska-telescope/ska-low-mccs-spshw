@@ -13,6 +13,7 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
+import time
 from tango.server import command, device_property
 
 from ska_tango_base.base import SKABaseDevice
@@ -22,6 +23,8 @@ from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 import ska_low_mccs.release as release
+from ska_low_mccs import MccsDeviceProxy
+
 
 __all__ = ["MccsController", "main"]
 
@@ -84,9 +87,9 @@ class MccsController(SKABaseDevice):
             self.MccsSubarrayBeams,
             self.MccsStationBeams,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
             self._component_power_mode_changed,
-            self._message_queue_size_changed,
             self._health_model.subrack_health_changed,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
@@ -97,6 +100,14 @@ class MccsController(SKABaseDevice):
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
+        self.register_command_object(
+            "On",
+            self.OnCommand(self, self.op_state_model, self.logger),
+        )
+        self.register_command_object(
+            "Off",
+            self.OffCommand(self, self.op_state_model, self.logger),
+        )
         self.register_command_object(
             "Allocate",
             self.AllocateCommand(
@@ -145,6 +156,100 @@ class MccsController(SKABaseDevice):
             # TODO: This needs to be fixed in the base classes.
             device._health_state = device._health_model.health_state
 
+            return (result_code, message)
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """A class for the MccsController's On() command."""
+
+        def do(  # type: ignore[override]
+            self: MccsController.OnCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Stateless hook for On() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            result_code = self.target.component_manager.on()
+            if result_code == ResultCode.FAILED:
+                return (ResultCode.FAILED, "Controller failed to initiate On command")
+
+            def wait_until_on(
+                device: MccsDeviceProxy, timeout: float, period: float = 0.5
+            ) -> tuple[ResultCode, str]:
+                """
+                Wait until the device is on.
+
+                :param device: the device to wait for
+                :param timeout: the time we are prepared to wait for the device to become ON
+                :param period: the polling period in seconds
+
+                :return: a return code and a string message indicating status.
+                    The message is for information purpose only.
+                """
+                elapsed_time = 0.0
+                while elapsed_time <= timeout:
+                    if device.get_state() == tango.DevState.ON:
+                        message = "Controller On command completed OK"
+                        return (ResultCode.OK, message)
+                    time.sleep(period)
+                    elapsed_time += period
+                message = (
+                    f"Controller On command didn't complete within {timeout} seconds"
+                )
+                return (ResultCode.FAILED, message)
+
+            # Wait for conditions on component manager to unblock
+            result_code, message = wait_until_on(self.target, timeout=30.0)
+            self.target.logger.info(message)
+            return (result_code, message)
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """A class for the MccsController's Off() command."""
+
+        def do(  # type: ignore[override]
+            self: MccsController.OffCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Stateless hook for Off() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            result_code = self.target.component_manager.off()
+            if result_code == ResultCode.FAILED:
+                return (ResultCode.FAILED, "Controller failed to initiate Off command")
+
+            def wait_until_off(
+                device: MccsDeviceProxy, timeout: float, period: float = 0.5
+            ) -> tuple[ResultCode, str]:
+                """
+                Wait until the device is off.
+
+                :param device: the device to wait for
+                :param timeout: the time we are prepared to wait for the device to become OFF
+                :param period: the polling period in seconds
+
+                :return: a return code and a string message indicating status.
+                    The message is for information purpose only.
+                """
+                elapsed_time = 0.0
+                while elapsed_time <= timeout:
+                    if device.get_state() == tango.DevState.OFF:
+                        message = "Controller Off command completed OK"
+                        return (ResultCode.OK, message)
+                    time.sleep(period)
+                    elapsed_time += period
+                message = (
+                    f"Controller Off command didn't complete within {timeout} seconds"
+                )
+                return (ResultCode.FAILED, message)
+
+            # Wait for conditions on component manager to unblock
+            result_code, message = wait_until_off(self.target, timeout=10.0)
+            self.target.logger.info(message)
             return (result_code, message)
 
     # ----------
@@ -224,19 +329,6 @@ class MccsController(SKABaseDevice):
             }
 
             self.op_state_model.perform_action(action_map[power_mode])
-
-    def _message_queue_size_changed(
-        self: MccsController,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsController, health: HealthState) -> None:
         """
@@ -318,8 +410,6 @@ class MccsController(SKABaseDevice):
         The JSON argument
         specifies the overall sub-array composition in terms of which stations should be
         allocated to the specified Sub-Array.
-
-        Method returns as soon as the message has been enqueued.
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and subarray_beam_ids.
@@ -438,9 +528,9 @@ class MccsController(SKABaseDevice):
     class RestartSubarrayCommand(ResponseCommand):
         """Restart a subarray."""
 
-        SUCCEEDED_MESSAGE = "Allocate command completed OK"
-        QUEUED_MESSAGE = "Allocate command queued"
-        FAILED_MESSAGE = "Allocate command failed"
+        SUCCEEDED_MESSAGE = "Restart subarray command completed OK"
+        QUEUED_MESSAGE = "Restart subarray command queued"
+        FAILED_MESSAGE = "Restart subarray command failed"
 
         def do(  # type: ignore[override]
             self: MccsController.RestartSubarrayCommand, subarray_id: int

@@ -48,12 +48,32 @@ linting:
 # unittest output (see setup.cfg), and the coverage xml report is moved to the reports
 # directory while the html output is persisted for use by the pages job.
 # TODO: possibly a candidate for refactor / renaming later on.
-test:
+test1:
   stage: test
   tags:
     - k8srunner
   script:
-    - tox -e py37
+    - tox -e py -- --splits 3 --group 1
+  artifacts:
+    paths:
+      - ./build
+
+test2:
+  stage: test
+  tags:
+    - k8srunner
+  script:
+    - tox -e py -- --splits 3 --group 2
+  artifacts:
+    paths:
+      - ./build
+
+test3:
+  stage: test
+  tags:
+    - k8srunner
+  script:
+    - tox -e py -- --splits 3 --group 3
   artifacts:
     paths:
       - ./build

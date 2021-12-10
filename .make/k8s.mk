@@ -6,6 +6,7 @@ TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
 MAX_WAIT ?= 300s
+MAX_FUNCTIONAL_TEST_WAIT ?= 600s
 
 EXTERNAL_IP ?= $(shell kubectl config view | gawk 'match($$0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 
@@ -163,7 +164,7 @@ functional-test helm-test test: ## test the application on K8s
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
-	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_WAIT} -f $$yaml; \
+	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_FUNCTIONAL_TEST_WAIT} -f $$yaml; \
 	kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR); \
 	python3 .wait_for_report_file.py; \
 	report_retcode=$$?; \

@@ -125,6 +125,7 @@ class TestMccsAntenna:
         tango_harness: TangoHarness,
         device_under_test: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_state_changed_callback: MockChangeEventCallback,
         voltage: float,
     ) -> None:
         """
@@ -136,6 +137,8 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
+        :param device_state_changed_callback: a callback that we can use
+            to subscribe to state changes on the tile device
         :param voltage: a voltage value to use for testing
         """
         mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
@@ -148,6 +151,13 @@ class TestMccsAntenna:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
+        device_under_test.add_change_event_callback(
+            "state",
+            device_state_changed_callback,
+        )
+        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        assert device_under_test.state() == tango.DevState.DISABLE
+
         with pytest.raises(
             tango.DevFailed, match="Communication with component is not established"
         ):
@@ -156,9 +166,13 @@ class TestMccsAntenna:
         device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
+        device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
         device_under_test.MockApiuOn()
+
         time.sleep(0.1)
+        # TODO How do we check that the component_manager decorators are satisfied here?
+        # Decorators "check_communicating" & "check_on" need to be verified in this test first.
 
         assert device_under_test.voltage == voltage
         assert mock_apiu.get_antenna_voltage.called_once_with(1)
@@ -169,6 +183,7 @@ class TestMccsAntenna:
         tango_harness: TangoHarness,
         device_under_test: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_state_changed_callback: MockChangeEventCallback,
         current: float,
     ) -> None:
         """
@@ -180,6 +195,8 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
+        :param device_state_changed_callback: a callback that we can use
+            to subscribe to state changes on the tile device
         :param current: a current value to use for testing
         """
         mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
@@ -192,6 +209,13 @@ class TestMccsAntenna:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
+        device_under_test.add_change_event_callback(
+            "state",
+            device_state_changed_callback,
+        )
+        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        assert device_under_test.state() == tango.DevState.DISABLE
+
         with pytest.raises(
             tango.DevFailed, match="Communication with component is not established"
         ):
@@ -200,9 +224,13 @@ class TestMccsAntenna:
         device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
+        device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+
+        device_under_test.MockApiuOn()
 
         time.sleep(0.1)
-        device_under_test.MockApiuOn()
+        # TODO How do we check that the component_manager decorators are satisfied here?
+        # Decorators "check_communicating" & "check_on" need to be verified in this test first.
 
         assert device_under_test.current == current
         assert mock_apiu.get_antenna_current.called_once_with(1)
@@ -213,6 +241,7 @@ class TestMccsAntenna:
         tango_harness: TangoHarness,
         device_under_test: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_state_changed_callback: MockChangeEventCallback,
         temperature: float,
     ) -> None:
         """
@@ -224,6 +253,8 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
+        :param device_state_changed_callback: a callback that we can use
+            to subscribe to state changes on the tile device
         :param temperature: a temperature value to use for testing
         """
         mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
@@ -236,6 +267,13 @@ class TestMccsAntenna:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
+        device_under_test.add_change_event_callback(
+            "state",
+            device_state_changed_callback,
+        )
+        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        assert device_under_test.state() == tango.DevState.DISABLE
+
         with pytest.raises(
             tango.DevFailed, match="Communication with component is not established"
         ):
@@ -244,8 +282,13 @@ class TestMccsAntenna:
         device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
+        device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
         device_under_test.MockApiuOn()
+
+        time.sleep(0.1)
+        # TODO How do we check that the component_manager decorators are satisfied here?
+        # Decorators "check_communicating" & "check_on" need to be verified in this test first.
 
         assert device_under_test.temperature == temperature
         assert mock_apiu.get_antenna_temperature.called_once_with(1)
@@ -594,8 +637,8 @@ class TestMccsAntenna:
         time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.On()
-        assert result_code == ResultCode.OK
-        assert message == "On command completed OK"
+        assert result_code == ResultCode.QUEUED
+        assert "_OnCommand" in message
 
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
         # At this point the APIU should turn the antenna on, then fire a change event.

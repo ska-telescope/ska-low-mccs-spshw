@@ -9,17 +9,15 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Tuple
+from typing import Any, Callable, cast, Optional
 
 from ska_tango_base.commands import ResultCode
-
-from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.subrack import (
     SubrackData,
     SubrackDriver,
     SubrackSimulator,
-    TestingSubrackSimulator,
 )
 from ska_low_mccs.component import (
     check_communicating,
@@ -28,7 +26,6 @@ from ska_low_mccs.component import (
     ComponentManagerWithUpstreamPowerSupply,
     ExtendedPowerMode,
     SwitchingComponentManager,
-    MessageQueue,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
 )
@@ -37,7 +34,6 @@ from ska_low_mccs.component import (
 __all__ = [
     "BaseSubrackSimulatorComponentManager",
     "SubrackSimulatorComponentManager",
-    "TestingSubrackSimulatorComponentManager",
     "SubrackComponentManager",
 ]
 
@@ -48,8 +44,8 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: BaseSubrackSimulatorComponentManager,
         subrack_simulator: SubrackSimulator,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -59,9 +55,9 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         Initialise a new instance.
 
         :param subrack_simulator: a subrack simulator object to use
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -74,8 +70,8 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         """
         super().__init__(
             subrack_simulator,
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -233,8 +229,8 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
 
     def __init__(
         self: SubrackSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
@@ -243,9 +239,9 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -258,47 +254,8 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         """
         super().__init__(
             SubrackSimulator(),
-            message_queue,
             logger,
-            communication_status_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
-            component_tpm_power_changed_callback,
-        )
-
-
-class TestingSubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
-    """A component manager for a subrack simulator."""
-
-    def __init__(
-        self: TestingSubrackSimulatorComponentManager,
-        message_queue: MessageQueue,
-        logger: logging.Logger,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param message_queue: the message queue to be used by this
-            component manager
-        :param logger: a logger for this object to use
-        :param communication_status_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of an tpm changes
-        """
-        super().__init__(
-            TestingSubrackSimulator(),
-            message_queue,
-            logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_progress_changed_callback,
@@ -312,9 +269,8 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
     def __init__(
         self: SwitchingSubrackComponentManager,
         initial_simulation_mode: SimulationMode,
-        initial_test_mode: TestMode,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -327,11 +283,9 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
 
         :param initial_simulation_mode: the simulation mode that the
             component should start in
-        :param initial_test_mode: the simulation mode that the component
-            should start in
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
         :param initial_simulation_mode: the simulation mode that the
@@ -347,8 +301,8 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             called when the power mode of an tpm changes
         """
         subrack_driver = SubrackDriver(
-            message_queue,
             logger,
+            push_change_event,
             subrack_ip,
             subrack_port,
             communication_status_changed_callback,
@@ -357,16 +311,8 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             component_tpm_power_changed_callback,
         )
         subrack_simulator = SubrackSimulatorComponentManager(
-            message_queue,
             logger,
-            communication_status_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
-            component_tpm_power_changed_callback,
-        )
-        testing_subrack_simulator = TestingSubrackSimulatorComponentManager(
-            message_queue,
-            logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_progress_changed_callback,
@@ -374,18 +320,10 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         )
         super().__init__(
             {
-                (SimulationMode.FALSE, TestMode.NONE): subrack_driver,
-                (SimulationMode.FALSE, TestMode.TEST): subrack_driver,
-                (
-                    SimulationMode.TRUE,
-                    TestMode.NONE,
-                ): subrack_simulator,
-                (
-                    SimulationMode.TRUE,
-                    TestMode.TEST,
-                ): testing_subrack_simulator,
+                (SimulationMode.FALSE): subrack_driver,
+                (SimulationMode.TRUE): subrack_simulator,
             },
-            (initial_simulation_mode, initial_test_mode),
+            (initial_simulation_mode),
         )
 
     @property
@@ -397,7 +335,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         """
         simulation_mode: SimulationMode  # typehint only
 
-        (simulation_mode, _) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
+        simulation_mode = cast(SimulationMode, self.switcher_mode)
         return simulation_mode
 
     @simulation_mode.setter
@@ -411,52 +349,13 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         :param required_simulation_mode: the new value for the simulation mode.
         """
         simulation_mode: SimulationMode  # typehints only
-        test_mode: TestMode  # typehints only
 
-        (simulation_mode, test_mode) = cast(
-            Tuple[SimulationMode, TestMode], self.switcher_mode
-        )
+        (simulation_mode) = cast(SimulationMode, self.switcher_mode)
         if simulation_mode != required_simulation_mode:
             communicating = self.is_communicating
             if communicating:
                 self.stop_communicating()
-            self.switcher_mode = (required_simulation_mode, test_mode)
-            if communicating:
-                self.start_communicating()
-
-    @property
-    def test_mode(self: SwitchingSubrackComponentManager) -> TestMode:
-        """
-        Return the test mode.
-
-        :return: the test mode
-        """
-        test_mode: TestMode  # typehint only
-        (_, test_mode) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
-        return cast(TestMode, test_mode)
-
-    @test_mode.setter
-    def test_mode(
-        self: SwitchingSubrackComponentManager,
-        required_test_mode: TestMode,
-    ) -> None:
-        """
-        Set the test mode.
-
-        :param required_test_mode: the new value for the test mode.
-        """
-        simulation_mode: SimulationMode  # typehint only
-        test_mode: TestMode  # typehint only
-
-        (simulation_mode, test_mode) = cast(
-            Tuple[SimulationMode, TestMode], self.switcher_mode
-        )
-
-        if test_mode != required_test_mode:
-            communicating = self.is_communicating
-            if communicating:
-                self.stop_communicating()
-            self.switcher_mode = (simulation_mode, required_test_mode)
+            self.switcher_mode = required_simulation_mode
             if communicating:
                 self.start_communicating()
 
@@ -467,15 +366,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def __init__(
         self: SubrackComponentManager,
         initial_simulation_mode: SimulationMode,
-        initial_test_mode: TestMode,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        message_queue_size_callback: Callable[[int], None],
         tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
         _initial_power_mode: PowerMode = PowerMode.OFF,
     ) -> None:
@@ -484,9 +382,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param initial_simulation_mode: the simulation mode that the
             component should start in
-        :param initial_test_mode: the simulation mode that the component
-            should start in
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
         :param communication_status_changed_callback: callback to be
@@ -498,8 +396,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component faults (or stops faulting)
         :param component_progress_changed_callback: callback to be called when the
             component command progress values changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param tpm_power_changed_callback: callback to be called when
             the power mode of an tpm changes
         :param _initial_power_mode: the initial power mode of the power
@@ -511,16 +407,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._tpm_power_changed_callback = tpm_power_changed_callback
         self._tpm_power_changed_callback(self._tpm_power_modes)
 
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
-            initial_test_mode,
-            self._message_queue,
             logger,
+            push_change_event,
             subrack_ip,
             subrack_port,
             self._hardware_communication_status_changed,
@@ -530,8 +420,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
-            self._message_queue,
             logger,
+            push_change_event,
             self._power_supply_communication_status_changed,
             self.component_power_mode_changed,
             _initial_power_mode,
@@ -540,6 +430,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -643,28 +534,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             SwitchingSubrackComponentManager, self._hardware_component_manager
         ).simulation_mode = mode
 
-    @property
-    def test_mode(self: SubrackComponentManager) -> TestMode:
-        """
-        Return the test mode of this component manager.
-
-        :return: the test mode of this component manager.
-        """
-        return cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).test_mode
-
-    @test_mode.setter
-    def test_mode(self: SubrackComponentManager, mode: TestMode) -> None:
-        """
-        Set the test mode of this component manager.
-
-        :param mode: the new test mode of this component manager
-        """
-        cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).test_mode = mode
-
     def off(self: SubrackComponentManager) -> ResultCode | None:
         """
         Tell the subrack simulator to turn off.
@@ -676,10 +545,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        result_code = super().off()
         cast(
             SwitchingSubrackComponentManager, self._hardware_component_manager
         ).turn_off_tpms()
+        result_code = super().off()
         return result_code
 
     @check_communicating

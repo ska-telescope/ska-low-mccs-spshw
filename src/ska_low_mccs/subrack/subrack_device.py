@@ -111,15 +111,14 @@ class MccsSubrack(SKABaseDevice):
 
         return SubrackComponentManager(
             SimulationMode.TRUE,
-            TestMode.NONE,
             self.logger,
+            self.push_change_event,
             self.SubrackIp,
             self.SubrackPort,
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
             self._component_progress_changed,
-            self._message_queue_size_changed,
             self._tpm_power_modes_changed,
         )
 
@@ -254,19 +253,6 @@ class MccsSubrack(SKABaseDevice):
         self._progress = progress
         self.logger.debug(f"Subrack progress value = {progress}")
         # TODO: Link the progress update to an attribute to be exposed to the real world...
-
-    def _message_queue_size_changed(
-        self: MccsSubrack,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsSubrack, health: HealthState) -> None:
         """
@@ -706,8 +692,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerOnTpm")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler, argin)
+        return ([return_code], [unique_id])
 
     class PowerOffTpmCommand(ResponseCommand):
         """The command class for the PowerOffTpm command."""
@@ -766,8 +752,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerOffTpm")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler, argin)
+        return ([return_code], [unique_id])
 
     class PowerUpTpmsCommand(ResponseCommand):
         """The command class for the PowerUpTpms command."""
@@ -820,8 +806,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUpTpms")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler)
+        return ([return_code], [unique_id])
 
     class PowerDownTpmsCommand(ResponseCommand):
         """The command class for the PowerDownTpms command."""
@@ -872,8 +858,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerDownTpms")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        unique_id, return_code = self.component_manager.enqueue(handler)
+        return ([return_code], [unique_id])
 
     class SetSubrackFanSpeedCommand(ResponseCommand):
         """

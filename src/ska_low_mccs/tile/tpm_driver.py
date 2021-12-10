@@ -23,17 +23,16 @@ from typing import Any, Callable, cast, List, Optional
 
 from pyfabil.base.definitions import Device
 
+from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MessageQueue,
-    MessageQueueComponentManager,
-    enqueue,
+    MccsComponentManager,
 )
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
 
 
-class TpmDriver(MessageQueueComponentManager):
+class TpmDriver(MccsComponentManager):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -61,8 +60,8 @@ class TpmDriver(MessageQueueComponentManager):
 
     def __init__(
         self: TpmDriver,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         ip: str,
         port: int,
         tpm_version: str,
@@ -74,9 +73,9 @@ class TpmDriver(MessageQueueComponentManager):
 
         Tries to connect to the given IP and port.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this simulator to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param ip: IP address for hardware tile
         :param port: IP address for hardware tile control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -130,8 +129,8 @@ class TpmDriver(MessageQueueComponentManager):
         )
 
         super().__init__(
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -140,12 +139,30 @@ class TpmDriver(MessageQueueComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         super().start_communicating()
-        self.enqueue(self._connect_to_tile)
+        connect_to_tile_command = self.ConnectToTile(target=self)
+        _ = self.enqueue(connect_to_tile_command)
 
-    def _connect_to_tile(self: TpmDriver) -> None:
-        self.tile.connect()
-        if self.tile.tpm is not None:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+    class ConnectToTile(BaseCommand):
+        """Connect to Tile command class."""
+
+        def do(  # type: ignore[override]
+            self: TpmDriver.ConnectToTile,
+        ) -> tuple[ResultCode, str]:
+            """
+            Establish communication with the tile, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :return: a result code and message
+            """
+            target = self.target
+            target.tile.connect()
+            if target.tile.tpm is not None:
+                target.update_communication_status(CommunicationStatus.ESTABLISHED)
+                return ResultCode.OK, "Connected to Tile"
+
+            return ResultCode.FAILED, "Could not connect to Tile"
 
     def stop_communicating(self: TpmDriver) -> None:
         """
@@ -209,7 +226,6 @@ class TpmDriver(MessageQueueComponentManager):
         self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
-    @enqueue
     def download_firmware(self: TpmDriver, bitfile: str) -> None:
         """
         Download the provided firmware bitfile onto the TPM.
@@ -233,7 +249,6 @@ class TpmDriver(MessageQueueComponentManager):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
-    @enqueue
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initializes tile."""
         assert self.tile.tpm is not None  # for the type checker

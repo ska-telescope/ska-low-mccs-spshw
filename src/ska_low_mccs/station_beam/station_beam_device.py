@@ -69,8 +69,8 @@ class MccsStationBeam(SKAObsDevice):
         return StationBeamComponentManager(
             self.BeamId,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
-            self._message_queue_size_changed,
             self._health_model.is_beam_locked_changed,
             self._health_model.station_health_changed,
             self._health_model.station_fault_changed,
@@ -142,19 +142,6 @@ class MccsStationBeam(SKAObsDevice):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-
-    def _message_queue_size_changed(
-        self: MccsStationBeam,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsStationBeam, health: HealthState) -> None:
         """

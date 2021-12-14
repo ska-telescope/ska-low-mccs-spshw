@@ -12,15 +12,15 @@ dependencies:
 - name: ska-low-mccs
   version: 0.8.6 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
   repository: file://../ska-low-mccs
-- name: ska-webjive
-  version: 1.0.27
+- name: ska-taranta
+  version: 1.0.29
   repository: https://artefact.skao.int/repository/helm-internal
   condition: webjive.enabled
-- name: ska-webjive-auth
-  version: 0.1.3
+- name: ska-taranta-auth
+  version: 0.1.5
   repository: https://artefact.skao.int/repository/helm-internal
   condition: webjive-auth.enabled
 - name: ska-dashboard-repo
-  version: 0.1.8
+  version: 0.1.9
   repository: https://artefact.skao.int/repository/helm-internal
   condition: webjive-dashboard.enabled

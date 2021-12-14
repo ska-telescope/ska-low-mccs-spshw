@@ -58,7 +58,7 @@ setuptools.setup(
         ]
     },
     install_requires=[
-        "ska-tango-base == 0.11.3",
+        "ska-tango-base == 0.12.0",
         "pytango >= 9.3.3",
         "jsonschema >= 3.2.0",
         "fire",

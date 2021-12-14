@@ -9,3 +9,4 @@ coverage
 pyyaml
 pytest-rerunfailures
 pytest-timeout
+pytest-split

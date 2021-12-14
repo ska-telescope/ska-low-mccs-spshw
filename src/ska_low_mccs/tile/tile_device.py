@@ -82,6 +82,7 @@ class MccsTile(SKABaseDevice):
             SimulationMode.TRUE,
             TestMode.NONE,
             self.logger,
+            self.push_change_event,
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
@@ -90,7 +91,6 @@ class MccsTile(SKABaseDevice):
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
-            self._message_queue_size_changed,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -226,9 +226,14 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO: return OK for now to be consistent with base classes
+            # It's fine to complete this long-running command here
+            # (returning ResultCode.OK), even though the component manager
+            # may not actually be finished turning everything on.
+            # The completion of the original On command to MccsController
+            # is waiting for the various power mode callbacks to be received
+            # rather than completion of the various long-running commands.
             _ = self.target.on()
-            message = "On command completed OK"
+            message = "Tile On command completed OK"
             return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsTile) -> bool:
@@ -319,19 +324,6 @@ class MccsTile(SKABaseDevice):
             if power_mode is not None:
                 self._component_power_mode_changed(power_mode)
             self._health_model.component_fault(False)
-
-    def _message_queue_size_changed(
-        self: MccsTile,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsTile, health: HealthState) -> None:
         """

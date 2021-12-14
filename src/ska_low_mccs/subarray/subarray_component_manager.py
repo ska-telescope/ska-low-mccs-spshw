@@ -20,11 +20,9 @@ import ska_tango_base.subarray
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
-    MessageQueue,
     ObsDeviceComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 
 
@@ -36,7 +34,6 @@ class _StationProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def configure(self: _StationProxy, configuration: dict) -> ResultCode:
         """
         Configure the station.
@@ -48,7 +45,7 @@ class _StationProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        (result_code, _) = self._proxy.Configure(configuration_str)
+        ([result_code], _) = self._proxy.Configure(configuration_str)
         return result_code
 
 
@@ -57,7 +54,6 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def configure(self: _SubarrayBeamProxy, configuration: dict) -> ResultCode:
         """
         Configure the subarray beam.
@@ -69,12 +65,11 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        (result_code, _) = self._proxy.Configure(configuration_str)
+        ([result_code], _) = self._proxy.Configure(configuration_str)
         return result_code
 
     @check_communicating
     @check_on
-    @enqueue
     def scan(self: _SubarrayBeamProxy, scan_id: int, start_time: float) -> ResultCode:
         """
         Start the subarray beam scanning.
@@ -86,7 +81,7 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         scan_arg = json.dumps({"scan_id": scan_id, "start_time": start_time})
-        (result_code, _) = self._proxy.Scan(scan_arg)
+        ([result_code], _) = self._proxy.Scan(scan_arg)
         return result_code
 
 
@@ -95,7 +90,6 @@ class _StationBeamProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def configure(self: _StationBeamProxy, configuration: dict) -> ResultCode:
         """
         Configure the station beam.
@@ -107,7 +101,7 @@ class _StationBeamProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        (result_code, _) = self._proxy.Configure(configuration_str)
+        ([result_code], _) = self._proxy.Configure(configuration_str)
         return result_code
 
 
@@ -120,8 +114,8 @@ class SubarrayComponentManager(
     def __init__(
         self: SubarrayComponentManager,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        message_queue_size_callback: Callable[[int], None],
         assign_completed_callback: Callable[[], None],
         release_completed_callback: Callable[[], None],
         configure_completed_callback: Callable[[], None],
@@ -144,11 +138,11 @@ class SubarrayComponentManager(
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
         :param release_completed_callback: callback to be called when
@@ -207,13 +201,9 @@ class SubarrayComponentManager(
 
         self._scan_id: Optional[int] = None
 
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,
@@ -233,7 +223,8 @@ class SubarrayComponentManager(
                 station_beam_proxy.start_communicating()
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
-            self.update_component_power_mode(PowerMode.ON)
+            with self._power_mode_lock:
+                self.update_component_power_mode(PowerMode.ON)
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""
@@ -269,14 +260,14 @@ class SubarrayComponentManager(
     @check_communicating
     def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resource_spec: dict[str, Sequence[Any]],
+        resource_spec: dict,
     ) -> ResultCode:
         """
         Assign resources to this subarray.
 
         This is just for communication and health roll-up, resource management is done by controller.
 
-        :param resource_spec: a resource specification; for example
+        :param resource_spec: resource specification; for example
 
             .. code-block:: python
 
@@ -310,8 +301,8 @@ class SubarrayComponentManager(
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn] = _StationProxy(
                     fqdn,
-                    self._message_queue,
                     self.logger,
+                    self._push_change_event,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     functools.partial(self._station_power_mode_changed, fqdn),
                     None,
@@ -321,8 +312,8 @@ class SubarrayComponentManager(
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn] = _SubarrayBeamProxy(
                     fqdn,
-                    self._message_queue,
                     self.logger,
+                    self._push_change_event,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,
                     None,
@@ -334,8 +325,8 @@ class SubarrayComponentManager(
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn] = _StationBeamProxy(
                     fqdn,
-                    self._message_queue,
                     self.logger,
+                    self._push_change_event,
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,
                     None,
@@ -491,6 +482,7 @@ class SubarrayComponentManager(
 
         if result_code == ResultCode.OK:
             self._configure_completed_callback()
+
         return result_code
 
     def _configure_stations(

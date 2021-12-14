@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Union
+from typing import Any, Union, Optional, Callable
+import logging
+
 import unittest.mock
 
 import pytest
@@ -30,7 +32,7 @@ from ska_low_mccs.tile import (
     TileComponentManager,
 )
 
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 class TestTileComponentManager:
@@ -576,12 +578,11 @@ class TestStaticSimulatorCommon:
         tile.download_firmware(mock_bitfile)
         assert tile.is_programmed
 
-    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
-    @pytest.mark.parametrize("device", (0, 1))
+    @pytest.mark.parametrize("device", (1,))
     @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
-    @pytest.mark.parametrize("read_offset", (0, 2))
-    @pytest.mark.parametrize("read_length", (0, 4))
-    @pytest.mark.parametrize("write_offset", (0, 3))
+    @pytest.mark.parametrize("read_offset", (2,))
+    @pytest.mark.parametrize("read_length", (4,))
+    @pytest.mark.parametrize("write_offset", (3,))
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
     def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
@@ -624,8 +625,12 @@ class TestStaticSimulatorCommon:
             == expected_read
         )
 
-    @pytest.mark.skip(reason="Overparametrized; takes forever for little benefit")
-    @pytest.mark.parametrize("write_address", [9, 11])
+    @pytest.mark.parametrize(
+        "write_address",
+        [
+            9,
+        ],
+    )
     @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
     @pytest.mark.parametrize("read_address", [10])
     @pytest.mark.parametrize("read_length", [0, 4])
@@ -949,61 +954,169 @@ class TestDriverCommon:
         """
         return SimulationMode.FALSE
 
-    @pytest.fixture(
-        params=[
-            "tpm_driver",
-            "switching_tpm_component_manager",
-        ]
-    )
-    def tile(
+    @pytest.fixture()
+    def hardware_tile_mock(self: TestDriverCommon) -> unittest.mock.Mock:
+        """
+        Provide a mock for the hardware tile.
+
+        :return: An hardware tile mock
+        """
+        return unittest.mock.Mock()
+
+    class PatchedTpmDriver(TpmDriver):
+        """Patched TpmDriver class."""
+
+        def __init__(
+            self: TestDriverCommon.PatchedTpmDriver,
+            logger: logging.Logger,
+            push_change_event: Optional[Callable],
+            ip: str,
+            port: int,
+            tpm_version: str,
+            communication_status_changed_callback: Callable[
+                [CommunicationStatus], None
+            ],
+            component_fault_callback: Callable[[bool], None],
+            aavs_tile: unittest.mock.Mock,
+        ) -> None:
+            """
+            Initialise a new patched TPM driver instance.
+
+            :param logger: a logger for this simulator to use
+            :param push_change_event: method to call when the base classes
+                want to send an event
+            :param ip: IP address for hardware tile
+            :param port: IP address for hardware tile control
+            :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+            :param communication_status_changed_callback: callback to be
+                called when the status of the communications channel between
+                the component manager and its component changes
+            :param component_fault_callback: callback to be called when the
+                component faults (or stops faulting)
+            :param aavs_tile: a mock of the hardware tile
+            """
+            super().__init__(
+                logger,
+                push_change_event,
+                ip,
+                port,
+                tpm_version,
+                communication_status_changed_callback,
+                component_fault_callback,
+            )
+            self.tile = aavs_tile
+
+    @pytest.fixture()
+    def patched_tpm_driver(
         self: TestDriverCommon,
-        tpm_driver: TpmDriver,
-        switching_tpm_component_manager: SwitchingTpmComponentManager,
-        request: SubRequest,
-    ) -> Union[TpmDriver, SwitchingTpmComponentManager]:
+        logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
+        tpm_ip: str,
+        tpm_cpld_port: int,
+        tpm_version: str,
+        communication_status_changed_callback: MockCallable,
+        component_fault_callback: MockCallable,
+        hardware_tile_mock: unittest.mock.Mock,
+    ) -> PatchedTpmDriver:
         """
-        Return the tile component under test.
+        Return a patched TPM driver.
 
-        This is parametrised to return
+        :param logger: the logger to be used by this object.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
+        :param tpm_ip: the IP address of the tile
+        :param tpm_cpld_port: the port at which the tile is accessed for control
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_fault_callback: callback to be called when the
+            component faults (or stops faulting)
+        :param hardware_tile_mock: a mock of the hardware tile
 
-        * a TPM driver,
-
-        * a component manager that can switch between TPM simulator and
-          TPM driver.
-
-        So any test that relies on this fixture will be run twice.
-
-        :param tpm_driver: the TPM driver
-        :param switching_tpm_component_manager: the component manager
-            that switches between TPM simulator and TPM driver to return
-        :param request: A pytest object giving access to the requesting test
-            context.
-
-        :raises ValueError: if parametrized with an unrecognised option
-
-        :return: the tile class object under test
+        :return: a patched TPM driver
         """
-        if request.param == "tpm_driver":
-            return tpm_driver
-        elif request.param == "switching_tpm_component_manager":
-            return switching_tpm_component_manager
-        raise ValueError("Tile fixture parametrized with unrecognised option")
+        return self.PatchedTpmDriver(
+            logger,
+            lrc_result_changed_callback,
+            tpm_ip,
+            tpm_cpld_port,
+            tpm_version,
+            communication_status_changed_callback,
+            component_fault_callback,
+            hardware_tile_mock,
+        )
 
     def test_communication_fails(
-        self: TestDriverCommon, tile: Union[TpmDriver, SwitchingTpmComponentManager]
+        self: TestDriverCommon,
+        patched_tpm_driver: PatchedTpmDriver,
+        hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
-        Test was can create the driver but not start communication with the component.
+        Test we can create the driver but not start communication with the component.
 
         We can create the tile class object under test, but will not be
         able to use it to establish communication with the component
         (which is a hardware TPM that does not exist in this test
         harness).
 
-        :param tile: the tile class object under test.
+        :param patched_tpm_driver: the patched tpm driver under test.
+        :param hardware_tile_mock: An hardware tile mock
         """
-        assert tile.communication_status == CommunicationStatus.DISABLED
-        tile.start_communicating()
-        assert tile.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        hardware_tile_mock.tpm = None
+        assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
+        patched_tpm_driver.start_communicating()
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
+        # Wait for the message to execute
         time.sleep(0.1)
-        assert tile.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        hardware_tile_mock.connect.assert_called_once()
+        assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
+        assert patched_tpm_driver._queue_manager._task_result[1] == str(
+            ResultCode.FAILED.value
+        )
+        assert (
+            patched_tpm_driver._queue_manager._task_result[2]
+            == "Could not connect to Tile"
+        )
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+    def test_communication(
+        self: TestDriverCommon,
+        patched_tpm_driver: PatchedTpmDriver,
+        hardware_tile_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test we can create the driver and start communication with the component.
+
+        We can create the tile class object under test, and we will mock
+        the underlying component (which is a hardware TPM that does not exist
+        in this test harness).
+
+        :param patched_tpm_driver: the patched tpm driver under test.
+        :param hardware_tile_mock: An hardware tile mock
+        """
+        hardware_tile_mock.tpm = True
+        assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
+        patched_tpm_driver.start_communicating()
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        hardware_tile_mock.connect.assert_called_once()
+        assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
+        assert patched_tpm_driver._queue_manager._task_result[1] == str(
+            ResultCode.OK.value
+        )
+        assert patched_tpm_driver._queue_manager._task_result[2] == "Connected to Tile"
+        assert (
+            patched_tpm_driver.communication_status == CommunicationStatus.ESTABLISHED
+        )

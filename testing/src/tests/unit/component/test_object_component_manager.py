@@ -16,10 +16,10 @@ import pytest_mock
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MessageQueue,
     ObjectComponentManager,
 )
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 class TestObjectComponentManager:
@@ -43,8 +43,8 @@ class TestObjectComponentManager:
     def component_manager(
         self: TestObjectComponentManager,
         component: unittest.mock.Mock,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
         communication_status_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
         component_fault_callback: MockCallable,
@@ -54,9 +54,9 @@ class TestObjectComponentManager:
 
         :param component: the component to be managed by the component
             manager.
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for the component manager to use
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -69,8 +69,8 @@ class TestObjectComponentManager:
         """
         return ObjectComponentManager(
             component,
-            message_queue,
             logger,
+            lrc_result_changed_callback,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

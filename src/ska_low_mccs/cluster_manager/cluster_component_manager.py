@@ -18,7 +18,6 @@ from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
-    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -29,8 +28,8 @@ __all__ = ["ClusterComponentManager"]
 class ClusterSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: ClusterSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
@@ -48,8 +47,8 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         cluster_simulator = ClusterSimulator()
         super().__init__(
             cluster_simulator,
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             power_mode_changed_callback,
             fault_callback,
@@ -174,13 +173,13 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
     def __init__(
         self: ClusterComponentManager,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         initial_simulation_mode: SimulationMode,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
-        message_queue_size_callback: Optional[Callable[[int], None]],
         component_shadow_master_pool_node_health_changed_callback: Optional[
             Callable[[list[HealthState]], None]
         ],
@@ -189,6 +188,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param communication_status_changed_callback: callback to be
@@ -198,20 +199,13 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param component_shadow_master_pool_node_health_changed_callback:
             callback to be called when the health of a node in the
             shadow pool changes
         """
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         cluster_simulator = ClusterSimulatorComponentManager(
-            self._message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,

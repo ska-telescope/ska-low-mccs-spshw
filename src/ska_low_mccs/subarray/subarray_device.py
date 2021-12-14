@@ -11,6 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 from typing import Any, List, Optional, Tuple
+import json
 
 import tango
 from tango.server import attribute, command
@@ -73,8 +74,8 @@ class MccsSubarray(SKASubarray):
         """
         return SubarrayComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
-            self._message_queue_size_changed,
             self._assign_completed,
             self._release_completed,
             self._configure_completed,
@@ -163,19 +164,6 @@ class MccsSubarray(SKASubarray):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-
-    def _message_queue_size_changed(
-        self: MccsSubarray,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def _assign_completed(
         self: MccsSubarray,
@@ -429,6 +417,22 @@ class MccsSubarray(SKASubarray):
             result_code = component_manager.assign(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
 
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def AssignResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
+        """
+        Assign resources to this subarray.
+
+        :param argin: the resources to be assigned
+
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        # TODO Call assign resources directly - DON'T USE LRC - for now.
+        handler = self.get_command_object("AssignResources")
+        params = json.loads(argin)
+        (return_code, message) = handler(params)
+        return ([return_code], [message])
+
     class ReleaseResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand
     ):
@@ -581,7 +585,8 @@ class MccsSubarray(SKASubarray):
             )
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.ConfigureCommand, argin: dict
+            self: MccsSubarray.ConfigureCommand,
+            argin: dict,
         ) -> tuple[ResultCode, str]:
             """
             Implement the functionality of the configure command.
@@ -589,7 +594,7 @@ class MccsSubarray(SKASubarray):
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Configure` command for this
             :py:class:`.MccsSubarray` device.
 
-            :param argin: JSON configuration specification
+            :param argin: configuration specification
                 {
                 "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
                 "stations":[{"station_id": 1},{"station_id": 2}],
@@ -775,7 +780,7 @@ class MccsSubarray(SKASubarray):
                 information purpose only.
             """
             component_manager = self.target
-            result_code = component_manager.obs_reset()
+            result_code = component_manager.restart()
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     class SendTransientBufferCommand(ResponseCommand):

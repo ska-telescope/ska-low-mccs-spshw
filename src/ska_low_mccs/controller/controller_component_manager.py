@@ -20,15 +20,12 @@ from ska_tango_base.control_model import HealthState, PowerMode
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
-    MessageQueue,
     DeviceComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 from ska_low_mccs.controller import ControllerResourceManager
 from ska_low_mccs.resource_manager import ResourceManager, ResourcePool
-
 
 __all__ = ["ControllerComponentManager"]
 
@@ -40,8 +37,8 @@ class _StationProxy(DeviceComponentManager):
         self: _StationProxy,
         fqdn: str,
         subarray_fqdns: Iterable[str],
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -55,9 +52,9 @@ class _StationProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the device
         :param subarray_fqdns: the FQDNs of subarrays which channel
             blocks can be assigned to.
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -79,8 +76,8 @@ class _StationProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -133,7 +130,6 @@ class _SubarrayProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def assign_resources(
         self: _SubarrayProxy,
         station_fqdns: Iterable[str],
@@ -155,21 +151,19 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.AssignResources(
-            json.dumps(
-                {
-                    "stations": sorted(station_fqdns),
-                    "subarray_beams": sorted(subarray_beam_fqdns),
-                    "station_beams": sorted(station_beam_fqdns),
-                    "channel_blocks": sorted(channel_blocks),
-                }
-            )
+        args = json.dumps(
+            {
+                "stations": sorted(station_fqdns),
+                "subarray_beams": sorted(subarray_beam_fqdns),
+                "station_beams": sorted(station_beam_fqdns),
+                "channel_blocks": sorted(channel_blocks),
+            }
         )
+        ([result_code], _) = self._proxy.AssignResources(args)
         return result_code
 
     @check_communicating
     @check_on
-    @enqueue
     def release_all_resources(
         self: _SubarrayProxy,
     ) -> ResultCode:
@@ -179,12 +173,11 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.ReleaseAllResources()
+        ([result_code], _) = self._proxy.ReleaseAllResources()
         return result_code
 
     @check_communicating
     @check_on
-    @enqueue
     def restart(
         self: _SubarrayProxy,
     ) -> ResultCode:
@@ -194,7 +187,7 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.Restart()
+        ([result_code], _) = self._proxy.Restart()
         return result_code
 
 
@@ -216,7 +209,6 @@ class _SubarrayBeamProxy(DeviceComponentManager):
         """
         return self._write_station_ids(new_station_ids)
 
-    @enqueue
     def _write_station_ids(
         self: _SubarrayBeamProxy,
         new_station_ids: list[int],
@@ -244,7 +236,6 @@ class _StationBeamProxy(DeviceComponentManager):
         """
         return self._write_station_id(new_station_id)
 
-    @enqueue
     def _write_station_id(
         self: _StationBeamProxy,
         new_station_id: int,
@@ -268,7 +259,6 @@ class _StationBeamProxy(DeviceComponentManager):
         """
         return self._write_subarray_id(new_subarray_id)
 
-    @enqueue
     def _write_subarray_id(
         self: _StationBeamProxy,
         new_subarray_id: int,
@@ -292,7 +282,6 @@ class _StationBeamProxy(DeviceComponentManager):
         """
         return self._write_station_fqdn(new_station_fqdn)
 
-    @enqueue
     def _write_station_fqdn(
         self: _StationBeamProxy,
         new_station_fqdn: str,
@@ -323,9 +312,9 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_beam_fqdns: Iterable[str],
         station_beam_fqdns: Iterable[str],
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
-        message_queue_size_callback: Callable[[int], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -338,19 +327,19 @@ class ControllerComponentManager(MccsComponentManager):
         """
         Initialise a new instance.
 
-        :param logger: the logger to be used by this object.
         :param subarray_fqdns: FQDNS of all subarray devices
         :param subrack_fqdns: FQDNS of all subrack devices
         :param station_fqdns: FQDNS of all station devices
         :param subarray_beam_fqdns: FQDNS of all subarray beam devices
         :param station_beam_fqdns: FQDNS of all station beam devices
+        :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param subrack_health_changed_callback: callback to be called
             when the health of one of this controller's subracks changes
         :param station_health_changed_callback: callback to be called
@@ -371,7 +360,6 @@ class ControllerComponentManager(MccsComponentManager):
         self.__communication_status_lock = threading.Lock()
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
 
-        self.__power_mode_lock = threading.Lock()
         self._station_power_modes: dict[str, PowerMode] = {}
         self._subrack_power_modes: dict[str, PowerMode] = {}
 
@@ -400,17 +388,11 @@ class ControllerComponentManager(MccsComponentManager):
             range(1, 49),
         )
 
-        self._message_queue = MessageQueue(
-            logger,
-            num_workers=3,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         self._subarrays: dict[str, _SubarrayProxy] = {
             fqdn: _SubarrayProxy(
                 fqdn,
-                self._message_queue,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -421,8 +403,8 @@ class ControllerComponentManager(MccsComponentManager):
         self._subracks: dict[str, DeviceComponentManager] = {
             fqdn: DeviceComponentManager(
                 fqdn,
-                self._message_queue,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._subrack_power_mode_changed, fqdn),
                 None,
@@ -434,8 +416,8 @@ class ControllerComponentManager(MccsComponentManager):
             fqdn: _StationProxy(
                 fqdn,
                 subarray_fqdns,
-                self._message_queue,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._station_power_mode_changed, fqdn),
                 None,
@@ -446,8 +428,8 @@ class ControllerComponentManager(MccsComponentManager):
         self._subarray_beams: dict[Hashable, _SubarrayBeamProxy] = {
             fqdn: _SubarrayBeamProxy(
                 fqdn,
-                self._message_queue,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -458,8 +440,8 @@ class ControllerComponentManager(MccsComponentManager):
         self._station_beams: dict[Hashable, _StationBeamProxy] = {
             fqdn: _StationBeamProxy(
                 fqdn,
-                self._message_queue,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -470,6 +452,7 @@ class ControllerComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             None,
@@ -549,7 +532,8 @@ class ControllerComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        self._subrack_power_modes[fqdn] = power_mode
+        with self._power_mode_lock:
+            self._subrack_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     def _station_power_mode_changed(
@@ -557,7 +541,8 @@ class ControllerComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        self._station_power_modes[fqdn] = power_mode
+        with self._power_mode_lock:
+            self._station_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     def _evaluate_power_mode(self: ControllerComponentManager) -> None:
@@ -565,7 +550,7 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             for power_mode in [
                 PowerMode.UNKNOWN,
                 PowerMode.OFF,
@@ -706,7 +691,6 @@ class ControllerComponentManager(MccsComponentManager):
         results = [station_proxy.on() for station_proxy in self._stations.values()] + [
             subrack_proxy.on() for subrack_proxy in self._subracks.values()
         ]
-
         if ResultCode.FAILED in results:
             return ResultCode.FAILED
         else:

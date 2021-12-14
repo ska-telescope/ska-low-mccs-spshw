@@ -28,8 +28,7 @@ from ska_low_mccs.pasd_bus import (
 )
 
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.component import MessageQueue
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -164,8 +163,8 @@ def mock_pasd_bus_simulator(
 @pytest.fixture()
 def pasd_bus_simulator_component_manager(
     mock_pasd_bus_simulator: unittest.mock.Mock,
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> PasdBusSimulatorComponentManager:
@@ -176,9 +175,9 @@ def pasd_bus_simulator_component_manager(
 
     :param mock_pasd_bus_simulator: a mock PaSD bus simulator to be used
         by the PaSD bus simulator component manager
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -188,8 +187,8 @@ def pasd_bus_simulator_component_manager(
     :return: a PaSD bus simulator component manager.
     """
     return PasdBusSimulatorComponentManager(
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
         _simulator=mock_pasd_bus_simulator,
@@ -200,9 +199,9 @@ def pasd_bus_simulator_component_manager(
 def pasd_bus_component_manager(
     pasd_bus_simulator_component_manager: PasdBusSimulatorComponentManager,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: MockCallable,
-    message_queue_size_callback: Callable[[int], None],
 ) -> PasdBusComponentManager:
     """
     Return a PaSD bus component manager.
@@ -211,21 +210,21 @@ def pasd_bus_component_manager(
         PaSD bus simulator component manager to be used by the PaSD bus
         component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
 
     :return: a PaSD bus component manager
     """
     return PasdBusComponentManager(
         SimulationMode.TRUE,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
-        message_queue_size_callback,
         _simulator_component_manager=pasd_bus_simulator_component_manager,
     )

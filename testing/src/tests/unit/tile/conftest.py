@@ -19,9 +19,9 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import SimulationMode, TestMode
 
 from ska_low_mccs import MccsDeviceProxy, MccsTile
-from ska_low_mccs.component import ExtendedPowerMode, MessageQueue
+from ska_low_mccs.component import ExtendedPowerMode
+
 from ska_low_mccs.tile import (
-    TpmDriver,
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
@@ -192,46 +192,6 @@ def tpm_version() -> str:
 
 
 @pytest.fixture()
-def tpm_driver(
-    message_queue: MessageQueue,
-    logger: logging.Logger,
-    tpm_ip: str,
-    tpm_cpld_port: int,
-    tpm_version: str,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-) -> TpmDriver:
-    """
-    Return a TPM driver.
-
-    (This is a pytest fixture.)
-
-    :param message_queue: a message queue for the component manager to
-        use
-    :param logger: the logger to be used by this object.
-    :param tpm_ip: the IP address of the tile
-    :param tpm_cpld_port: the port at which the tile is accessed for control
-    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param communication_status_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-
-    :return: a TPM driver
-    """
-    return TpmDriver(
-        message_queue,
-        logger,
-        tpm_ip,
-        tpm_cpld_port,
-        tpm_version,
-        communication_status_changed_callback,
-        component_fault_callback,
-    )
-
-
-@pytest.fixture()
 def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     """
     Return a static TPM simulator.
@@ -263,8 +223,8 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 
 @pytest.fixture()
 def static_tpm_simulator_component_manager(
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> StaticTpmSimulatorComponentManager:
@@ -273,9 +233,9 @@ def static_tpm_simulator_component_manager(
 
     (This is a pytest fixture.)
 
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -285,8 +245,8 @@ def static_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return StaticTpmSimulatorComponentManager(
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )
@@ -294,8 +254,8 @@ def static_tpm_simulator_component_manager(
 
 @pytest.fixture()
 def dynamic_tpm_simulator_component_manager(
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> DynamicTpmSimulatorComponentManager:
@@ -304,9 +264,9 @@ def dynamic_tpm_simulator_component_manager(
 
     (This is a pytest fixture.)
 
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -316,8 +276,8 @@ def dynamic_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return DynamicTpmSimulatorComponentManager(
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )
@@ -327,8 +287,8 @@ def dynamic_tpm_simulator_component_manager(
 def switching_tpm_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -343,9 +303,9 @@ def switching_tpm_component_manager(
     :param simulation_mode: the initial simulation mode of this
         component manager
     :param test_mode: the initial test mode of this component manager
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -361,8 +321,8 @@ def switching_tpm_component_manager(
     return SwitchingTpmComponentManager(
         simulation_mode,
         test_mode,
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -377,6 +337,7 @@ def tile_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -385,7 +346,6 @@ def tile_component_manager(
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
-    message_queue_size_callback: MockCallable,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -397,6 +357,8 @@ def tile_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -410,8 +372,6 @@ def tile_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -419,6 +379,7 @@ def tile_component_manager(
         simulation_mode,
         test_mode,
         logger,
+        lrc_result_changed_callback,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -427,7 +388,6 @@ def tile_component_manager(
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
-        message_queue_size_callback,
     )
 
 

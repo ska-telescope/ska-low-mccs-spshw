@@ -31,6 +31,7 @@ from ska_low_mccs.testing.mock import (
     MockCallable,
     MockDeviceBuilder,
     MockSubarrayBuilder,
+    MockChangeEventCallback,
 )
 
 
@@ -224,9 +225,9 @@ def controller_component_manager(
     subarray_beam_fqdns: Iterable[str],
     station_beam_fqdns: Iterable[str],
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
-    message_queue_size_callback: Callable[[int], None],
     subrack_health_changed_callback: MockCallable,
     station_health_changed_callback: MockCallable,
     subarray_beam_health_changed_callback: MockCallable,
@@ -242,13 +243,13 @@ def controller_component_manager(
     :param subarray_beam_fqdns: FQDNS of all subarray beam devices
     :param station_beam_fqdns: FQDNS of all station beam devices
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_power_mode_changed_callback: callback to be called
         when the component power mode changes
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
     :param subrack_health_changed_callback: callback to be called when
         the health of a subrack changes
     :param station_health_changed_callback: callback to be called when
@@ -267,9 +268,9 @@ def controller_component_manager(
         subarray_beam_fqdns,
         station_beam_fqdns,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
-        message_queue_size_callback,
         subrack_health_changed_callback,
         station_health_changed_callback,
         subarray_beam_health_changed_callback,
@@ -409,8 +410,21 @@ def subrack_proxies(
     return [MccsDeviceProxy(fqdn, logger) for fqdn in subrack_fqdns]
 
 
+@pytest.fixture
+def unique_id() -> str:
+    """
+    Return a unique ID used to test Tango layer infrastructure.
+
+    :return: a unique ID
+    """
+    return "a unique id"
+
+
 @pytest.fixture()
-def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
+def mock_component_manager(
+    mocker: pytest_mock.mocker,
+    unique_id: str,
+) -> unittest.mock.Mock:
     """
     Return a mock component manager.
 
@@ -420,6 +434,7 @@ def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
     and the component is off.
 
     :param mocker: pytest wrapper for unittest.mock
+    :param unique_id: a unique id used to check Tango layer functionality
 
     :return: a mock component manager
     """
@@ -433,6 +448,8 @@ def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
         mock._component_power_mode_changed_callback(PowerMode.OFF)
 
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
+
+    mock.enqueue.return_value = unique_id, ResultCode.QUEUED
 
     return mock
 

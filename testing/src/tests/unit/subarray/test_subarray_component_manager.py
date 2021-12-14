@@ -67,14 +67,13 @@ class TestSubarrayComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [station_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
@@ -153,14 +152,13 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.assigned_resources == set()
 
         # Assignment from empty
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [station_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_off_fqdn],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,
@@ -181,14 +179,13 @@ class TestSubarrayComponentManager:
         )
 
         # Further assign
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [station_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,
@@ -304,14 +301,13 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.power_mode == PowerMode.ON
 
         # can't configure when resources are OFF
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [station_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_off_fqdn],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,
@@ -334,14 +330,13 @@ class TestSubarrayComponentManager:
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
 
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [station_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
@@ -367,14 +362,13 @@ class TestSubarrayComponentManager:
 
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [station_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_off_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
@@ -401,14 +395,13 @@ class TestSubarrayComponentManager:
         assert result_code == ResultCode.OK
 
         # CAN configure when resources are ON
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [station_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
@@ -499,14 +492,13 @@ class TestSubarrayComponentManager:
         subarray_component_manager.start_communicating()
         assert subarray_component_manager.power_mode == PowerMode.ON
 
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "station_beams": [station_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         time.sleep(0.1)
 

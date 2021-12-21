@@ -174,13 +174,25 @@ class SubrackDriver(MccsComponentManager):
         self._client.disconnect()
         self.logger.info("Disconnected")
 
+    def check_tpm_power_modes(self: SubrackDriver) -> None:
+        """
+        Check the status of the TPM power.
+
+        In the simulator it just calls the callback if it exists. In a
+        real device, it also reads the hardware power state from the
+        device.
+        """
+        self._tpm_power_changed()
+
     def _tpm_power_changed(self: SubrackDriver) -> None:
         """
         Handle a change in TPM power.
 
-        This is a helper method that calls the callback if it exists.
+        This is a helper method that calls the callback if it exists. As
+        a side effect, it reads and updates the hardware power mode.
         """
-        self.logger.debug("TPM power changed: " + str(self.tpm_power_modes))
+        tpm_power_modes = str(self.tpm_power_modes)
+        self.logger.debug("TPM power changed: " + tpm_power_modes)
         if self._component_tpm_power_changed_callback is not None:
             self._component_tpm_power_changed_callback(self.tpm_power_modes)
 

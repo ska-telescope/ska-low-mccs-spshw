@@ -225,10 +225,18 @@ class MccsSubrack(SKABaseDevice):
                 self.op_state_model.perform_action(action)
             else:
                 self.op_state_model.perform_action("component_unknown")
+                self.logger.debug("Power supply status unknown")
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
+        power_status = (
+            self.component_manager._hardware_component_manager.supplied_power_mode
+        )
+        self.logger.debug(f"Power mode: {power_status}, Communicating: {self._health_model._communicating}")
+        if (power_status == PowerMode.ON) and self._health_model._communicating:
+            self.logger.debug("Checking tpm power modes")
+            self.component_manager.check_tpm_power_modes()
 
     def _component_power_mode_changed(
         self: MccsSubrack,
@@ -250,6 +258,9 @@ class MccsSubrack(SKABaseDevice):
             PowerMode.UNKNOWN: "component_unknown",
         }
         self.op_state_model.perform_action(action_map[power_mode])
+        if (power_mode == PowerMode.ON) and self._health_model._communicating:
+            self.logger.debug("Checking tpm power modes")
+            self.component_manager.check_tpm_power_modes()
 
     def _component_fault(
         self: MccsSubrack,
@@ -315,6 +326,13 @@ class MccsSubrack(SKABaseDevice):
 
         :param tpm_power_modes: the power modes of the TPMs
         """
+        self.logger.debug(
+            "TPM power modes changed: old"
+            + str(self._tpm_power_modes)
+            + "new: "
+            + str(tpm_power_modes)
+        )
+
         with self._tpm_power_modes_lock:
             for i in range(SubrackData.TPM_BAY_COUNT):
                 if self._tpm_power_modes[i] != tpm_power_modes[i]:

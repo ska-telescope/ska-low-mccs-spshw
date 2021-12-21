@@ -143,6 +143,7 @@ class TpmDriver(MccsComponentManager):
 
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
+        self.logger.debug("Establish communication with the TPM")
         super().start_communicating()
         connect_to_tile_command = self.ConnectToTile(target=self)
         _ = self.enqueue(connect_to_tile_command)
@@ -162,7 +163,7 @@ class TpmDriver(MccsComponentManager):
             :return: a result code and message
             """
             target = self.target
-            targer.logger.debug("Trying to connect to tile")
+            target.logger.debug("Trying to connect to tile")
             with target._hardware_lock:
                 target.tile.connect()
             if target.tile.tpm is not None:
@@ -184,8 +185,13 @@ class TpmDriver(MccsComponentManager):
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
                 return ResultCode.OK, "Connected to Tile"
             else:
-                self.logger.error(f"Connection to tile failed after {timeout/0.5} seconds")
-            return ResultCode.FAILED, f"Could not connect to Tile after {timeout/0.5} seconds"
+                target.logger.error(
+                    f"Connection to tile failed after {timeout/0.5} seconds"
+                )
+            return (
+                ResultCode.FAILED,
+                f"Could not connect to Tile after {timeout/0.5} seconds",
+            )
 
     def stop_communicating(self: TpmDriver) -> None:
         """

@@ -35,6 +35,7 @@ from ska_low_mccs.tile import (
     StaticTpmSimulator,
 )
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
+from ska_low_mccs.tile.tpm_status import TpmStatus
 
 __all__ = [
     "DynamicTpmSimulatorComponentManager",
@@ -145,6 +146,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
+        "tpm_status",
         "tweak_transceivers",
         "voltage",
         "write_address",
@@ -738,6 +740,25 @@ class TileComponentManager(MccsComponentManager):
         cast(
             SwitchingTpmComponentManager, self._tpm_component_manager
         ).test_mode = value
+
+    @property
+    def tpm_status(self: TileComponentManager) -> TpmStatus:
+        """
+        Return the TPM status.
+
+        :return: the TPM status
+        """
+        if self.power_mode != PowerMode.UNKNOWN:
+            status = TpmStatus.UNKNOWN
+        elif self.power_mode != PowerMode.ON:
+            status = TpmStatus.OFF
+        elif self.communication_status != CommunicationStatus.ESTABLISHED:
+            status = TpmStatus.UNCONNECTED
+        else:
+            status = cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).tpm_status
+        return status
 
     __PASSTHROUGH = [
         "adc_rms",

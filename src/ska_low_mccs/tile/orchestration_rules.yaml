@@ -322,7 +322,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_OFF, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [report_tpm_off, stop_communicating_with_tpm, report_communication_established]
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []  # we already knew that
-!!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established]
+!!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
 
 # SUBRACK COMMS ESTABLISHED, TPM IS ON, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "ON", ESTABLISHED]: [stop_communicating_with_subrack, stop_communicating_with_tpm, report_communication_disabled]

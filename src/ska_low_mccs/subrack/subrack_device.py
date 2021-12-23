@@ -230,10 +230,10 @@ class MccsSubrack(SKABaseDevice):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-        power_status = (
-            self.component_manager._hardware_component_manager.supplied_power_mode
+        power_status = self.component_manager.power_mode
+        self.logger.debug(
+            f"Power mode: {power_status}, Communicating: {self._health_model._communicating}"
         )
-        self.logger.debug(f"Power mode: {power_status}, Communicating: {self._health_model._communicating}")
         if (power_status == PowerMode.ON) and self._health_model._communicating:
             self.logger.debug("Checking tpm power modes")
             self.component_manager.check_tpm_power_modes()

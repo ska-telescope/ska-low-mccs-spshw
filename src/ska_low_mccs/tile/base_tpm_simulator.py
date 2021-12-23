@@ -16,6 +16,8 @@ from typing_extensions import Final
 
 from ska_low_mccs.component import ObjectComponent
 
+from .tpm_status import TpmStatus
+
 __all__ = ["BaseTpmSimulator"]
 
 
@@ -87,6 +89,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger = logger
 
         self._is_programmed = False
+        self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
         self._station_id = 0
@@ -173,6 +176,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: download_firmware")
         self._firmware_name = bitfile
         self._is_programmed = True
+        self._tpm_status = TpmStatus.PROGRAMMED
 
     def cpld_flash_write(self: BaseTpmSimulator, bitfile: bytes) -> None:
         """
@@ -194,6 +198,16 @@ class BaseTpmSimulator(ObjectComponent):
         """
         self.logger.debug("TpmSimulator: initialise")
         self.download_firmware(self._firmware_name)
+        self._tpm_status = TpmStatus.INITIALISED
+
+    @property
+    def tpm_status(self: BaseTpmSimulator) -> TpmStatus:
+        """
+        Get the tpm status.
+
+        :return: tpm status
+        """
+        return self._tpm_status
 
     @property
     def tile_id(self: BaseTpmSimulator) -> int:
@@ -870,6 +884,7 @@ class BaseTpmSimulator(ObjectComponent):
             meaningfully implemented
         """
         self.logger.debug("TpmSimulator:Start acquisition")
+        self._tpm_status = TpmStatus.SYNCHRONISED
         raise NotImplementedError
 
     def set_time_delays(self: BaseTpmSimulator, delay: int) -> None:

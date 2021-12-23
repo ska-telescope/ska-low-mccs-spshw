@@ -280,6 +280,9 @@ class MccsTile(SKABaseDevice):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
+        # if communication has been established, update power mode
+        if communication_status == CommunicationStatus.ESTABLISHED:
+            self._component_power_mode_changed(self.component_manager.power_mode)
 
     def _component_power_mode_changed(
         self: MccsTile,

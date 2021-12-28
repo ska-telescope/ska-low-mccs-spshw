@@ -28,6 +28,7 @@ from typing import Any, Callable, cast, List, Optional
 from pyfabil.base.definitions import Device
 
 from ska_tango_base.commands import ResultCode, BaseCommand
+from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
@@ -50,7 +51,7 @@ class TpmDriver(MccsComponentManager):
     FPGA2_TEMPERATURE = 37.5
     ADC_RMS = tuple(float(i) for i in range(32))
     FPGAS_TIME = [1, 2]
-    CURRENT_TILE_BEAMFORMER_FRAME = 23
+    CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "itpm_v1_6.bit"
@@ -68,6 +69,7 @@ class TpmDriver(MccsComponentManager):
         self: TpmDriver,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
+        tile_id: int,
         ip: str,
         port: int,
         tpm_version: str,
@@ -82,6 +84,7 @@ class TpmDriver(MccsComponentManager):
         :param logger: a logger for this simulator to use
         :param push_change_event: method to call when the base classes
             want to send an event
+        :param tile_id: the unique ID for the tile
         :param ip: IP address for hardware tile
         :param port: IP address for hardware tile control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -96,7 +99,7 @@ class TpmDriver(MccsComponentManager):
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
 
-        self._tile_id = 0
+        self._tile_id = tile_id
         self._station_id = 0
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -105,6 +108,7 @@ class TpmDriver(MccsComponentManager):
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
+        self._current_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
@@ -223,6 +227,20 @@ class TpmDriver(MccsComponentManager):
 
         :return: the TPM status
         """
+        if self._tpm_status == TpmStatus.UNKNOWN:
+            # try to determine the status. Successive tests until one fails
+            if self.power_mode != PowerMode.ON:
+                self._tpm_status = TpmStatus.OFF
+            elif self.communication_status != CommunicationStatus.ESTABLISHED:
+                self._tpm_status = TpmStatus.UNCONNECTED
+            elif self.is_programmed is False:
+                self._tpm_status = TpmStatus.UNPROGRAMMED
+            elif self._tile_id != self.tile.get_tile_id():
+                self._tpm_status = TpmStatus.PROGRAMMED
+            elif self.tile.current_frame == 0:
+                self._tpm_status = TpmStatus.INITIALISED
+            else:
+                self._tpm_status = TpmStatus.SYNCHRONISED
         return self._tpm_status
 
     @property
@@ -290,6 +308,14 @@ class TpmDriver(MccsComponentManager):
         self._is_programmed = True
         self._tpm_status = TpmStatus.PROGRAMMED
 
+    def erase_fpga(self: TpmDriver) -> None:
+        """Erase FPGA programming to reduce FPGA power consumption."""
+        with self._hardware_lock:
+            self.logger.debug("TpmDriver: erase_fpga")
+            self.tile.erase_fpga()
+        self._is_programmed = False
+        self._tpm_status = TpmStatus.UNPROGRAMMED
+
     def cpld_flash_write(self: TpmDriver, bitfile: bytes) -> None:
         """
         Flash a program to the tile's CPLD (complex programmable logic device).
@@ -333,6 +359,7 @@ class TpmDriver(MccsComponentManager):
                 # Base initialisation
                 #
                 with target._hardware_lock:
+                    target.tile.set_station_id(0, 0)
                     target.tile.initialise()
                 #
                 # extra steps required to have it working
@@ -341,9 +368,10 @@ class TpmDriver(MccsComponentManager):
                     target.initialise_beamformer(128, 8, True, True)
                 with target._hardware_lock:
                     target.tile.post_synchronisation()
+                    target.tile.set_station_id(target._tile_id, target._station_id)
                 target._tpm_status = TpmStatus.INITIALISED
                 target.logger.debug("TpmDriver: initialisation completed")
-                return (ResultCode.OK, "Initlialsation completed")
+                return (ResultCode.OK, "Initialsation completed")
             else:
                 target._tpm_status = TpmStatus.UNPROGRAMMED
                 target.logger.error("TpmDriver: Cannot initialise board")
@@ -1137,9 +1165,21 @@ class TpmDriver(MccsComponentManager):
             self.tile.send_raw_data(timestamp, seconds, sync=True)
 
     @property
-    def current_tile_beamformer_frame(self: TpmDriver) -> int:
+    def current_tile_frame(self: TpmDriver) -> int:
         """
         Return current frame, in units of 256 ADC frames.
+
+        :return: current tile beamformer frame
+        """
+        self.logger.debug("TpmDriver: current_tile_beamformer_frame")
+        with self._hardware_lock:
+            self._current_tile_frame = self.tile.current_tile_beamformer_frame()
+        return self._current_tile_frame
+
+    @property
+    def current_tile_beamformer_frame(self: TpmDriver) -> int:
+        """
+        Return current tile beamformer frame, in units of 256 ADC frames.
 
         :return: current tile beamformer frame
         """

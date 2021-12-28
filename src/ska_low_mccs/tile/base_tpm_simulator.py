@@ -178,6 +178,12 @@ class BaseTpmSimulator(ObjectComponent):
         self._is_programmed = True
         self._tpm_status = TpmStatus.PROGRAMMED
 
+    def erase_fpga(self: BaseTpmSimulator) -> None:
+        """Erase the firmware form the FPGA, to reduce power."""
+        self.logger.debug("TpmSimulator: erase_fpga")
+        self._is_programmed = False
+        self._tpm_status = TpmStatus.UNPROGRAMMED
+
     def cpld_flash_write(self: BaseTpmSimulator, bitfile: bytes) -> None:
         """
         Flash a program to the tile's CPLD (complex programmable logic device).

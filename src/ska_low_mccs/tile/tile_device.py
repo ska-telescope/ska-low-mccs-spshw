@@ -30,6 +30,7 @@ from ska_tango_base.control_model import (
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tile import TileComponentManager, TileHealthModel
+from ska_low_mccs.tile.tpm_status import TpmStatus
 
 __all__ = ["MccsTile", "main"]
 
@@ -47,6 +48,7 @@ class MccsTile(SKABaseDevice):
     SubrackFQDN = device_property(dtype=str)
     SubrackBay = device_property(dtype=int)  # position of TPM in subrack
 
+    TileId = device_property(dtype=int, default_value=1)  # Tile ID must be nonzero
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
@@ -83,6 +85,7 @@ class MccsTile(SKABaseDevice):
             TestMode.NONE,
             self.logger,
             self.push_change_event,
+            self.TileId,
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
@@ -281,8 +284,8 @@ class MccsTile(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
         # if communication has been established, update power mode
-        if communication_status == CommunicationStatus.ESTABLISHED:
-            self._component_power_mode_changed(self.component_manager.power_mode)
+        # if communication_status == CommunicationStatus.ESTABLISHED:
+        #     self._component_power_mode_changed(self.component_manager.power_mode)
 
     def _component_power_mode_changed(
         self: MccsTile,
@@ -412,6 +415,25 @@ class MccsTile(SKABaseDevice):
         :param value: the new logical tile id
         """
         self.component_manager.tile_id = value
+
+    @attribute(dtype="DevString")
+    def tileProgrammingState(self: MccsTile) -> str:
+        """
+        Get the tile programming state.
+
+        :return: a string describing the programming state of the tile
+        """
+        status_names = {
+            TpmStatus.UNKNOWN: "Unknown",
+            TpmStatus.OFF: "Off",
+            TpmStatus.UNCONNECTED: "Unconnected",
+            TpmStatus.UNPROGRAMMED: "NotProgrammed",
+            TpmStatus.PROGRAMMED: "Programmed",
+            TpmStatus.INITIALISED: "Initialised",
+            TpmStatus.SYNCHRONISED: "Synchronised",
+        }
+        status = self.component_manager.tpm_status
+        return status_names[status]
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:

@@ -998,6 +998,7 @@ class TestDriverCommon:
             super().__init__(
                 logger,
                 push_change_event,
+                1,  # default tile_id
                 ip,
                 port,
                 tpm_version,

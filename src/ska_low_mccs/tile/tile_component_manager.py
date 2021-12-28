@@ -99,6 +99,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "current_tile_beamformer_frame",
         "current",
         "download_firmware",
+        "erase_fpga",
         "firmware_available",
         "firmware_name",
         "firmware_version",
@@ -309,6 +310,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         initial_test_mode: TestMode,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
+        tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
@@ -325,6 +327,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         :param logger: a logger for this object to use
         :param push_change_event: method to call when the base classes
             want to send an event
+        :param tile_id: the unique ID for the tile
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -337,6 +340,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         tpm_driver = TpmDriver(
             logger,
             push_change_event,
+            tile_id,
             tpm_ip,
             tpm_cpld_port,
             tpm_version,
@@ -456,6 +460,7 @@ class TileComponentManager(MccsComponentManager):
         initial_test_mode: TestMode,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
+        tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
@@ -476,6 +481,7 @@ class TileComponentManager(MccsComponentManager):
         :param logger: a logger for this object to use
         :param push_change_event: method to call when the base classes
             want to send an event
+        :param tile_id: the unique ID for the tile
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -508,6 +514,7 @@ class TileComponentManager(MccsComponentManager):
                 initial_test_mode,
                 logger,
                 push_change_event,
+                tile_id,
                 tpm_ip,
                 tpm_cpld_port,
                 tpm_version,
@@ -523,8 +530,8 @@ class TileComponentManager(MccsComponentManager):
             self._stop_communicating_with_tpm,
             self._turn_off_tpm,
             self._turn_on_tpm,
-            self.update_communication_status,
-            self.update_component_power_mode,
+            self.update_communication_status,  # update_communication_status,
+            self.update_tpm_power_mode,
             logger,
         )
 
@@ -696,6 +703,33 @@ class TileComponentManager(MccsComponentManager):
         """
         self._tile_orchestrator.update_tpm_communication_status(communication_status)
 
+    def update_tpm_power_mode(
+        self: TileComponentManager, power_mode: Optional[PowerMode]
+    ) -> None:
+        """
+        Update the power mode, calling callbacks as required.
+
+        If power mode is ON, then the TPM is checked for initialisation,
+        and initialised if not already so.
+
+        :param power_mode: the new power mode of the component. This can
+            be None, in which case the internal value is updated but no
+            callback is called. This is useful to ensure that the
+            callback is called next time a real value is pushed.
+        """
+        self.update_component_power_mode(power_mode)
+        self.logger.debug(
+            f"power mode: {self.power_mode}, communication status: {self.communication_status}"
+        )
+        if self.communication_status == CommunicationStatus.ESTABLISHED:
+            if power_mode == PowerMode.ON:
+                if (self.is_programmed is False) or (
+                    self.tpm_status == TpmStatus.PROGRAMMED
+                ):
+                    self.initialise()
+            if power_mode == PowerMode.STANDBY:
+                self.erase_fpga()
+
     @property
     def simulation_mode(self: TileComponentManager) -> SimulationMode:
         """
@@ -748,7 +782,8 @@ class TileComponentManager(MccsComponentManager):
 
         :return: the TPM status
         """
-        if self.power_mode != PowerMode.UNKNOWN:
+        if self.power_mode == PowerMode.UNKNOWN:
+            self.logger.debug("power mode UNKNOWN")
             status = TpmStatus.UNKNOWN
         elif self.power_mode != PowerMode.ON:
             status = TpmStatus.OFF
@@ -758,6 +793,7 @@ class TileComponentManager(MccsComponentManager):
             status = cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
             ).tpm_status
+            self.logger.debug(f"tpm_status: {status}")
         return status
 
     __PASSTHROUGH = [
@@ -775,6 +811,7 @@ class TileComponentManager(MccsComponentManager):
         "current_tile_beamformer_frame",
         "current",
         "download_firmware",
+        "erase_fpga",
         "firmware_available",
         "firmware_name",
         "firmware_version",

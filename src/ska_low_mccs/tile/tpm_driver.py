@@ -22,13 +22,13 @@ import logging
 import threading
 import numpy as np
 from typing import Any, Callable, cast, List, Optional
+from pyfabil.base.definitions import LibraryError
 
 # from contextlib import contextmanager
 
 from pyfabil.base.definitions import Device
 
 from ska_tango_base.commands import ResultCode, BaseCommand
-from ska_tango_base.control_model import PowerMode
 from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
@@ -171,6 +171,7 @@ class TpmDriver(MccsComponentManager):
             """
             target = self.target
             target.logger.debug("Trying to connect to tile")
+            self._is_programmed = False
             with target._hardware_lock:
                 target.tile.connect()
             if target.tile.tpm is not None:
@@ -178,17 +179,18 @@ class TpmDriver(MccsComponentManager):
                 with target._hardware_lock:
                     if target.tile.is_programmed():
                         self._tpm_status = TpmStatus.PROGRAMMED
+                        self._is_programmed = True
                 target.logger.debug("Connected to tile")
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
                 return ResultCode.OK, "Connected to Tile"
 
             self._tpm_status = TpmStatus.UNCONNECTED
             timeout = 0
-            max_time = 100  # 50 seconds
+            max_time = 10  # 30 seconds
             while target.tile.tpm is None:
-                time.sleep(0.5)
+                time.sleep(1.0)
                 with target._hardware_lock:
-                    target.tile.connect()
+                    target.tile.connect()  # this takes 2 seconds to fail
                 timeout = timeout + 1
                 if timeout > max_time:
                     break
@@ -197,16 +199,18 @@ class TpmDriver(MccsComponentManager):
                 with target._hardware_lock:
                     if target.tile.is_programmed():
                         self._tpm_status = TpmStatus.PROGRAMMED
+                        self._is_programmed = True
                 target.logger.debug("Connected to tile")
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
                 return ResultCode.OK, "Connected to Tile"
             else:
                 target.logger.error(
-                    f"Connection to tile failed after {timeout/0.5} seconds"
+                    f"Connection to tile failed after {timeout*3} seconds"
                 )
+                target.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             return (
                 ResultCode.FAILED,
-                f"Could not connect to Tile after {timeout/0.5} seconds",
+                f"Could not connect to Tile after {timeout*3} seconds",
             )
 
     def stop_communicating(self: TpmDriver) -> None:
@@ -218,6 +222,8 @@ class TpmDriver(MccsComponentManager):
         """
         super().stop_communicating()
         self._tpm_status = TpmStatus.UNCONNECTED
+        self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        self._is_programmed = False
         self.tile.tpm = None
 
     @property
@@ -227,21 +233,41 @@ class TpmDriver(MccsComponentManager):
 
         :return: the TPM status
         """
-        if self._tpm_status == TpmStatus.UNKNOWN:
+        if self._tpm_status in [TpmStatus.UNKNOWN, TpmStatus.UNCONNECTED]:
+            # The status in unknown, either because it has not been tested or
+            # because it comes from an unconnected state.
             # try to determine the status. Successive tests until one fails
-            if self.power_mode != PowerMode.ON:
-                self._tpm_status = TpmStatus.OFF
-            elif self.communication_status != CommunicationStatus.ESTABLISHED:
+            # if self.power_mode != PowerMode.ON:
+            #     self._tpm_status = TpmStatus.OFF
+            if self.communication_status != CommunicationStatus.ESTABLISHED:
                 self._tpm_status = TpmStatus.UNCONNECTED
-            elif self.is_programmed is False:
-                self._tpm_status = TpmStatus.UNPROGRAMMED
-            elif self._tile_id != self.tile.get_tile_id():
-                self._tpm_status = TpmStatus.PROGRAMMED
-            elif self.tile.current_frame == 0:
-                self._tpm_status = TpmStatus.INITIALISED
             else:
-                self._tpm_status = TpmStatus.SYNCHRONISED
+                with self._hardware_lock:
+                    self._is_programmed = self.tile.is_programmed()
+                if self._is_programmed is False:
+                    self._tpm_status = TpmStatus.UNPROGRAMMED
+                elif self._tile_id != self.get_tile_id():
+                    self._tpm_status = TpmStatus.PROGRAMMED
+                elif self.tile.current_frame == 0:
+                    self._tpm_status = TpmStatus.INITIALISED
+                else:
+                    self._tpm_status = TpmStatus.SYNCHRONISED
         return self._tpm_status
+
+    def get_tile_id(self: TpmDriver) -> int:
+        """
+        Get the tile ID stored in the FPGA.
+
+        :returns: tile ID
+        :raises: LibraryError
+        """
+        with self._hardware_lock:
+            try:
+                tile_id = self.tile.get_tile_id()
+            except LibraryError:
+                tile_id = 0
+        self._tile_id = tile_id
+        return tile_id
 
     @property
     def firmware_available(self: TpmDriver) -> list[dict[str, Any]]:
@@ -251,7 +277,8 @@ class TpmDriver(MccsComponentManager):
         :return: the firmware list
         """
         self.logger.debug("TpmDriver: firmware_available")
-        self._firmware_list = self.tile.get_firmware_list()
+        with self._hardware_lock:
+            self._firmware_list = self.tile.get_firmware_list()
         return copy.deepcopy(self._firmware_list)
 
     @property
@@ -291,8 +318,8 @@ class TpmDriver(MccsComponentManager):
 
         :return: whether this TPM is programmed
         """
-        self._is_programmed = self.tile.is_programmed()
-        self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
+        # self._is_programmed = self.tile.is_programmed()
+        # self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
     def download_firmware(self: TpmDriver, bitfile: str) -> None:
@@ -359,8 +386,8 @@ class TpmDriver(MccsComponentManager):
                 # Base initialisation
                 #
                 with target._hardware_lock:
-                    target.tile.set_station_id(0, 0)
                     target.tile.initialise()
+                    target.tile.set_station_id(0, 0)
                 #
                 # extra steps required to have it working
                 #
@@ -399,7 +426,8 @@ class TpmDriver(MccsComponentManager):
         :param value: assigned tile Id value
         """
         self._tile_id = value
-        self.tile.set_station_id(self._station_id, self._tile_id)
+        with self._hardware_lock:
+            self.tile.set_station_id(self._station_id, self._tile_id)
 
     @property
     def station_id(self: TpmDriver) -> int:
@@ -418,7 +446,8 @@ class TpmDriver(MccsComponentManager):
         :param value: assigned station Id value
         """
         self._station_id = value
-        self.tile.set_station_id(self._station_id, self._tile_id)
+        with self._hardware_lock:
+            self.tile.set_station_id(self._station_id, self._tile_id)
 
     @property
     def board_temperature(self: TpmDriver) -> float:
@@ -531,7 +560,8 @@ class TpmDriver(MccsComponentManager):
         """
         assert self.tile.tpm is not None  # for the type checker
         self.logger.warning("TpmDriver: register_list too big to be transmitted")
-        regmap = self.tile.tpm.find_register("")
+        with self._hardware_lock:
+            regmap = self.tile.tpm.find_register("")
         reglist = []
         for reg in regmap:
             reglist.append(reg.name)
@@ -618,7 +648,8 @@ class TpmDriver(MccsComponentManager):
                 + "of type "
                 + str(type(current_address))
             )
-            values.append(cast(int, self.tile[current_address]))
+            with self._hardware_lock:
+                values.append(cast(int, self.tile[current_address]))
             current_address = current_address + 4
         return values
 
@@ -1235,9 +1266,15 @@ class TpmDriver(MccsComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
-        self.tile.send_channelised_data_narrowband(
-            frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds
-        )
+        with self._hardware_lock:
+            self.tile.send_channelised_data_narrowband(
+                frequency,
+                round_bits,
+                number_of_samples,
+                wait_seconds,
+                timestamp,
+                seconds,
+            )
 
     #
     # The synchronisation routine for the current TPM requires that

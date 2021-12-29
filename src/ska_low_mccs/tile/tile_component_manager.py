@@ -561,11 +561,19 @@ class TileComponentManager(MccsComponentManager):
 
     def on(self: TileComponentManager) -> ResultCode:
         """
-        Tell the upstream power supply proxy to turn the tpm off.
+        Tell the upstream power supply proxy to turn the tpm on.
 
         :return: a result code, or None if there was nothing to do.
         """
         return self._tile_orchestrator.desire_on()
+
+    def standby(self: TileComponentManager) -> ResultCode:
+        """
+        Tell the upstream power supply proxy to turn the tpm on.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        return self._tile_orchestrator.desire_standby()
 
     def component_progress_changed(self: TileComponentManager, progress: int) -> None:
         """
@@ -717,6 +725,17 @@ class TileComponentManager(MccsComponentManager):
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
+        # identify power mode if not specified
+        if power_mode == PowerMode.UNKNOWN:
+            if self.tpm_status in [
+                TpmStatus.UNKNOWN,
+                TpmStatus.UNCONNECTED,
+                TpmStatus.OFF,
+                TpmStatus.UNPROGRAMMED,
+            ]:
+                power_mode = PowerMode.STANDBY
+            else:
+                power_mode = PowerMode.ON
         self.update_component_power_mode(power_mode)
         self.logger.debug(
             f"power mode: {self.power_mode}, communication status: {self.communication_status}"
@@ -793,7 +812,6 @@ class TileComponentManager(MccsComponentManager):
             status = cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
             ).tpm_status
-            self.logger.debug(f"tpm_status: {status}")
         return status
 
     __PASSTHROUGH = [

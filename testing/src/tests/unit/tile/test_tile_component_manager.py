@@ -67,19 +67,21 @@ class TestTileComponentManager:
             tile_component_manager.communication_status == CommunicationStatus.DISABLED
         )
 
+        # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
         tile_component_manager.start_communicating()
 
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        # This will not happen as the power mode is OFF.
+        # communication_status_changed_callback.assert_next_call(
+        #     CommunicationStatus.ESTABLISHED
+        # )
 
-        assert (
-            tile_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
-        )
+        # assert (
+        #     tile_component_manager.communication_status
+        #     == CommunicationStatus.ESTABLISHED
+        # )
 
         if power_mode == ExtendedPowerMode.UNKNOWN:
             tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.UNKNOWN)
@@ -89,9 +91,9 @@ class TestTileComponentManager:
             pass  # test harness starts with TPM off
         elif power_mode == ExtendedPowerMode.ON:
             tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
-            communication_status_changed_callback.assert_next_call(
-                CommunicationStatus.NOT_ESTABLISHED
-            )
+            # communication_status_changed_callback.assert_next_call(
+            #     CommunicationStatus.NOT_ESTABLISHED
+            # )
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
@@ -151,21 +153,21 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        # communication_status_changed_callback.assert_next_call(
+        #     CommunicationStatus.ESTABLISHED
+        # )
 
         assert (
             tile_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
+            == CommunicationStatus.NOT_ESTABLISHED
         )
 
         tile_component_manager._tpm_power_mode_changed(first_power_mode)
 
         if first_power_mode == ExtendedPowerMode.ON:
-            communication_status_changed_callback.assert_next_call(
-                CommunicationStatus.NOT_ESTABLISHED
-            )
+            # communication_status_changed_callback.assert_next_call(
+            #     CommunicationStatus.NOT_ESTABLISHED
+            # )
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
@@ -178,9 +180,9 @@ class TestTileComponentManager:
             first_power_mode != ExtendedPowerMode.ON
             and second_power_mode == ExtendedPowerMode.ON
         ):
-            communication_status_changed_callback.assert_next_call(
-                CommunicationStatus.NOT_ESTABLISHED
-            )
+            #     communication_status_changed_callback.assert_next_call(
+            #         CommunicationStatus.NOT_ESTABLISHED
+            #     )
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
@@ -211,9 +213,9 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        # communication_status_changed_callback.assert_next_call(
+        #     CommunicationStatus.ESTABLISHED
+        # )
 
         tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
@@ -259,9 +261,9 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        # communication_status_changed_callback.assert_next_call(
+        #     CommunicationStatus.ESTABLISHED
+        # )
 
         # mock an event from subrack announcing it to be turned off
         tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
@@ -379,9 +381,9 @@ class TestStaticSimulatorCommon:
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.NOT_ESTABLISHED
             )
-            communication_status_changed_callback.assert_next_call(
-                CommunicationStatus.ESTABLISHED
-            )
+            # communication_status_changed_callback.assert_next_call(
+            #     CommunicationStatus.ESTABLISHED
+            # )
             time.sleep(0.1)
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
@@ -548,6 +550,7 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         """
+        tile.erase_fpga()
         assert not tile.is_programmed
         tile.initialise()
         assert tile.is_programmed
@@ -573,6 +576,7 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         :param mocker: fixture that wraps unittest.mock
         """
+        tile.erase_fpga()
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
         tile.download_firmware(mock_bitfile)

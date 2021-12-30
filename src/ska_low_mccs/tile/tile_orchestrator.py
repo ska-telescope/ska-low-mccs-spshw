@@ -450,7 +450,6 @@ class TileOrchestrator:
     def _report_tpm_on(self: TileOrchestrator) -> None:
         self._tpm_power_mode = ExtendedPowerMode.ON
         self._power_mode_changed_callback(PowerMode.ON)
-        #self._power_mode_changed_callback(self._tpm_power_mode_on)
 
     def _report_tpm_power_unknown(self: TileOrchestrator) -> None:
         self._tpm_power_mode = ExtendedPowerMode.UNKNOWN

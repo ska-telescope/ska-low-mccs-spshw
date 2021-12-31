@@ -1076,8 +1076,10 @@ class TestDriverCommon:
             == CommunicationStatus.NOT_ESTABLISHED
         )
         # Wait for the message to execute
-        time.sleep(0.1)
-        hardware_tile_mock.connect.assert_called_once()
+        # As connect tries multiple times, it takes some time and must not
+        # use "assert_called_once"
+        time.sleep(3.1)
+        hardware_tile_mock.connect.assert_called_with()
         assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
         assert patched_tpm_driver._queue_manager._task_result[1] == str(
             ResultCode.FAILED.value

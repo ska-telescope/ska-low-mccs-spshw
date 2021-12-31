@@ -186,9 +186,9 @@ class TpmDriver(MccsComponentManager):
 
             self._tpm_status = TpmStatus.UNCONNECTED
             timeout = 0
-            max_time = 10  # 30 seconds
+            max_time = 4  # 15 seconds
             while target.tile.tpm is None:
-                time.sleep(1.0)
+                time.sleep(0.5)
                 with target._hardware_lock:
                     target.tile.connect()  # this takes 2 seconds to fail
                 timeout = timeout + 1
@@ -210,7 +210,7 @@ class TpmDriver(MccsComponentManager):
                 target.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             return (
                 ResultCode.FAILED,
-                f"Could not connect to Tile after {timeout*3} seconds",
+                "Could not connect to Tile",
             )
 
     def stop_communicating(self: TpmDriver) -> None:

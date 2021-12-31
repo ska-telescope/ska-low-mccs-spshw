@@ -272,9 +272,10 @@ class MccsTile(SKABaseDevice):
         """
         action_map = {
             CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
+            CommunicationStatus.NOT_ESTABLISHED: None,
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
+        self.logger.debug(f"communication_status: {communication_status}")
 
         action = action_map[communication_status]
         if action is not None:
@@ -300,6 +301,7 @@ class MccsTile(SKABaseDevice):
 
         :param power_mode: the power mode of the component.
         """
+        self.logger.debug(f"power_mode: {power_mode}")
         action_map = {
             PowerMode.OFF: "component_off",
             PowerMode.STANDBY: "component_standby",
@@ -308,6 +310,7 @@ class MccsTile(SKABaseDevice):
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
+        self._health_model.set_power_mode(power_mode)
 
     def _component_fault(
         self: MccsTile,

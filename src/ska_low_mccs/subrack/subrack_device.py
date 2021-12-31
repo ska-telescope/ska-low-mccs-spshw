@@ -257,6 +257,8 @@ class MccsSubrack(SKABaseDevice):
             PowerMode.ON: "component_on",
             PowerMode.UNKNOWN: "component_unknown",
         }
+        if power_mode is None:
+            return
         self.op_state_model.perform_action(action_map[power_mode])
         if (power_mode == PowerMode.ON) and self._health_model._communicating:
             self.logger.debug("Checking tpm power modes")

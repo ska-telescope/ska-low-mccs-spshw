@@ -176,7 +176,7 @@ class TestMccsTile:
 
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
-        device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
+        # device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
         device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
 
         tile_device.MockTpmOn()

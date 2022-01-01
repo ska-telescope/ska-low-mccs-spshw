@@ -677,20 +677,28 @@ class TileComponentManager(MccsComponentManager):
     def _stop_communicating_with_subrack(self: TileComponentManager) -> None:
         self._subrack_proxy = None
 
-    # TODO: Convert this to a LRC, but lower priority
+    # TODO: Convert this to a LRC, but lower priority. COnverted in subrack
     # @enqueue
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], _) = self._subrack_proxy.PowerOffTpm(self._subrack_tpm_id)
         # TODO better handling of result code and exceptions.
+        if result_code > 2:
+            self.logger.error(
+                f"Turn off tpm {self._subrack_tpm_id} returns {result_code}"
+            )
         return result_code
 
-    # TODO: Convert this to a LRC
+    # TODO: Convert this to a LRC. Converted in subrack
     # @enqueue
     def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], _) = self._subrack_proxy.PowerOnTpm(self._subrack_tpm_id)
         # TODO better handling of result code and exceptions.
+        if result_code > 2:
+            self.logger.error(
+                f"Turn on tpm {self._subrack_tpm_id} returns {result_code}"
+            )
         return result_code
 
     def _tpm_power_mode_changed(

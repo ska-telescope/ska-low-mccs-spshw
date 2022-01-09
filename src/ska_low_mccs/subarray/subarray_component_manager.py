@@ -287,7 +287,7 @@ class SubarrayComponentManager(
         station_beam_fqdns: list[str] = resource_spec.get("station_beams", [])
         channel_blocks: list[int] = resource_spec.get("channel_blocks", [])
 
-        station_fqdn_set = self._add_station_groups(station_fqdns)
+        station_fqdn_set = self._flatten_new_station_groups(station_fqdns)
         self._channel_blocks = self._channel_blocks + channel_blocks
 
         station_fqdns_to_add = sorted(station_fqdn_set) - self._stations.keys()
@@ -355,7 +355,7 @@ class SubarrayComponentManager(
 
         return ResultCode.OK
 
-    def _add_station_groups(
+    def _flatten_new_station_groups(
         self: SubarrayComponentManager,
         station_fqdns: list[list[str]],
     ) -> set:
@@ -363,6 +363,7 @@ class SubarrayComponentManager(
         Add station groups to this subarray component manager's _station_groups.
 
         This is for housekeeping to store the station heirarchy for the assigned_resources_dict attribute.
+        A flattened (1-D) array is returned for adding new fqdns to the component manager's Station Proxies.
 
         :param station_fqdns: list of lists of stations
 
@@ -406,6 +407,21 @@ class SubarrayComponentManager(
             "station_beams": sorted(self._station_beams.keys()),
             "channel_blocks": self._channel_blocks,
         }
+
+    @check_communicating
+    def release(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        argin: str,
+    ) -> None:
+        """
+        Release resources from this subarray.
+
+        :param argin: list of resource fqdns to release.
+
+        :raises NotImplementedError: because MCCS Subarray cannot perferm a
+            partial release of resources.
+        """
+        raise NotImplementedError("MCCS Subarray cannot partially release resources.")
 
     @check_communicating
     def release_all(  # type: ignore[override]

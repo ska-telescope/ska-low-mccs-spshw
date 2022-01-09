@@ -313,6 +313,7 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.assignedResources == json.dumps(
             {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
                 "subarray_beam_ids": [subarray_beam_on_fqdn.split("/")[-1].lstrip("0")],
                 "station_ids": [[station_on_fqdn.split("/")[-1].lstrip("0")]],
                 "channel_blocks": channel_blocks,
@@ -346,6 +347,7 @@ class TestMccsSubarray:
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
         assert device_under_test.assignedResources == json.dumps(
             {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
                 "subarray_beam_ids": [],
                 "station_ids": [],
                 "channel_blocks": [],

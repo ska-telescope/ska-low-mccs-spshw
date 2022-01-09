@@ -12,7 +12,6 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 import json
 from typing import Any, List, Optional, Tuple
-import json
 
 import tango
 from tango.server import attribute, command
@@ -369,6 +368,7 @@ class MccsSubarray(SKASubarray):
         channel_blocks = resource_dict["channel_blocks"]
         return json.dumps(
             {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
                 "subarray_beam_ids": subarray_beams,
                 "station_ids": stations,
                 "channel_blocks": channel_blocks,

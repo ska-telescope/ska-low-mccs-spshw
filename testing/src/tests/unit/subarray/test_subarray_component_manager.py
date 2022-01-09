@@ -229,6 +229,28 @@ class TestSubarrayComponentManager:
             "channel_blocks": list(),
         }
 
+    def test_release(
+        self: TestSubarrayComponentManager,
+        subarray_component_manager: SubarrayComponentManager,
+        station_off_fqdn: str,
+    ) -> None:
+        """
+        Test the component manager's handling of the release command.
+
+        :param subarray_component_manager: the subarray component
+            manager under test.
+        :param station_off_fqdn: the FQDN of a station that is powered
+            off.
+        """
+        subarray_component_manager.start_communicating()
+        assert subarray_component_manager.power_mode == PowerMode.ON
+        release_json = json.dumps({"station_beams": [station_off_fqdn]})
+        with pytest.raises(
+            NotImplementedError,
+            match="MCCS Subarray cannot partially release resources.",
+        ):
+            subarray_component_manager.release(release_json)
+
     def test_configure(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,

@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements component management for station beams."""
 from __future__ import annotations
 
@@ -20,10 +18,8 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
-    MessageQueue,
     check_communicating,
     check_on,
-    enqueue,
 )
 
 
@@ -35,7 +31,6 @@ class _StationProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def apply_pointing(self: _StationProxy, pointing_args: list[float]) -> ResultCode:
         """
         Apply the provided pointing arguments to the station.
@@ -45,7 +40,7 @@ class _StationProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.ApplyPointing(pointing_args)
+        ([result_code], _) = self._proxy.ApplyPointing(pointing_args)
         return result_code
 
 
@@ -56,8 +51,8 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        message_queue_size_callback: Callable[[int], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         station_health_changed_callback: Callable[[Optional[HealthState]], None],
         station_fault_changed_callback: Callable[[bool], None],
@@ -67,11 +62,11 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :param beam_id: the beam id of this station beam
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param is_beam_locked_changed_callback: a callback to be called
             when whether the beam is locked changes
         :param station_health_changed_callback: a callback to be called
@@ -100,13 +95,9 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_health_changed_callback = station_health_changed_callback
         self._station_fault_changed_callback = station_fault_changed_callback
 
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,
@@ -170,8 +161,8 @@ class StationBeamComponentManager(MccsComponentManager):
             if self._station_fqdn is not None:
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
-                    self._message_queue,
                     self.logger,
+                    self._push_change_event,
                     self._device_communication_status_changed,
                     None,
                     self._station_fault_changed_callback,

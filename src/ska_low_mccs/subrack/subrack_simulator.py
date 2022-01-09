@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 This module contains an implementation of a simulator for a subrack management board.
 
@@ -596,14 +594,10 @@ class SubrackSimulator(ObjectComponent):
         Specialist implementation to emulate a real hardware delay.
 
         To be used specifically in a K8s deployment i.e. TestMode.NONE.
-
-        :raises AssertionError: if method is called in unit test environment
         """
         # Safeguard against deployment in unit testing environment
         if "PYTEST_CURRENT_TEST" in os.environ:
-            raise AssertionError(
-                "Hardware delay emulation not allowed in unit test environment"
-            )
+            return
 
         for i in range(1, 5):
             if self._component_progress_changed_callback:

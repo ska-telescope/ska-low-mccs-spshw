@@ -1,25 +1,24 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the subrack component manager."""
 from __future__ import annotations
 
 import time
 from typing import Any, Union
+import unittest
 
 import pytest
 from _pytest.fixtures import SubRequest
+from ska_tango_base.commands import ResultCode
 
-from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
-from ska_low_mccs.component import ExtendedPowerMode
+from ska_low_mccs.component import ExtendedPowerMode, CommunicationStatus
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -27,8 +26,6 @@ from ska_low_mccs.subrack import (
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
-    TestingSubrackSimulator,
-    TestingSubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
 )
 
@@ -54,25 +51,16 @@ class TestSubrackSimulatorCommon:
 
     @pytest.fixture(
         params=[
-            "testing_subrack_simulator",
-            "testing_subrack_simulator_component_manager",
             "switching_subrack_component_manager",
             "subrack_component_manager",
         ]
     )
     def subrack(
         self: TestSubrackSimulatorCommon,
-        testing_subrack_simulator: TestingSubrackSimulator,
-        testing_subrack_simulator_component_manager: TestingSubrackSimulatorComponentManager,
         switching_subrack_component_manager: SwitchingSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
         request: SubRequest,
-    ) -> Union[
-        TestingSubrackSimulator,
-        TestingSubrackSimulatorComponentManager,
-        SwitchingSubrackComponentManager,
-        SubrackComponentManager,
-    ]:
+    ) -> Union[SwitchingSubrackComponentManager, SubrackComponentManager]:
         """
         Return the subrack class under test.
 
@@ -90,9 +78,6 @@ class TestSubrackSimulatorCommon:
         So any test that relies on this fixture will be run four times:
         once for each of the above classes.
 
-        :param testing_subrack_simulator: the testing subrack simulator to return
-        :param testing_subrack_simulator_component_manager: the testing subrack
-            simulator component manager to return
         :param switching_subrack_component_manager:
             a component manager that switches between subrack simulator
             and driver (in simulation mode)
@@ -105,12 +90,7 @@ class TestSubrackSimulatorCommon:
 
         :return: the subrack class object under test
         """
-        if request.param == "testing_subrack_simulator":
-            return testing_subrack_simulator
-        elif request.param == "testing_subrack_simulator_component_manager":
-            testing_subrack_simulator_component_manager.start_communicating()
-            return testing_subrack_simulator_component_manager
-        elif request.param == "switching_subrack_component_manager":
+        if request.param == "switching_subrack_component_manager":
             switching_subrack_component_manager.start_communicating()
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":
@@ -377,17 +357,86 @@ class TestSubrackDriverCommon:
             return subrack_driver
         elif request.param == "switching_subrack_component_manager":
             switching_subrack_component_manager.simulation_mode = SimulationMode.FALSE
-            switching_subrack_component_manager.test_mode = TestMode.NONE
             switching_subrack_component_manager.start_communicating()
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":
             subrack_component_manager.simulation_mode = SimulationMode.FALSE
-            subrack_component_manager.test_mode = TestMode.NONE
             subrack_component_manager.start_communicating()
             subrack_component_manager.on()
             time.sleep(0.2)
             return subrack_component_manager
         raise ValueError("subrack fixture parametrized with unrecognised option")
+
+    @pytest.fixture()
+    def web_hardware_client_mock(self: TestSubrackDriverCommon) -> unittest.mock.Mock:
+        """
+        Provide a mock for the web hardware client.
+
+        :return: A web hardware client mock
+        """
+        return unittest.mock.Mock()
+
+    def test_communication(
+        self: TestSubrackDriverCommon,
+        subrack_driver: SubrackDriver,
+        web_hardware_client_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Create the subrack driver and start communication with the component.
+
+        :param subrack_driver: the subrack driver under test.
+        :param web_hardware_client_mock: a mock provided for the
+            web hardare client member of the subrack driver.
+        """
+        setattr(subrack_driver, "_client", web_hardware_client_mock)
+        web_hardware_client_mock.connect.return_value = True
+        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        subrack_driver.start_communicating()
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        web_hardware_client_mock.connect.assert_called_once()
+        assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
+        assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
+        assert "Connected to " in subrack_driver._queue_manager._task_result[2]
+        assert subrack_driver.communication_status == CommunicationStatus.ESTABLISHED
+
+    def test_communication_fails(
+        self: TestSubrackDriverCommon,
+        subrack_driver: SubrackDriver,
+        web_hardware_client_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Create the subrack driver and start communication with the component.
+
+        Failure to communicate with the underlying client must be handled correctly.
+
+        :param subrack_driver: the subrack driver under test.
+        :param web_hardware_client_mock: a mock provided for the
+            web hardare client member of the subrack driver.
+        """
+        setattr(subrack_driver, "_client", web_hardware_client_mock)
+        web_hardware_client_mock.connect.return_value = False
+        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        subrack_driver.start_communicating()
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        web_hardware_client_mock.connect.assert_called_once()
+        assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
+        assert subrack_driver._queue_manager._task_result[1] == str(
+            ResultCode.FAILED.value
+        )
+        assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -601,7 +650,7 @@ class TestSubrackComponentManager:
         assert subrack_component_manager.turn_off_tpm(tpm_id) is None
         component_tpm_power_changed_callback.assert_not_called()
 
-        assert subrack_component_manager.off()
+        assert subrack_component_manager.off() == ResultCode.OK
         component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
         assert subrack_component_manager.power_mode == PowerMode.OFF
 

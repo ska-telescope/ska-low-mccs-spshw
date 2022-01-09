@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defined a pytest test harness for testing the MCCS antenna module."""
 from __future__ import annotations
 
@@ -29,10 +25,14 @@ from ska_low_mccs.antenna.antenna_component_manager import (
     _ApiuProxy,
     _TileProxy,
 )
-from ska_low_mccs.component import CommunicationStatus, MessageQueue
+from ska_low_mccs.component import CommunicationStatus
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
 
 
 @pytest.fixture()
@@ -100,8 +100,8 @@ def antenna_apiu_proxy(
     tango_harness: TangoHarness,
     apiu_fqdn: str,
     apiu_antenna_id: int,
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -115,9 +115,9 @@ def antenna_apiu_proxy(
     :param tango_harness: a test harness for MCCS tango devices
     :param apiu_fqdn: FQDN of the antenna's APIU device
     :param apiu_antenna_id: the id of the antenna in the APIU device
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: a loger for the antenna component manager to use
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -133,8 +133,8 @@ def antenna_apiu_proxy(
     return _ApiuProxy(
         apiu_fqdn,
         apiu_antenna_id,
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
@@ -147,8 +147,8 @@ def antenna_tile_proxy(
     tango_harness: TangoHarness,
     tile_fqdn: str,
     tile_antenna_id: int,
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: Callable[[bool], None],
 ) -> _TileProxy:
@@ -160,9 +160,9 @@ def antenna_tile_proxy(
     :param tango_harness: a test harness for MCCS tango devices
     :param tile_fqdn: FQDN of the antenna's tile device
     :param tile_antenna_id: the id of the antenna in the tile device
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: a loger for the antenna component manager to use
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -174,8 +174,8 @@ def antenna_tile_proxy(
     return _TileProxy(
         tile_fqdn,
         tile_antenna_id,
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )
@@ -189,10 +189,10 @@ def antenna_component_manager(
     tile_fqdn: str,
     tile_antenna_id: int,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
-    message_queue_size_callback: Callable[[int], None],
 ) -> AntennaComponentManager:
     """
     Return an antenna component manager.
@@ -203,6 +203,8 @@ def antenna_component_manager(
     :param tile_fqdn: FQDN of the antenna's tile device
     :param tile_antenna_id: the id of the antenna in the tile device
     :param logger: a loger for the antenna component manager to use
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -210,8 +212,6 @@ def antenna_component_manager(
         when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
-    :param message_queue_size_callback: callback to be called when the
-        size of the message queue changes.
 
     :return: an antenna component manager
     """
@@ -221,10 +221,10 @@ def antenna_component_manager(
         tile_fqdn,
         tile_antenna_id,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
-        message_queue_size_callback,
     )
 
 

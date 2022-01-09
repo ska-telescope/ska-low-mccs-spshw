@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 Standard setup.py script.
 """
@@ -52,7 +58,7 @@ setuptools.setup(
         ]
     },
     install_requires=[
-        "ska-tango-base == 0.11.3",
+        "ska-tango-base == 0.12.0",
         "pytango >= 9.3.3",
         "jsonschema >= 3.2.0",
         "fire",

@@ -3,16 +3,15 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Tuple, List
 
 import tango
-from tango.server import attribute, device_property
+from tango.server import attribute, device_property, command
 
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResultCode
@@ -22,6 +21,8 @@ from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
 from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsAntenna", "main"]
+
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 class MccsAntenna(SKABaseDevice):
@@ -70,10 +71,10 @@ class MccsAntenna(SKABaseDevice):
             f"low-mccs/tile/{self.TileId:04}",
             self.LogicalTileAntennaId,
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
-            self._message_queue_size_changed,
         )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -133,6 +134,26 @@ class MccsAntenna(SKABaseDevice):
             device._health_state = device._health_model.health_state
 
             return (ResultCode.OK, "Init command completed OK")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    def Reset(self: MccsAntenna) -> DevVarLongStringArrayType:
+        """
+        Reset the device from the FAULT state.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        # TODO Call Reset directly - DON'T USE LRC - for now.
+        handler = self.get_command_object("Reset")
+        (result_code, message) = handler()
+        return ([result_code], [message])
 
     # --------------
     # Callback hooks
@@ -206,19 +227,6 @@ class MccsAntenna(SKABaseDevice):
         else:
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
-
-    def _message_queue_size_changed(
-        self: MccsAntenna,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsAntenna, health: HealthState) -> None:
         """
@@ -537,9 +545,14 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO: return OK for now to be consistent with base classes
+            # It's fine to complete this long-running command here
+            # (returning ResultCode.OK), even though the component manager
+            # may not actually be finished turning everything on.
+            # The completion of the original On command to MccsController
+            # is waiting for the various power mode callbacks to be received
+            # rather than completion of the various long-running commands.
             _ = self.target.on()
-            message = "On command completed OK"
+            message = "Antenna On command completed OK"
             return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsAntenna) -> bool:

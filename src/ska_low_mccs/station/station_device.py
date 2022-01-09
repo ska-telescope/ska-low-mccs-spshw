@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS station device."""
 
 from __future__ import annotations
@@ -86,9 +84,9 @@ class MccsStation(SKAObsDevice):
             self.AntennaFQDNs,
             self.TileFQDNs,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
             self._component_power_mode_changed,
-            self._message_queue_size_changed,
             self._health_model.apiu_health_changed,
             self._health_model.antenna_health_changed,
             self._health_model.tile_health_changed,
@@ -179,9 +177,14 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO: return OK for now to be consistent with base classes
+            # It's fine to complete this long-running command here
+            # (returning ResultCode.OK), even though the component manager
+            # may not actually be finished turning everything on.
+            # The completion of the original On command to MccsController
+            # is waiting for the various power mode callbacks to be received
+            # rather than completion of the various long-running commands.
             _ = self.target.on()
-            message = "On command completed OK"
+            message = "Station On command completed OK"
             return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsStation) -> bool:
@@ -250,19 +253,6 @@ class MccsStation(SKAObsDevice):
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
-
-    def _message_queue_size_changed(
-        self: MccsStation,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsStation, health: HealthState) -> None:
         """
@@ -533,9 +523,8 @@ class MccsStation(SKAObsDevice):
             information purpose only.
 
         :example:
-
-        >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("Configure", json_str)
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("Configure", json_str)
         """
         handler = self.get_command_object("Configure")
         (return_code, message) = handler(argin)

@@ -3,9 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements a component manager for a PaSD bus."""
 from __future__ import annotations
 
@@ -18,7 +17,6 @@ from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
-    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -28,8 +26,8 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
 
     def __init__(
         self: PasdBusSimulatorComponentManager,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         _simulator: Optional[PasdBusSimulator] = None,
@@ -38,9 +36,9 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -56,8 +54,8 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         )
         super().__init__(
             pasd_bus_simulator,
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -164,9 +162,9 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         self: PasdBusComponentManager,
         initial_simulation_mode: SimulationMode,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        message_queue_size_callback: Callable[[int], None],
         _simulator_component_manager: Optional[PasdBusSimulatorComponentManager] = None,
     ) -> None:
         """
@@ -175,6 +173,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param logger: a logger for this object to use
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param communication_status_changed_callback: callback to be
@@ -182,22 +182,15 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
             the component manager and its component changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
-        :param message_queue_size_callback: callback to be called when
-            the size of the message queue changes
         :param _simulator_component_manager: for testing only, we can
             provide a pre-created component manager for the simulator,
             rather than letting this component manager create one.
         """
-        self._message_queue = MessageQueue(
-            logger,
-            queue_size_callback=message_queue_size_callback,
-        )
-
         pasd_bus_simulator = (
             _simulator_component_manager
             or PasdBusSimulatorComponentManager(
-                self._message_queue,
                 logger,
+                push_change_event,
                 communication_status_changed_callback,
                 component_fault_callback,
             )

@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains classes for interacting with upstream devices."""
 from __future__ import annotations
 
 import logging
-import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -12,11 +18,9 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
     MccsComponentManagerProtocol,
-    MessageQueue,
     ObjectComponent,
     ObjectComponentManager,
     check_communicating,
-    enqueue,
 )
 from ska_low_mccs.utils import threadsafe
 
@@ -165,8 +169,8 @@ class PowerSupplyProxySimulator(
 
     def __init__(
         self: PowerSupplyProxySimulator,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         supplied_power_mode_changed_callback: Callable[[PowerMode], None],
         initial_supplied_power_mode: PowerMode = PowerMode.OFF,
@@ -174,9 +178,9 @@ class PowerSupplyProxySimulator(
         """
         Initialise a new instance.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -187,8 +191,8 @@ class PowerSupplyProxySimulator(
         """
         super().__init__(
             self._Component(initial_supplied_power_mode),
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,
@@ -211,7 +215,6 @@ class PowerSupplyProxySimulator(
         self.update_supplied_power_mode(None)
 
     @check_communicating
-    @enqueue
     def power_off(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn off supply of power to the downstream device.
@@ -221,7 +224,6 @@ class PowerSupplyProxySimulator(
         return cast(PowerSupplyProxySimulator._Component, self._component).power_off()
 
     @check_communicating
-    @enqueue
     def power_on(self: PowerSupplyProxySimulator) -> ResultCode | None:
         """
         Turn on supply of power to the downstream device.
@@ -255,6 +257,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         hardware_component_manager: MccsComponentManagerProtocol,
         power_supply_component_manager: PowerSupplyProxyComponentManager,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
@@ -268,6 +271,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param power_supply_component_manager: the component
             manager that manages supply of power to the hardware.
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -278,7 +283,6 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param component_progress_changed_callback: callback to be called when the
             component command progress values changes
         """
-        self.__power_mode_lock = threading.Lock()
         self._target_power_mode: Optional[PowerMode] = None
 
         self._power_supply_communication_status = CommunicationStatus.DISABLED
@@ -291,6 +295,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -396,7 +401,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._target_power_mode = PowerMode.OFF
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.OFF
         return self._review_power()
 
     @check_communicating
@@ -406,14 +412,16 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._target_power_mode = PowerMode.ON
-        return self._review_power()
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.ON
+        rc = self._review_power()
+        return rc
 
     @threadsafe
     def _review_power(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> ResultCode | None:
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             if self._target_power_mode is None:
                 return None
             if self.power_mode == self._target_power_mode:

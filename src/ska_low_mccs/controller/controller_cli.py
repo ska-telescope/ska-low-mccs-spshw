@@ -2,12 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Used to drive the Command Line Interface for the
-# MCCS Controller Device Server.
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """The command line interface for the MCCS Controller device server."""
 
 from __future__ import annotations  # allow forward references in type hints

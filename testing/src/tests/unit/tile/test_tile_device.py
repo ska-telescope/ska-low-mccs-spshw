@@ -1,13 +1,10 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for MccsTile."""
 from __future__ import annotations
 
@@ -23,6 +20,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     HealthState,
+    TestMode,
 )
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -157,6 +155,7 @@ class TestMccsTile:
         :param initial_value: expected initial value of the attribute
         :param write_value: value to be written as part of the test.
         """
+        tile_device.testMode = TestMode.TEST
         tile_device.add_change_event_callback(
             "adminMode",
             device_admin_mode_changed_callback,
@@ -170,7 +169,9 @@ class TestMccsTile:
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(tile_device, attribute)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -378,7 +379,9 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         args = [] if arg is None else [arg]
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(tile_device, device_command)(*args)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -440,8 +443,8 @@ class TestMccsTileCommands:
         time.sleep(0.1)
 
         [[result_code], [message]] = tile_device.On()
-        assert result_code == ResultCode.OK
-        assert message == "On command completed OK"
+        assert result_code == ResultCode.QUEUED
+        assert "_OnCommand" in message
 
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
         # At this point the subrack should turn the TPM on, then fire a change event.
@@ -471,7 +474,9 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = tile_device.Initialise()
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -496,6 +501,7 @@ class TestMccsTileCommands:
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test if firmware available.
@@ -511,6 +517,8 @@ class TestMccsTileCommands:
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
+        :param device_state_changed_callback: a callback that we can use
+            to subscribe to state changes on the tile device
         """
         tile_device.add_change_event_callback(
             "adminMode",
@@ -519,22 +527,29 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        tile_device.add_change_event_callback(
+            "state",
+            device_state_changed_callback,
+        )
+        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        assert tile_device.state() == tango.DevState.DISABLE
+
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+        device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-
+        # At this point, the component should be connected, but not turned on
         with pytest.raises(tango.DevFailed, match="Component is not turned on."):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.MockTpmOn()
+        device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
 
         firmware_available_str = tile_device.GetFirmwareAvailable()
         firmware_available = json.loads(firmware_available_str)
@@ -884,6 +899,7 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.adminMode = AdminMode.ONLINE
+        time.sleep(0.1)  # Just a settle time require so become ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 

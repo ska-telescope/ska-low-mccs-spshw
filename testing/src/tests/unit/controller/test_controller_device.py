@@ -1,13 +1,10 @@
-###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the SKA-Low-MCCS project
+# This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-###############################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """Contains the tests for the MccsController Tango device_under_test prototype."""
 from __future__ import annotations
 
@@ -23,6 +20,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsController, MccsDeviceProxy, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
@@ -90,20 +88,6 @@ class TestMccsController:
         """
         assert device_under_test.Status() == "The device is in DISABLE state."
 
-    def test_GetVersionInfo(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
-        """
-        Test for GetVersionInfo.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        """
-        vinfo = release.get_release_info(device_under_test.info().dev_class)
-        assert device_under_test.GetVersionInfo() == [vinfo]
-
     def test_adminMode(
         self: TestMccsController,
         device_under_test: MccsDeviceProxy,
@@ -130,9 +114,11 @@ class TestMccsController:
     @pytest.mark.parametrize(
         ("device_command", "component_method"),
         [
-            ("Off", "off"),
-            ("Standby", "standby"),
-            ("On", "on"),
+            ("On", "enqueue"),
+            ("Off", "enqueue"),
+            ("GetVersionInfo", "enqueue"),
+            ("Standby", "enqueue"),
+            ("Reset", "enqueue"),
         ],
     )
     def test_command(
@@ -141,6 +127,7 @@ class TestMccsController:
         device_command: str,
         mock_component_manager: unittest.mock.Mock,
         component_method: str,
+        unique_id: str,
     ) -> None:
         """
         Test that device commands are passed through to the component manager.
@@ -153,10 +140,15 @@ class TestMccsController:
             been patched into the device under test
         :param component_method: name of the component method that
             implements the device command
+        :param unique_id: a unique id used to check Tango layer functionality
         """
         device_under_test.adminMode = AdminMode.ONLINE
-        getattr(device_under_test, device_command)()
-        getattr(mock_component_manager, component_method).assert_called_once_with()
+        [[result_code], [uid]] = getattr(device_under_test, device_command)()
+        assert uid == unique_id
+        assert result_code == ResultCode.QUEUED
+        method = getattr(mock_component_manager, component_method)
+        method.assert_called_once()
+        assert len(method.call_args[0]) == 1
 
     @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(

@@ -1,13 +1,10 @@
-###############################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-###############################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains integration tests of tile-subrack interactions in MCCS."""
 from __future__ import annotations
 
@@ -15,6 +12,7 @@ import pytest
 import tango
 
 from ska_tango_base.control_model import AdminMode
+from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import ExtendedPowerMode
@@ -52,6 +50,7 @@ class TestSubrackTileIntegration:
         subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
         subrack_device_state_changed_callback: MockChangeEventCallback,
         tile_device_admin_mode_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback: MockChangeEventCallback,
         tile_device_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
@@ -73,6 +72,8 @@ class TestSubrackTileIntegration:
         :param tile_device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param tile_device_state_changed_callback: a callback that we
             can use to subscribe to state changes on the tile device.
         """
@@ -112,6 +113,19 @@ class TestSubrackTileIntegration:
         )
 
         assert subrack_device.tpm1PowerMode == ExtendedPowerMode.UNKNOWN
+
+        # Subscribe to subrack's LRC result attribute
+        subrack_device.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in subrack_device._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert subrack_device.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         tile_device.adminMode = AdminMode.ONLINE
 
@@ -183,7 +197,16 @@ class TestSubrackTileIntegration:
         assert tile_device.state() == tango.DevState.ON
         assert subrack_device.tpm1PowerMode == ExtendedPowerMode.ON
 
-        subrack_device.PowerOffTpm(1)
+        tpm_id = 1
+        [[result_code], [unique_id]] = subrack_device.PowerOffTpm(tpm_id)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOffTpmCommand" in unique_id
+        lrc_result_changed_callback.assert_long_running_command_result_change_event(
+            unique_id=unique_id,
+            expected_result_code=ResultCode.OK,
+            expected_message=f"Subrack TPM {tpm_id} power-off successful",
+        )
+
         # A third party has told the subrack device to turn the TPM off. The subrack
         # device tells the subrack to turn the TPM off. The subrack device detects that
         # the TPM is off.

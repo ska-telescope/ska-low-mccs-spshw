@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements an abstract component manager for simple object components."""
 from __future__ import annotations  # allow forward references in type hints
 
@@ -15,11 +16,9 @@ from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MessageQueue,
-    MessageQueueComponentManager,
+    MccsComponentManager,
     ObjectComponent,
     check_communicating,
-    enqueue,
 )
 from ska_low_mccs.utils import threadsafe
 
@@ -27,7 +26,7 @@ from ska_low_mccs.utils import threadsafe
 __all__ = ["ObjectComponentManager"]
 
 
-class ObjectComponentManager(MessageQueueComponentManager):
+class ObjectComponentManager(MccsComponentManager):
     """
     An abstract component manager for a component that is an object in this process.
 
@@ -43,8 +42,8 @@ class ObjectComponentManager(MessageQueueComponentManager):
     def __init__(
         self: ObjectComponentManager,
         component: ObjectComponent,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
@@ -58,9 +57,9 @@ class ObjectComponentManager(MessageQueueComponentManager):
 
         :param component: the commponent object to be managed by this
             component manager
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -76,8 +75,8 @@ class ObjectComponentManager(MessageQueueComponentManager):
         self._fail_communicate = False
 
         super().__init__(
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -127,7 +126,6 @@ class ObjectComponentManager(MessageQueueComponentManager):
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating
-    @enqueue
     def off(self: ObjectComponentManager) -> ResultCode | None:
         """
         Turn the component off.
@@ -137,7 +135,6 @@ class ObjectComponentManager(MessageQueueComponentManager):
         return self._component.off()
 
     @check_communicating
-    @enqueue
     def standby(self: ObjectComponentManager) -> ResultCode | None:
         """
         Put the component into low-power standby mode.
@@ -147,7 +144,6 @@ class ObjectComponentManager(MessageQueueComponentManager):
         return self._component.standby()
 
     @check_communicating
-    @enqueue
     def on(self: ObjectComponentManager) -> ResultCode | None:
         """
         Turn the component on.
@@ -157,7 +153,6 @@ class ObjectComponentManager(MessageQueueComponentManager):
         return self._component.on()
 
     @check_communicating
-    @enqueue
     def reset(self: ObjectComponentManager) -> ResultCode | None:
         """
         Reset the component (from fault state).

@@ -1,13 +1,10 @@
-###############################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-###############################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for MccsStation."""
 from __future__ import annotations
 
@@ -25,6 +22,7 @@ from ska_tango_base.control_model import (
 from ska_low_mccs import MccsDeviceProxy, MccsStation, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
+from ska_tango_base.commands import ResultCode
 
 
 @pytest.fixture()
@@ -129,6 +127,7 @@ class TestMccsStation:
     def test_GetVersionInfo(
         self: TestMccsStation,
         device_under_test: MccsDeviceProxy,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for GetVersionInfo.
@@ -136,9 +135,33 @@ class TestMccsStation:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
-        version_info = release.get_release_info(device_under_test.info().dev_class)
-        assert device_under_test.GetVersionInfo() == [version_info]
+        # Subscribe to controller's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+
+        ([result_code], [unique_id]) = device_under_test.GetVersionInfo()
+        assert result_code == ResultCode.QUEUED
+        assert "GetVersionInfo" in unique_id
+
+        vinfo = release.get_release_info(device_under_test.info().dev_class)
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            str([vinfo]),
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
     def test_versionId(
         self: TestMccsStation,

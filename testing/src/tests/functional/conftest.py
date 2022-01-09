@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains pytest-specific test harness for MCCS functional (BDD) tests."""
 from __future__ import annotations
 
@@ -132,6 +139,24 @@ def controller_device_state_changed_callback(
 
 
 @pytest.fixture()
+def controller_device_lrc_changed_callback(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for controller device state change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback to be registered with the
+        controller device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return mock_change_event_callback_factory("longRunningCommandResult")
+
+
+@pytest.fixture()
 def mock_callback_called_timeout() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is expected.
@@ -143,7 +168,7 @@ def mock_callback_called_timeout() -> float:
     :return: the time to wait for a mock callback to be called when a
         call is asserted.
     """
-    return 10.0
+    return 30.0
 
 
 @pytest.fixture(scope="module")
@@ -290,10 +315,10 @@ def station_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     :return: station beams by number
     """
     return {
-        1: tango_harness.get_device("low-mccs/beam/001"),
-        2: tango_harness.get_device("low-mccs/beam/002"),
-        3: tango_harness.get_device("low-mccs/beam/003"),
-        4: tango_harness.get_device("low-mccs/beam/004"),
+        1: tango_harness.get_device("low-mccs/beam/01"),
+        2: tango_harness.get_device("low-mccs/beam/02"),
+        3: tango_harness.get_device("low-mccs/beam/03"),
+        4: tango_harness.get_device("low-mccs/beam/04"),
     }
 
 

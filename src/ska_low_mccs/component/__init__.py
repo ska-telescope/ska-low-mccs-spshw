@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements infrastructure for component management in MCCS."""
 
 __all__ = [
@@ -19,8 +20,6 @@ __all__ = [
     "PowerSupplyProxySimulator",
     "MccsComponentManager",
     "MccsComponentManagerProtocol",
-    "MessageQueue",
-    "MessageQueueComponentManager",
     "ObjectComponent",
     "ObjectComponentManager",
     "ObsDeviceComponentManager",
@@ -28,7 +27,6 @@ __all__ = [
     "WebHardwareClient",
     "check_communicating",
     "check_on",
-    "enqueue",
 ]
 
 from .component_manager import (
@@ -39,11 +37,6 @@ from .component_manager import (
     MccsComponentManagerProtocol,
 )
 from .util import check_communicating, check_on
-from .message_queue_component_manager import (
-    MessageQueue,
-    MessageQueueComponentManager,
-    enqueue,
-)
 from .object_component import ObjectComponent
 from .object_component_manager import ObjectComponentManager
 from .device_component_manager import DeviceComponentManager, ObsDeviceComponentManager

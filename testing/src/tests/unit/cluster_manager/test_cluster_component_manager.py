@@ -1,12 +1,10 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the cluster simulator."""
 from __future__ import annotations
 
@@ -26,6 +24,7 @@ from ska_low_mccs.cluster_manager import (
 )
 
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 class TestClusterCommon:
@@ -421,13 +420,17 @@ class TestClusterComponentManager:
     """Contains tests specific to ClusterComponentManager."""
 
     def test_init_simulation_mode(
-        self: TestClusterComponentManager, logger: logging.Logger
+        self: TestClusterComponentManager,
+        logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that we can't create a cluster manager that's not in simulation mode.
 
         :param logger: a logger for the ClusterComponentManager instance
             that this test will try to initialise.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         with pytest.raises(
             NotImplementedError,
@@ -435,8 +438,8 @@ class TestClusterComponentManager:
         ):
             _ = ClusterComponentManager(
                 logger,
+                lrc_result_changed_callback,
                 SimulationMode.FALSE,
-                None,
                 None,
                 None,
                 None,

@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements a MCCS test harness for Tango devices."""
 from __future__ import annotations
 
@@ -497,6 +495,7 @@ class TestContextTangoHarness(BaseTangoHarness):
                 process=process,
                 host=self._host,
                 port=self._port,
+                timeout=10,  # because some devices do slow I/O during initialisation
                 # debug=5,
                 # uncomment this to get debug info, including cppTango debugging symbols
                 # when run against a 'Debug' cppTango build.

@@ -2,18 +2,17 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This subpackage implements subrack functionality for the MCCS."""
 
 __all__ = [
     "MccsSubrack",
     "SubrackData",
     "SubrackSimulator",
-    "TestingSubrackSimulator",
     "BaseSubrackSimulatorComponentManager",
     "SubrackSimulatorComponentManager",
-    "TestingSubrackSimulatorComponentManager",
     "SwitchingSubrackComponentManager",
     "SubrackComponentManager",
     "SubrackDriver",
@@ -22,12 +21,10 @@ __all__ = [
 
 from .subrack_data import SubrackData
 from .subrack_simulator import SubrackSimulator
-from .testing_subrack_simulator import TestingSubrackSimulator
 from .subrack_driver import SubrackDriver
 from .subrack_component_manager import (
     BaseSubrackSimulatorComponentManager,
     SubrackSimulatorComponentManager,
-    TestingSubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
     SubrackComponentManager,
 )

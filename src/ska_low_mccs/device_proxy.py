@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements a base device proxy for MCCS devices."""
 
 from __future__ import annotations  # allow forward references in type hints
@@ -295,7 +296,7 @@ class MccsDeviceProxy:
         not ready, in which case subscription will fail and a
         :py:class:`tango.DevFailed` exception will be raised. Here, we
         attempt subscription in a backoff-retry, and only raise the
-        exception one our retries are exhausted. (The alternative option
+        exception once our retries are exhausted. (The alternative option
         of subscribing with "stateless=True" could not be made to work.)
 
         :param attribute_name: the name of the attribute for which
@@ -359,7 +360,7 @@ class MccsDeviceProxy:
         :return: the attribute value data
         """
         if event.err:
-            self._logger.warn(
+            self._logger.warning(
                 f"Received failed change event: error stack is {event.errors}."
             )
             return None
@@ -370,7 +371,7 @@ class MccsDeviceProxy:
                 f"{event.errors}."
             )
             warnings.warn(UserWarning(warning_message))
-            self._logger.warn(warning_message)
+            self._logger.warning(warning_message)
             return self._read(event.attr_name)
         else:
             return event.attr_value

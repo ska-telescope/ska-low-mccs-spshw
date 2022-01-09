@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS subarray beam device."""
 from __future__ import annotations
 
@@ -69,8 +67,8 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return SubarrayBeamComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
-            self._message_queue_size_changed,
             self._health_model.is_beam_locked_changed,
             self._obs_state_model.is_configured_changed,
         )
@@ -150,19 +148,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-
-    def _message_queue_size_changed(
-        self: MccsSubarrayBeam,
-        size: int,
-    ) -> None:
-        """
-        Handle change in component manager message queue size.
-
-        :param size: the new size of the component manager's message
-            queue
-        """
-        # TODO: This should push an event but the details have to wait for SP-1827
-        self.logger.info(f"Message queue size is now {size}")
 
     def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
         """

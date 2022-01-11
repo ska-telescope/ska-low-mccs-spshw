@@ -11,3 +11,5 @@ requests
 scipy
 ska-tango-base == 0.12.0
 transitions
+strict_rfc3339
+datetime

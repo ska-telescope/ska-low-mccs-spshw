@@ -132,7 +132,7 @@ class _SubarrayProxy(DeviceComponentManager):
     @check_on
     def assign_resources(
         self: _SubarrayProxy,
-        station_fqdns: Iterable[str],
+        station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         station_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
@@ -771,7 +771,7 @@ class ControllerComponentManager(MccsComponentManager):
         )
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            list(set(flattened_station_fqdns)),  # unique items only
+            station_fqdns,
             subarray_beam_fqdns,
             station_beam_fqdns,
             channel_blocks,

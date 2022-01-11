@@ -195,9 +195,11 @@ class SubarrayComponentManager(
         self._device_obs_states: dict[str, Optional[ObsState]] = {}
         self._is_assigning = False
         self._configuring_resources: set[str] = set()
+        self._station_groups: list[list[str]] = list()
         self._stations: dict[str, _StationProxy] = dict()
         self._subarray_beams: dict[str, _SubarrayBeamProxy] = dict()
         self._station_beams: dict[str, _StationBeamProxy] = dict()
+        self._channel_blocks: list[int] = list()
 
         self._scan_id: Optional[int] = None
 
@@ -273,18 +275,22 @@ class SubarrayComponentManager(
 
                 {
                     "subarray_beams": ["low-mccs/subarraybeam/01"],
-                    "stations": ["low-mccs/station/001", "low-mccs/station/002"],
+                    "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
                     "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"]
                     "channel_blocks": [3]
                 }
 
         :return: a result code
         """
-        station_fqdns: Sequence[str] = resource_spec.get("stations", [])
-        subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
-        station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
+        station_fqdns: list[list[str]] = resource_spec.get("stations", [])
+        subarray_beam_fqdns: list[str] = resource_spec.get("subarray_beams", [])
+        station_beam_fqdns: list[str] = resource_spec.get("station_beams", [])
+        channel_blocks: list[int] = resource_spec.get("channel_blocks", [])
 
-        station_fqdns_to_add = station_fqdns - self._stations.keys()
+        station_fqdn_set = self._flatten_new_station_groups(station_fqdns)
+        self._channel_blocks = self._channel_blocks + channel_blocks
+
+        station_fqdns_to_add = sorted(station_fqdn_set) - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
         station_beam_fqdns_to_add = station_beam_fqdns - self._station_beams.keys()
         fqdns_to_add = station_fqdns_to_add.union(
@@ -349,11 +355,33 @@ class SubarrayComponentManager(
 
         return ResultCode.OK
 
+    def _flatten_new_station_groups(
+        self: SubarrayComponentManager,
+        station_fqdns: list[list[str]],
+    ) -> set:
+        """
+        Add station groups to this subarray component manager's _station_groups.
+
+        This is for housekeeping to store the station heirarchy for the assigned_resources_dict attribute.
+        A flattened (1-D) array is returned for adding new fqdns to the component manager's Station Proxies.
+
+        :param station_fqdns: list of lists of stations
+
+        :return: a (1-D) set of station fqdns
+        """
+        station_fqdn_set = set()
+        for station_group in station_fqdns:
+            for station_fqdn in station_group:
+                station_fqdn_set.add(station_fqdn)
+            self._station_groups.append(station_group)
+
+        return station_fqdn_set
+
     @property  # type: ignore[misc]
     @check_communicating
     def assigned_resources(
         self: SubarrayComponentManager,
-    ) -> set[str]:
+    ) -> set:
         """
         Return this subarray's resources.
 
@@ -363,72 +391,37 @@ class SubarrayComponentManager(
             set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
         )
 
+    @property  # type: ignore[misc]
+    @check_communicating
+    def assigned_resources_dict(
+        self: SubarrayComponentManager,
+    ) -> dict[str, Sequence[Any]]:
+        """
+        Return a dictionary of resource types and fqdns.
+
+        :return: this subarray's resources.
+        """
+        return {
+            "stations": self._station_groups,
+            "subarray_beams": sorted(self._subarray_beams.keys()),
+            "station_beams": sorted(self._station_beams.keys()),
+            "channel_blocks": self._channel_blocks,
+        }
+
     @check_communicating
     def release(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resource_spec: dict[str, Sequence[Any]],
-    ) -> ResultCode:
+        argin: str,
+    ) -> None:
         """
-        Assign resources to this subarray.
+        Release resources from this subarray.
 
-        :param resource_spec: a resource specification; for example
+        :param argin: list of resource fqdns to release.
 
-            .. code-block:: python
-
-                {
-                    "subarray_beams": ["low-mccs/subarraybeam/01"],
-                    "stations": ["low-mccs/station/001", "low-mccs/station/002"],
-                    "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"],
-                    "channel_blocks": [3]
-                }
-
-        :return: a result code
+        :raises NotImplementedError: because MCCS Subarray cannot perferm a
+            partial release of resources.
         """
-        station_fqdns: Sequence[str] = resource_spec.get("stations", [])
-        subarray_beam_fqdns: Sequence[str] = resource_spec.get("subarray_beams", [])
-        station_beam_fqdns: Sequence[str] = resource_spec.get("station_beams", [])
-
-        station_fqdns_to_remove = self._stations.keys() & station_fqdns
-        subarray_beam_fqdns_to_remove = (
-            self._subarray_beams.keys() & subarray_beam_fqdns
-        )
-        station_beam_fqdns_to_remove = self._station_beams.keys() & station_beam_fqdns
-
-        if len(station_fqdns_to_remove) != len(subarray_beam_fqdns_to_remove):
-            self.logger.error(
-                f"Mismatch: releasing {len(station_fqdns_to_remove)} stations, "
-                f"{len(subarray_beam_fqdns_to_remove)} subarray beams."
-            )
-            self._release_completed_callback()
-            return ResultCode.FAILED
-
-        if (
-            station_fqdns_to_remove
-            or subarray_beam_fqdns_to_remove
-            or station_beam_fqdns_to_remove
-        ):
-            for fqdn in station_fqdns_to_remove:
-                del self._stations[fqdn]
-                del self._device_communication_statuses[fqdn]
-                del self._device_obs_states[fqdn]
-            for fqdn in subarray_beam_fqdns_to_remove:
-                del self._subarray_beams[fqdn]
-                del self._device_communication_statuses[fqdn]
-                del self._device_obs_states[fqdn]
-            for fqdn in station_beam_fqdns_to_remove:
-                del self._station_beams[fqdn]
-                del self._device_communication_statuses[fqdn]
-                del self._device_obs_states[fqdn]
-
-            self._resources_changed_callback(
-                set(self._stations.keys()),
-                set(self._subarray_beams.keys()),
-                set(self._station_beams.keys()),
-            )
-            self._evaluate_communication_status()
-
-        self._release_completed_callback()
-        return ResultCode.OK
+        raise NotImplementedError("MCCS Subarray cannot partially release resources.")
 
     @check_communicating
     def release_all(  # type: ignore[override]
@@ -441,8 +434,10 @@ class SubarrayComponentManager(
         """
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
+            self._station_groups.clear()
             self._subarray_beams.clear()
             self._station_beams.clear()
+            self._channel_blocks.clear()
             self._device_communication_statuses.clear()
             self._device_obs_states.clear()
 

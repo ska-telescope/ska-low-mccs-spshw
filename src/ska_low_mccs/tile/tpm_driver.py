@@ -115,7 +115,8 @@ class TpmDriver(MccsComponentManager):
         self._test_generator_active = False
         self._arp_table: dict[int, list[int]] = {}
         self._fpgas_time = self.FPGAS_TIME
-
+        self._fpga_current_frame = 0
+        self._fpga_sync_time = 0
         self._address_map: dict = {}
         self._forty_gb_core_list: list = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
@@ -538,6 +539,33 @@ class TpmDriver(MccsComponentManager):
                 self.tile.get_fpga_time(Device.FPGA_2),
             ]
         return self._fpgas_time
+
+    @property
+    def fpga_sync_time(self: TpmDriver) -> int:
+        """
+        Return the FPGA reference time.
+
+        Required to map the FPGA timestamps, expressed in frames
+        to UTC time
+
+        :return: the FPGA_1 reference time, in Unix seconds
+        """
+        self.logger.debug("TpmDriver: fpga_sync_time")
+        with self._hardware_lock:
+            self._fpga_sync_time = self.tile["fpga1.pps_manager.sync_time_val"]
+        return self._fpga_sync_time
+
+    @property
+    def fpga_current_frame(self: TpmDriver) -> int:
+        """
+        Return the FPGA current frame counter.
+
+        :return: the FPGA_1 current frame counter
+        """
+        self.logger.debug("TpmDriver: fpga_current_frame")
+        with self._hardware_lock:
+            self._fpga_current_frame = self.tile["fpga1.pps_manager.timestamp_read_val"]
+        return self._fpga_current_frame
 
     @property
     def pps_delay(self: TpmDriver) -> float:

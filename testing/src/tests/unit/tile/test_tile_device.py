@@ -117,7 +117,7 @@ class TestMccsTile:
             ("current", StaticTpmSimulator.CURRENT, None),
             ("fpga1Temperature", StaticTpmSimulator.FPGA1_TEMPERATURE, None),
             ("fpga2Temperature", StaticTpmSimulator.FPGA2_TEMPERATURE, None),
-            ("fpgasTime", pytest.approx(StaticTpmSimulator.FPGAS_TIME), None),
+            ("fpgasUnixTime", pytest.approx(StaticTpmSimulator.FPGAS_TIME), None),
             (
                 "currentTileBeamformerFrame",
                 StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,

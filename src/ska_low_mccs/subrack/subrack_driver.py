@@ -491,6 +491,7 @@ class SubrackDriver(MccsComponentManager):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            time.sleep(0.5)  # wait some time to settle things in subrack
             self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")
@@ -520,6 +521,7 @@ class SubrackDriver(MccsComponentManager):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            time.sleep(0.5)  # wait some time to settle things in subrack
             self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")
@@ -545,6 +547,7 @@ class SubrackDriver(MccsComponentManager):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            time.sleep(0.5)  # wait some time to settle things in subrack
             self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")
@@ -570,6 +573,7 @@ class SubrackDriver(MccsComponentManager):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            time.sleep(0.5)  # wait some time to settle things in subrack
             self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")

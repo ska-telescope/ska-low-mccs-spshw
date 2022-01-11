@@ -609,9 +609,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
-        max_value=50.0,
+        max_value=70.0,
         min_alarm=16.0,
-        max_alarm=47.0,
+        max_alarm=65.0,
     )
     def fpga1Temperature(self: MccsTile) -> float:
         """
@@ -625,9 +625,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.2,
         min_value=15.0,
-        max_value=50.0,
+        max_value=70.0,
         min_alarm=16.0,
-        max_alarm=47.0,
+        max_alarm=65.0,
     )
     def fpga2Temperature(self: MccsTile) -> float:
         """
@@ -638,15 +638,42 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.fpga2_temperature
 
     @attribute(dtype=("DevLong",), max_dim_x=2)
-    def fpgasTime(self: MccsTile) -> list[int]:
+    def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
         Return the time for FPGAs.
 
         :return: the time for FPGAs
         """
-        return self.component_manager.fpgas_time
+        return self.component_manager.fpgas_unix_time
 
-    @attribute(dtype=("DevLong",), max_dim_x=8, label="Antenna ID's")
+    @attribute(dtype="DevString")
+    def fpgaTime(self: MccsTile) -> str:
+        """
+        Return the FPGA internal time.
+
+        :return: the FPGA time, in UTC format
+        """
+        return self.component_manager.fpga_time
+
+    @attribute(dtype="DevString")
+    def fpgaReferenceTime(self: MccsTile) -> str:
+        """
+        Return the FPGA synchronization timestamp.
+
+        :return: the FPGA timestamp, in UTC format
+        """
+        return self.component_manager.fpga_reference_time
+
+    @attribute(dtype="DevString")
+    def fpgaFrameTime(self: MccsTile) -> str:
+        """
+        Return the FPGA synchronization timestamp.
+
+        :return: the FPGA timestamp, in UTC format
+        """
+        return self.component_manager.fpga_frame_time
+
+    @attribute(dtype=("DevLong",), max_dim_x=16, label="Antenna ID's")
     def antennaIds(self: MccsTile) -> list[int]:
         """
         Return the antenna IDs.
@@ -708,6 +735,18 @@ class MccsTile(SKABaseDevice):
         :return: current frame
         """
         return self.component_manager.current_tile_beamformer_frame
+
+    @attribute(dtype="DevLong")
+    def currentFrame(self: MccsTile) -> int:
+        """
+        Return current frame.
+
+        in units of 256 ADC frames (276,48 us) Currently this is
+        required, not sure if it will remain so.
+
+        :return: current frame
+        """
+        return self.component_manager.fpga_current_frame
 
     @attribute(dtype="DevBoolean")
     def checkPendingDataRequests(self: MccsTile) -> bool:

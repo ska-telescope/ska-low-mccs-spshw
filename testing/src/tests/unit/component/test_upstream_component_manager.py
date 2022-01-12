@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains tests of the object_component_manager module."""
 from __future__ import annotations
 
@@ -10,11 +17,10 @@ from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MessageQueue,
     PowerSupplyProxySimulator,
 )
 
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 class TestPowerSupplyProxySimulator:
@@ -23,17 +29,17 @@ class TestPowerSupplyProxySimulator:
     @pytest.fixture()
     def component_manager(
         self: TestPowerSupplyProxySimulator,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
         communication_status_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
     ) -> PowerSupplyProxySimulator:
         """
         Return a component manager for the component object.
 
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: a logger for the component manager to use
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -43,8 +49,8 @@ class TestPowerSupplyProxySimulator:
         :return: a fake upstream power supply proxy.
         """
         return PowerSupplyProxySimulator(
-            message_queue,
             logger,
+            lrc_result_changed_callback,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
         )
@@ -159,7 +165,9 @@ class TestPowerSupplyProxySimulator:
         """
         assert component_manager.supplied_power_mode is None
 
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, command)()
         time.sleep(0.1)
         assert component_manager.supplied_power_mode is None

@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 This module implements a Demo APIU device.
 
@@ -199,7 +200,7 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
 
     :return: exit code
     """
-    return DemoAPIU.run_server(args=args, **kwargs)
+    return DemoAPIU.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

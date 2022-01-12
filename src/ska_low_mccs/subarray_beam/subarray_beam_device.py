@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS subarray beam device."""
 from __future__ import annotations
 
@@ -69,13 +67,14 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return SubarrayBeamComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._health_model.is_beam_locked_changed,
             self._obs_state_model.is_configured_changed,
         )
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
-        """Initialises the command handlers for commands supported by this device."""
+        """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self.component_manager, self.op_state_model, self.logger)
@@ -94,8 +93,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             self: MccsSubarrayBeam.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsSubarrayBeam`.
+            Initialise the attributes and properties of the MccsSubarrayBeam.
 
             State is managed under the hood; the basic sequence is:
 
@@ -187,6 +185,24 @@ class MccsSubarrayBeam(SKAObsDevice):
         :return: the subarray beam id
         """
         return self.component_manager.subarray_beam_id
+
+    @attribute(dtype=("DevLong",), format="%i", max_value=47, min_value=0)
+    def stationBeamIds(self: MccsSubarrayBeam) -> list[int]:
+        """
+        Return the ids of station beams assigned to this subarray beam.
+
+        :return: the station beam ids
+        """
+        return self.component_manager.station_beam_ids
+
+    @stationBeamIds.write  # type: ignore[no-redef]
+    def stationBeamIds(self: MccsSubarrayBeam, station_beam_ids: list[int]) -> None:
+        """
+        Set the station beam ids.
+
+        :param station_beam_ids: ids of the station beams for this subarray beam
+        """
+        self.component_manager.station_beam_ids = station_beam_ids
 
     @attribute(dtype=("DevLong",), max_dim_x=512, format="%i")
     def stationIds(self: MccsSubarrayBeam) -> list[int]:
@@ -381,8 +397,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             self: MccsSubarrayBeam.ScanCommand, argin: str
         ) -> tuple[ResultCode, str]:
             """
-            Stateless do-hook for the
-            :py:meth:`.MccsSubarrayBeam.Scan` command
+            Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
 
             :param argin: Scan parameters encoded in a json string
                 {

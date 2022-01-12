@@ -2,14 +2,15 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements MCCS functionality for monitoring and control of subarrays."""
 
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
+import json
 from typing import Any, List, Optional, Tuple
 
 import tango
@@ -73,6 +74,7 @@ class MccsSubarray(SKASubarray):
         """
         return SubarrayComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._assign_completed,
             self._release_completed,
@@ -86,6 +88,7 @@ class MccsSubarray(SKASubarray):
             self._obs_fault_occurred,
             self._health_model.station_health_changed,
             self._health_model.subarray_beam_health_changed,
+            self._health_model.station_beam_health_changed,
         )
 
     def init_command_objects(self: MccsSubarray) -> None:
@@ -232,6 +235,7 @@ class MccsSubarray(SKASubarray):
         self: MccsSubarray,
         station_fqdns: set[str],
         subarray_beam_fqdns: set[str],
+        station_beam_fqdns: set[str],
     ) -> None:
         """
         Handle change in subarray resources.
@@ -243,12 +247,16 @@ class MccsSubarray(SKASubarray):
             subarray
         :param subarray_beam_fqdns: the FQDNs of subarray beams assigned
             to this subarray
+        :param station_beam_fqdns: the FQDNs of station beams assigned
+            to this subarray
         """
-        if station_fqdns or subarray_beam_fqdns:
+        if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
             self.obs_state_model.perform_action("component_resourced")
         else:
             self.obs_state_model.perform_action("component_unresourced")
-        self._health_model.resources_changed(station_fqdns, subarray_beam_fqdns)
+        self._health_model.resources_changed(
+            station_fqdns, subarray_beam_fqdns, station_beam_fqdns
+        )
 
     def _configured_changed(
         self: MccsSubarray,
@@ -340,14 +348,32 @@ class MccsSubarray(SKASubarray):
         """
         return sorted(self.component_manager.station_fqdns)
 
-    @attribute(dtype=("str",), max_dim_x=100)
-    def assignedResources(self: MccsSubarray) -> list[str]:
+    @attribute(dtype=("DevString"), max_dim_x=1024)
+    def assignedResources(self: MccsSubarray) -> str:
         """
         Return this subarray's assigned resources.
 
         :return: this subarray's assigned resources.
         """
-        return sorted(self.component_manager.assigned_resources)
+        resource_dict = self.component_manager.assigned_resources_dict
+        stations = []
+        for station_group in resource_dict["stations"]:
+            stations.append(
+                [station.split("/")[-1].lstrip("0") for station in station_group]
+            )
+        subarray_beams = [
+            subarray_beam.split("/")[-1].lstrip("0")
+            for subarray_beam in resource_dict["subarray_beams"]
+        ]
+        channel_blocks = resource_dict["channel_blocks"]
+        return json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "subarray_beam_ids": subarray_beams,
+                "station_ids": stations,
+                "channel_blocks": channel_blocks,
+            }
+        )
 
     # ------------------
     # Attribute methods
@@ -408,6 +434,22 @@ class MccsSubarray(SKASubarray):
             component_manager = self.target
             result_code = component_manager.assign(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def AssignResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
+        """
+        Assign resources to this subarray.
+
+        :param argin: the resources to be assigned
+
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        # TODO Call assign resources directly - DON'T USE LRC - for now.
+        handler = self.get_command_object("AssignResources")
+        params = json.loads(argin)
+        (return_code, message) = handler(params)
+        return ([return_code], [message])
 
     class ReleaseResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand
@@ -561,7 +603,8 @@ class MccsSubarray(SKASubarray):
             )
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.ConfigureCommand, argin: dict
+            self: MccsSubarray.ConfigureCommand,
+            argin: dict,
         ) -> tuple[ResultCode, str]:
             """
             Implement the functionality of the configure command.
@@ -569,7 +612,7 @@ class MccsSubarray(SKASubarray):
             :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Configure` command for this
             :py:class:`.MccsSubarray` device.
 
-            :param argin: JSON configuration specification
+            :param argin: configuration specification
                 {
                 "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
                 "stations":[{"station_id": 1},{"station_id": 2}],
@@ -755,7 +798,7 @@ class MccsSubarray(SKASubarray):
                 information purpose only.
             """
             component_manager = self.target
-            result_code = component_manager.obs_reset()
+            result_code = component_manager.restart()
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     class SendTransientBufferCommand(ResponseCommand):

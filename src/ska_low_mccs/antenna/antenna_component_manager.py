@@ -3,9 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements an component manager for an MCCS antenna Tango device."""
 from __future__ import annotations
 
@@ -21,11 +20,9 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
-    MessageQueue,
     PowerSupplyProxyComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 
 
@@ -39,8 +36,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         self: _ApiuProxy,
         fqdn: str,
         logical_antenna_id: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -51,9 +48,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :param fqdn: the FQDN of the APIU
         :param logical_antenna_id: this antenna's id within the APIU
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -75,8 +72,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -112,12 +109,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_up_antenna()
 
-    @enqueue
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.PowerUpAntenna(
-            self._logical_antenna_id
-        )
+        ([result_code], _) = self._proxy.PowerUpAntenna(self._logical_antenna_id)
         return result_code
 
     @check_communicating
@@ -131,12 +125,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             return None
         return self._power_down_antenna()
 
-    @enqueue
     def _power_down_antenna(self: _ApiuProxy) -> ResultCode:
         assert self._proxy is not None  # for the type checker
-        ([result_code], [message]) = self._proxy.PowerDownAntenna(
-            self._logical_antenna_id
-        )
+        ([result_code], _) = self._proxy.PowerDownAntenna(self._logical_antenna_id)
         return result_code
 
     @property  # type: ignore[misc]
@@ -181,7 +172,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        assert self._proxy is not None  # for the type checker
         assert (
             event_name.lower() == "state"
         ), "state changed callback called but event_name is {event_name}."
@@ -192,7 +182,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         elif event_value == tango.DevState.OFF:
             self.update_supplied_power_mode(PowerMode.OFF)
 
-    @enqueue
     def _register_are_antennas_on_callback(self: _ApiuProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(
@@ -249,8 +238,8 @@ class _TileProxy(DeviceComponentManager):
         self: _TileProxy,
         fqdn: str,
         logical_antenna_id: int,
-        message_queue: MessageQueue,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -259,9 +248,9 @@ class _TileProxy(DeviceComponentManager):
 
         :param fqdn: the FQDN of the Tile device
         :param logical_antenna_id: this antenna's id within the Tile
-        :param message_queue: the message queue to be used by this
-            component manager
         :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -276,8 +265,8 @@ class _TileProxy(DeviceComponentManager):
 
         super().__init__(
             fqdn,
-            message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             lambda power_mode: None,  # tile doesn't manage antenna power
             component_fault_callback,
@@ -362,6 +351,7 @@ class AntennaComponentManager(MccsComponentManager):
         tile_fqdn: str,
         tile_antenna_id: int,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -376,6 +366,8 @@ class AntennaComponentManager(MccsComponentManager):
             antenna's tile.
         :param tile_antenna_id: the id of the antenna in the tile.
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -396,13 +388,11 @@ class AntennaComponentManager(MccsComponentManager):
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
-        self._message_queue = MessageQueue(logger)
-
         self._apiu_proxy = _ApiuProxy(
             apiu_fqdn,
             apiu_antenna_id,
-            self._message_queue,
             logger,
+            push_change_event,
             self._apiu_communication_status_changed,
             self._apiu_power_mode_changed,
             self._apiu_component_fault_changed,
@@ -411,14 +401,15 @@ class AntennaComponentManager(MccsComponentManager):
         self._tile_proxy = _TileProxy(
             tile_fqdn,
             tile_antenna_id,
-            self._message_queue,
             logger,
+            push_change_event,
             self._tile_communication_status_changed,
             self._tile_component_fault_changed,
         )
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -483,22 +474,24 @@ class AntennaComponentManager(MccsComponentManager):
         self: AntennaComponentManager,
         apiu_power_mode: PowerMode,
     ) -> None:
-        self._apiu_power_mode = apiu_power_mode
+        with self._power_mode_lock:
+            self._apiu_power_mode = apiu_power_mode
 
-        if apiu_power_mode == PowerMode.UNKNOWN:
-            self.update_component_power_mode(PowerMode.UNKNOWN)
-        elif apiu_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
-            self.update_component_power_mode(PowerMode.OFF)
-        else:
-            # power_mode is ON, wait for antenna power change
-            pass
+            if apiu_power_mode == PowerMode.UNKNOWN:
+                self.update_component_power_mode(PowerMode.UNKNOWN)
+            elif apiu_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
+                self.update_component_power_mode(PowerMode.OFF)
+            else:
+                # power_mode is ON, wait for antenna power change
+                pass
         self._review_power()
 
     def _antenna_power_mode_changed(
         self: AntennaComponentManager,
         antenna_power_mode: PowerMode,
     ) -> None:
-        self.update_component_power_mode(antenna_power_mode)
+        with self._power_mode_lock:
+            self.update_component_power_mode(antenna_power_mode)
         self._review_power()
 
     def _apiu_component_fault_changed(
@@ -538,7 +531,8 @@ class AntennaComponentManager(MccsComponentManager):
 
         :return: a ResultCode, or None if there was nothing to do
         """
-        self._target_power_mode = PowerMode.OFF
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.OFF
         return self._review_power()
 
     def standby(self: AntennaComponentManager) -> None:
@@ -560,27 +554,35 @@ class AntennaComponentManager(MccsComponentManager):
 
         :return: whether successful, or None if there was nothing to do.
         """
-        self._target_power_mode = PowerMode.ON
+        with self._power_mode_lock:
+            self._target_power_mode = PowerMode.ON
         return self._review_power()
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
-        if self._target_power_mode is None:
-            return None
-        if self.power_mode == self._target_power_mode:
-            self._target_power_mode = None  # attained without any action needed
-            return None
+        with self._power_mode_lock:
+            if self._target_power_mode is None:
+                return None
+            if self.power_mode == self._target_power_mode:
+                self._target_power_mode = None  # attained without any action needed
+                return None
 
-        if self._apiu_power_mode != PowerMode.ON:
+            if self._apiu_power_mode != PowerMode.ON:
+                return ResultCode.QUEUED
+            if (
+                self.power_mode == PowerMode.OFF
+                and self._target_power_mode == PowerMode.ON
+            ):
+                result_code = self._apiu_proxy.power_on()
+                self._target_power_mode = None
+                return result_code
+            if (
+                self.power_mode == PowerMode.ON
+                and self._target_power_mode == PowerMode.OFF
+            ):
+                result_code = self._apiu_proxy.power_off()
+                self._target_power_mode = None
+                return result_code
             return ResultCode.QUEUED
-        if self.power_mode == PowerMode.OFF and self._target_power_mode == PowerMode.ON:
-            result_code = self._apiu_proxy.power_on()
-            self._target_power_mode = None
-            return result_code
-        if self.power_mode == PowerMode.ON and self._target_power_mode == PowerMode.OFF:
-            result_code = self._apiu_proxy.power_off()
-            self._target_power_mode = None
-            return result_code
-        return ResultCode.QUEUED
 
     def reset(self: AntennaComponentManager) -> None:
         """

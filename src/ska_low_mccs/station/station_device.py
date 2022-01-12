@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS station device."""
 
 from __future__ import annotations
@@ -86,6 +84,7 @@ class MccsStation(SKAObsDevice):
             self.AntennaFQDNs,
             self.TileFQDNs,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
             self._component_power_mode_changed,
             self._health_model.apiu_health_changed,
@@ -147,8 +146,6 @@ class MccsStation(SKAObsDevice):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device.set_change_event("subarrayId", True, True)
-            device.set_archive_event("subarrayId", True, True)
             device.set_change_event("beamFQDNs", True, True)
             device.set_archive_event("beamFQDNs", True, True)
             device.set_change_event("transientBufferFQDN", True, False)
@@ -180,9 +177,14 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO: return OK for now to be consistent with base classes
+            # It's fine to complete this long-running command here
+            # (returning ResultCode.OK), even though the component manager
+            # may not actually be finished turning everything on.
+            # The completion of the original On command to MccsController
+            # is waiting for the various power mode callbacks to be received
+            # rather than completion of the various long-running commands.
             _ = self.target.on()
-            message = "On command completed OK"
+            message = "Station On command completed OK"
             return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsStation) -> bool:
@@ -307,33 +309,6 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
-
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        max_value=16,
-        min_value=0,
-    )
-    def subarrayId(self: MccsStation) -> int:
-        """
-        Return the subarray id.
-
-        :todo: Probably this attribute will have to be removed just as
-            it has been removed from tile device.
-
-        :return: the subarray id
-        """
-        return self._subarray_id
-
-    @subarrayId.write  # type: ignore[no-redef]
-    def subarrayId(self: MccsStation, subarray_id: int) -> None:
-        """
-        Set the ID of the Subarray to which this Station is allocated.
-
-        :param subarray_id: the new subarray id for this station
-        """
-        self._subarray_id = subarray_id
-        self._obs_state_model.is_resourced_changed(subarray_id != 0)
 
     @attribute(
         dtype="float",
@@ -548,9 +523,8 @@ class MccsStation(SKAObsDevice):
             information purpose only.
 
         :example:
-
-        >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("Configure", json_str)
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("Configure", json_str)
         """
         handler = self.get_command_object("Configure")
         (return_code, message) = handler(argin)

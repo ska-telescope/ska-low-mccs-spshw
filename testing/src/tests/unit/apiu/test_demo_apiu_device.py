@@ -1,15 +1,11 @@
-########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-########################################################################
-"""
-This module contains the tests for the
-:py:mod:`ska_low_mccs.apiu.demo_apiu_device` module.
-"""
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""This module contains the tests for ska_low_mccs.apiu.demo_apiu_device module."""
 from __future__ import annotations
 
 import time
@@ -57,13 +53,14 @@ class TestDemoAPIU:
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test(
+    def test_demo_apiu(
         self: TestDemoAPIU,
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test:
+        Test APIU power up/down.
 
+        Test:
         * the `isAntenna1Powered`, `isAntenna2Powered` etc attributes.
         * the `PowerUpAntenna1`, `PowerDownAntenna2` etc commands.
 
@@ -74,7 +71,7 @@ class TestDemoAPIU:
 
         def assert_powered(expected: list[bool]) -> None:
             """
-            Helper function to assert the power mode of each TPM.
+            Assert the power mode of each TPM.
 
             :param expected: the expected power mode of each TPM
             """

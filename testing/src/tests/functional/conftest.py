@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains pytest-specific test harness for MCCS functional (BDD) tests."""
 from __future__ import annotations
 
@@ -11,7 +18,8 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
-def pytest_configure(config: pytest.config.Config) -> None:
+# TODO: pytest is partially typehinted but does not yet export Config
+def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
 
@@ -46,8 +54,10 @@ def initial_mocks() -> dict[str, unittest.mock.Mock]:
 @pytest.fixture(scope="module")
 def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
-    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    Fixture that provides a mock factory for device proxy mocks.
+
+    This default factory provides vanilla mocks,
+    but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 
     (Overruled here with the same implementation, just to give the
@@ -61,8 +71,9 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 @pytest.fixture(scope="module")
 def tango_config() -> dict[str, Any]:
     """
-    Fixture that returns basic configuration information for a Tango test harness, such
-    as whether or not to run in a separate process.
+    Fixture that returns basic configuration information for a Tango test harness.
+
+    e.g. such as whether or not to run in a separate process.
 
     :return: a dictionary of configuration key-value pairs
     """
@@ -86,7 +97,7 @@ def tango_harness(
     initial_mocks: dict[str, unittest.mock.Mock],
 ) -> Generator[TangoHarness, None, None]:
     """
-    Creates a test harness for testing Tango devices.
+    Create a test harness for testing Tango devices.
 
     (This overwrites the `tango_harness` fixture, in order to change the
     fixture scope.)
@@ -128,6 +139,24 @@ def controller_device_state_changed_callback(
 
 
 @pytest.fixture()
+def controller_device_lrc_changed_callback(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for controller device state change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback to be registered with the
+        controller device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return mock_change_event_callback_factory("longRunningCommandResult")
+
+
+@pytest.fixture()
 def mock_callback_called_timeout() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is expected.
@@ -139,7 +168,7 @@ def mock_callback_called_timeout() -> float:
     :return: the time to wait for a mock callback to be called when a
         call is asserted.
     """
-    return 10.0
+    return 30.0
 
 
 @pytest.fixture(scope="module")
@@ -164,10 +193,10 @@ def devices_to_load() -> DevicesToLoadType:
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
             {"name": "station_001", "proxy": MccsDeviceProxy},
             {"name": "station_002", "proxy": MccsDeviceProxy},
-            {"name": "beam_001", "proxy": MccsDeviceProxy},
-            {"name": "beam_002", "proxy": MccsDeviceProxy},
-            {"name": "beam_003", "proxy": MccsDeviceProxy},
-            {"name": "beam_004", "proxy": MccsDeviceProxy},
+            {"name": "beam_01", "proxy": MccsDeviceProxy},
+            {"name": "beam_02", "proxy": MccsDeviceProxy},
+            {"name": "beam_03", "proxy": MccsDeviceProxy},
+            {"name": "beam_04", "proxy": MccsDeviceProxy},
             {"name": "apiu_001", "proxy": MccsDeviceProxy},
             {"name": "apiu_002", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy},
@@ -286,10 +315,10 @@ def station_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     :return: station beams by number
     """
     return {
-        1: tango_harness.get_device("low-mccs/beam/001"),
-        2: tango_harness.get_device("low-mccs/beam/002"),
-        3: tango_harness.get_device("low-mccs/beam/003"),
-        4: tango_harness.get_device("low-mccs/beam/004"),
+        1: tango_harness.get_device("low-mccs/beam/01"),
+        2: tango_harness.get_device("low-mccs/beam/02"),
+        3: tango_harness.get_device("low-mccs/beam/03"),
+        4: tango_harness.get_device("low-mccs/beam/04"),
     }
 
 

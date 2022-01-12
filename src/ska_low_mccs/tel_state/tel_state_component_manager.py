@@ -3,21 +3,18 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements component management for telescope state."""
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from ska_low_mccs.tel_state import TelState
 from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
-    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -31,22 +28,23 @@ class TelStateComponentManager(ObjectComponentManager):
     def __init__(
         self: TelStateComponentManager,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        self._message_queue = MessageQueue(logger)
-
         super().__init__(
             TelState(logger),
-            self._message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,

@@ -3,14 +3,13 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements infrastructure for mocking tango devices."""
 
 from __future__ import annotations  # allow forward references in type hints
 
+import threading
 from typing import Any, Callable
 import unittest.mock
 
@@ -55,8 +54,9 @@ class MockDeviceBuilder:
 
     def add_command(self: MockDeviceBuilder, name: str, return_value: Any) -> None:
         """
-        Tell this builder to build mocks with a specified command that returns the
-        provided value.
+        Tell this builder to build mocks with a specified command.
+
+        And that the command returns the provided value.
 
         :param name: name of the command
         :param return_value: what the command should return
@@ -70,9 +70,10 @@ class MockDeviceBuilder:
         status: str = "Mock information-only message",
     ) -> None:
         """
-        Tell this builder to build mocks with a specified command that returns
-        (ResultCode, [message, message_uid]) or (ResultCode, message) tuples as
-        required.
+        Tell this builder to build mocks with a specified command.
+
+        And that the command  returns (ResultCode, [message, message_uid])
+        or (ResultCode, message) tuples as required.
 
         :param name: the name of the command
         :param result_code: the
@@ -108,8 +109,9 @@ class MockDeviceBuilder:
             name: str, *args: Any, **kwargs: Any
         ) -> tango.DeviceAttribute:
             """
-            Mock side-effect for read_attribute method, which reads the
-            attribute value and packs it into a
+            Mock side-effect for read_attribute method.
+
+            It should read the attribute value and pack it into a
             :py:class:`tango.DeviceAttribute`.
 
             :param name: the name of the attribute
@@ -156,7 +158,7 @@ class MockDeviceBuilder:
 
             :return: the specified return value for the command
             """
-            return getattr(mock_device, name).return_value
+            return getattr(mock_device, name)()
 
         mock_device.command_inout.side_effect = _mock_command_inout
 
@@ -195,7 +197,7 @@ class MockDeviceBuilder:
             :return: the specified return value for the command
             """
             command_name = asynch_id
-            return getattr(mock_device, command_name).return_value
+            return getattr(mock_device, command_name)()
 
         mock_device.command_inout_reply.side_effect = _mock_command_inout_reply
 
@@ -241,7 +243,10 @@ class MockDeviceBuilder:
                 mock_event_data.attr_value.name = attribute_name
                 mock_event_data.attr_value.value = attribute_value
                 mock_event_data.attr_value.quality = tango.AttrQuality.ATTR_VALID
-                callback(mock_event_data)
+
+                # Don't just invoke callback(mock_event_data): it's more realistic if
+                # the callback is fired asynchronously.
+                threading.Thread(target=callback, args=(mock_event_data,)).start()
             # TODO: if attribute_value is None, it might be better to call the callback
             # with a mock rather than not calling it at all.
 

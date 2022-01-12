@@ -1,19 +1,22 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """The command line interface for the MCCS Tile device server."""
+
+from __future__ import annotations  # allow forward references in type hints
+
 import functools
 import json
 import types
+from typing import Any, Callable, Optional, Tuple, Type
 
 from fire import Fire
 from fire.core import FireError
+
 import tango
 
 from ska_tango_base.commands import ResultCode
@@ -21,25 +24,22 @@ from ska_tango_base.commands import ResultCode
 
 class CliMeta(type):
     """
-    Metaclass to catch and dissect :py:class:`tango.DevFailed` and other exceptions for
-    all class methods.
+    Metaclass to catch and dissect exceptions for all class methods.
 
     They get turned into `fire.core.FireError` exceptions.
     """
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(
+        cls: Type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict
+    ) -> CliMeta:
         """
         Class constructor.
 
         :param name: name of the new class
-        :type name: str
         :param bases: parent classes of the new class
-        :type bases: tuple(cls)
         :param attrs: class attributes
-        :type attrs: dict
 
         :return: new class
-        :rtype: cls
         """
         for attr_name, attr_value in attrs.items():
             if isinstance(attr_value, types.FunctionType):
@@ -47,38 +47,35 @@ class CliMeta(type):
         return super(CliMeta, cls).__new__(cls, name, bases, attrs)
 
     @classmethod
-    def fire_except(cls, method):
+    def fire_except(cls: Type[CliMeta], method: Callable) -> Callable:
         """
-        Wraps the method so that any :py:exc:`tango.DevFailed` exception
-        raised by a method is converted to a
-        :py:exc:`fire.core.FireError`, so that the CLI framework handles
-        it nicely.
+        Wrap the method to handle exceptions.
+
+        Any :py:exc:`tango.DevFailed` exception raised by a method is converted to a
+        :py:exc:`fire.core.FireError`, so that the CLI framework handles it nicely.
 
         :param method: the method to be wrapped
-        :type method: callable
 
         :return: the wrapped method
-        :rtype: callable
         """
 
         @functools.wraps(method)
-        def _wrapper(*args, **kwargs):
+        def _wrapper(*args: Any, **kwargs: Any) -> Any:
             """
-            Wrapper that catches any :py:exc:`tango.DevFailed` exception
+            Wrap tango exceptions.
+
+            Any :py:exc:`tango.DevFailed` exception
             raised by the wrapped method, and converts it to a
             :py:exc:`fire.core.FireError`, so that the CLI framework
             handles it nicely.
 
             :param args: positional arguments to the wrapped method
-            :type args: list
             :param kwargs: keyword arguments to the wrapped method
-            :type kwargs: dict
 
             :raises FireError: if a :py:exc:`tango.DevFailed` exception
                 is raised by the method.
 
             :return: whatever the method returns
-            :rtype: object
             """
             try:
                 return method(*args, **kwargs)
@@ -90,30 +87,25 @@ class CliMeta(type):
         return _wrapper
 
 
-def command_result_as_string(method):
+def command_result_as_string(method: Callable) -> Callable:
     """
-    Wrapper to format device command results as a two-line string.
+    Wrap and format device command results as a two-line string.
 
     :param method: function handle of the method to wrap
-    :type method: callable
 
     :return: function handle of the wrapped method
-    :rtype: callable
     """
 
     @functools.wraps(method)
-    def _wrapper(*args, **kwargs):
-        """Wrapper that ensure device command methods return results formatted as a a
-        two- line string.
+    def _wrapper(*args: tuple, **kwargs: dict) -> str:
+        """
+        Wrap and ensure device command methods return formatted two-line strings.
 
         :param args: positional arguments to the wrapped method
-        :type args: list
         :param kwargs: keyword arguments to the wrapped method
-        :type kwargs: dict
 
         :return: what the method returns, formatted into a two-line
              string
-        :rtype: str
         """
         reslist = method(*args, **kwargs)
         # The commands convert the command tuple to the form [[return_code], [message]]
@@ -125,12 +117,9 @@ def command_result_as_string(method):
 
 
 class MccsTileCli(metaclass=CliMeta):
-    """
-    Command-line interface to the
-    :py:class:`ska_low_mccs.tile.tile_device.MccsTile` tango device.
-    """
+    """Command-line interface to :py:class:`ska_low_mccs.tile.tile_device.MccsTile`."""
 
-    def __init__(self):
+    def __init__(self: MccsTileCli) -> None:
         """
         Initialise a new CLI instance.
 
@@ -140,36 +129,32 @@ class MccsTileCli(metaclass=CliMeta):
         self._dp = tango.DeviceProxy(f"low-mccs/tile/{self.tile_number:04}")
 
     @command_result_as_string
-    def connect(self):
+    def connect(self: MccsTileCli) -> Tuple[ResultCode, str]:
         """
         Connect to the hardware.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("connect", True)
 
-    def subarrayid(self):
+    def subarrayid(self: MccsTileCli) -> int:
         """
         Return the id of the subarray the tile has been allocated to.
 
         :return: subarray ID
-        :rtype: int
         """
         return self._dp.subarrayId
 
-    def logginglevel(self, level=None):
+    def logginglevel(self: MccsTileCli, level: Optional[str] = None) -> str:
         """
         Get and/or set the logging level of the device.
 
         :param level: the logging level to be set. If omited, return the current
             logging level
-        :type level: str
 
         :return: logging level value
-        :rtype: str
         """
         if level is not None:
             elevel = self._dp.logginglevel.__class__[level.upper()]
@@ -177,18 +162,20 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.logginglevel.name
 
     @command_result_as_string
-    def SendBeamData(self, timestamp=None, seconds=0.2):
+    def SendBeamData(
+        self: MccsTileCli,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> Tuple[ResultCode, str]:
         """
         Transmit a snapshot containing beamformed data.
 
         :param timestamp: when to start(?), defaults to None
-        :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
-        :type seconds: float, optional
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         args = {
             "Timestamp": timestamp,
@@ -199,28 +186,26 @@ class MccsTileCli(metaclass=CliMeta):
 
     @command_result_as_string
     def SendChannelisedDataContinuous(
-        self,
-        channel_id=None,
-        num_samples=128,
-        wait_seconds=0,
-        timestamp=None,
-        seconds=0.2,
-    ):
+        self: MccsTileCli,
+        channel_id: Optional[int] = None,
+        num_samples: int = 128,
+        wait_seconds: int = 0,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> Tuple[ResultCode, str]:
         """
+        Transmit channelised data continuously.
+
         :param channel_id: index of channel to send
-        :type channel_id: int
         :param num_samples: number of spectra to send, defaults to 1024
-        :type num_samples: int, optional
         :param wait_seconds: wait time before sending data
-        :type wait_seconds: float
         :param timestamp: when to start(?), defaults to None
-        :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
-        :type seconds: float, optional
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+
         :raises RuntimeError: if a general failure occurred in device
         """
         try:
@@ -238,32 +223,25 @@ class MccsTileCli(metaclass=CliMeta):
 
     @command_result_as_string
     def SendChannelisedData(
-        self,
-        num_samples=128,
-        first_channel=0,
-        last_channel=511,
-        timestamp=None,
-        seconds=0.2,
-    ):
+        self: MccsTileCli,
+        num_samples: int = 128,
+        first_channel: int = 0,
+        last_channel: int = 511,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> Tuple[ResultCode, str]:
         """
-        Transmit a snapshot containing channelized data totalling number_of_samples
-        spectra.
+        Transmit a snapshot 0f channelized data totalling number_of_samples spectra.
 
         :param num_samples: number of spectra to send, defaults to 1024
-        :type num_samples: int, optional
         :param first_channel: first channel to send, defaults to 0
-        :type first_channel: int, optional
         :param last_channel: last channel to send, defaults to 511
-        :type last_channel: int, optional
         :param timestamp: when to start(?), defaults to None
-        :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
-        :type seconds: float, optional
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         args = {
             "NSamples": num_samples,
@@ -276,21 +254,22 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.command_inout("SendChannelisedData", jstr)
 
     @command_result_as_string
-    def SendRawData(self, sync=False, timestamp=None, seconds=0.2):
+    def SendRawData(
+        self: MccsTileCli,
+        sync: bool = False,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> Tuple[ResultCode, str]:
         """
         Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
-        :type sync: bool, optional
         :param timestamp: when to start(?), defaults to None
-        :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
-        :type seconds: float, optional
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         args = {
             "Sync": sync,
@@ -301,92 +280,95 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.command_inout("SendRawData", jstr)
 
     @command_result_as_string
-    def ConfigureIntegratedBeamData(self, integration_time=0.5):
+    def ConfigureIntegratedBeamData(
+        self: MccsTileCli, integration_time: float = 0.5
+    ) -> Tuple[ResultCode, str]:
         """
-        Configure the transmission of integrated beam data with the provided integration
-        time.
+        Configure the transmission of integrated beam data with the integration time.
 
         :param integration_time: integration time in seconds, defaults
             to 0.5
-        :type integration_time: float
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
 
     @command_result_as_string
-    def ConfigureIntegratedChannelData(self, integration_time=0.5):
+    def ConfigureIntegratedChannelData(
+        self: MccsTileCli, integration_time: float = 0.5
+    ) -> Tuple[ResultCode, str]:
         """
-        Configure the transmission of integrated channel data with the provided
-        integration time.
+        Configure the transmission of integrated channel data with the integration time.
 
         :param integration_time: integration_time in seconds (defaults
             to 0.5)
-        :type integration_time: float
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout(
             "ConfigureIntegratedChannelData", integration_time
         )
 
     @command_result_as_string
-    def StartBeamformer(self, start_time=0, duration=-1):
+    def StartBeamformer(
+        self: MccsTileCli, start_time: int = 0, duration: int = -1
+    ) -> Tuple[ResultCode, str]:
         """
         Start the beamformer at the specified time delay.
 
         :param start_time: the start time
-        :type start_time: int
         :param duration: how long to run (default is -1, meaning run
             forever)
-        :type duration: int
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         args = {"StartTime": start_time, "Duration": duration}
         jstr = json.dumps(args)
         return self._dp.command_inout("StartBeamformer", jstr)
 
     @command_result_as_string
-    def StopBeamformer(self):
+    def StopBeamformer(self: MccsTileCli) -> Tuple[ResultCode, str]:
         """
         Stop the beamformer.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("StopBeamformer")
 
     @command_result_as_string
-    def LoadPointingDelay(self, load_time=0):
+    def LoadPointingDelay(
+        self: MccsTileCli, load_time: int = 0
+    ) -> Tuple[ResultCode, str]:
         """
-        Loads the pointing delays at the specified time delay.
+        Load the pointing delays at the specified time delay.
 
         :param load_time: time delay (default = 0)
-        :type load_time: int
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("LoadPointingDelay", load_time)
 
 
-def main():
-    """Entry point for CLI."""
-    Fire(MccsTileCli)
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
+    """
+    Entry point for module.
+
+    :param args: positional arguments
+    :param kwargs: named arguments
+
+    :return: exit code
+    """
+    return Fire(MccsTileCli)
 
 
 if __name__ == "__main__":

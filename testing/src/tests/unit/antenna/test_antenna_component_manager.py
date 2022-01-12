@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains unit tests of the MCCS antenna component manager module."""
 from __future__ import annotations
 
@@ -88,7 +84,7 @@ class TestAntennaApiuProxy:
         """
         with pytest.raises(
             ConnectionError,
-            match="Not connected",
+            match="Communication with component is not established",
         ):
             antenna_apiu_proxy.on()
 
@@ -103,7 +99,7 @@ class TestAntennaApiuProxy:
         assert antenna_apiu_proxy.power_mode == PowerMode.OFF
         assert antenna_apiu_proxy.supplied_power_mode == PowerMode.OFF
 
-        antenna_apiu_proxy.on()
+        assert antenna_apiu_proxy.on() == ResultCode.QUEUED
         mock_apiu_device_proxy.On.assert_next_call()
 
         # Fake an event that tells this proxy that the APIU has been turned on.
@@ -115,7 +111,7 @@ class TestAntennaApiuProxy:
         assert antenna_apiu_proxy.supplied_power_mode == PowerMode.OFF
 
         time.sleep(0.1)
-        assert antenna_apiu_proxy.power_on() == ResultCode.QUEUED
+        assert antenna_apiu_proxy.power_on() == ResultCode.OK
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
         # The antenna power mode won't update until an event confirms that the antenna is on.
@@ -133,7 +129,7 @@ class TestAntennaApiuProxy:
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()
         assert antenna_apiu_proxy.supplied_power_mode == PowerMode.ON
 
-        assert antenna_apiu_proxy.power_off() == ResultCode.QUEUED
+        assert antenna_apiu_proxy.power_off() == ResultCode.OK
         mock_apiu_device_proxy.PowerDownAntenna.assert_next_call(apiu_antenna_id)
 
         # The power mode won't update until an event confirms that the antenna is on.
@@ -246,13 +242,6 @@ class TestAntennaComponentManager:
 
         antenna_component_manager.start_communicating()
 
-        # communication status is NOT_ESTABLISHED because the task of
-        # connecting to devices has been enqueued rather than directly
-        # run.
-        assert (
-            antenna_component_manager.communication_status
-            == CommunicationStatus.NOT_ESTABLISHED
-        )
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -306,7 +295,7 @@ class TestAntennaComponentManager:
         assert antenna_component_manager.power_mode == PowerMode.OFF
         # APIU is on but antenna is off
 
-        assert antenna_component_manager.on() == ResultCode.QUEUED
+        assert antenna_component_manager.on() == ResultCode.OK
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
         # The power mode won't update until an event confirms that the antenna is on.
@@ -324,7 +313,7 @@ class TestAntennaComponentManager:
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()
         assert antenna_component_manager.power_mode == PowerMode.ON
 
-        assert antenna_component_manager.off() == ResultCode.QUEUED
+        assert antenna_component_manager.off() == ResultCode.OK
         mock_apiu_device_proxy.PowerDownAntenna.assert_next_call(apiu_antenna_id)
 
         # The power mode won't update until an event confirms that the antenna is on.

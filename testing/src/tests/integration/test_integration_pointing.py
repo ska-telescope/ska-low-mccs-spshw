@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains tests of pointing interactions between devices."""
 from __future__ import annotations
 
@@ -55,10 +62,10 @@ def devices_to_load() -> DevicesToLoadType:
         "devices": [
             {"name": "station_001", "proxy": MccsDeviceProxy},
             {"name": "station_002", "proxy": MccsDeviceProxy},
-            {"name": "beam_001", "proxy": MccsDeviceProxy},
-            {"name": "beam_002", "proxy": MccsDeviceProxy},
-            {"name": "beam_003", "proxy": MccsDeviceProxy},
-            {"name": "beam_004", "proxy": MccsDeviceProxy},
+            {"name": "beam_01", "proxy": MccsDeviceProxy},
+            {"name": "beam_02", "proxy": MccsDeviceProxy},
+            {"name": "beam_03", "proxy": MccsDeviceProxy},
+            {"name": "beam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -152,17 +159,16 @@ class TestMccsIntegration:
         self: TestMccsIntegration, tango_harness: TangoHarness
     ) -> None:
         """
-        Test that a MccsStationBeam device can apply delays to associated MccsTile
-        devices.
+        Test that a MccsStationBeam can apply delays to associated MccsTiles.
 
         :param tango_harness: a test harness for tango devices
         """
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        stationbeam_1 = tango_harness.get_device("low-mccs/beam/001")
-        stationbeam_2 = tango_harness.get_device("low-mccs/beam/002")
-        stationbeam_3 = tango_harness.get_device("low-mccs/beam/003")
-        stationbeam_4 = tango_harness.get_device("low-mccs/beam/004")
+        stationbeam_1 = tango_harness.get_device("low-mccs/beam/01")
+        stationbeam_2 = tango_harness.get_device("low-mccs/beam/02")
+        stationbeam_3 = tango_harness.get_device("low-mccs/beam/03")
+        stationbeam_4 = tango_harness.get_device("low-mccs/beam/04")
         mock_tile_1 = tango_harness.get_device("low-mccs/tile/0001")
         mock_tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         mock_tile_3 = tango_harness.get_device("low-mccs/tile/0003")
@@ -225,8 +231,8 @@ class TestMccsIntegration:
         assert station_1.state() == tango.DevState.ON
         assert station_2.state() == tango.DevState.ON
 
-        ([result_code], [message]) = stationbeam_1.ApplyPointing()
-        assert result_code == ResultCode.QUEUED
+        ([result_code], _) = stationbeam_1.ApplyPointing()
+        assert result_code == ResultCode.OK
 
         # we need to do this the long way because if Tango is numpy-enabled, then the
         # component manager will be called with an array not a list.
@@ -254,8 +260,8 @@ class TestMccsIntegration:
         mock_tile_3.SetPointingDelay.assert_not_called()
         mock_tile_4.SetPointingDelay.assert_not_called()
 
-        ([result_code], [message]) = stationbeam_2.ApplyPointing()
-        assert result_code == ResultCode.QUEUED
+        ([result_code], _) = stationbeam_2.ApplyPointing()
+        assert result_code == ResultCode.OK
 
         (args, kwargs) = mock_tile_1.SetPointingDelay.get_next_call()
         assert not kwargs
@@ -281,8 +287,8 @@ class TestMccsIntegration:
         mock_tile_3.SetPointingDelay.assert_not_called()
         mock_tile_4.SetPointingDelay.assert_not_called()
 
-        ([result_code], [message]) = stationbeam_3.ApplyPointing()
-        assert result_code == ResultCode.QUEUED
+        ([result_code], _) = stationbeam_3.ApplyPointing()
+        assert result_code == ResultCode.OK
 
         mock_tile_1.SetPointingDelay.assert_not_called()
         mock_tile_2.SetPointingDelay.assert_not_called()
@@ -308,8 +314,8 @@ class TestMccsIntegration:
             BEAM_3_DELAY_RATE_ELEVATION,
         ]
 
-        ([result_code], [message]) = stationbeam_4.ApplyPointing()
-        assert result_code == ResultCode.QUEUED
+        ([result_code], _) = stationbeam_4.ApplyPointing()
+        assert result_code == ResultCode.OK
 
         mock_tile_1.SetPointingDelay.assert_not_called()
         mock_tile_2.SetPointingDelay.assert_not_called()

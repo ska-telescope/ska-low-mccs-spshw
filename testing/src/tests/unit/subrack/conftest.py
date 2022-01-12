@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defined a pytest harness for testing the MCCS subrack module."""
 from __future__ import annotations
 
@@ -22,8 +18,8 @@ import requests
 
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
-from ska_low_mccs.component import MessageQueue
 from ska_low_mccs.subrack import (
+    SubrackData,
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
@@ -32,6 +28,7 @@ from ska_low_mccs.subrack import (
 )
 
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -83,58 +80,70 @@ def initial_power_mode() -> PowerMode:
 
 
 @pytest.fixture()
-def subrack_simulator() -> SubrackSimulator:
+def subrack_simulator(
+    component_progress_changed_callback: Callable[[int], None],
+) -> SubrackSimulator:
     """
-    Fixture that returns a TPM simulator.
+    Fixture that returns a subrack simulator.
+
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
 
     :return: a subrack simulator
     """
-    return SubrackSimulator()
+    subrack_simulator = SubrackSimulator()
+    subrack_simulator.set_progress_changed_callback(component_progress_changed_callback)
+    return subrack_simulator
 
 
 @pytest.fixture()
 def subrack_simulator_component_manager(
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
 ) -> SubrackSimulatorComponentManager:
     """
-    Return an subrack simulator component manager.
+    Return a subrack simulator component manager.
 
     (This is a pytest fixture.)
 
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param component_tpm_power_changed_callback: callback to be
         called when the power mode of an tpm changes
 
-    :return: an subrack simulator component manager.
+    :return: a subrack simulator component manager.
     """
     return SubrackSimulatorComponentManager(
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         component_tpm_power_changed_callback,
     )
 
 
 @pytest.fixture()
 def switching_subrack_component_manager(
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
 ) -> SwitchingSubrackComponentManager:
     """
@@ -142,9 +151,9 @@ def switching_subrack_component_manager(
 
     (This is a pytest fixture.)
 
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param communication_status_changed_callback: callback to be
@@ -152,6 +161,8 @@ def switching_subrack_component_manager(
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param component_tpm_power_changed_callback: callback to be
         called when the power mode of an tpm changes
 
@@ -159,25 +170,28 @@ def switching_subrack_component_manager(
     """
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         component_tpm_power_changed_callback,
     )
 
 
+# TODO: pytest is partially typehinted but does not yet export monkeypatch
 @pytest.fixture()
 def subrack_driver(
-    monkeypatch: pytest.monkeypatch,
-    message_queue: MessageQueue,
+    monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
 ) -> SubrackDriver:
     """
@@ -186,9 +200,9 @@ def subrack_driver(
     (This is a pytest fixture.)
 
     :param monkeypatch: the pytest monkey-patching fixture
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param communication_status_changed_callback: callback to be
@@ -196,6 +210,8 @@ def subrack_driver(
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param component_tpm_power_changed_callback: callback to be
         called when the power mode of an tpm changes
 
@@ -212,11 +228,11 @@ def subrack_driver(
             "board_current": SubrackSimulator.DEFAULT_BOARD_CURRENT,
             "subrack_fan_speeds": SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS,
             "subrack_fan_speeds_percent": [
-                speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                 for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
             ],
             "subrack_fan_modes": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES,
-            "tpm_count": SubrackSimulator.TPM_BAY_COUNT,
+            "tpm_count": SubrackData.TPM_BAY_COUNT,
             #  "tpm_temperatures" is not implemented in driver
             "tpm_powers": [
                 SubrackSimulator.DEFAULT_TPM_VOLTAGE
@@ -263,7 +279,7 @@ def subrack_driver(
 
         def json(self: MockResponse) -> dict[str, str]:
             """
-            A mock method to replace the patched :py:meth:`request.Response.json`.
+            Replace the patched :py:meth:`request.Response.json` with mock.
 
             This implementation always returns the same key-value pair.
 
@@ -273,7 +289,7 @@ def subrack_driver(
 
     def mock_request(method: str, url: str, **kwargs: Any) -> MockResponse:
         """
-        A mock method to replace requests.request.
+        Replace requests.request method with a mock method.
 
         :param method: "GET" or "POST"
         :param url: the URL
@@ -285,7 +301,7 @@ def subrack_driver(
 
     def mock_get(url: str, params: Any = None, **kwargs: Any) -> MockResponse:
         """
-        A mock method to replace requests.get.
+        Replace requests.get with mock method.
 
         :param url: the URL
         :param params: arguments to the GET
@@ -299,12 +315,13 @@ def subrack_driver(
     monkeypatch.setattr(requests, "get", mock_get)
 
     return SubrackDriver(
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         component_tpm_power_changed_callback,
     )
 
@@ -312,11 +329,13 @@ def subrack_driver(
 @pytest.fixture()
 def subrack_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     subrack_ip: str,
     subrack_port: int,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
+    component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
     initial_power_mode: PowerMode,
 ) -> SubrackComponentManager:
@@ -326,6 +345,8 @@ def subrack_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param communication_status_changed_callback: callback to be
@@ -335,6 +356,8 @@ def subrack_component_manager(
         called when the component power mode changes
     :param component_fault_callback: callback to be called when the
         component faults (or stops faulting)
+    :param component_progress_changed_callback: callback to be
+        called when the progress value changes
     :param component_tpm_power_changed_callback: callback to be
         called when the power mode of an tpm changes
     :param initial_power_mode: the initial power mode of the simulated
@@ -345,11 +368,13 @@ def subrack_component_manager(
     return SubrackComponentManager(
         SimulationMode.TRUE,
         logger,
+        lrc_result_changed_callback,
         subrack_ip,
         subrack_port,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
+        component_progress_changed_callback,
         component_tpm_power_changed_callback,
         initial_power_mode,
     )

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains tests of the hardware client module."""
 from __future__ import annotations
 
@@ -12,9 +19,10 @@ from ska_low_mccs.component import WebHardwareClient
 class TestWebHardwareClient:
     """Tests of the WebHardwareClient class."""
 
+    # TODO: pytest is partially typehinted but does not yet export monkeypatch
     def test_web_hardware_client_interface(
         self: TestWebHardwareClient,
-        monkeypatch: pytest.monkeypatch,
+        monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
     ) -> None:
         """
         Test the web hardware client.
@@ -37,7 +45,7 @@ class TestWebHardwareClient:
             @staticmethod
             def json() -> dict[str, str]:
                 """
-                A mock method to replace the patched :py:meth:`request.Response.json`.
+                Replace the patched request.Response.json with mock.
 
                 This implementation always returns the same key-value pair.
 
@@ -47,7 +55,7 @@ class TestWebHardwareClient:
 
         def mock_request(method: str, url: str, **kwargs: Any) -> MockResponse:
             """
-            A mock method to replace requests.request.
+            Replace requests.request with mock method.
 
             :param method: "GET" or "POST"
             :param url: the URL
@@ -69,7 +77,7 @@ class TestWebHardwareClient:
 
         def mock_get(url: str, params: Any = None, **kwargs: Any) -> MockResponse:
             """
-            A mock method to replace requests.get.
+            Replace requests.get with mock method.
 
             :param url: the URL
             :param params: arguments to the GET

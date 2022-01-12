@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS transient buffer device."""
 from __future__ import annotations
 
@@ -59,6 +57,7 @@ class MccsTransientBuffer(SKABaseDevice):
         """
         return TransientBufferComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
         )
 

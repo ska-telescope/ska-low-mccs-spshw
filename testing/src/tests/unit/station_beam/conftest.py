@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defined a pytest harness for testing the MCCS station beam module."""
 from __future__ import annotations
 
@@ -22,7 +18,11 @@ import tango
 from ska_low_mccs.station_beam import StationBeamComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
 
 
 @pytest.fixture()
@@ -30,8 +30,9 @@ def component_device_health_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback for a change in the health of the component device (i.e. the
-    station).
+    Return a mock callback for a change in the health of the component device.
+
+    (i.e. the station).
 
     :param mock_callback_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
@@ -92,6 +93,7 @@ def station_beam_component_manager(
     tango_harness: TangoHarness,
     beam_id: int,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_is_beam_locked_changed_callback: MockCallable,
     component_device_health_changed_callback: MockCallable,
@@ -103,6 +105,8 @@ def station_beam_component_manager(
     :param tango_harness: a test harness for MCCS tango devices
     :param beam_id: a beam id for the station beam under test.
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -120,6 +124,7 @@ def station_beam_component_manager(
     return StationBeamComponentManager(
         beam_id,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_is_beam_locked_changed_callback,
         component_device_health_changed_callback,

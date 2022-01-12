@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 This module implements a DemoSubrack Tango device.
 
@@ -15,7 +16,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import List, Optional, Tuple
 
-from tango.server import attribute, command
+from tango.server import command
 
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsSubrack
@@ -29,7 +30,7 @@ DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 class DemoSubrack(MccsSubrack):
     """
-    A version of the MccsSubrack tango device with extra attributes...
+    A version of the MccsSubrack tango device with extra commands...
 
     because Webjive.
     """
@@ -146,46 +147,6 @@ class DemoSubrack(MccsSubrack):
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(4)
         return ([return_code], [message])
-
-    @attribute(dtype=bool, label="Is TPM 1 powered")
-    def isTpm1Powered(self: DemoSubrack) -> bool:
-        """
-        Return whether TPM 1 is powered.
-
-        :return: whether TPM 1 is powered
-        """
-        handler = self.get_command_object("IsTpmOn")
-        return handler(1)
-
-    @attribute(dtype=bool, label="Is TPM 2 powered")
-    def isTpm2Powered(self: DemoSubrack) -> bool:
-        """
-        Return whether TPM 2 is powered.
-
-        :return: whether TPM 2 is powered
-        """
-        handler = self.get_command_object("IsTpmOn")
-        return handler(2)
-
-    @attribute(dtype=bool, label="Is TPM 3 powered")
-    def isTpm3Powered(self: DemoSubrack) -> bool:
-        """
-        Return whether TPM 3 is powered.
-
-        :return: whether TPM 3 is powered
-        """
-        handler = self.get_command_object("IsTpmOn")
-        return handler(3)
-
-    @attribute(dtype=bool, label="Is TPM 4 powered")
-    def isTpm4Powered(self: DemoSubrack) -> bool:
-        """
-        Return whether TPM 4 is powered.
-
-        :return: whether TPM 4 is powered
-        """
-        handler = self.get_command_object("IsTpmOn")
-        return handler(4)
 
 
 # ----------

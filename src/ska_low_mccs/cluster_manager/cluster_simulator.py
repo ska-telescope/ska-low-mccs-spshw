@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """An implementation of a cluster simulator for SKA-Low-MCCS."""
 from __future__ import annotations  # allow forward references in type hints
 
@@ -14,7 +12,7 @@ from enum import IntEnum
 from itertools import count
 from typing import Any, cast, Callable, Iterator, Optional, Tuple
 
-from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.control_model import HealthState
 from ska_low_mccs.component import ObjectComponent
 
 
@@ -283,43 +281,7 @@ class ClusterSimulator(ObjectComponent):
         """
         return self._faulty
 
-    @property
-    def power_mode(self: ObjectComponent) -> PowerMode:
-        """
-        Return the power mode of the component.
-
-        This is assumed to be an always-on service, so this property
-        will always be ``PowerMode.ON``.
-
-        :return: the power mode of the component. i.e. PowerMode.ON
-        """
-        return PowerMode.ON
-
-    def off(self: ObjectComponent) -> None:
-        """
-        Turn the component off.
-
-        :raises NotImplementedError: because this simulator is modelled
-            as an always-on device, so this method has not been
-            implemented.
-        """
-        raise NotImplementedError("ClusterSimulator is an always-on component.")
-
-    def standby(self: ObjectComponent) -> None:
-        """
-        Put the component into low-power standby mode.
-
-        :raises NotImplementedError: because this simulator is modelled
-            as an always-on device, so this method has not been
-            implemented.
-        """
-        raise NotImplementedError("ClusterSimulator is an always-on component.")
-
-    def on(self: ObjectComponent) -> None:
-        """Turn the component on."""
-        pass
-
-    def reset(self: ObjectComponent) -> None:
+    def reset(self: ClusterSimulator) -> None:
         """
         Reset the component (from fault state).
 

@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements utils for component managers in MCCS."""
 from __future__ import annotations  # allow forward references in type hints
 
@@ -62,7 +63,10 @@ def check_communicating(func: Wrapped) -> Wrapped:
         :return: whatever the wrapped function returns
         """
         if component_manager.communication_status != CommunicationStatus.ESTABLISHED:
-            raise ConnectionError("Not connected")
+            raise ConnectionError(
+                f"Cannot execute '{type(component_manager).__name__}.{func.__name__}'. "
+                "Communication with component is not established."
+            )
         return func(component_manager, *args, **kwargs)
 
     return cast(Wrapped, _wrapper)
@@ -109,7 +113,10 @@ def check_on(func: Wrapped) -> Wrapped:
         :return: whatever the wrapped function returns
         """
         if component_manager.power_mode != PowerMode.ON:
-            raise ConnectionError("Component is not turned on.")
+            raise ConnectionError(
+                f"Cannot execute {type(component_manager).__name__}.{func.__name__}. "
+                "Component is not turned on."
+            )
         return func(component_manager, *args, **kwargs)
 
     return cast(Wrapped, _wrapper)

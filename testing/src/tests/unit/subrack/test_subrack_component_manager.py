@@ -1,26 +1,28 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the subrack component manager."""
 from __future__ import annotations
 
 import time
 from typing import Any, Union
+import unittest
 
 import pytest
 from _pytest.fixtures import SubRequest
+from ska_tango_base.commands import ResultCode
 
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
+from ska_low_mccs.component import ExtendedPowerMode, CommunicationStatus
+
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
+    SubrackData,
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
@@ -49,25 +51,16 @@ class TestSubrackSimulatorCommon:
 
     @pytest.fixture(
         params=[
-            "subrack_simulator",
-            "subrack_simulator_component_manager",
             "switching_subrack_component_manager",
             "subrack_component_manager",
         ]
     )
     def subrack(
         self: TestSubrackSimulatorCommon,
-        subrack_simulator: SubrackSimulator,
-        subrack_simulator_component_manager: SubrackSimulatorComponentManager,
         switching_subrack_component_manager: SwitchingSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
         request: SubRequest,
-    ) -> Union[
-        SubrackSimulator,
-        SubrackSimulatorComponentManager,
-        SwitchingSubrackComponentManager,
-        SubrackComponentManager,
-    ]:
+    ) -> Union[SwitchingSubrackComponentManager, SubrackComponentManager]:
         """
         Return the subrack class under test.
 
@@ -85,9 +78,6 @@ class TestSubrackSimulatorCommon:
         So any test that relies on this fixture will be run four times:
         once for each of the above classes.
 
-        :param subrack_simulator: the subrack simulator to return
-        :param subrack_simulator_component_manager: the subrack
-            simulator component manager to return
         :param switching_subrack_component_manager:
             a component manager that switches between subrack simulator
             and driver (in simulation mode)
@@ -100,12 +90,7 @@ class TestSubrackSimulatorCommon:
 
         :return: the subrack class object under test
         """
-        if request.param == "subrack_simulator":
-            return subrack_simulator
-        elif request.param == "subrack_simulator_component_manager":
-            subrack_simulator_component_manager.start_communicating()
-            return subrack_simulator_component_manager
-        elif request.param == "switching_subrack_component_manager":
+        if request.param == "switching_subrack_component_manager":
             switching_subrack_component_manager.start_communicating()
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":
@@ -128,16 +113,15 @@ class TestSubrackSimulatorCommon:
             (
                 "subrack_fan_speeds_percent",
                 [
-                    speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                    speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
             ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
-            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
+            ("tpm_count", SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_temperatures",
-                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_powers",
@@ -145,11 +129,11 @@ class TestSubrackSimulatorCommon:
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "power_supply_fan_speeds",
@@ -170,7 +154,7 @@ class TestSubrackSimulatorCommon:
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
             (
                 "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
             ),
         ),
     )
@@ -186,7 +170,9 @@ class TestSubrackSimulatorCommon:
         expected_value: Any,
     ) -> None:
         """
-        Tests that read-only attributes take certain known initial values. This is a
+        Tests that read-only attributes take certain known initial values.
+
+        This is a
         weak test; over time we should find ways to more thoroughly test each of these
         independently.
 
@@ -202,7 +188,6 @@ class TestSubrackSimulatorCommon:
     @pytest.mark.parametrize(
         "command_name",
         (
-            "are_tpms_on",
             "turn_on_tpms",
             "turn_off_tpms",
         ),
@@ -265,6 +250,46 @@ class TestSubrackSimulatorCommon:
         elif num_args == 2:
             _ = getattr(subrack, command_name)(1, 1)
 
+    @pytest.mark.parametrize(
+        ("command_name", "args"),
+        (
+            ("simulate_power_supply_voltages", [0.1, 0.2]),
+            ("simulate_backplane_temperatures", [0.3, 0.4]),
+            ("simulate_board_temperatures", [0.5, 0.6]),
+            ("simulate_board_current", [0.7, 0.8]),
+            ("simulate_subrack_fan_speeds", [0.9, 1.0]),
+            ("simulate_tpm_temperatures", [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8]),
+            ("simulate_tpm_currents", [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8]),
+            ("simulate_tpm_powers", [3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8]),
+            ("simulate_tpm_voltages", [4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8]),
+            ("simulate_power_supply_fan_speeds", [1.7, 1.8]),
+            ("simulate_power_supply_currents", [1.9, 2.0]),
+            ("simulate_power_supply_powers", [2.1, 2.2]),
+        ),
+    )
+    def test_commands_with_lists(
+        self: TestSubrackSimulatorCommon,
+        subrack: Union[
+            SubrackSimulator,
+            SubrackSimulatorComponentManager,
+            SwitchingSubrackComponentManager,
+            SubrackComponentManager,
+        ],
+        command_name: str,
+        args: Any,
+    ) -> None:
+        """
+        Test of commands that require list parameters.
+
+        These tests don't really do anything, they simply check that the
+        command can be called.
+
+        :param subrack: the subrack class object under test.
+        :param command_name: the name of the command under test
+        :param args: the args the command takes
+        """
+        _ = getattr(subrack, command_name)(args)
+
 
 class TestSubrackDriverCommon:
     """
@@ -317,7 +342,7 @@ class TestSubrackDriverCommon:
 
         :param subrack_driver: the subrack driver to return
         :param switching_subrack_component_manager:
-            a component manager that switches between subrack simulator
+            a component manager that switches between subrack simulators
             and driver (in driver mode)
         :param subrack_component_manager: the subrack component manager
             to return (in driver mode and powered on)
@@ -338,9 +363,80 @@ class TestSubrackDriverCommon:
             subrack_component_manager.simulation_mode = SimulationMode.FALSE
             subrack_component_manager.start_communicating()
             subrack_component_manager.on()
-            time.sleep(0.1)
+            time.sleep(0.2)
             return subrack_component_manager
         raise ValueError("subrack fixture parametrized with unrecognised option")
+
+    @pytest.fixture()
+    def web_hardware_client_mock(self: TestSubrackDriverCommon) -> unittest.mock.Mock:
+        """
+        Provide a mock for the web hardware client.
+
+        :return: A web hardware client mock
+        """
+        return unittest.mock.Mock()
+
+    def test_communication(
+        self: TestSubrackDriverCommon,
+        subrack_driver: SubrackDriver,
+        web_hardware_client_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Create the subrack driver and start communication with the component.
+
+        :param subrack_driver: the subrack driver under test.
+        :param web_hardware_client_mock: a mock provided for the
+            web hardare client member of the subrack driver.
+        """
+        setattr(subrack_driver, "_client", web_hardware_client_mock)
+        web_hardware_client_mock.connect.return_value = True
+        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        subrack_driver.start_communicating()
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        web_hardware_client_mock.connect.assert_called_once()
+        assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
+        assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
+        assert "Connected to " in subrack_driver._queue_manager._task_result[2]
+        assert subrack_driver.communication_status == CommunicationStatus.ESTABLISHED
+
+    def test_communication_fails(
+        self: TestSubrackDriverCommon,
+        subrack_driver: SubrackDriver,
+        web_hardware_client_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Create the subrack driver and start communication with the component.
+
+        Failure to communicate with the underlying client must be handled correctly.
+
+        :param subrack_driver: the subrack driver under test.
+        :param web_hardware_client_mock: a mock provided for the
+            web hardare client member of the subrack driver.
+        """
+        setattr(subrack_driver, "_client", web_hardware_client_mock)
+        web_hardware_client_mock.connect.return_value = False
+        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        subrack_driver.start_communicating()
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
+        time.sleep(0.1)
+        web_hardware_client_mock.connect.assert_called_once()
+        assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
+        assert subrack_driver._queue_manager._task_result[1] == str(
+            ResultCode.FAILED.value
+        )
+        assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -355,24 +451,24 @@ class TestSubrackDriverCommon:
             (
                 "subrack_fan_speeds_percent",
                 [
-                    speed * 100.0 / SubrackSimulator.MAX_SUBRACK_FAN_SPEED
+                    speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
                     for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
                 ],
             ),
             ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
-            ("tpm_count", SubrackSimulator.TPM_BAY_COUNT),
-            ("tpm_temperatures", [0.0] * SubrackSimulator.TPM_BAY_COUNT),
+            ("tpm_count", SubrackData.TPM_BAY_COUNT),
+            ("tpm_temperatures", [0.0] * SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_powers",
                 [
                     SubrackSimulator.DEFAULT_TPM_VOLTAGE
                     * SubrackSimulator.DEFAULT_TPM_CURRENT
                 ]
-                * SubrackSimulator.TPM_BAY_COUNT,
+                * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
             ),
             (
                 "power_supply_fan_speeds",
@@ -393,7 +489,7 @@ class TestSubrackDriverCommon:
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
             (
                 "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackSimulator.TPM_BAY_COUNT,
+                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
             ),
         ),
     )
@@ -408,7 +504,9 @@ class TestSubrackDriverCommon:
         expected_value: Any,
     ) -> None:
         """
-        Tests that read-only attributes take certain known initial values. This is a
+        Tests that read-only attributes take certain known initial values.
+
+        This is a
         weak test; over time we should find ways to more thoroughly test each of these
         independently.
 
@@ -424,7 +522,6 @@ class TestSubrackDriverCommon:
     @pytest.mark.parametrize(
         "command_name",
         (
-            "are_tpms_on",
             "turn_on_tpms",
             "turn_off_tpms",
         ),
@@ -490,45 +587,102 @@ class TestSubrackComponentManager:
     """Tests of the subrack component manager."""
 
     @pytest.mark.parametrize("tpm_id", [1, 2])
-    def test_component_tpm_power_changed_callback(
+    def test_tpm_power_modes(
         self: TestSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
+        component_power_mode_changed_callback: MockCallable,
         component_tpm_power_changed_callback: MockCallable,
         tpm_id: int,
     ) -> None:
         """
-        Test that the callback is called when we change the power mode of an tpm (i.e.
-        turn it on or off).
+        Test that the callback is called when we change the power mode of an tpm.
+
+        (i.e. turn it on or off).
 
         :param subrack_component_manager: the subrack component manager under
             test
+        :param component_power_mode_changed_callback: callback to be
+            called when the component power mode changes
         :param component_tpm_power_changed_callback: callback to be
             called when the power mode of an tpm changes
         :param tpm_id: the number of the tpm to use in the test
+        """
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        )
+
+        component_tpm_power_changed_callback.assert_not_called()
+
+        subrack_component_manager.start_communicating()
+
+        component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
+        assert subrack_component_manager.power_mode == PowerMode.OFF
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        )
+
+        component_tpm_power_changed_callback.assert_not_called()
+
+        subrack_component_manager.on()
+
+        component_power_mode_changed_callback.assert_next_call(PowerMode.ON)
+        assert subrack_component_manager.power_mode == PowerMode.ON
+
+        expected_tpm_power_modes = [ExtendedPowerMode.OFF] * SubrackData.TPM_BAY_COUNT
+        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
+
+        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
+        component_tpm_power_changed_callback.assert_not_called()
+
+        assert subrack_component_manager.turn_on_tpm(tpm_id)
+        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerMode.ON
+        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
+        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
+
+        assert subrack_component_manager.turn_on_tpm(tpm_id) is None
+        component_tpm_power_changed_callback.assert_not_called()
+
+        assert subrack_component_manager.turn_off_tpm(tpm_id) is True
+        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerMode.OFF
+        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
+        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
+
+        assert subrack_component_manager.turn_off_tpm(tpm_id) is None
+        component_tpm_power_changed_callback.assert_not_called()
+
+        assert subrack_component_manager.off() == ResultCode.OK
+        component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
+        assert subrack_component_manager.power_mode == PowerMode.OFF
+
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        )
+
+        subrack_component_manager.stop_communicating()
+        component_tpm_power_changed_callback.assert_next_call(
+            [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        )
+
+    def test_component_progress_changed_callback(
+        self: TestSubrackComponentManager,
+        subrack_component_manager: SubrackComponentManager,
+        component_progress_changed_callback: MockCallable,
+    ) -> None:
+        """
+        Test that the callback is called when we change the progress.
+
+        Reported by the subrack simulator when using the 'turn_on_tpm' method.
+
+        :param subrack_component_manager: the subrack component manager under
+            test
+        :param component_progress_changed_callback: callback to be
+            called when the progress value of a tpm command changes
         """
         subrack_component_manager.start_communicating()
         subrack_component_manager.on()
 
         time.sleep(0.1)
 
-        assert subrack_component_manager.power_mode == PowerMode.ON
-
-        expected_are_tpms_on = [False] * subrack_component_manager.tpm_count
-        component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
-        assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
-
-        subrack_component_manager.turn_on_tpm(tpm_id)
-        expected_are_tpms_on[tpm_id - 1] = True
-        component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
-        assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
-
-        subrack_component_manager.turn_on_tpm(tpm_id)
-        component_tpm_power_changed_callback.assert_not_called()
-
-        subrack_component_manager.turn_off_tpm(tpm_id)
-        expected_are_tpms_on[tpm_id - 1] = False
-        component_tpm_power_changed_callback.assert_next_call(expected_are_tpms_on)
-        assert subrack_component_manager.are_tpms_on() == expected_are_tpms_on
-
-        subrack_component_manager.turn_off_tpm(tpm_id)
-        component_tpm_power_changed_callback.assert_not_called()
+        subrack_component_manager.turn_on_tpm(1)
+        component_progress_changed_callback.assert_next_call(0)
+        component_progress_changed_callback.assert_next_call(100)

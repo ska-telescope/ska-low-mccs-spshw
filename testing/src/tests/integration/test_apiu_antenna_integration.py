@@ -1,13 +1,10 @@
-###############################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-###############################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains integration tests of MCCS power management functionality."""
 from __future__ import annotations
 
@@ -85,6 +82,8 @@ class TestApiuAntennaIntegration:
         self: TestApiuAntennaIntegration, tango_harness: TangoHarness
     ) -> None:
         """
+        Test the integration of antenna within the APIU.
+
         Test that:
 
         * when MccsAntenna is turned on, the APIU supplies power to the

@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS station beam device."""
 from __future__ import annotations
 
@@ -71,6 +69,7 @@ class MccsStationBeam(SKAObsDevice):
         return StationBeamComponentManager(
             self.BeamId,
             self.logger,
+            self.push_change_event,
             self._communication_status_changed,
             self._health_model.is_beam_locked_changed,
             self._health_model.station_health_changed,
@@ -78,7 +77,7 @@ class MccsStationBeam(SKAObsDevice):
         )
 
     def init_command_objects(self: MccsStationBeam) -> None:
-        """Initialises the command handlers for commands supported by this device."""
+        """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self.component_manager, self.op_state_model, self.logger)
@@ -97,8 +96,7 @@ class MccsStationBeam(SKAObsDevice):
             self: MccsStationBeam.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            :py:class:`.MccsStationBeam`.
+            Initialise the attributes and properties of the MccsStationBeam.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -173,6 +171,15 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self.component_manager.subarray_id
 
+    @subarrayId.write  # type: ignore[no-redef]
+    def subarrayId(self: MccsStationBeam, subarray_id: int) -> None:
+        """
+        Set the subarray ID.
+
+        :param subarray_id: The ID of the subarray this beam is assigned to
+        """
+        self.component_manager.subarray_id = subarray_id
+
     @attribute(dtype="DevLong", format="%i", max_value=47, min_value=0)
     def beamId(self: MccsStationBeam) -> int:
         """
@@ -200,23 +207,23 @@ class MccsStationBeam(SKAObsDevice):
         """
         self.component_manager.station_fqdn = station_fqdn
 
-    @attribute(dtype=("DevLong",), max_dim_x=512, format="%i")
-    def stationIds(self: MccsStationBeam) -> list[int]:
+    @attribute(dtype="DevLong")
+    def stationId(self: MccsStationBeam) -> int:
         """
-        Return the station ids.
+        Return the station id.
 
-        :return: the station ids
+        :return: the station id
         """
-        return self.component_manager.station_ids
+        return self.component_manager.station_id
 
-    @stationIds.write  # type: ignore[no-redef]
-    def stationIds(self: MccsStationBeam, station_ids: list[int]) -> None:
+    @stationId.write  # type: ignore[no-redef]
+    def stationId(self: MccsStationBeam, station_id: int) -> None:
         """
-        Set the station ids.
+        Set the station id.
 
-        :param station_ids: ids of the stations for this beam
+        :param station_id: id of the station for this beam
         """
-        self.component_manager.station_ids = station_ids
+        self.component_manager.station_id = station_id
 
     @attribute(dtype="DevLong", format="%i", max_value=7, min_value=0)
     def logicalBeamId(self: MccsStationBeam) -> int:
@@ -430,8 +437,7 @@ class MccsStationBeam(SKAObsDevice):
             self: MccsStationBeam.ApplyPointingCommand,
         ) -> Tuple[ResultCode, str]:
             """
-            Stateless do-hook for the
-            :py:meth:`.MccsStationBeam.ApplyPointing` command
+            Implement the :py:meth:`.MccsStationBeam.ApplyPointing` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

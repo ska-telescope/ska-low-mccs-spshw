@@ -51,10 +51,12 @@ autodoc_mock_imports = [
     "jsonschema",
     "numpy",
     "pyfabil",
+    "pyaavs",
     "scipy",
     "ska_tango_base",
     "tango",
     "uritools",
+    "yaml",
 ]
 
 
@@ -101,7 +103,11 @@ nitpick_ignore = [
     ("py:exc", "BoardError"),
     ("py:exc", "LibraryError"),
     ("py:exc", "PluginError"),
-    ("py:exc", "fire.core.FireError")
+    ("py:exc", "fire.core.FireError"),
+    ("py:exc", "Status"),
+    ("py:exc", "yaml.YAMLError"),
+    ("py:class", "ska_tango_base.control_model.PowerMode")
+    # TODO: Remove once our ska_tango_base version contains the rename to PowerState
 ]
 
 extensions = [

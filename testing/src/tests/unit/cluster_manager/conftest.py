@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defines a pytest harness for testing the MCCS cluster manager module."""
 from __future__ import annotations
 
@@ -25,7 +21,8 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulatorComponentManager,
     ClusterSimulator,
 )
-from ska_low_mccs.component import CommunicationStatus, MessageQueue
+from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -58,8 +55,8 @@ def cluster_simulator() -> ClusterSimulator:
 
 @pytest.fixture()
 def cluster_simulator_component_manager(
-    message_queue: MessageQueue,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
@@ -70,9 +67,9 @@ def cluster_simulator_component_manager(
     """
     Return a cluster simulator component manager.
 
-    :param message_queue: the message queue to be used by this component
-        manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -87,8 +84,8 @@ def cluster_simulator_component_manager(
     :return: a cluster simulator component manager
     """
     return ClusterSimulatorComponentManager(
-        message_queue,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
@@ -99,6 +96,7 @@ def cluster_simulator_component_manager(
 @pytest.fixture()
 def cluster_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerMode], None],
     component_fault_callback: Callable[[bool], None],
@@ -110,6 +108,8 @@ def cluster_component_manager(
     Return a cluster component manager in simulation mode.
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -126,6 +126,7 @@ def cluster_component_manager(
     """
     return ClusterComponentManager(
         logger,
+        lrc_result_changed_callback,
         SimulationMode.TRUE,
         communication_status_changed_callback,
         component_power_mode_changed_callback,

@@ -33,7 +33,7 @@ For a basic environment in which devices may be tested:
    terminal session.
 
        me@local:~$ cd ska-low-mccs
-       me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app artefact.skao.int/ska-tango-images-pytango-builder:9.3.10
+       me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app artefact.skao.int/ska-tango-images-pytango-builder:9.3.16
        root@caa98e8e264d:/app#
 
 4. Install project dependencies:

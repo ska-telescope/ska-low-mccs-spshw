@@ -1,24 +1,24 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS Tile device."""
-from __future__ import annotations
+from __future__ import annotations  # allow forward references in type hints
 
 import json
+import logging
 import numpy as np
 import os.path
+from typing import List, Optional, Tuple
 
 import tango
 from tango.server import attribute, command, device_property
 
-from ska_tango_base import SKABaseDevice
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
@@ -31,8 +31,9 @@ from ska_tango_base.control_model import (
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tile import TileComponentManager, TileHealthModel
 
-
 __all__ = ["MccsTile", "main"]
+
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 class MccsTile(SKABaseDevice):
@@ -53,7 +54,7 @@ class MccsTile(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self):
+    def init_device(self: MccsTile) -> None:
         """
         Initialise the device.
 
@@ -81,6 +82,7 @@ class MccsTile(SKABaseDevice):
             SimulationMode.TRUE,
             TestMode.NONE,
             self.logger,
+            self.push_change_event,
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
@@ -91,7 +93,7 @@ class MccsTile(SKABaseDevice):
             self._component_fault,
         )
 
-    def init_command_objects(self):
+    def init_command_objects(self: MccsTile) -> None:
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
@@ -175,15 +177,15 @@ class MccsTile(SKABaseDevice):
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for the MCCS Tile device."""
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.InitCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the MCCS Tile device.
+            Initialise the attributes and properties of the MCCS Tile device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
             device = self.target
@@ -192,7 +194,6 @@ class MccsTile(SKABaseDevice):
             device._csp_destination_ip = ""
             device._csp_destination_mac = ""
             device._csp_destination_port = 0
-
             device._antenna_ids = []
 
             # The health model updates our health, but then the base class super().do()
@@ -215,7 +216,9 @@ class MccsTile(SKABaseDevice):
         state.
         """
 
-        def do(self) -> tuple[ResultCode, str]:
+        def do(  # type: ignore[override]
+            self: MccsTile.OnCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook for Off() command functionality.
 
@@ -223,17 +226,21 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO: return OK for now to be consistent with base classes
+            # It's fine to complete this long-running command here
+            # (returning ResultCode.OK), even though the component manager
+            # may not actually be finished turning everything on.
+            # The completion of the original On command to MccsController
+            # is waiting for the various power mode callbacks to be received
+            # rather than completion of the various long-running commands.
             _ = self.target.on()
-            message = "On command completed OK"
+            message = "Tile On command completed OK"
             return (ResultCode.OK, message)
 
-    def is_On_allowed(self):
+    def is_On_allowed(self: MccsTile) -> bool:
         """
         Check if command `Off` is allowed in the current device state.
 
         :return: ``True`` if the command is allowed
-        :rtype: bool
         """
         return self.get_state() in [
             tango.DevState.OFF,
@@ -318,7 +325,7 @@ class MccsTile(SKABaseDevice):
                 self._component_power_mode_changed(power_mode)
             self._health_model.component_fault(False)
 
-    def health_changed(self, health):
+    def health_changed(self: MccsTile, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -328,7 +335,6 @@ class MccsTile(SKABaseDevice):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -343,16 +349,15 @@ class MccsTile(SKABaseDevice):
         memorized=True,
         hw_memorized=True,
     )
-    def simulationMode(self: MccsTile):
+    def simulationMode(self: MccsTile) -> int:
         """
         Report the simulation mode of the device.
 
         :return: Return the current simulation mode
-        :rtype: int
         """
         return self.component_manager.simulation_mode
 
-    @simulationMode.write
+    @simulationMode.write  # type: ignore[no-redef]
     def simulationMode(self: MccsTile, value):
         """
         Set the simulation mode.
@@ -366,17 +371,16 @@ class MccsTile(SKABaseDevice):
         memorized=True,
         hw_memorized=True,
     )
-    def testMode(self: MccsTile):
+    def testMode(self: MccsTile) -> int:
         """
         Report the test mode of the device.
 
         :return: the current test mode
-        :rtype: int
         """
         return self.component_manager.test_mode
 
-    @testMode.write
-    def testMode(self: MccsTile, value):
+    @testMode.write  # type: ignore[no-redef]
+    def testMode(self: MccsTile, value: int) -> None:
         """
         Set the test mode.
 
@@ -385,146 +389,132 @@ class MccsTile(SKABaseDevice):
         self.component_manager.test_mode = TestMode(value)
 
     @attribute(dtype="DevLong")
-    def logicalTileId(self):
+    def logicalTileId(self: MccsTile) -> int:
         """
         Return the logical tile id.
 
         The logical tile id is the id of the tile in the station.
 
         :return: the logical tile id
-        :rtype: int
         """
         return self.component_manager.tile_id
 
-    @logicalTileId.write
-    def logicalTileId(self, value):
+    @logicalTileId.write  # type: ignore[no-redef]
+    def logicalTileId(self: MccsTile, value: int) -> None:
         """
         Set the logicalTileId attribute.
 
         The logical tile id is the id of the tile in the station.
 
         :param value: the new logical tile id
-        :type value: int
         """
         self.component_manager.tile_id = value
 
     @attribute(dtype="DevLong")
-    def stationId(self):
+    def stationId(self: MccsTile) -> int:
         """
         Return the id of the station to which this tile is assigned.
 
         :return: the id of the station to which this tile is assigned
-        :rtype: int
         """
         return self.component_manager.station_id
 
-    @stationId.write
-    def stationId(self, value):
+    @stationId.write  # type: ignore[no-redef]
+    def stationId(self: MccsTile, value: int) -> None:
         """
         Set the id of the station to which this tile is assigned.
 
         :param value: the station id
-        :type value: int
         """
         self.component_manager.station_id = value
 
     @attribute(dtype="DevString")
-    def cspDestinationIp(self):
+    def cspDestinationIp(self: MccsTile) -> str:
         """
         Return the CSP destination IP address.
 
         :return: the CSP destination IP address
-        :rtype: str
         """
         return self._csp_destination_ip
 
-    @cspDestinationIp.write
-    def cspDestinationIp(self, value):
+    @cspDestinationIp.write  # type: ignore[no-redef]
+    def cspDestinationIp(self: MccsTile, value: str) -> None:
         """
         Set the CSP destination IP address.
 
         :param value: the new IP address
-        :type value: str
         """
         self._csp_destination_ip = value
 
     @attribute(dtype="DevString")
-    def cspDestinationMac(self):
+    def cspDestinationMac(self: MccsTile) -> str:
         """
         Return the CSP destination MAC address.
 
         :return: a MAC address
-        :rtype: str
         """
         return self._csp_destination_mac
 
-    @cspDestinationMac.write
-    def cspDestinationMac(self, value):
+    @cspDestinationMac.write  # type: ignore[no-redef]
+    def cspDestinationMac(self: MccsTile, value: str) -> None:
         """
         Set the CSP destination MAC address.
 
         :param value: MAC address
-        :type value: str
         """
         self._csp_destination_mac = value
 
     @attribute(dtype="DevLong")
-    def cspDestinationPort(self):
+    def cspDestinationPort(self: MccsTile) -> int:
         """
         Return the cspDestinationPort attribute.
 
         :return: CSP destination port
-        :rtype: int
         """
         return self._csp_destination_port
 
-    @cspDestinationPort.write
-    def cspDestinationPort(self, value):
+    @cspDestinationPort.write  # type: ignore[no-redef]
+    def cspDestinationPort(self: MccsTile, value: int) -> None:
         """
         Set the CSP destination port.
 
         :param value: CSP destination port
-        :type value: int
         """
         self._csp_destination_port = value
 
     @attribute(dtype="DevString")
-    def firmwareName(self):
+    def firmwareName(self: MccsTile) -> str:
         """
         Return the firmware name.
 
         :return: firmware name
-        :rtype: str
         """
         return self.component_manager.firmware_name
 
-    @firmwareName.write
-    def firmwareName(self, value):
+    @firmwareName.write  # type: ignore[no-redef]
+    def firmwareName(self: MccsTile, value: str) -> None:
         """
         Set the firmware name.
 
         :param value: firmware name
-        :type value: str
         """
         self.component_manager.firmware_name = value
 
     @attribute(dtype="DevString")
-    def firmwareVersion(self):
+    def firmwareVersion(self: MccsTile) -> str:
         """
         Return the firmware version.
 
         :return: firmware version
-        :rtype: str
         """
         return self.component_manager.firmware_version
 
-    @firmwareVersion.write
-    def firmwareVersion(self, value):
+    @firmwareVersion.write  # type: ignore[no-redef]
+    def firmwareVersion(self: MccsTile, value: str) -> None:
         """
         Set the firmware version.
 
         :param value: firmware version
-        :type value: str
         """
         self.component_manager.firmware_version = value
 
@@ -536,12 +526,11 @@ class MccsTile(SKABaseDevice):
         min_alarm=4.55,
         max_alarm=5.45,
     )
-    def voltage(self):
+    def voltage(self: MccsTile) -> float:
         """
         Return the voltage.
 
         :return: voltage
-        :rtype: float
         """
         return self.component_manager.voltage
 
@@ -555,22 +544,20 @@ class MccsTile(SKABaseDevice):
         min_alarm=0.05,
         max_alarm=2.95,
     )
-    def current(self):
+    def current(self: MccsTile) -> float:
         """
         Return the current.
 
         :return: current
-        :rtype: float
         """
         return self.component_manager.current
 
     @attribute(dtype="DevBoolean")
-    def isProgrammed(self):
+    def isProgrammed(self: MccsTile) -> bool:
         """
         Return a flag indicating whether of not the board is programmed.
 
         :return: whether of not the board is programmed
-        :rtype: bool
         """
         return self.component_manager.is_programmed
 
@@ -582,12 +569,11 @@ class MccsTile(SKABaseDevice):
         min_alarm=16.0,
         max_alarm=47.0,
     )
-    def boardTemperature(self):
+    def boardTemperature(self: MccsTile) -> float:
         """
         Return the board temperature.
 
         :return: the board temperature
-        :rtype: float
         """
         return self.component_manager.board_temperature
 
@@ -599,12 +585,11 @@ class MccsTile(SKABaseDevice):
         min_alarm=16.0,
         max_alarm=47.0,
     )
-    def fpga1Temperature(self):
+    def fpga1Temperature(self: MccsTile) -> float:
         """
         Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
-        :rtype: float
         """
         return self.component_manager.fpga1_temperature
 
@@ -616,148 +601,137 @@ class MccsTile(SKABaseDevice):
         min_alarm=16.0,
         max_alarm=47.0,
     )
-    def fpga2Temperature(self):
+    def fpga2Temperature(self: MccsTile) -> float:
         """
         Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
-        :rtype: float
         """
         return self.component_manager.fpga2_temperature
 
     @attribute(dtype=("DevLong",), max_dim_x=2)
-    def fpgasTime(self):
+    def fpgasTime(self: MccsTile) -> list[int]:
         """
         Return the time for FPGAs.
 
         :return: the time for FPGAs
-        :rtype: tuple(int)
         """
-        return tuple(self.component_manager.fpgas_time)
+        return self.component_manager.fpgas_time
 
     @attribute(dtype=("DevLong",), max_dim_x=8, label="Antenna ID's")
-    def antennaIds(self):
+    def antennaIds(self: MccsTile) -> list[int]:
         """
         Return the antenna IDs.
 
         :return: the antenna IDs
-        :rtype: list(int)
         """
-        return tuple(self._antenna_ids)
+        return self._antenna_ids
 
-    @antennaIds.write
-    def antennaIds(self, antenna_ids):
+    @antennaIds.write  # type: ignore[no-redef]
+    def antennaIds(self: MccsTile, antenna_ids: list[int]) -> None:
         """
         Set the antenna IDs.
 
         :param antenna_ids: the antenna IDs
-        :type antenna_ids: list(int)
         """
         self._antenna_ids = list(antenna_ids)
 
     @attribute(dtype=("DevString",), max_dim_x=256)
-    def fortyGbDestinationIps(self):
+    def fortyGbDestinationIps(self: MccsTile) -> list[str]:
         """
         Return the destination IPs for all 40Gb ports on the tile.
 
         :return: IP addresses
-        :rtype: list(str)
         """
-        return tuple(
-            item["DstIP"] for item in self.component_manager.get_40g_configuration()
-        )
+        return [
+            item["dst_ip"] for item in self.component_manager.get_40g_configuration()
+        ]
 
     @attribute(dtype=("DevLong",), max_dim_x=256)
-    def fortyGbDestinationPorts(self):
+    def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
         Return the destination ports for all 40Gb ports on the tile.
 
         :return: ports
-        :rtype: list(int)
         """
-        return tuple(
-            item["DstPort"] for item in self.component_manager.get_40g_configuration()
-        )
+        return [
+            item["dst_port"] for item in self.component_manager.get_40g_configuration()
+        ]
 
     @attribute(dtype=("DevDouble",), max_dim_x=32)
-    def adcPower(self):
+    def adcPower(self: MccsTile) -> list[float]:
         """
-        Return the RMS power of every ADC signal (so a TPM processes 16 antennas, this
-        should return 32 RMS value.
+        Return the RMS power of every ADC signal.
+
+        (so a TPM processes 16 antennas, this should return 32 RMS value.
 
         :return: RMP power of ADC signals
-        :rtype: list(float)
         """
         return self.component_manager.adc_rms
 
     @attribute(dtype="DevLong")
-    def currentTileBeamformerFrame(self):
+    def currentTileBeamformerFrame(self: MccsTile) -> int:
         """
-        Return current frame, in units of 256 ADC frames (276,48 us) Currently this is
+        Return current frame.
+
+        in units of 256 ADC frames (276,48 us) Currently this is
         required, not sure if it will remain so.
 
         :return: current frame
-        :rtype: int
         """
         return self.component_manager.current_tile_beamformer_frame
 
     @attribute(dtype="DevBoolean")
-    def checkPendingDataRequests(self):
+    def checkPendingDataRequests(self: MccsTile) -> bool:
         """
         Check for pending data requests.
 
         :return: whether there are data requests pending
-        :rtype: bool
         """
         return self.component_manager.check_pending_data_requests()
 
     @attribute(dtype="DevBoolean")
-    def isBeamformerRunning(self):
+    def isBeamformerRunning(self: MccsTile) -> bool:
         """
         Check if beamformer is running.
 
         :return: whether the beamformer is running
-        :rtype: bool
         """
         return self.component_manager.is_beamformer_running
 
     @attribute(dtype="DevLong")
-    def phaseTerminalCount(self):
+    def phaseTerminalCount(self: MccsTile) -> int:
         """
         Get phase terminal count.
 
         :return: phase terminal count
-        :rtype: int
         """
         return self.component_manager.phase_terminal_count
 
-    @phaseTerminalCount.write
-    def phaseTerminalCount(self, value):
+    @phaseTerminalCount.write  # type: ignore[no-redef]
+    def phaseTerminalCount(self: MccsTile, value: int) -> None:
         """
         Set the phase terminal count.
 
         :param value: the phase terminal count
-        :type value: int
         """
         self.component_manager.phase_terminal_count = value
 
     @attribute(dtype="DevLong")
-    def ppsDelay(self):
+    def ppsDelay(self: MccsTile) -> int:
         """
         Return the PPS delay.
 
         :return: Return the PPS delay
-        :rtype: int
         """
         return self.component_manager.pps_delay
 
     @attribute(dtype="DevBoolean")
-    def TestGeneratorActive(self):
+    def TestGeneratorActive(self: MccsTile) -> bool:
         """
-        Reports if the test generator is used for some channels.
+        Report if the test generator is used for some channels.
 
         :return: test generator status
-        :rtype: bool
         """
         return self.component_manager.test_generator_active
 
@@ -770,26 +744,26 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "Initialise command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.InitialiseCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.Initialise` command
-            functionality.
+            Implement :py:meth:`.MccsTile.Initialise` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.initialise()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def Initialise(self):
+    def Initialise(self: MccsTile) -> DevVarLongStringArrayType:
         """
-        Performs all required initialisation (switches on on-board devices, locks PLL,
+        Perform all required initialisation.
+
+        (switches on on-board devices, locks PLL,
         performs synchronisation and other operations required to start configuring the
         signal processing functions of the firmware, such as channelisation and
         beamforming)
@@ -797,7 +771,6 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -806,25 +779,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("Initialise")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class GetFirmwareAvailableCommand(BaseCommand):
         """Class for handling the GetFirmwareAvailable() command."""
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.GetFirmwareAvailableCommand,
+        ) -> str:
             """
-            Implementation of
-            :py:meth:`.MccsTile.GetFirmwareAvailable` command
-            functionality.
+            Implement :py:meth:`.MccsTile.GetFirmwareAvailable` command functionality.
 
             :return: json encoded string containing list of dictionaries
-            :rtype: str
             """
             component_manager = self.target
             return json.dumps(component_manager.firmware_available)
 
     @command(dtype_out="DevString")
-    def GetFirmwareAvailable(self):
+    def GetFirmwareAvailable(self: MccsTile) -> str:
         """
         Get available firmware.
 
@@ -837,7 +809,6 @@ class MccsTile(SKABaseDevice):
         version number, and ‘minor’.
 
         :return: a JSON-encoded dictionary of firmware details
-        :rtype: str
 
         :example:
             >>> dp = tango.DeviceProxy("mccs/tile/01")
@@ -857,20 +828,17 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "DownloadFirmware command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.DownloadFirmwareCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.DownloadFirmware` command
-            functionality.
+            Implement :py:meth:`.MccsTile.DownloadFirmware` command functionality.
 
             :param argin: path to the bitfile to be downloaded
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             bitfile = argin
@@ -881,21 +849,20 @@ class MccsTile(SKABaseDevice):
                 return (ResultCode.FAILED, f"{bitfile} doesn't exist")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def DownloadFirmware(self, argin):
+    def DownloadFirmware(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
-        Downloads the firmware contained in bitfile to all FPGAs on the board. This
-        should also update the internal register mapping, such that registers become
+        Download the firmware contained in bitfile to all FPGAs on the board.
+
+        This should also update the internal register mapping, such that registers become
         available for use.
 
         :param argin: can either be the design name returned from
             :py:meth:`.GetFirmwareAvailable` command, or a path to a
             file
-        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -904,47 +871,44 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("DownloadFirmware")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ProgramCPLDCommand(ResponseCommand):
         """Class for handling the ProgramCPLD(argin) command."""
 
         SUCCEEDED_MESSAGE = "ProgramCPLD command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.ProgramCPLDCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.ProgramCPLD` command
-            functionality.
+            Implement :py:meth:`.MccsTile.ProgramCPLD` command functionality.
 
             :param argin: path to the bitfile to be loaded
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             bitfile = argin
-            self.logger.info("Downloading bitstream to CPLD FLASH")
+            component_manager.logger.info("Downloading bitstream to CPLD FLASH")
             component_manager.cpld_flash_write(bitfile)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ProgramCPLD(self, argin):
+    def ProgramCPLD(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
+        Program the CPLD.
+
         If the TPM has a CPLD (or other management chip which need firmware), this
         function program it with the provided bitfile.
 
         :param argin: is the path to a file containing the required CPLD firmware
-        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -953,31 +917,28 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ProgramCPLD")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class GetRegisterListCommand(BaseCommand):
         """Class for handling the GetRegisterList() command."""
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.GetRegisterListCommand,
+        ) -> list[str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.GetRegisterList` command
-            functionality.
+            Implement :py:meth:`.MccsTile.GetRegisterList` command functionality.
 
             :return:a list of firmware & cpld registers
-            :rtype: list(str)
             """
             component_manager = self.target
             return component_manager.register_list
 
     @command(dtype_out="DevVarStringArray")
-    def GetRegisterList(self):
+    def GetRegisterList(self: MccsTile) -> list[str]:
         """
-        Return a list containing description of the exposed firmware (and CPLD)
-        registers.
+        Return a list of descriptions of the exposed firmware (and CPLD) registers.
 
         :return: a list of register names
-        :rtype: list(str)
 
         :example:
 
@@ -990,17 +951,16 @@ class MccsTile(SKABaseDevice):
     class ReadRegisterCommand(BaseCommand):
         """Class for handling the ReadRegister(argin) command."""
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.ReadRegisterCommand, argin: str
+        ) -> list[int]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.ReadRegister` command
-            functionality.
+            Implement :py:meth:`.MccsTile.ReadRegister` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
                 including RegisterName, NbRead, Offset, Device
-            :type argin: str
+
             :return: list of register values
-            :rtype: list(int)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -1012,25 +972,25 @@ class MccsTile(SKABaseDevice):
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
-                self.logger.error("RegisterName is a mandatory parameter")
+                component_manager.logger.error("RegisterName is a mandatory parameter")
                 raise ValueError("RegisterName is a mandatory parameter")
             nb_read = params.get("NbRead", None)
             if nb_read is None:
-                self.logger.error("NbRead is a mandatory parameter")
+                component_manager.logger.error("NbRead is a mandatory parameter")
                 raise ValueError("NbRead is a mandatory parameter")
             offset = params.get("Offset", None)
             if offset is None:
-                self.logger.error("Offset is a mandatory parameter")
+                component_manager.logger.error("Offset is a mandatory parameter")
                 raise ValueError("Offset is a mandatory parameter")
             device = params.get("Device", None)
             if device is None:
-                self.logger.error("Device is a mandatory parameter")
+                component_manager.logger.error("Device is a mandatory parameter")
                 raise ValueError("Device is a mandatory parameter")
 
             return component_manager.read_register(name, nb_read, offset, device)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongArray")
-    def ReadRegister(self, argin):
+    def ReadRegister(self: MccsTile, argin: str) -> list[int]:
         """
         Return the value(s) of the specified register.
 
@@ -1041,10 +1001,7 @@ class MccsTile(SKABaseDevice):
         * Offset - (int) offset is the address offset within the register to write to
         * Device - (int) device is the FPGA to write to (0 or 1)
 
-        :type argin: str
-
         :return: a list of register values
-        :rtype: list(int)
 
         :example:
 
@@ -1062,53 +1019,50 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "WriteRegister command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.WriteRegisterCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.WriteRegister` command
-            functionality.
+            Implement :py:meth:`.MccsTile.WriteRegister` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
                 including RegisterName, Values, Offset, Device
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks
                 mandatory parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
-
             """
             component_manager = self.target
 
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
-                self.logger.error("RegisterName is a mandatory parameter")
+                component_manager.logger.error("RegisterName is a mandatory parameter")
                 raise ValueError("RegisterName is a mandatory parameter")
             values = params.get("Values", None)
             if values is None:
-                self.logger.error("Values is a mandatory parameter")
+                component_manager.logger.error("Values is a mandatory parameter")
                 raise ValueError("Values is a mandatory parameter")
             offset = params.get("Offset", None)
             if offset is None:
-                self.logger.error("Offset is a mandatory parameter")
+                component_manager.logger.error("Offset is a mandatory parameter")
                 raise ValueError("Offset is a mandatory parameter")
             device = params.get("Device", None)
             if device is None:
-                self.logger.error("Device is a mandatory parameter")
+                component_manager.logger.error("Device is a mandatory parameter")
                 raise ValueError("Device is a mandatory parameter")
 
             component_manager.write_register(name, values, offset, device)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def WriteRegister(self, argin):
+    def WriteRegister(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Write values to the specified register.
 
@@ -1119,12 +1073,9 @@ class MccsTile(SKABaseDevice):
         * Offset - (int) offset is the address offset within the register to write to
         * Device - (int) device is the FPGA to write to (0 or 1)
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1136,20 +1087,19 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("WriteRegister")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ReadAddressCommand(BaseCommand):
         """Class for handling the ReadAddress(argin) command."""
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.ReadAddressCommand, argin: list[int]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.ReadAddress` command
-            functionality.
+            Implement :py:meth:`.MccsTile.ReadAddress` command functionality.
 
             :param argin: sequence of length two, containing an address and
                 a value
-            :type argin: list
 
             :return: [values, ]
 
@@ -1159,14 +1109,14 @@ class MccsTile(SKABaseDevice):
             component_manager = self.target
 
             if len(argin) < 2:
-                self.logger.error("Two parameters are required")
+                component_manager.logger.error("Two parameters are required")
                 raise ValueError("Two parameters are required")
             address = argin[0]
             nvalues = argin[1]
             return component_manager.read_address(address, nvalues)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarULongArray")
-    def ReadAddress(self, argin):
+    def ReadAddress(self: MccsTile, argin: list[int]) -> list[int]:
         """
         Read n 32-bit values from address.
 
@@ -1174,12 +1124,11 @@ class MccsTile(SKABaseDevice):
                       [1] = number of values to read
 
         :return: list of values
-        :rtype: list(int)
 
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> reglist = dp.command_inout("ReadAddress", [address, nvalues]])
+        >>> reglist = dp.command_inout("ReadAddress", [address, nvalues])
         """
         handler = self.get_command_object("ReadAddress")
         return handler(argin)
@@ -1189,33 +1138,32 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "WriteAddress command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.WriteAddressCommand, argin: list[int]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.WriteAddress` command
-            functionality.
+            Implement :py:meth:`.MccsTile.WriteAddress` command functionality.
 
             :param argin: sequence of length two, containing an address and
                 a value
-            :type argin: list
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin has the wrong length/structure
             """
             component_manager = self.target
             if len(argin) < 2:
-                self.logger.error("A minimum of two parameters are required")
+                component_manager.logger.error(
+                    "A minimum of two parameters are required"
+                )
                 raise ValueError("A minium of two parameters are required")
             component_manager.write_address(argin[0], argin[1:])
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarULongArray", dtype_out="DevVarLongStringArray")
-    def WriteAddress(self, argin):
+    def WriteAddress(self: MccsTile, argin: list[int]) -> DevVarLongStringArrayType:
         """
         Write list of values at address.
 
@@ -1225,7 +1173,6 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1236,27 +1183,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("WriteAddress")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class Configure40GCoreCommand(ResponseCommand):
         """Class for handling the Configure40GCore(argin) command."""
 
         SUCCEEDED_MESSAGE = "Configure40GCore command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.Configure40GCoreCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.Configure40GCore` command
-            functionality.
+            Implement :py:meth:`.MccsTile.Configure40GCore` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -1264,47 +1208,47 @@ class MccsTile(SKABaseDevice):
                 against a schema
             """
             params = json.loads(argin)
+            component_manager = self.target
 
             core_id = params.get("CoreID", None)
             if core_id is None:
                 message = "CoreID is a mandatory parameter."
-                self.logger.error(message)
+                component_manager.logger.error(message)
                 raise ValueError(message)
             arp_table_entry = params.get("ArpTableEntry", None)
             if arp_table_entry is None:
                 message = "ArpTableEntry is a mandatory parameter."
-                self.logger.error(message)
+                component_manager.logger.error(message)
                 raise ValueError(message)
             src_mac = params.get("SrcMac", None)
             if src_mac is None:
                 message = "SrcMac is a mandatory parameter."
-                self.logger.error(message)
+                component_manager.logger.error(message)
                 raise ValueError(message)
             src_ip = params.get("SrcIP", None)
             src_port = params.get("SrcPort", None)
             if src_port is None:
                 message = "SrcPort is a mandatory parameter."
-                self.logger.error(message)
+                component_manager.logger.error(message)
                 raise ValueError(message)
             dst_ip = params.get("DstIP", None)
             if dst_ip is None:
                 message = "DstIP is a mandatory parameter."
-                self.logger.error(message)
+                component_manager.logger.error(message)
                 raise ValueError(message)
             dst_port = params.get("DstPort", None)
             if dst_port is None:
                 message = "DstPort is a mandatory parameter."
-                self.logger.error(message)
+                component_manager.logger.error(message)
                 raise ValueError(message)
 
-            component_manager = self.target
             component_manager.configure_40g_core(
                 core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Configure40GCore(self, argin):
+    def Configure40GCore(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Configure 40g core_id with specified parameters.
 
@@ -1319,12 +1263,9 @@ class MccsTile(SKABaseDevice):
         * DstIP - (string) IP dot notation
         * DstPort - (int) destination port
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1337,22 +1278,20 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("Configure40GCore")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class Get40GCoreConfigurationCommand(BaseCommand):
         """Class for handling the Get40GCoreConfiguration(argin) command."""
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.Get40GCoreConfigurationCommand, argin: str
+        ) -> str:
             """
-            Implementation of
-            :py:meth:`.MccsTile.Get40GCoreConfiguration`
-            command functionality.
+            Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: json string with configuration
-            :rtype: str
 
             :raises ValueError: if the argin is an invalid code id
             """
@@ -1363,14 +1302,24 @@ class MccsTile(SKABaseDevice):
             component_manager = self.target
             item = component_manager.get_40g_configuration(core_id, arp_table_entry)
             if item is not None:
-                return json.dumps(item)
+                item_new = {
+                    "CoreID": item.get("core_id", None),
+                    "ArpTableEntry": item.get("arp_table_entry", None),
+                    "SrcMac": item.get("src_mac", None),
+                    "SrcIP": item.get("src_ip", None),
+                    "SrcPort": item.get("src_port", None),
+                    "DstIp": item.get("dst_ip", None),
+                    "DstPort": item.get("dst_port", None),
+                }
+                return json.dumps(item_new)
             raise ValueError("Invalid core id or arp table id specified")
 
     @command(dtype_in="DevString", dtype_out="DevString")
-    def Get40GCoreConfiguration(self, argin):
+    def Get40GCoreConfiguration(self: MccsTile, argin: str) -> str:
         """
-        Get 40g core configuration for core_id. This is required to chain up TPMs to
-        form a station.
+        Get 40g core configuration for core_id.
+
+        This is required to chain up TPMs to form a station.
 
         :param argin: json dictionary with optional keywords:
 
@@ -1379,7 +1328,6 @@ class MccsTile(SKABaseDevice):
 
         :return: the configuration is a json string comprising:
                  core_id, arp_table_entry, src_mac, src_ip, src_port, dest_ip, dest_port
-        :rtype: str
 
         :example:
 
@@ -1398,30 +1346,28 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SetLmcDownloadCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SetLmcDownload` command
-            functionality.
+            Implement :py:meth:`.MccsTile.SetLmcDownload` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
+            component_manager = self.target
             params = json.loads(argin)
             mode = params.get("Mode", None)
             if mode is None:
-                self.logger.error("Mode is a mandatory parameter")
+                component_manager.logger.error("Mode is a mandatory parameter")
                 raise ValueError("Mode is a mandatory parameter")
             payload_length = params.get("PayloadLength", 1024)
             dst_ip = params.get("DstIP", None)
@@ -1429,14 +1375,13 @@ class MccsTile(SKABaseDevice):
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
 
-            component_manager = self.target
             component_manager.set_lmc_download(
                 mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetLmcDownload(self, argin):
+    def SetLmcDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
@@ -1449,12 +1394,9 @@ class MccsTile(SKABaseDevice):
         * DstPort - (int) Destination port for integrated data streams
         * LmcMac: - (int) LMC Mac address is required for 10G lane configuration
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1465,32 +1407,30 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SetLmcDownload")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class GetArpTableCommand(BaseCommand):
         """Class for handling the GetArpTable() command."""
 
-        def do(self):
+        def do(self: MccsTile.GetArpTableCommand) -> str:  # type: ignore[override]
             """
-            Implementation of
-            :py:meth:`.MccsTile.GetArpTable` command functionality.
+            Implement :py:meth:`.MccsTile.GetArpTable` command functionality.
 
             :return: a JSON-encoded dictionary of coreId and populated arpID table
-            :rtype: str
             """
             component_manager = self.target
             return json.dumps(component_manager.arp_table)
 
     @command(dtype_out="DevString")
-    def GetArpTable(self):
+    def GetArpTable(self: MccsTile) -> str:
         """
-        Return a dictionary with populated ARP table  for all used cores. 40G interfaces
-        use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC. 10G
-        interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
+        Return a dictionary with populated ARP table for all used cores.
+
+        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC.
+        10G interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
         LMC with only one ARP.
 
         :return: a JSON-encoded dictionary of coreId and populated arpID table
-        :rtype: str
 
         :example:
 
@@ -1510,38 +1450,37 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "SetChanneliserTruncation command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SetChanneliserTruncationCommand, argin: list[int]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SetChanneliserTruncation`
-            command functionality.
+            Implement :py:meth:`.MccsTile.SetChanneliserTruncation` commands.
 
             :param argin: a truncation array
-            :type argin: list(int)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
+            component_manager = self.target
             if len(argin) < 3:
-                self.logger.error("Insufficient values supplied")
+                component_manager.logger.error("Insufficient values supplied")
                 raise ValueError("Insufficient values supplied")
             nb_chan = argin[0]
             nb_freq = argin[1]
             arr = np.array(argin[2:])
             np.reshape(arr, (nb_chan, nb_freq))
 
-            component_manager = self.target
             component_manager.set_channeliser_truncation(arr)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SetChanneliserTruncation(self, argin):
+    def SetChanneliserTruncation(
+        self: MccsTile, argin: list[int]
+    ) -> DevVarLongStringArrayType:
         """
         Set the coefficients to modify (flatten) the bandpass.
 
@@ -1551,18 +1490,15 @@ class MccsTile(SKABaseDevice):
         * argin[1] - is M, the number of frequency channel
         * argin[2:] - is the data
 
-        :type argin: list(int)
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
         >>> n=4
         >>> m=3
-        >>> trunc = [[0, 1, 2], [3, 4, 5],[6, 7, 0], [1, 2, 3],]
+        >>> trunc = ([0, 1, 2], [3, 4, 5],[6, 7, 0], [1, 2, 3],]
         >>> arr = np.array(trunc).ravel()
         >>> argin = np.concatenate([np.array((4, 3)), arr])
         >>> dp = tango.DeviceProxy("mccs/tile/01")
@@ -1570,39 +1506,37 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SetChanneliserTruncation")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SetBeamFormerRegionsCommand(ResponseCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetBeamFormerRegions command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SetBeamFormerRegionsCommand, argin: list[int]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SetBeamFormerRegions`
-            command functionality.
+            Implement :py:meth:`.MccsTile.SetBeamFormerRegions` command functionality.
 
             :param argin: a region array
-            :type argin: list(int)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
+            component_manager = self.target
             if len(argin) < 5:
-                self.logger.error("Insufficient parameters specified")
+                component_manager.logger.error("Insufficient parameters specified")
                 raise ValueError("Insufficient parameters specified")
             if len(argin) > (48 * 5):
-                self.logger.error("Too many regions specified")
+                component_manager.logger.error("Too many regions specified")
                 raise ValueError("Too many regions specified")
             if len(argin) % 5 != 0:
-                self.logger.error("Incomplete specification of region")
+                component_manager.logger.error("Incomplete specification of region")
                 raise ValueError("Incomplete specification of region")
             regions = []
             total_chan = 0
@@ -1610,32 +1544,38 @@ class MccsTile(SKABaseDevice):
                 region = argin[i : i + 5]  # noqa: E203
                 start_channel = region[0]
                 if start_channel % 2 != 0:
-                    self.logger.error("Start channel in region must be even")
+                    component_manager.logger.error(
+                        "Start channel in region must be even"
+                    )
                     raise ValueError("Start channel in region must be even")
                 nchannels = region[1]
                 if nchannels % 8 != 0:
-                    self.logger.error(
+                    component_manager.logger.error(
                         "Nos. of channels in region must be multiple of 8"
                     )
                     raise ValueError("Nos. of channels in region must be multiple of 8")
                 beam_index = region[2]
                 if beam_index < 0 or beam_index > 47:
-                    self.logger.error("Beam_index is out side of range 0-47")
+                    component_manager.logger.error(
+                        "Beam_index is out side of range 0-47"
+                    )
                     raise ValueError("Beam_index is out side of range 0-47")
                 total_chan += nchannels
                 if total_chan > 384:
-                    self.logger.error("Too many channels specified > 384")
+                    component_manager.logger.error("Too many channels specified > 384")
                     raise ValueError("Too many channels specified > 384")
                 regions.append(region)
 
-            component_manager = self.target
             component_manager.set_beamformer_regions(regions)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SetBeamFormerRegions(self, argin):
+    def SetBeamFormerRegions(
+        self: MccsTile, argin: list[int]
+    ) -> DevVarLongStringArrayType:
         """
         Set the frequency regions which are going to be beamformed into each beam.
+
         region_array is defined as a 2D array, for a maximum of 48 regions. Total number
         of channels must be <= 384.
 
@@ -1647,12 +1587,9 @@ class MccsTile(SKABaseDevice):
         * substation_id - (int) Substation
         * subarray_id - (int) Subarray
 
-        :type argin: list(int)
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1663,57 +1600,56 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SetBeamFormerRegions")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ConfigureStationBeamformerCommand(ResponseCommand):
         """Class for handling the ConfigureStationBeamformer(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadCalibrationCoefficients command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.ConfigureStationBeamformerCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.ConfigureStationBeamformer`
-            command functionality.
+            Implement :py:meth:`.MccsTile.ConfigureStationBeamformer` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
+            component_manager = self.target
             params = json.loads(argin)
             start_channel = params.get("StartChannel", None)
             if start_channel is None:
-                self.logger.error("StartChannel is a mandatory parameter")
+                component_manager.logger.error("StartChannel is a mandatory parameter")
                 raise ValueError("StartChannel is a mandatory parameter")
             ntiles = params.get("NumTiles", None)
             if ntiles is None:
-                self.logger.error("NumTiles is a mandatory parameter")
+                component_manager.logger.error("NumTiles is a mandatory parameter")
                 raise ValueError("NumTiles is a mandatory parameter")
             is_first = params.get("IsFirst", None)
             if is_first is None:
-                self.logger.error("IsFirst is a mandatory parameter")
+                component_manager.logger.error("IsFirst is a mandatory parameter")
                 raise ValueError("IsFirst is a mandatory parameter")
             is_last = params.get("IsLast", None)
             if is_last is None:
-                self.logger.error("IsLast is a mandatory parameter")
+                component_manager.logger.error("IsLast is a mandatory parameter")
                 raise ValueError("IsLast is a mandatory parameter")
 
-            component_manager = self.target
             component_manager.initialise_beamformer(
                 start_channel, ntiles, is_first, is_last
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureStationBeamformer(self, argin):
+    def ConfigureStationBeamformer(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Initialise and start the station beamformer.
 
@@ -1724,12 +1660,9 @@ class MccsTile(SKABaseDevice):
         * IsFirst - (bool) specifies whether the tile is the first one in the station
         * IsLast - (bool) specifies whether the tile is the last one in the station
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1741,36 +1674,36 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ConfigureStationBeamformer")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class LoadCalibrationCoefficientsCommand(ResponseCommand):
         """Class for handling the LoadCalibrationCoefficients(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.LoadCalibrationCoefficientsCommand, argin: list[float]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.LoadCalibrationCoefficients`
-            command functionality.
+            Implement :py:meth:`.MccsTile.LoadCalibrationCoefficients` commands.
 
             :param argin: calibration coefficients
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
+            component_manager = self.target
             if len(argin) < 9:
-                self.logger.error("Insufficient calibration coefficients")
+                component_manager.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[1:]) % 8 != 0:
-                self.logger.error("Incomplete specification of coefficient")
+                component_manager.logger.error(
+                    "Incomplete specification of coefficient"
+                )
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
             calibration_coefficients = [
@@ -1783,17 +1716,20 @@ class MccsTile(SKABaseDevice):
                 for i in range(1, len(argin), 8)
             ]
 
-            component_manager = self.target
             component_manager.load_calibration_coefficients(
                 antenna, calibration_coefficients
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadCalibrationCoefficients(self, argin):
+    def LoadCalibrationCoefficients(
+        self: MccsTile, argin: list[float]
+    ) -> DevVarLongStringArrayType:
         """
-        Loads calibration coefficients (but does not apply them, this is performed by
-        switch_calibration_bank). The calibration coefficients may include any rotation
+        Load the calibration coefficients, but does not apply them.
+
+        This is performed by switch_calibration_bank.
+        The calibration coefficients may include any rotation
         matrix (e.g. the parallactic angle), but do not include the geometric delay.
 
         :param argin: list comprises:
@@ -1814,12 +1750,9 @@ class MccsTile(SKABaseDevice):
                 * 2: Y->X polarization cross element
                 * 3: Y polarization direct element
 
-        :type argin: list(float)
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1827,7 +1760,7 @@ class MccsTile(SKABaseDevice):
         >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
         >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
         >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
-        >>> out = [[v.real, v.imag] for v in inp]
+        >>> out = ([v.real, v.imag] for v in inp]
         >>> coefficients = list(itertools.chain.from_iterable(out))
         >>> coefficients.insert(0, float(antenna))
         >>> input = list(itertools.chain.from_iterable(coefficients))
@@ -1836,36 +1769,36 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("LoadCalibrationCoefficients")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class LoadCalibrationCurveCommand(ResponseCommand):
         """Class for handling the LoadCalibrationCurve(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadCalibrationCurve command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.LoadCalibrationCurveCommand, argin: list[float]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.LoadCalibrationCurve`
-            command functionality.
+            Implement:py:meth:`.MccsTile.LoadCalibrationCurve` command functionality.
 
             :param argin: antenna, beam, calibration coefficients
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
+            component_manager = self.target
             if len(argin) < 10:
-                self.logger.error("Insufficient calibration coefficients")
+                component_manager.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[2:]) % 8 != 0:
-                self.logger.error("Incomplete specification of coefficient")
+                component_manager.logger.error(
+                    "Incomplete specification of coefficient"
+                )
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
             beam = int(argin[1])
@@ -1879,16 +1812,19 @@ class MccsTile(SKABaseDevice):
                 for i in range(2, len(argin), 8)
             ]
 
-            component_manager = self.target
             component_manager.load_calibration_curve(
                 antenna, beam, calibration_coefficients
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadCalibrationCurve(self, argin):
+    def LoadCalibrationCurve(
+        self: MccsTile, argin: list[float]
+    ) -> DevVarLongStringArrayType:
         """
-        Load calibration curve. This is the frequency dependent response for a single
+        Load calibration curve.
+
+        This is the frequency dependent response for a single
         antenna and beam, as a function of frequency. It will be combined together with
         tapering coefficients and beam angles by ComputeCalibrationCoefficients, which
         will also make them active like SwitchCalibrationBank. The calibration
@@ -1913,12 +1849,9 @@ class MccsTile(SKABaseDevice):
                 * 2: Y->X polarization cross element
                 * 3: Y polarization direct element
 
-        :type argin: list(float)
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1927,7 +1860,7 @@ class MccsTile(SKABaseDevice):
         >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
         >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
         >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
-        >>> out = [[v.real, v.imag] for v in inp]
+        >>> out = ([v.real, v.imag] for v in inp]
         >>> coefficients = list(itertools.chain.from_iterable(out))
         >>> coefficients.insert(0, float(antenna))
         >>> coefficients.insert(1, float(beam))
@@ -1937,35 +1870,34 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("LoadCalibrationCurve")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class LoadBeamAngleCommand(ResponseCommand):
         """Class for handling the LoadBeamAngle(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadBeamAngle command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.LoadBeamAngleCommand, argin: list[float]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.LoadBeamAngle` command
-            functionality.
+            Implement:py:meth:`.MccsTile.LoadBeamAngle` command functionality.
 
             :param argin: angle coefficients
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.load_beam_angle(argin)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadBeamAngle(self, argin):
+    def LoadBeamAngle(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
         """
+        Load the beam angle coefficients.
+
         angle_coefficients in argin is an array of one element per beam, specifying a
         rotation angle, in radians, for the specified beam. The rotation is the same for
         all antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X
@@ -1973,12 +1905,10 @@ class MccsTile(SKABaseDevice):
         calibration.
 
         :param argin: list of angle coefficients for each beam
-        :type argin: list(float)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -1988,55 +1918,54 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("LoadBeamAngle")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class LoadAntennaTaperingCommand(ResponseCommand):
         """Class for handling the LoadAntennaTapering(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadAntennaTapering command completed OK"
 
-        def __init__(self, target, state_model, logger, antennas_per_tile):
+        def __init__(
+            self: MccsTile.LoadAntennaTaperingCommand,
+            target: object,
+            state_model: OpStateModel,
+            logger: logging.Logger,
+            antennas_per_tile: int,
+        ) -> None:
             """
             Initialise a new LoadAntennaTaperingCommand instance.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
                 command
-            :type target: object
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.base.op_state_model.OpStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
             :param antennas_per_tile: the number of antennas per tile
-            :type antennas_per_tile: int
             """
             super().__init__(target, state_model, logger)
             self._antennas_per_tile = antennas_per_tile
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.LoadAntennaTaperingCommand, argin: list[float]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.LoadAntennaTapering`
-            command functionality.
+            Implement :py:meth:`.MccsTile.LoadAntennaTapering` command functionality.
 
             :param argin: beam index, antenna tapering coefficients
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
+            component_manager = self.target
             if len(argin) < self._antennas_per_tile + 1:
-                self.logger.error(
+                component_manager.logger.error(
                     f"Insufficient coefficients should be {self._antennas_per_tile+1}"
                 )
                 raise ValueError(
@@ -2045,27 +1974,28 @@ class MccsTile(SKABaseDevice):
 
             beam = int(argin[0])
             if beam < 0 or beam > 47:
-                self.logger.error("Beam index should be in range 0 to 47")
+                component_manager.logger.error("Beam index should be in range 0 to 47")
                 raise ValueError("Beam index should be in range 0 to 47")
 
             tapering = argin[1:]
-            component_manager = self.target
             component_manager.load_antenna_tapering(beam, tapering)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadAntennaTapering(self, argin):
+    def LoadAntennaTapering(
+        self: MccsTile, argin: list[float]
+    ) -> DevVarLongStringArrayType:
         """
+        Load antenna tapering coefficients.
+
         tapering_coefficients in argin is a vector contains a value for each antenna the
         TPM processes. Default at initialisation is 1.0.
 
         :param argin: beam index, list of tapering coefficients for each antenna
-        :type argin: list(float)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2077,27 +2007,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("LoadAntennaTapering")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SwitchCalibrationBankCommand(ResponseCommand):
         """Class for handling the SwitchCalibrationBank(argin) command."""
 
         SUCCEEDED_MESSAGE = "SwitchCalibrationBank command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SwitchCalibrationBankCommand, argin: int
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SwitchCalibrationBank`
-            command functionality.
+            Implement :py:meth:`.MccsTile.SwitchCalibrationBank` command functionality.
 
             :param argin: switch time
-            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             switch_time = argin
             component_manager = self.target
@@ -2105,17 +2032,15 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
-    def SwitchCalibrationBank(self, argin):
+    def SwitchCalibrationBank(self: MccsTile, argin: int) -> DevVarLongStringArrayType:
         """
         Load the calibration coefficients at the specified time delay.
 
         :param argin: switch time
-        :type argin: int
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2124,108 +2049,104 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SwitchCalibrationBank")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SetPointingDelayCommand(ResponseCommand):
         """Class for handling the SetPointingDelay(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetPointingDelay command completed OK"
 
-        def __init__(self, target, state_model, logger, antennas_per_tile):
+        def __init__(
+            self: MccsTile.SetPointingDelayCommand,
+            target: object,
+            state_model: OpStateModel,
+            logger: logging.Logger,
+            antennas_per_tile: int,
+        ) -> None:
             """
             Initialise a new SetPointingDelayCommand instance.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
                 command
-            :type target: object
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.base.op_state_model.OpStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
             :param antennas_per_tile: the number of antennas per tile
-            :type antennas_per_tile: int
             """
             super().__init__(target, state_model, logger)
             self._antennas_per_tile = antennas_per_tile
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SetPointingDelayCommand, argin: list[float]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SetPointingDelay` command
-            functionality.
+            Implement :py:meth:`.MccsTile.SetPointingDelay` command functionality.
 
             :param argin: an array containing a beam index and antenna
                 delays
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
+            component_manager = self.target
             if len(argin) != self._antennas_per_tile * 2 + 1:
-                self.logger.error("Insufficient parameters")
+                component_manager.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
             if beam_index < 0 or beam_index > 7:
-                self.logger.error("Invalid beam index")
+                component_manager.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
             for i in range(self._antennas_per_tile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
 
-            component_manager = self.target
             component_manager.set_pointing_delay(delay_array, beam_index)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def SetPointingDelay(self, argin):
+    def SetPointingDelay(
+        self: MccsTile, argin: list[float]
+    ) -> DevVarLongStringArrayType:
         """
-        Specifies the delay in seconds and the delay rate in seconds/second. The
-        delay_array specifies the delay and delay rate for each antenna. beam_index
+        Specify the delay in seconds and the delay rate in seconds/second.
+
+        The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
         :param argin: the delay in seconds and the delay rate in
             seconds/second.
-        :type argin: list(float)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("SetPointingDelay")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class LoadPointingDelayCommand(ResponseCommand):
         """Class for handling the LoadPointingDelay(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadPointingDelay command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.LoadPointingDelayCommand, argin: int
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.LoadPointingDelay` command
-            functionality.
+            Implement :py:meth:`.MccsTile.LoadPointingDelay` command functionality.
 
             :param argin: load time
-            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             load_time = argin
             component_manager = self.target
@@ -2233,17 +2154,15 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
-    def LoadPointingDelay(self, argin):
+    def LoadPointingDelay(self: MccsTile, argin: int) -> DevVarLongStringArrayType:
         """
-        Loads the pointing delays at the specified time delay.
+        Load the pointing delays at the specified time delay.
 
         :param argin: time delay (default = 0)
-        :type argin: int
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2252,28 +2171,25 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("LoadPointingDelay")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class StartBeamformerCommand(ResponseCommand):
         """Class for handling the StartBeamformer(argin) command."""
 
         SUCCEEDED_MESSAGE = "StartBeamformer command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.StartBeamformerCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.StartBeamformer` command
-            functionality.
+            Implement :py:meth:`.MccsTile.StartBeamformer` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
                 "StartTime" and "Duration"
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
 
@@ -2284,7 +2200,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartBeamformer(self, argin):
+    def StartBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Start the beamformer at the specified time delay.
 
@@ -2297,7 +2213,6 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2308,38 +2223,35 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("StartBeamformer")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class StopBeamformerCommand(ResponseCommand):
         """Class for handling the StopBeamformer() command."""
 
         SUCCEEDED_MESSAGE = "StopBeamformer command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.StopBeamformerCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.StopBeamformer` command
-            functionality.
+            Implement :py:meth:`.MccsTile.StopBeamformer` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.stop_beamformer()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def StopBeamformer(self):
+    def StopBeamformer(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop the beamformer.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2348,28 +2260,25 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("StopBeamformer")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ConfigureIntegratedChannelDataCommand(ResponseCommand):
         """Class for handling the ConfigureIntegratedChannelData(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.ConfigureIntegratedChannelDataCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Stateless do-hook for implementation of
-            :py:meth:`.MccsTile.ConfigureIntegratedChannelData`
-            command functionality.
+            Implement :py:meth:`.MccsTile.ConfigureIntegratedChannelData` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
                 "integration time", "first_channel", "last_channel"
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             integration_time = params.get("IntegrationTime", 0.5)
@@ -2385,11 +2294,14 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureIntegratedChannelData(self, argin):
+    def ConfigureIntegratedChannelData(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
         """
-        Configure and start the transmission of integrated channel data with the
-        provided integration time, first channel and last channel. Data are sent
-        continuously until the StopIntegratedData command is run.
+        Configure and start the transmission of integrated channel data.
+
+        Using the provided integration time, first channel and last channel.
+        Data are sent continuously until the StopIntegratedData command is run.
 
         :param argin: json dictionary with optional keywords:
 
@@ -2400,7 +2312,6 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2409,28 +2320,25 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ConfigureIntegratedChannelData")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ConfigureIntegratedBeamDataCommand(ResponseCommand):
         """Class for handling the ConfigureIntegratedBeamData(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.ConfigureIntegratedBeamDataCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.ConfigureIntegratedBeamData`
-            command functionality.
+            Implement :py:meth:`.MccsTile.ConfigureIntegratedBeamData` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
                 "integration time", "first_channel", "last_channel"
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             integration_time = params.get("IntegrationTime", 0.5)
@@ -2446,11 +2354,14 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureIntegratedBeamData(self, argin):
+    def ConfigureIntegratedBeamData(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
         """
-        Configure the transmission of integrated beam data with the provided integration
-        time, the first channel and the last channel. The data are sent continuously
-        until the StopIntegratedData command is run.
+        Configure the transmission of integrated beam data.
+
+        Using the provided integration time, the first channel and the last channel.
+        The data are sent continuously until the StopIntegratedData command is run.
 
         :param argin: json dictionary with optional keywords:
 
@@ -2461,7 +2372,6 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2470,62 +2380,56 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ConfigureIntegratedBeamData")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class StopIntegratedDataCommand(ResponseCommand):
         """Class for handling the StopIntegratedData command."""
 
         SUCCEEDED_MESSAGE = "StopIntegratedData command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.StopIntegratedDataCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.StopIntegratedData`
-            command functionality.
+            Implement :py:meth:`.MccsTile.StopIntegratedData` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.stop_integrated_data()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def StopIntegratedData(self):
+    def StopIntegratedData(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop the integrated  data.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StopIntegratedData")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SendRawDataCommand(ResponseCommand):
         """Class for handling the SendRawData(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendRawData command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SendRawDataCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SendRawData` command
-            functionality.
+            Implement :py:meth:`.MccsTile.SendRawData` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             sync = params.get("Sync", False)
@@ -2537,7 +2441,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendRawData(self, argin):
+    def SendRawData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Transmit a snapshot containing raw antenna data.
 
@@ -2550,7 +2454,6 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2561,27 +2464,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SendRawData")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SendChannelisedDataCommand(ResponseCommand):
         """Class for handling the SendChannelisedData(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendChannelisedData command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SendChannelisedDataCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SendChannelisedData` command
-            functionality.
+            Implement :py:meth:`.MccsTile.SendChannelisedData` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             number_of_samples = params.get("NSamples", 1024)
@@ -2601,10 +2501,9 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedData(self, argin):
+    def SendChannelisedData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
-        Transmit a snapshot containing channelized data totalling number_of_samples
-        spectra.
+        Transmit a snapshot of channelized data totalling number_of_samples spectra.
 
         :param argin: json dictionary with optional keywords:
 
@@ -2617,7 +2516,6 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2628,54 +2526,54 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SendChannelisedData")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SendChannelisedDataContinuousCommand(ResponseCommand):
         """Class for handling the SendChannelisedDataContinuous(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataContinuous command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SendChannelisedDataContinuousCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SendChannelisedDataContinuous`
-            command functionality.
+            Implement :py:meth:`.MccsTile.SendChannelisedDataContinuous` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
+            component_manager = self.target
             params = json.loads(argin)
             channel_id = params.get("ChannelID")
             if channel_id is None:
-                self.logger.error("ChannelID is a mandatory parameter")
+                component_manager.logger.error("ChannelID is a mandatory parameter")
                 raise ValueError("ChannelID is a mandatory parameter")
             number_of_samples = params.get("NSamples", 128)
             wait_seconds = params.get("WaitSeconds", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
-            component_manager = self.target
             component_manager.send_channelised_data_continuous(
                 channel_id, number_of_samples, wait_seconds, timestamp, seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedDataContinuous(self, argin):
+    def SendChannelisedDataContinuous(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
         """
-        Send data from channel channel continuously (until stopped with
-        StopDataTransmission command)
+        Send data from channel channel continuously.
+
+        Continues until stopped with StopDataTransmission command.
 
         :param argin: json dictionary with 1 mandatory and optional keywords:
 
@@ -2685,12 +2583,9 @@ class MccsTile(SKABaseDevice):
         * Timestamp - (int??) When to start
         * Seconds - (float) When to synchronise
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2701,27 +2596,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SendChannelisedDataContinuous")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SendBeamDataCommand(ResponseCommand):
         """Class for handling the SendBeamData(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendBeamData command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SendBeamDataCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SendBeamData` command
-            functionality.
+            Implement :py:meth:`.MccsTile.SendBeamData` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             timestamp = params.get("Timestamp", None)
@@ -2732,7 +2624,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendBeamData(self, argin):
+    def SendBeamData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Transmit a snapshot containing beamformed data.
 
@@ -2741,12 +2633,9 @@ class MccsTile(SKABaseDevice):
         * Timestamp - (string??) When to send
         * Seconds - (float) When to synchronise
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2757,38 +2646,35 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SendBeamData")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class StopDataTransmissionCommand(ResponseCommand):
         """Class for handling the StopDataTransmission() command."""
 
         SUCCEEDED_MESSAGE = "StopDataTransmission command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.StopDataTransmissionCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.StopDataTransmission`
-            command functionality.
+            Implement :py:meth:`.MccsTile.StopDataTransmission` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.stop_data_transmission()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def StopDataTransmission(self):
+    def StopDataTransmission(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop data transmission from board.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2797,40 +2683,39 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("StopDataTransmission")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ComputeCalibrationCoefficientsCommand(ResponseCommand):
         """Class for handling the ComputeCalibrationCoefficients() command."""
 
         SUCCEEDED_MESSAGE = "ComputeCalibrationCoefficients command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.ComputeCalibrationCoefficientsCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.ComputeCalibrationCoefficients`
-            command functionality.
+            Implement :py:meth:`.MccsTile.ComputeCalibrationCoefficients` commands.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.compute_calibration_coefficients()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def ComputeCalibrationCoefficients(self):
+    def ComputeCalibrationCoefficients(self: MccsTile) -> DevVarLongStringArrayType:
         """
-        Compute the calibration coefficients from previously specified gain curves,
-        tapering weights and beam angles, load them in the hardware. It must be followed
+        Compute the calibration coefficients.
+
+        Use previously specified gain curves, tapering weights and beam angles,
+        load them in the hardware. It must be followed
         by switch_calibration_bank() to make these active.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2839,27 +2724,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ComputeCalibrationCoefficients")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class StartAcquisitionCommand(ResponseCommand):
         """Class for handling the StartAcquisition(argin) command."""
 
         SUCCEEDED_MESSAGE = "StartAcquisition command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.StartAcquisitionCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.StartAcquisition` command
-            functionality.
+            Implement :py:meth:`.MccsTile.StartAcquisition` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             start_time = params.get("StartTime", None)
@@ -2870,7 +2752,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartAcquisition(self, argin):
+    def StartAcquisition(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Start data acquisition.
 
@@ -2879,12 +2761,9 @@ class MccsTile(SKABaseDevice):
         * StartTime - (int) start time
         * Delay - (int) delay start
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2895,27 +2774,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("StartAcquisition")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SetTimeDelaysCommand(ResponseCommand):
         """Class for handling the SetTimeDelays(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetTimeDelays command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SetTimeDelaysCommand, argin: list[float]
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SetTimeDelays` command
-            functionality.
+            Implement:py:meth:`.MccsTile.SetTimeDelays` command functionality.
 
             :param argin: time delays
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             delays = argin
             component_manager = self.target
@@ -2923,19 +2799,18 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def SetTimeDelays(self, argin):
+    def SetTimeDelays(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
         """
-        Set coarse zenith delay for input ADC streams Delay specified in nanoseconds,
-        nominal is 0.
+        Set coarse zenith delay for input ADC streams.
+
+        Delay specified in nanoseconds, nominal is 0.
 
         :param argin: the delay in samples, positive delay adds delay
                        to the signal stream
-        :type argin: list(int)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2945,27 +2820,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SetTimeDelays")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SetCspRoundingCommand(ResponseCommand):
         """Class for handling the SetCspRounding(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetCspRounding command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SetCspRoundingCommand, argin: float
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SetCspRounding` command
-            functionality.
+            Implement :py:meth:`.MccsTile.SetCspRounding` command functionality.
 
             :param argin: csp rounding
-            :type argin: float
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             rounding = argin
             component_manager = self.target
@@ -2973,17 +2845,15 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevDouble", dtype_out="DevVarLongStringArray")
-    def SetCspRounding(self, argin):
+    def SetCspRounding(self: MccsTile, argin: float) -> DevVarLongStringArrayType:
         """
         Set output rounding for CSP.
 
         :param argin: the rounding
-        :type argin: float
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -2992,37 +2862,35 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SetCspRounding")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SetLmcIntegratedDownloadCommand(ResponseCommand):
         """Class for handling the SetLmcIntegratedDownload(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SetLmcIntegratedDownloadCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SetLmcIntegratedDownload`
-            command functionality.
+            Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
+            component_manager = self.target
             params = json.loads(argin)
             mode = params.get("Mode", None)
             if mode is None:
-                self.logger.error("Mode is a mandatory parameter")
+                component_manager.logger.error("Mode is a mandatory parameter")
                 raise ValueError("Mode is a mandatory parameter")
             channel_payload_length = params.get("ChannelPayloadLength", 2)
             beam_payload_length = params.get("BeamPayloadLength", 2)
@@ -3031,7 +2899,6 @@ class MccsTile(SKABaseDevice):
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
 
-            component_manager = self.target
             component_manager.set_lmc_integrated_download(
                 mode,
                 channel_payload_length,
@@ -3044,7 +2911,9 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetLmcIntegratedDownload(self, argin):
+    def SetLmcIntegratedDownload(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Configure link and size of control data.
 
@@ -3058,12 +2927,9 @@ class MccsTile(SKABaseDevice):
         * DstPort - (int) Destination port for integrated data streams
         * LmcMac: - (int) LMC Mac address is required for 10G lane configuration
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3075,27 +2941,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SetLmcIntegratedDownload")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SendRawDataSynchronisedCommand(ResponseCommand):
         """Class for handling the SendRawDataSynchronised(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendRawDataSynchronised command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SendRawDataSynchronisedCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SendRawDataSynchronised`
-            command functionality.
+            Implement :py:meth:`.MccsTile.SendRawDataSynchronised` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             timestamp = params.get("Timestamp", None)
@@ -3108,7 +2971,9 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendRawDataSynchronised(self, argin):
+    def SendRawDataSynchronised(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Send synchronised raw data.
 
@@ -3117,12 +2982,9 @@ class MccsTile(SKABaseDevice):
         * Timestamp - (string??) When to send
         * Seconds - (float) When to synchronise
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3133,47 +2995,44 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SendRawDataSynchronised")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SendChannelisedDataNarrowbandCommand(ResponseCommand):
         """Class for handling the SendChannelisedDataNarrowband(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataNarrowband command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.SendChannelisedDataNarrowbandCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SendChannelisedDataNarrowband`
-            command functionality.
+            Implement :py:meth:`.MccsTile.SendChannelisedDataNarrowband` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
+            component_manager = self.target
             params = json.loads(argin)
             frequency = params.get("Frequency", None)
             if frequency is None:
-                self.logger.error("Frequency is a mandatory parameter")
+                component_manager.logger.error("Frequency is a mandatory parameter")
                 raise ValueError("Frequency is a mandatory parameter")
             round_bits = params.get("RoundBits", None)
             if round_bits is None:
-                self.logger.error("RoundBits is a mandatory parameter")
+                component_manager.logger.error("RoundBits is a mandatory parameter")
                 raise ValueError("RoundBits is a mandatory parameter")
             number_of_samples = params.get("NSamples", 128)
             wait_seconds = params.get("WaitSeconds", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            component_manager = self.target
             component_manager.send_channelised_data_narrowband(
                 frequency,
                 round_bits,
@@ -3185,10 +3044,13 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedDataNarrowband(self, argin):
+    def SendChannelisedDataNarrowband(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
         """
-        Continuously send channelised data from a single channel end data from channel
-        channel continuously (until stopped)
+        Continuously send channelised data from a single channel.
+
+        and data from channel continuously (until stopped)
 
         This is a special mode used for UAV campaigns and not really
         part of the standard signal processing chain. I don’t know if
@@ -3204,12 +3066,9 @@ class MccsTile(SKABaseDevice):
         * Timestamp - (string??) When to start
         * Seconds - (float) When to synchronise
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3221,38 +3080,35 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SendChannelisedDataNarrowband")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class TweakTransceiversCommand(ResponseCommand):
         """Class for handling the TweakTransceivers() command."""
 
         SUCCEEDED_MESSAGE = "TweakTransceivers command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.TweakTransceiversCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.TweakTransceivers` command
-            functionality.
+            Implement :py:meth:`.MccsTile.TweakTransceivers` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.tweak_transceivers()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def TweakTransceivers(self):
+    def TweakTransceivers(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Tweak the transceivers.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3261,38 +3117,35 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("TweakTransceivers")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class PostSynchronisationCommand(ResponseCommand):
         """Class for handling the PostSynchronisation() command."""
 
         SUCCEEDED_MESSAGE = "PostSynchronisation command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.PostSynchronisationCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.PostSynchronisation` command
-            functionality.
+            Implement :py:meth:`.MccsTile.PostSynchronisation` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.post_synchronisation()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def PostSynchronisation(self):
+    def PostSynchronisation(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Post tile configuration synchronization.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3301,38 +3154,35 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("PostSynchronisation")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class SyncFpgasCommand(ResponseCommand):
         """Class for handling the SyncFpgas() command."""
 
         SUCCEEDED_MESSAGE = "SyncFpgas command completed OK"
 
-        def do(self):
+        def do(  # type: ignore[override]
+            self: MccsTile.SyncFpgasCommand,
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.SyncFpgas` command
-            functionality.
+            Implement :py:meth:`.MccsTile.SyncFpgas` command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
             component_manager.sync_fpgas()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def SyncFpgas(self):
+    def SyncFpgas(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Synchronise the FPGAs.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3341,27 +3191,24 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("SyncFpgas")
         (return_code, message) = handler()
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class CalculateDelayCommand(ResponseCommand):
         """Class for handling the CalculateDelay(argin) command."""
 
         SUCCEEDED_MESSAGE = "CalculateDelay command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.CalculateDelayCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.CalculateDelay` command
-            functionality.
+            Implement :py:meth:`.MccsTile.CalculateDelay` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks
                 mandatory parameters
@@ -3369,30 +3216,30 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
+            component_manager = self.target
             params = json.loads(argin)
             current_delay = params.get("CurrentDelay", None)
             if current_delay is None:
-                self.logger.error("CurrentDelay is a mandatory parameter")
+                component_manager.logger.error("CurrentDelay is a mandatory parameter")
                 raise ValueError("CurrentDelay is a mandatory parameter")
             current_tc = params.get("CurrentTC", None)
             if current_tc is None:
-                self.logger.error("CurrentTC is a mandatory parameter")
+                component_manager.logger.error("CurrentTC is a mandatory parameter")
                 raise ValueError("CurrentTC is a mandatory parameter")
             ref_lo = params.get("RefLo", None)
             if ref_lo is None:
-                self.logger.error("RefLo is a mandatory parameter")
+                component_manager.logger.error("RefLo is a mandatory parameter")
                 raise ValueError("RefLo is a mandatory parameter")
             ref_hi = params.get("RefHi", None)
             if ref_hi is None:
-                self.logger.error("RefHi is a mandatory parameter")
+                component_manager.logger.error("RefHi is a mandatory parameter")
                 raise ValueError("RefHi is a mandatory parameter")
 
-            component_manager = self.target
             component_manager.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def CalculateDelay(self, argin):
+    def CalculateDelay(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Calculate delay.
 
@@ -3403,12 +3250,9 @@ class MccsTile(SKABaseDevice):
         * RefLo - (float??) Low reference
         * RefHi -(float??) High reference
 
-        :type argin: str
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3419,21 +3263,21 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("CalculateDelay")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
     class ConfigureTestGeneratorCommand(BaseCommand):
         """Class for handling the ConfigureTestGenerator(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
 
-        def do(self, argin):
+        def do(  # type: ignore[override]
+            self: MccsTile.ConfigureTestGeneratorCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
-            Implementation of
-            :py:meth:`.MccsTile.ConfigureTestGenerator` command
-            functionality.
+            Implement :py:meth:`.MccsTile.ConfigureTestGenerator` commands.
 
             :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
+
             :raises ValueError: if the JSON input has invalid parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
@@ -3441,7 +3285,6 @@ class MccsTile(SKABaseDevice):
             :return: A tuple containing a return code and a string
                    message indicating status. The message is for
                    information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             component_manager = self.target
 
@@ -3503,19 +3346,18 @@ class MccsTile(SKABaseDevice):
             component_manager.test_generator_active = active
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-        def check_allowed(self):
+        def check_allowed(self: MccsTile.ConfigureTestGeneratorCommand) -> bool:
             """
             Check if command is allowed.
 
             It is allowed only in maintenance mode.
 
             :returns: whether the command is allowed
-            :rtype: bool
             """
-            return self.state_model.admin_mode == AdminMode.MAINTENANCE
+            return self.target.admin_mode_model.admin_mode == AdminMode.MAINTENANCE
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureTestGenerator(self, argin):
+    def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Set the test signal generator.
 
@@ -3542,18 +3384,11 @@ class MccsTile(SKABaseDevice):
         * SetTime: time at which the generator is set, for synchronization
             among different TPMs.
         * AdcChannels: list of adc channels which will be substituted with
-            the test signal. Channels are numbered from 0 to 31, with each
-            even-odd pair (2N, 2N+1) corresponding to X and Y polarizations
-            of channel N. Default to all signals if at least one generator
-            is specified, or none if no generator is specified (empty
-            json string).
 
-        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -3565,25 +3400,22 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ConfigureTestGenerator")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
+        return ([return_code], [message])
 
 
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):  # pragma: no cover
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return MccsTile.run_server(args=args, **kwargs)
+    return MccsTile.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

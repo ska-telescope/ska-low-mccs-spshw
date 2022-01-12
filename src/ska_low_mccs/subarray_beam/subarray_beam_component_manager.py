@@ -3,21 +3,18 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements component management for subarray beams."""
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast
+from typing import Any, Callable, cast, Optional
 
 from ska_low_mccs.subarray_beam import SubarrayBeam
 from ska_low_mccs.component import (
     check_communicating,
     CommunicationStatus,
-    MessageQueue,
     ObjectComponentManager,
 )
 
@@ -31,6 +28,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         is_configured_changed_callback: Callable[[bool], None],
@@ -39,6 +37,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -50,11 +50,10 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
         self._is_configured_changed_callback = is_configured_changed_callback
 
-        self._message_queue = MessageQueue(logger)
         super().__init__(
             SubarrayBeam(logger),
-            self._message_queue,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,
@@ -63,6 +62,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     __PASSTHROUGH = [
         "subarray_id",
         "subarray_beam_id",
+        "station_beam_ids",
         "station_ids",
         "logical_beam_id",
         "update_rate",

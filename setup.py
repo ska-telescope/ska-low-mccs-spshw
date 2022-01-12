@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 Standard setup.py script.
 """
@@ -22,7 +28,6 @@ setuptools.setup(
     license=release_module["license"],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    package_data={"": ["schemas/*.json"]},
     url=release_module["url"],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -40,6 +45,7 @@ setuptools.setup(
             "MccsAntenna=ska_low_mccs.antenna.antenna_device:main",
             "MccsAPIU=ska_low_mccs.apiu.apiu_device:main",
             "MccsController=ska_low_mccs.controller.controller_device:main",
+            "MccsPasdBus=ska_low_mccs.pasd_bus.pasd_bus_device:main",
             "MccsSubarray=ska_low_mccs.subarray.subarray_device:main",
             "MccsSubarrayBeam=ska_low_mccs.subarray_beam.subarray_beam_device:main",
             "MccsSubrack=ska_low_mccs.subrack.subrack_device:main",
@@ -52,11 +58,12 @@ setuptools.setup(
         ]
     },
     install_requires=[
-        "ska-tango-base >= 0.9.1",
+        "ska-tango-base == 0.12.0",
         "pytango >= 9.3.3",
         "jsonschema >= 3.2.0",
         "fire",
         "requests",
     ],
+    include_package_data=True,
     zip_safe=False,
 )

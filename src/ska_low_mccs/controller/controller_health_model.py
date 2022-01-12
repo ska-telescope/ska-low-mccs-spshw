@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """An implementation of a health model for a controller."""
 from __future__ import annotations
 
@@ -28,6 +26,7 @@ class ControllerHealthModel(HealthModel):
         station_fqdns: Sequence[str],
         subrack_fqdns: Sequence[str],
         subarray_beam_fqdns: Sequence[str],
+        station_beam_fqdns: Sequence[str],
         health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
@@ -37,6 +36,8 @@ class ControllerHealthModel(HealthModel):
         :param subrack_fqdns: the FQDNs of this controller's subracks
         :param subarray_beam_fqdns: the FQDNs of this controller's
             subarray beams
+        :param station_beam_fqdns: the FQDNs of this controller's
+            station beams
         :param health_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
@@ -50,6 +51,10 @@ class ControllerHealthModel(HealthModel):
         self._subarray_beam_health: dict[str, Optional[HealthState]] = {
             subarray_beam_fqdn: HealthState.UNKNOWN
             for subarray_beam_fqdn in subarray_beam_fqdns
+        }
+        self._station_beam_health: dict[str, Optional[HealthState]] = {
+            station_beam_fqdn: HealthState.UNKNOWN
+            for station_beam_fqdn in station_beam_fqdns
         }
         super().__init__(health_changed_callback)
 
@@ -106,6 +111,24 @@ class ControllerHealthModel(HealthModel):
             self._subarray_beam_health[subarray_beam_fqdn] = subarray_beam_health
             self.update_health()
 
+    def station_beam_health_changed(
+        self: ControllerHealthModel,
+        station_beam_fqdn: str,
+        station_beam_health: Optional[HealthState],
+    ) -> None:
+        """
+        Handle a change in station beam health.
+
+        :param station_beam_fqdn: the FQDN of the station beam whose
+            health has changed
+        :param station_beam_health: the health state of the specified
+            station beam, or None if the station beam's admin mode
+            indicates that its health should not be rolled up.
+        """
+        if self._station_beam_health.get(station_beam_fqdn) != station_beam_health:
+            self._station_beam_health[station_beam_fqdn] = station_beam_health
+            self.update_health()
+
     def evaluate_health(
         self: ControllerHealthModel,
     ) -> HealthState:
@@ -135,5 +158,7 @@ class ControllerHealthModel(HealthModel):
             if health in self._subrack_health.values():
                 return health
             if health in self._subarray_beam_health.values():
+                return health
+            if health in self._station_beam_health.values():
                 return health
         return HealthState.OK

@@ -1,9 +1,19 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
-This module contains pytest fixtures and other test setups common to all ska_low_mccs
-tests: unit, integration and functional (BDD).
+This module contains pytest fixtures other test setups.
+
+These are common to all ska-low-mccs tests: unit, integration and
+functional (BDD).
 """
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Any, Callable, Generator, Set, cast
 import pytest
@@ -36,7 +46,8 @@ with open("testing/testbeds.yaml", "r") as stream:
     _testbeds: dict[str, set[str]] = yaml.safe_load(stream)
 
 
-def pytest_configure(config: pytest.config.Config) -> None:
+# TODO: pytest is partially typehinted but does not yet export Config
+def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
 
@@ -47,10 +58,15 @@ def pytest_configure(config: pytest.config.Config) -> None:
         config.addinivalue_line("markers", f"needs_{tag}")
 
 
-def pytest_addoption(parser: pytest.config.ArgumentParser) -> None:
+# TODO: pytest is partially typehinted but does not yet export ArgumentParser
+def pytest_addoption(
+    parser: pytest.config.ArgumentParser,  # type: ignore[name-defined]
+) -> None:
     """
-    Pytest hook; implemented to add the `--testbed` option, used to specify the context
-    in which the test is running. This could be used, for example, to skip tests that
+    Implement the add the `--testbed` option.
+
+    Used to specify the context in which the test is running.
+    This could be used, for example, to skip tests that
     have requirements not met by the context.
 
     :param parser: the command line options parser
@@ -63,8 +79,9 @@ def pytest_addoption(parser: pytest.config.ArgumentParser) -> None:
     )
 
 
+# TODO: pytest is partially typehinted but does not yet export Config
 def pytest_collection_modifyitems(
-    config: pytest.config.Config, items: list[pytest.Item]
+    config: pytest.Config, items: list[pytest.Item]  # type: ignore[name-defined]
 ) -> None:
     """
     Modify the list of tests to be run, after pytest has collected them.
@@ -120,7 +137,9 @@ def initial_mocks() -> dict[str, unittest.mock.Mock]:
 @pytest.fixture()
 def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
+    Fixture that provides a mock factory for device proxy mocks.
+
+    This default factory
     provides vanilla mocks, but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 
@@ -142,8 +161,9 @@ def tango_harness_factory(
     TangoHarness,
 ]:
     """
-    Returns a factory for creating a test harness for testing Tango devices. The Tango
-    context used depends upon the context in which the tests are being run, as specified
+    Return a factory for creating a test harness for testing Tango devices.
+
+    The Tango context used depends upon the context in which the tests are being run, as specified
     by the `--testbed` option.
 
     If the context is "test", then this harness deploys the specified
@@ -169,7 +189,9 @@ def tango_harness_factory(
 
     class _CPTCTangoHarness(ClientProxyTangoHarness, TestContextTangoHarness):
         """
-        A Tango test harness with the client proxy functionality of
+        A Tango test harness.
+
+        With the client proxy functionality of
         :py:class:`~ska_low_mccs.testing.tango_harness.ClientProxyTangoHarness`
         within the lightweight test context provided by
         :py:class:`~ska_low_mccs.testing.tango_harness.TestContextTangoHarness`.
@@ -186,7 +208,7 @@ def tango_harness_factory(
         initial_mocks: dict[str, unittest.mock.Mock],
     ) -> TangoHarness:
         """
-        Builds the Tango test harness.
+        Build the Tango test harness.
 
         :param tango_config: basic configuration information for a tango
             test harness
@@ -223,8 +245,9 @@ def tango_harness_factory(
 @pytest.fixture()
 def tango_config() -> dict[str, Any]:
     """
-    Fixture that returns basic configuration information for a Tango test harness, such
-    as whether or not to run in a separate process.
+    Fixture that returns basic configuration information for a Tango test harness.
+
+    For example whether or not to run in a separate process.
 
     :return: a dictionary of configuration key-value pairs
     """
@@ -248,7 +271,7 @@ def tango_harness(
     initial_mocks: dict[str, unittest.mock.Mock],
 ) -> Generator[TangoHarness, None, None]:
     """
-    Creates a test harness for testing Tango devices.
+    Create a test harness for testing Tango devices.
 
     :param tango_harness_factory: a factory that provides a test harness
         for testing tango devices
@@ -279,11 +302,94 @@ def logger() -> logging.Logger:
 
 
 @pytest.fixture()
-def mock_change_event_callback_factory() -> Callable[[str], MockChangeEventCallback]:
+def mock_callback_called_timeout() -> float:
+    """
+    Return the time to wait for a mock callback to be called when a call is expected.
+
+    This is a high value because calls will usually arrive much much
+    sooner, but we should be prepared to wait plenty of time before
+    giving up and failing a test.
+
+    :return: the time to wait for a mock callback to be called when a
+        call is asserted.
+    """
+    return 7.5
+
+
+@pytest.fixture()
+def mock_callback_not_called_timeout() -> float:
+    """
+    Return the time to wait for a mock callback to be called when a call is unexpected.
+
+    An assertion that a callback has not been called can only be passed
+    once we have waited the full timeout period without a call being
+    received. Thus, having a high value for this timeout will make such
+    assertions very slow. It is better to keep this value fairly low,
+    and accept the risk of an assertion passing prematurely.
+
+    :return: the time to wait for a mock callback to be called when a
+        call is unexpected.
+    """
+    return 0.5
+
+
+@pytest.fixture()
+def mock_change_event_callback_factory(
+    mock_callback_called_timeout: float,
+    mock_callback_not_called_timeout: float,
+) -> Callable[[str], MockChangeEventCallback]:
     """
     Return a factory that returns a new mock change event callback each call.
+
+    :param mock_callback_called_timeout: the time to wait for a mock
+        callback to be called when a call is expected
+    :param mock_callback_not_called_timeout: the time to wait for a mock
+        callback to be called when a call is unexpected
 
     :return: a factory that returns a new mock change event callback
         each time it is called with the name of a device attribute.
     """
-    return MockChangeEventCallback
+    return functools.partial(
+        MockChangeEventCallback,
+        called_timeout=mock_callback_called_timeout,
+        not_called_timeout=mock_callback_not_called_timeout,
+    )
+
+
+@pytest.fixture()
+def lrc_result_changed_callback_factory(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> Callable[[], MockChangeEventCallback]:
+    """
+    Return a mock change event callback factory for device LRC result change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback factory to be registered with
+        a device via a change event subscription, so that it gets called
+        when the device LRC in queue changes.
+    """
+
+    def _factory() -> MockChangeEventCallback:
+        return mock_change_event_callback_factory("longRunningCommandResult")
+
+    return _factory
+
+
+@pytest.fixture()
+def lrc_result_changed_callback(
+    lrc_result_changed_callback_factory: Callable[[], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for a device LRC result change.
+
+    :param lrc_result_changed_callback_factory: fixture that provides a mock
+        change event callback factory for LRC result change events.
+
+    :return: a mock change event callback to be registered with the
+        device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return lrc_result_changed_callback_factory()

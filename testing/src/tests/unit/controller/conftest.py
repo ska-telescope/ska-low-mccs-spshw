@@ -1,19 +1,15 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defines a pytest harness for testing the MCCS controller module."""
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 import unittest
 
 import pytest
@@ -35,6 +31,7 @@ from ska_low_mccs.testing.mock import (
     MockCallable,
     MockDeviceBuilder,
     MockSubarrayBuilder,
+    MockChangeEventCallback,
 )
 
 
@@ -96,6 +93,24 @@ def subarray_beam_fqdns() -> list[str]:
 
 
 @pytest.fixture()
+def station_beam_fqdns() -> list[str]:
+    """
+    Return the FQDNs of station_beams managed by the controller.
+
+    :return: the FQDNs of station_beams managed by the controller.
+    """
+    # TODO: This must match the MccsStationBeams property of the
+    # controller. We should refactor the harness so that we can pull it
+    # straight from the device configuration.
+    return [
+        "low-mccs/beam/01",
+        "low-mccs/beam/02",
+        "low-mccs/beam/03",
+        "low-mccs/beam/04",
+    ]
+
+
+@pytest.fixture()
 def channel_blocks() -> list[int]:
     """
     Return the channel blocks controlled by this controller.
@@ -109,8 +124,8 @@ def channel_blocks() -> list[int]:
 def controller_resource_manager(
     subarray_fqdns: Iterable[str],
     subrack_fqdns: Iterable[str],
-    station_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
+    station_beam_fqdns: Iterable[str],
     channel_blocks: Iterable[int],
 ) -> ControllerResourceManager:
     """
@@ -118,8 +133,8 @@ def controller_resource_manager(
 
     :param subarray_fqdns: FQDNS of all subarray devices
     :param subrack_fqdns: FQDNS of all subrack devices
-    :param station_fqdns: FQDNS of all station devices
     :param subarray_beam_fqdns: FQDNS of all subarray beam devices
+    :param station_beam_fqdns: FQDNS of all subarray beam devices
     :param channel_blocks: ordinal numbers of all channel blocks
 
     :return: a controller resource manager for testing
@@ -127,8 +142,8 @@ def controller_resource_manager(
     return ControllerResourceManager(
         subarray_fqdns,
         subrack_fqdns,
-        station_fqdns,
         subarray_beam_fqdns,
+        station_beam_fqdns,
         channel_blocks,
     )
 
@@ -185,18 +200,38 @@ def subarray_beam_health_changed_callback(
 
 
 @pytest.fixture()
+def station_beam_health_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for a change in the health of a station beam.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that health of a station beam has changed.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
 def controller_component_manager(
     tango_harness: TangoHarness,
     subarray_fqdns: Iterable[str],
     subrack_fqdns: Iterable[str],
     station_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
+    station_beam_fqdns: Iterable[str],
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     subrack_health_changed_callback: MockCallable,
     station_health_changed_callback: MockCallable,
     subarray_beam_health_changed_callback: MockCallable,
+    station_beam_health_changed_callback: MockCallable,
 ) -> ControllerComponentManager:
     """
     Return a controller component manager in simulation mode.
@@ -206,7 +241,10 @@ def controller_component_manager(
     :param subrack_fqdns: FQDNS of all subrack devices
     :param station_fqdns: FQDNS of all station devices
     :param subarray_beam_fqdns: FQDNS of all subarray beam devices
+    :param station_beam_fqdns: FQDNS of all station beam devices
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
@@ -218,6 +256,8 @@ def controller_component_manager(
         the health of a station changes
     :param subarray_beam_health_changed_callback: callback to be called
         when the health of a subarray beam changes
+    :param station_beam_health_changed_callback: callback to be called
+        when the health of a station beam changes
 
     :return: a component manager for the MCCS controller device
     """
@@ -226,12 +266,15 @@ def controller_component_manager(
         subrack_fqdns,
         station_fqdns,
         subarray_beam_fqdns,
+        station_beam_fqdns,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         subrack_health_changed_callback,
         station_health_changed_callback,
         subarray_beam_health_changed_callback,
+        station_beam_health_changed_callback,
     )
 
 
@@ -367,8 +410,21 @@ def subrack_proxies(
     return [MccsDeviceProxy(fqdn, logger) for fqdn in subrack_fqdns]
 
 
+@pytest.fixture
+def unique_id() -> str:
+    """
+    Return a unique ID used to test Tango layer infrastructure.
+
+    :return: a unique ID
+    """
+    return "a unique id"
+
+
 @pytest.fixture()
-def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
+def mock_component_manager(
+    mocker: pytest_mock.mocker,
+    unique_id: str,
+) -> unittest.mock.Mock:
     """
     Return a mock component manager.
 
@@ -378,6 +434,7 @@ def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
     and the component is off.
 
     :param mocker: pytest wrapper for unittest.mock
+    :param unique_id: a unique id used to check Tango layer functionality
 
     :return: a mock component manager
     """
@@ -391,6 +448,8 @@ def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
         mock._component_power_mode_changed_callback(PowerMode.OFF)
 
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
+
+    mock.enqueue.return_value = unique_id, ResultCode.QUEUED
 
     return mock
 
@@ -420,6 +479,9 @@ def patched_controller_device_class(
 
             :return: a mock component manager
             """
+            self._communication_status: Optional[CommunicationStatus] = None
+            self._component_power_mode: Optional[PowerMode] = None
+
             mock_component_manager._communication_status_changed_callback = (
                 self._communication_status_changed
             )
@@ -434,6 +496,9 @@ def patched_controller_device_class(
             )
             mock_component_manager._subarray_beam_health_changed_callback = (
                 self._health_model.subarray_beam_health_changed
+            )
+            mock_component_manager._station_beam_health_changed_callback = (
+                self._health_model.station_beam_health_changed
             )
             return mock_component_manager
 

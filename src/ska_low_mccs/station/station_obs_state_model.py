@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """An implementation of an observation state model for a station."""
 from __future__ import annotations
 
@@ -37,7 +35,6 @@ class StationObsStateModel:
         """
         self._logger = logger
 
-        self._is_resourced = False
         self._is_configured = False
         self._obs_state = self._evaluate_obs_state()
 
@@ -45,20 +42,6 @@ class StationObsStateModel:
 
         assert self._obs_state is not None  # for the type checker
         self._obs_state_changed_callback(self._obs_state)
-
-    def is_resourced_changed(
-        self: StationObsStateModel,
-        is_resourced: bool,
-    ) -> None:
-        """
-        Handle a change in whether the station is resourced.
-
-        :param is_resourced: whether the station is resourced
-        """
-        self._is_resourced = is_resourced
-        if not is_resourced:
-            self._is_configured = False
-        self.update_obs_state()
 
     def is_configured_changed(
         self: StationObsStateModel,
@@ -92,17 +75,4 @@ class StationObsStateModel:
 
         :return: the evaluated observation state of the station.
         """
-        obs_state_map = {
-            (False, False): ObsState.EMPTY,
-            (True, False): ObsState.IDLE,
-            (True, True): ObsState.READY,
-        }
-        try:
-            return obs_state_map[(self._is_resourced, self._is_configured)]
-        except KeyError:
-            self._logger.error(
-                "Cannot evaluate obs state: "
-                f"resourced: {self._is_resourced}, "
-                f"configured: {self._is_configured}, "
-            )
-            return None
+        return ObsState.READY if self._is_configured else ObsState.IDLE

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains pytest test harness for tests of the MCCS component module."""
 from __future__ import annotations
 
@@ -20,8 +27,9 @@ def health_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback for a device component manager to call when the health state
-    of its device changes.
+    Return a mock callback for a device component manager.
+
+    To call when the health state of its device changes.
 
     :param mock_callback_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when

@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 LFAA Cluster Manager Device Server.
 
@@ -78,6 +76,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         # default to FALSE.
         return ClusterComponentManager(
             self.logger,
+            self.push_change_event,
             SimulationMode.TRUE,
             self._component_communication_status_changed,
             self._component_power_mode_changed,

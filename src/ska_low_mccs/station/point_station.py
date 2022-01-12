@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 MCCS pointing calculation prototype.
 
@@ -268,7 +266,7 @@ class Pointing(object):
                 Time(pointing_time),
                 self._reference_antenna_loc,
             )
-            # TODO: This code need investigation
+            # TODO: This code needs investigation
             self._delay_rates = (
                 self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
             )
@@ -380,8 +378,7 @@ class Pointing(object):
         self: Pointing, right_ascension: float, declination: float, pointing_time: float
     ) -> bool:
         """
-        Determine if the target is above the horizon, given the time for the reference
-        antenna.
+        Check if the target is above the horizon, given time for the reference antenna.
 
         :param right_ascension: The right ascension of the target as a astropy angle
         :param declination: The declination of the target as an astropy angle.

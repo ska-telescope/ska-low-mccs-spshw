@@ -1,15 +1,11 @@
-########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-########################################################################
-"""
-This module contains the tests for the
-:py:mod:`ska_low_mccs.subrack.demo_subrack_device` module.
-"""
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""This module contains the tests for the subrack.demo_subrack_device module."""
 from __future__ import annotations
 
 import time
@@ -19,6 +15,7 @@ import pytest
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
+from ska_low_mccs.component import ExtendedPowerMode
 from ska_low_mccs.subrack.demo_subrack_device import DemoSubrack
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -55,11 +52,12 @@ class TestDemoSubrack:
         """
         return tango_harness.get_device("low-mccs/subrack/01")
 
-    def test(self: TestDemoSubrack, device_under_test: MccsDeviceProxy) -> None:
+    def test_demo_subrack(
+        self: TestDemoSubrack, device_under_test: MccsDeviceProxy
+    ) -> None:
         """
-        Test:
+        Test.
 
-        * the `isTpm1Powered`, `isTpm2Powered` etc attributes.
         * the `PowerOnTpm1`, `PowerOffTpm2` etc commands.
 
         :param device_under_test: fixture that provides a
@@ -69,14 +67,17 @@ class TestDemoSubrack:
 
         def assert_powered(expected: list[bool]) -> None:
             """
-            Helper function to assert the power mode of each TPM.
+            Assert the power mode of each TPM.
 
             :param expected: the expected power mode of each TPM
             """
-            assert [
-                device_under_test.read_attribute(f"isTpm{tpm_id}Powered").value
-                for tpm_id in range(1, 5)
-            ] == expected
+            for (i, is_on) in enumerate(expected):
+                assert (
+                    device_under_test.read_attribute(f"tpm{i+1}PowerMode").value
+                    == ExtendedPowerMode.ON
+                    if is_on
+                    else ExtendedPowerMode.OFF
+                )
 
         device_under_test.adminMode = AdminMode.ONLINE
         device_under_test.On()
@@ -86,28 +87,37 @@ class TestDemoSubrack:
         assert_powered([False, False, False, False])
 
         device_under_test.PowerOnTpm1()
+        time.sleep(0.1)
         assert_powered([True, False, False, False])
 
         device_under_test.PowerOnTpm2()
+        time.sleep(0.1)
         assert_powered([True, True, False, False])
 
         device_under_test.PowerOffTpm1()
+        time.sleep(0.1)
         assert_powered([False, True, False, False])
 
         device_under_test.PowerOnTpm3()
+        time.sleep(0.1)
         assert_powered([False, True, True, False])
 
         device_under_test.PowerOffTpm2()
+        time.sleep(0.1)
         assert_powered([False, False, True, False])
 
         device_under_test.PowerOnTpm4()
+        time.sleep(0.1)
         assert_powered([False, False, True, True])
 
         device_under_test.PowerOffTpm3()
+        time.sleep(0.1)
         assert_powered([False, False, False, True])
 
         device_under_test.PowerOnTpm1()
+        time.sleep(0.1)
         assert_powered([True, False, False, True])
 
         device_under_test.PowerOffTpm4()
+        time.sleep(0.1)
         assert_powered([True, False, False, False])

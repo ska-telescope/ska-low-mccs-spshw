@@ -149,11 +149,16 @@ class TestSubarrayComponentManager:
         subarray_component_manager.start_communicating()
         assert subarray_component_manager.power_mode == PowerMode.ON
 
-        assert subarray_component_manager.assigned_resources == set()
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": list(),
+            "subarray_beams": list(),
+            "station_beams": list(),
+            "channel_blocks": list(),
+        }
 
         # Assignment from empty
         resource_spec = {
-            "stations": [station_off_fqdn],
+            "stations": [[station_off_fqdn]],
             "subarray_beams": [subarray_beam_off_fqdn],
             "station_beams": [station_beam_off_fqdn],
             "channel_blocks": channel_blocks,
@@ -169,18 +174,20 @@ class TestSubarrayComponentManager:
         )
 
         assign_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == {
-            station_off_fqdn,
-            station_beam_off_fqdn,
-            subarray_beam_off_fqdn,
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": [[station_off_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
         }
+
         resources_changed_callback.assert_next_call(
             {station_off_fqdn}, {subarray_beam_off_fqdn}, {station_beam_off_fqdn}
         )
 
         # Further assign
         resource_spec = {
-            "stations": [station_on_fqdn],
+            "stations": [[station_on_fqdn]],
             "subarray_beams": [subarray_beam_on_fqdn],
             "station_beams": [station_beam_on_fqdn],
             "channel_blocks": channel_blocks,
@@ -196,47 +203,53 @@ class TestSubarrayComponentManager:
         )
 
         assign_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == {
-            station_off_fqdn,
-            station_on_fqdn,
-            station_beam_on_fqdn,
-            station_beam_off_fqdn,
-            subarray_beam_off_fqdn,
-            subarray_beam_on_fqdn,
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": [[station_off_fqdn], [station_on_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn, subarray_beam_on_fqdn],
+            "station_beams": [station_beam_off_fqdn, station_beam_on_fqdn],
+            "channel_blocks": channel_blocks + channel_blocks,
         }
+
         resources_changed_callback.assert_next_call(
             {station_off_fqdn, station_on_fqdn},
             {subarray_beam_off_fqdn, subarray_beam_on_fqdn},
             {station_beam_off_fqdn, station_beam_on_fqdn},
         )
 
-        # Release
-        result_code = subarray_component_manager.release(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "station_beams": [station_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
-        assert result_code == ResultCode.OK
-
-        release_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == {
-            station_on_fqdn,
-            subarray_beam_on_fqdn,
-            station_beam_on_fqdn,
-        }
-        resources_changed_callback.assert_next_call(
-            {station_on_fqdn}, {subarray_beam_on_fqdn}, {station_beam_on_fqdn}
-        )
-
         # Release all
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
         release_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == set()
         resources_changed_callback.assert_next_call(set(), set(), set())
+
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": list(),
+            "subarray_beams": list(),
+            "station_beams": list(),
+            "channel_blocks": list(),
+        }
+
+    def test_release(
+        self: TestSubarrayComponentManager,
+        subarray_component_manager: SubarrayComponentManager,
+        station_off_fqdn: str,
+    ) -> None:
+        """
+        Test the component manager's handling of the release command.
+
+        :param subarray_component_manager: the subarray component
+            manager under test.
+        :param station_off_fqdn: the FQDN of a station that is powered
+            off.
+        """
+        subarray_component_manager.start_communicating()
+        assert subarray_component_manager.power_mode == PowerMode.ON
+        release_json = json.dumps({"station_beams": [station_off_fqdn]})
+        with pytest.raises(
+            NotImplementedError,
+            match="MCCS Subarray cannot partially release resources.",
+        ):
+            subarray_component_manager.release(release_json)
 
     def test_configure(
         self: TestSubarrayComponentManager,
@@ -302,7 +315,7 @@ class TestSubarrayComponentManager:
 
         # can't configure when resources are OFF
         resource_spec = {
-            "stations": [station_off_fqdn],
+            "stations": [[station_off_fqdn]],
             "subarray_beams": [subarray_beam_off_fqdn],
             "station_beams": [station_beam_off_fqdn],
             "channel_blocks": channel_blocks,
@@ -331,7 +344,7 @@ class TestSubarrayComponentManager:
         assert result_code == ResultCode.OK
 
         resource_spec = {
-            "stations": [station_on_fqdn],
+            "stations": [[station_on_fqdn]],
             "subarray_beams": [subarray_beam_off_fqdn],
             "station_beams": [station_beam_off_fqdn],
             "channel_blocks": channel_blocks,
@@ -363,7 +376,7 @@ class TestSubarrayComponentManager:
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
         resource_spec = {
-            "stations": [station_off_fqdn],
+            "stations": [[station_off_fqdn]],
             "subarray_beams": [subarray_beam_on_fqdn],
             "station_beams": [station_beam_on_fqdn],
             "channel_blocks": channel_blocks,
@@ -396,7 +409,7 @@ class TestSubarrayComponentManager:
 
         # CAN configure when resources are ON
         resource_spec = {
-            "stations": [station_on_fqdn],
+            "stations": [[station_on_fqdn]],
             "subarray_beams": [subarray_beam_on_fqdn],
             "station_beams": [station_beam_on_fqdn],
             "channel_blocks": channel_blocks,
@@ -493,7 +506,7 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.power_mode == PowerMode.ON
 
         resource_spec = {
-            "stations": [station_on_fqdn],
+            "stations": [[station_on_fqdn]],
             "subarray_beams": [subarray_beam_on_fqdn],
             "station_beams": [station_beam_on_fqdn],
             "channel_blocks": channel_blocks,

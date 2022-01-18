@@ -30,6 +30,7 @@ from ska_tango_base.control_model import (
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tile import TileComponentManager, TileHealthModel
+from ska_low_mccs.tile.tpm_status import TpmStatus
 
 __all__ = ["MccsTile", "main"]
 
@@ -47,6 +48,7 @@ class MccsTile(SKABaseDevice):
     SubrackFQDN = device_property(dtype=str)
     SubrackBay = device_property(dtype=int)  # position of TPM in subrack
 
+    TileId = device_property(dtype=int, default_value=1)  # Tile ID must be nonzero
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
@@ -83,6 +85,7 @@ class MccsTile(SKABaseDevice):
             TestMode.NONE,
             self.logger,
             self.push_change_event,
+            self.TileId,
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
@@ -220,7 +223,7 @@ class MccsTile(SKABaseDevice):
             self: MccsTile.OnCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for Off() command functionality.
+            Stateless hook for On() command functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -238,7 +241,7 @@ class MccsTile(SKABaseDevice):
 
     def is_On_allowed(self: MccsTile) -> bool:
         """
-        Check if command `Off` is allowed in the current device state.
+        Check if command `On` is allowed in the current device state.
 
         :return: ``True`` if the command is allowed
         """
@@ -269,9 +272,10 @@ class MccsTile(SKABaseDevice):
         """
         action_map = {
             CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
+            CommunicationStatus.NOT_ESTABLISHED: None,
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
+        self.logger.debug(f"communication_status: {communication_status}")
 
         action = action_map[communication_status]
         if action is not None:
@@ -280,6 +284,9 @@ class MccsTile(SKABaseDevice):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
+        # if communication has been established, update power mode
+        # if communication_status == CommunicationStatus.ESTABLISHED:
+        #     self._component_power_mode_changed(self.component_manager.power_mode)
 
     def _component_power_mode_changed(
         self: MccsTile,
@@ -294,6 +301,7 @@ class MccsTile(SKABaseDevice):
 
         :param power_mode: the power mode of the component.
         """
+        self.logger.debug(f"power_mode: {power_mode}")
         action_map = {
             PowerMode.OFF: "component_off",
             PowerMode.STANDBY: "component_standby",
@@ -302,6 +310,7 @@ class MccsTile(SKABaseDevice):
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
+        self._health_model.set_power_mode(power_mode)
 
     def _component_fault(
         self: MccsTile,
@@ -409,6 +418,25 @@ class MccsTile(SKABaseDevice):
         :param value: the new logical tile id
         """
         self.component_manager.tile_id = value
+
+    @attribute(dtype="DevString")
+    def tileProgrammingState(self: MccsTile) -> str:
+        """
+        Get the tile programming state.
+
+        :return: a string describing the programming state of the tile
+        """
+        status_names = {
+            TpmStatus.UNKNOWN: "Unknown",
+            TpmStatus.OFF: "Off",
+            TpmStatus.UNCONNECTED: "Unconnected",
+            TpmStatus.UNPROGRAMMED: "NotProgrammed",
+            TpmStatus.PROGRAMMED: "Programmed",
+            TpmStatus.INITIALISED: "Initialised",
+            TpmStatus.SYNCHRONISED: "Synchronised",
+        }
+        status = self.component_manager.tpm_status
+        return status_names[status]
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:

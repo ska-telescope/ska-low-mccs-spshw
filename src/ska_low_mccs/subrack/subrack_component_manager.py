@@ -13,6 +13,7 @@ from typing import Any, Callable, cast, Optional
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.base.task_queue_manager import QueueManager
 
 from ska_low_mccs.subrack import (
     SubrackData,
@@ -113,8 +114,9 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF
             for is_tpm_on in are_tpms_on
         ]
-        if self._tpm_power_modes == tpm_power_modes:
-            return
+        # if self._tpm_power_modes == tpm_power_modes:
+        #     return
+        # Report anyway. Let upper levels decide if information is redundant
         self._tpm_power_modes = tpm_power_modes
         self._component_tpm_power_changed_callback(tpm_power_modes)
 
@@ -186,6 +188,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             "turn_on_tpm",
             "turn_on_tpms",
             "turn_off_tpms",
+            "check_tpm_power_modes",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
             "set_power_supply_fan_speed",
@@ -363,6 +366,22 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
 class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an subrack (simulator or driver) and its power supply."""
 
+    def create_queue_manager(self: SubrackComponentManager) -> QueueManager:
+        """
+        Create a QueueManager.
+
+        Overwrite the creation of the queue manger specifying the
+        required max queue size and number of workers.
+
+        :return: The queue manager.
+        """
+        return QueueManager(
+            max_queue_size=8,  # 8 PowerOnTpm commands
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
+        )
+
     def __init__(
         self: SubrackComponentManager,
         initial_simulation_mode: SimulationMode,
@@ -472,6 +491,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param tpm_power_modes: the power mode of each TPM
         """
+        #
+        # Here can safely check fo redundancy, as extended power modes
+        # (NO_SUPPLY, UNKNOWN) have already been included in the attribute
         if self._tpm_power_modes == tpm_power_modes:
             return
         self._tpm_power_modes = list(tpm_power_modes)
@@ -640,6 +662,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "turn_on_tpm",
             "turn_on_tpms",
             "turn_off_tpms",
+            "check_tpm_power_modes",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
             "set_power_supply_fan_speed",

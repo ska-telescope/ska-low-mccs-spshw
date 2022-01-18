@@ -193,6 +193,10 @@ class SubrackSimulator(ObjectComponent):
         """
         self._component_progress_changed_callback = component_progress_changed_callback
 
+    def check_tpm_power_modes(self: SubrackSimulator) -> None:
+        """Check TPM power modes, calling the relevant callback."""
+        self._are_tpms_on_changed()
+
     def _are_tpms_on_changed(self: SubrackSimulator) -> None:
         """
         Handle a change in TPM power.

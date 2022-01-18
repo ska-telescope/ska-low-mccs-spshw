@@ -23,6 +23,7 @@ from ska_tango_base.control_model import (
     PowerMode,
     SimulationMode,
     TestMode,
+    AdminMode,
 )
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
@@ -191,14 +192,51 @@ class MccsSubrack(SKABaseDevice):
             CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
+        power_map = {
+            PowerMode.UNKNOWN: "component_unknown",
+            PowerMode.STANDBY: "component_standby",
+            PowerMode.OFF: "component_off",
+            PowerMode.ON: "component_on",
+        }
+        self.logger.debug(
+            "Component communication status changed to " + str(communication_status)
+        )
 
         action = action_map[communication_status]
         if action is not None:
             self.op_state_model.perform_action(action)
+        else:
+            power_supply_status = (
+                self.component_manager._power_supply_component_manager.supplied_power_mode
+            )
+            if (
+                self.admin_mode_model.admin_mode
+                in [
+                    AdminMode.ONLINE,
+                    AdminMode.MAINTENANCE,
+                ]
+                and power_supply_status is not None
+            ):
+                action = power_map[power_supply_status]
+                self.logger.debug(
+                    "Switch component according to power supply status"
+                    + str(power_supply_status)
+                )
+                self.op_state_model.perform_action(action)
+            else:
+                self.op_state_model.perform_action("component_unknown")
+                self.logger.debug("Power supply status unknown")
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
+        power_status = self.component_manager.power_mode
+        self.logger.debug(
+            f"Power mode: {power_status}, Communicating: {self._health_model._communicating}"
+        )
+        if (power_status == PowerMode.ON) and self._health_model._communicating:
+            self.logger.debug("Checking tpm power modes")
+            self.component_manager.check_tpm_power_modes()
 
     def _component_power_mode_changed(
         self: MccsSubrack,
@@ -219,7 +257,12 @@ class MccsSubrack(SKABaseDevice):
             PowerMode.ON: "component_on",
             PowerMode.UNKNOWN: "component_unknown",
         }
+        if power_mode is None:
+            return
         self.op_state_model.perform_action(action_map[power_mode])
+        if (power_mode == PowerMode.ON) and self._health_model._communicating:
+            self.logger.debug("Checking tpm power modes")
+            self.component_manager.check_tpm_power_modes()
 
     def _component_fault(
         self: MccsSubrack,
@@ -285,6 +328,13 @@ class MccsSubrack(SKABaseDevice):
 
         :param tpm_power_modes: the power modes of the TPMs
         """
+        self.logger.debug(
+            "TPM power modes changed: old"
+            + str(self._tpm_power_modes)
+            + "new: "
+            + str(tpm_power_modes)
+        )
+
         with self._tpm_power_modes_lock:
             for i in range(SubrackData.TPM_BAY_COUNT):
                 if self._tpm_power_modes[i] != tpm_power_modes[i]:

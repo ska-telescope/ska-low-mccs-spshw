@@ -24,8 +24,6 @@ import numpy as np
 from typing import Any, Callable, cast, List, Optional
 from pyfabil.base.definitions import LibraryError
 
-# from contextlib import contextmanager
-
 from pyfabil.base.definitions import Device
 
 from ska_tango_base.commands import ResultCode, BaseCommand
@@ -318,8 +316,6 @@ class TpmDriver(MccsComponentManager):
 
         :return: whether this TPM is programmed
         """
-        # self._is_programmed = self.tile.is_programmed()
-        # self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
     def download_firmware(self: TpmDriver, bitfile: str) -> None:

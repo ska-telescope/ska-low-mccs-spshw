@@ -176,7 +176,6 @@ class TestMccsTile:
 
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
-        # device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
         device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
 
         tile_device.MockTpmOn()
@@ -391,9 +390,6 @@ class TestMccsTileCommands:
         tile_device.MockTpmOff()
         time.sleep(0.1)
 
-        # with pytest.raises(tango.DevFailed, match="Component is not turned on."):
-        #     _ = getattr(tile_device, device_command)(*args)
-
         tile_device.MockTpmOn()
         time.sleep(0.1)
 
@@ -547,8 +543,7 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.ONLINE
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
-        # At this point, the component should be connected, but not turned on
-        # with pytest.raises(tango.DevFailed, match="Component is not turned on."):
+        # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
             tango.DevFailed, match="Communication with component is not established"
         ):
@@ -603,7 +598,6 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        # assert not tile_device.isProgrammed
         bitfile = "testing/data/Vivado_test_firmware_bitfile.bit"
         [[result_code], [message]] = tile_device.DownloadFirmware(bitfile)
         assert result_code == ResultCode.OK
@@ -652,7 +646,6 @@ class TestMccsTileCommands:
         [[result_code], [message]] = tile_device.DownloadFirmware(invalid_bitfile_path)
         assert result_code == ResultCode.FAILED
         assert message != MccsTile.DownloadFirmwareCommand.SUCCEEDED_MESSAGE
-        # assert not tile_device.isProgrammed
         assert tile_device.firmwareName == existing_firmware_name
 
     def test_GetRegisterList(

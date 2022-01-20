@@ -10,7 +10,7 @@ dependencies:
   version: 0.3.5
   repository: https://artefact.skao.int/repository/helm-internal
 - name: ska-low-mccs
-  version: 0.8.6 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+  version: 0.9.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
   repository: file://../ska-low-mccs
 - name: ska-taranta
   version: 1.0.29

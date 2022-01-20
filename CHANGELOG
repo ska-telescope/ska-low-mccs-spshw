@@ -2,6 +2,20 @@
 
 ## unreleased
 
+## 0.9.0
+
+* MCCS-622 - Correcting physical device drivers to work with 0.11 base classes.
+* MCCS-842 - Add assigned resources to subarray
+* MCCS-837 - Long Running Commands - ska-tango-base usage
+* MCCS-908 - add make target to wait for Taranta pod CPU utilisation to reduce
+* MCCS-903 - Add command to upgrade pip at the start of the Docker build process
+* MCCS-476 - licensing cleanup
+* MCCS-851 - Synchronous disable
+* MCCS-844 - Dependency update
+* MCCS-771 - Changed Taranta to 1.1.5 in Chart.yaml and created a Taranta Dashboard for...
+* MCCS-847 - State space reduction
+* MCCS-735 - Refactor pyaavs package to be used directly from MCCS
+* MCCS-845 - Subrack refactor
 * MCCS-838 - Add tile orchestrator
 * MCCS-708 - Remove allocated_resources attribute from controller
 * MCCS-767 - PaSD bus device

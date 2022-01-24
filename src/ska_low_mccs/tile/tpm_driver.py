@@ -16,12 +16,13 @@ case, or a NotImplementedError exception raised.
 
 from __future__ import annotations  # allow forward references in type hints
 
+import functools
 import time
 import copy
 import logging
 import threading
 import numpy as np
-from typing import Any, Callable, cast, List, Optional
+from typing import Any, Callable, TypeVar, cast, List, Optional
 from pyfabil.base.definitions import LibraryError
 
 from pyfabil.base.definitions import Device
@@ -35,6 +36,8 @@ from .tpm_status import TpmStatus
 
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
+
+Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
 
 class TpmDriver(MccsComponentManager):
@@ -1458,3 +1461,56 @@ class TpmDriver(MccsComponentManager):
             meaningfully implemented
         """
         raise NotImplementedError
+
+
+def check_locked(func: Wrapped) -> Wrapped:
+    """
+    Check whether the TpmDriver is locked before calling the argument function.
+
+    If it is locked, [TODO] does something, currently raises an exception.
+    Acquires the lock, calls the argument funciton and releases the lockr
+    before returning. func must not require the lock, or deadlock occurs.
+
+       This function is intended to be used as a decorator:
+
+    .. code-block:: python
+
+        @check_locked
+        def scan(self):
+            ...
+
+    :param func: the wrapped function
+
+    :return: the wrapped function
+    """
+
+    @functools.wraps(func)
+    def _wrapper(
+        tpm_driver: TpmDriver,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Check for lock status before calling the function.
+
+        Wrapper function that implements the functionality of the decorator.
+
+        :param tpm_driver: the component manager to check
+        :param args: positional arguments to the wrapped function
+        :param kwargs: keyword arguments to the wrapped function
+
+        :raises ConnectionError: if communication with the component has
+            not been established.
+        :return: whatever the wrapped function returns
+        """
+        res = tpm_driver._hardware_lock.acquire(timeout=0.5)
+        if res:
+            retval = func(tpm_driver, *args, **kwargs)
+            tpm_driver._hardware_lock.release()
+            return retval
+        else:
+            raise ConnectionError(
+                f"Cannot execute '{type(tpm_driver).__name__}.{func.__name__}'."
+            )
+
+    return cast(Wrapped, _wrapper)

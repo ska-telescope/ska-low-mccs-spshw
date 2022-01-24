@@ -73,15 +73,6 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        # This will not happen as the power mode is OFF.
-        # communication_status_changed_callback.assert_next_call(
-        #     CommunicationStatus.ESTABLISHED
-        # )
-
-        # assert (
-        #     tile_component_manager.communication_status
-        #     == CommunicationStatus.ESTABLISHED
-        # )
 
         if power_mode == ExtendedPowerMode.UNKNOWN:
             tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.UNKNOWN)
@@ -91,9 +82,6 @@ class TestTileComponentManager:
             pass  # test harness starts with TPM off
         elif power_mode == ExtendedPowerMode.ON:
             tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
-            # communication_status_changed_callback.assert_next_call(
-            #     CommunicationStatus.NOT_ESTABLISHED
-            # )
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
@@ -153,9 +141,6 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        # communication_status_changed_callback.assert_next_call(
-        #     CommunicationStatus.ESTABLISHED
-        # )
 
         assert (
             tile_component_manager.communication_status
@@ -165,9 +150,6 @@ class TestTileComponentManager:
         tile_component_manager._tpm_power_mode_changed(first_power_mode)
 
         if first_power_mode == ExtendedPowerMode.ON:
-            # communication_status_changed_callback.assert_next_call(
-            #     CommunicationStatus.NOT_ESTABLISHED
-            # )
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
@@ -180,9 +162,6 @@ class TestTileComponentManager:
             first_power_mode != ExtendedPowerMode.ON
             and second_power_mode == ExtendedPowerMode.ON
         ):
-            #     communication_status_changed_callback.assert_next_call(
-            #         CommunicationStatus.NOT_ESTABLISHED
-            #     )
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
@@ -213,9 +192,6 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        # communication_status_changed_callback.assert_next_call(
-        #     CommunicationStatus.ESTABLISHED
-        # )
 
         tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
@@ -261,9 +237,6 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        # communication_status_changed_callback.assert_next_call(
-        #     CommunicationStatus.ESTABLISHED
-        # )
 
         # mock an event from subrack announcing it to be turned off
         tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
@@ -381,9 +354,6 @@ class TestStaticSimulatorCommon:
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.NOT_ESTABLISHED
             )
-            # communication_status_changed_callback.assert_next_call(
-            #     CommunicationStatus.ESTABLISHED
-            # )
             time.sleep(0.1)
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
@@ -1076,8 +1046,6 @@ class TestDriverCommon:
             == CommunicationStatus.NOT_ESTABLISHED
         )
         # Wait for the message to execute
-        # As connect tries multiple times, it takes some time and must not
-        # use "assert_called_once"
         time.sleep(3.1)
         hardware_tile_mock.connect.assert_called_with()
         assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]

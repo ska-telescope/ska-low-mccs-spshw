@@ -10,8 +10,8 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
-from typing import Any, List, Optional, Tuple
 import json
+from typing import Any, List, Optional, Tuple
 
 import tango
 from tango.server import attribute, command
@@ -348,14 +348,32 @@ class MccsSubarray(SKASubarray):
         """
         return sorted(self.component_manager.station_fqdns)
 
-    @attribute(dtype=("str",), max_dim_x=100)
-    def assignedResources(self: MccsSubarray) -> list[str]:
+    @attribute(dtype=("DevString"), max_dim_x=1024)
+    def assignedResources(self: MccsSubarray) -> str:
         """
         Return this subarray's assigned resources.
 
         :return: this subarray's assigned resources.
         """
-        return sorted(self.component_manager.assigned_resources)
+        resource_dict = self.component_manager.assigned_resources_dict
+        stations = []
+        for station_group in resource_dict["stations"]:
+            stations.append(
+                [station.split("/")[-1].lstrip("0") for station in station_group]
+            )
+        subarray_beams = [
+            subarray_beam.split("/")[-1].lstrip("0")
+            for subarray_beam in resource_dict["subarray_beams"]
+        ]
+        channel_blocks = resource_dict["channel_blocks"]
+        return json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "subarray_beam_ids": subarray_beams,
+                "station_ids": stations,
+                "channel_blocks": channel_blocks,
+            }
+        )
 
     # ------------------
     # Attribute methods

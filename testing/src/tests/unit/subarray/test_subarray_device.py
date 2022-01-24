@@ -302,7 +302,7 @@ class TestMccsSubarray:
         ([result_code], _) = device_under_test.AssignResources(
             json.dumps(
                 {
-                    "stations": [station_on_fqdn],
+                    "stations": [[station_on_fqdn]],
                     "subarray_beams": [subarray_beam_on_fqdn],
                     "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,
@@ -311,11 +311,14 @@ class TestMccsSubarray:
         )
         assert result_code == ResultCode.OK
         time.sleep(0.1)
-        assert list(device_under_test.assignedResources) == [
-            station_beam_on_fqdn,
-            station_on_fqdn,
-            subarray_beam_on_fqdn,
-        ]
+        assert device_under_test.assignedResources == json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "subarray_beam_ids": [subarray_beam_on_fqdn.split("/")[-1].lstrip("0")],
+                "station_ids": [[station_on_fqdn.split("/")[-1].lstrip("0")]],
+                "channel_blocks": channel_blocks,
+            }
+        )
 
         assert device_under_test.state() == DevState.ON
 
@@ -342,7 +345,14 @@ class TestMccsSubarray:
             "ReleaseAllResources command completed OK",
         )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
-        assert device_under_test.assignedResources is None
+        assert device_under_test.assignedResources == json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "subarray_beam_ids": [],
+                "station_ids": [],
+                "channel_blocks": [],
+            }
+        )
 
     def test_configure(
         self: TestMccsSubarray,
@@ -393,7 +403,7 @@ class TestMccsSubarray:
         ([result_code], _) = device_under_test.AssignResources(
             json.dumps(
                 {
-                    "stations": [station_on_fqdn],
+                    "stations": [[station_on_fqdn]],
                     "subarray_beams": [subarray_beam_on_fqdn],
                     "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,

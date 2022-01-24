@@ -533,7 +533,7 @@ class TileComponentManager(MccsComponentManager):
             self._stop_communicating_with_tpm,
             self._turn_off_tpm,
             self._turn_on_tpm,
-            self.update_communication_status,  # update_communication_status,
+            self.update_communication_status,
             self.update_tpm_power_mode,
             logger,
         )
@@ -736,24 +736,13 @@ class TileComponentManager(MccsComponentManager):
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        # identify power mode if not specified
-        # if power_mode == PowerMode.UNKNOWN:
-        #     if self.tpm_status in [
-        #         TpmStatus.UNKNOWN,
-        #         TpmStatus.UNCONNECTED,
-        #         TpmStatus.OFF,
-        #         TpmStatus.UNPROGRAMMED,
-        #     ]:
-        #         power_mode = PowerMode.STANDBY
-        #     else:
-        #         power_mode = PowerMode.ON
         self.update_component_power_mode(power_mode)
         self.logger.debug(
             f"power mode: {self.power_mode}, communication status: {self.communication_status}"
         )
         if self.communication_status == CommunicationStatus.ESTABLISHED:
             if power_mode == PowerMode.ON:
-                if (self.is_programmed is False) or (
+                if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
                     self.initialise()

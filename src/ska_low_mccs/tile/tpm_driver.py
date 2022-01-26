@@ -94,7 +94,7 @@ class TpmDriver(MccsComponentManager):
         """
         self._hardware_lock = threading.RLock()
         self._is_programmed = False
-        self.is_connection_thread_running = False
+        self._is_tile_connected = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
 
@@ -147,6 +147,11 @@ class TpmDriver(MccsComponentManager):
             component_fault_callback,
         )
 
+        connection_thread = threading.Thread(
+            target=self.check_tpm_connection, daemon=True
+        )
+        connection_thread.start()
+
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         self.logger.debug("Establish communication with the TPM")
@@ -181,12 +186,7 @@ class TpmDriver(MccsComponentManager):
                         self._is_programmed = True
                 target.logger.debug("Connected to tile")
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
-
-                connection_thread = threading.Thread(target=check_tpm_connection,
-                                                     daemon=True)
-                connection_thread.start()
-                self.is_connection_thread_running = True
-
+                self._is_tile_connected = True
                 return ResultCode.OK, "Connected to Tile"
 
             self._tpm_status = TpmStatus.UNCONNECTED
@@ -207,18 +207,14 @@ class TpmDriver(MccsComponentManager):
                         self._is_programmed = True
                 target.logger.debug("Connected to tile")
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
-
-                connection_thread = threading.Thread(target=check_tpm_connection,
-                                                     daemon=True)
-                connection_thread.start()
-                self.is_connection_thread_running = True
-
+                self._is_tile_connected = True
                 return ResultCode.OK, "Connected to Tile"
             else:
                 target.logger.error(
                     f"Connection to tile failed after {timeout*3} seconds"
                 )
                 target.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+                self._is_tile_connected = False
             return (
                 ResultCode.FAILED,
                 "Could not connect to Tile",
@@ -236,31 +232,45 @@ class TpmDriver(MccsComponentManager):
         self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
         self._is_programmed = False
         self.tile.tpm = None
-        self.is_connection_thread_running = False
+        self._is_tile_connected = False
 
-    def check_tpm_connection(self:TpmDriver) -> None:
-        while self.is_connection_thread_running:
-            try:
-                self.tile.read_cpld()
-                sleep(2.0)
-            except:
-                self.logger.warning('Connection lost. Reconnecting to tile...')
+    def check_tpm_connection(self: TpmDriver) -> None:
+        """Daemon thread to start monitoring tile connection."""
+        while True:
+            if self._is_tile_connected:
+                try:
+                    "current_address = int(0x30000000 & 0xFFFFFFFC)"
+                    "self.tile[current_address]" "tile_id = self.tile.get_tile_id()"
+                    self.tile.read_cpld()
+                    time.sleep(2.0)
+                except LibraryError:
+                    self._is_tile_connected = False
+            else:
+                self.logger.warning("Connection lost. Reconnecting to tile...")
                 self._tpm_status = TpmStatus.UNCONNECTED
                 self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
                 self._is_programmed = False
                 self.tile.tpm = None
-
-                with self._hardware_lock:
-                    self.tile.connect()
+                while self.tile.tpm is None:
+                    time.sleep(0.5)
+                    with self._hardware_lock:
+                        self.tile.connect()
                 if self.tile.tpm is not None:
                     self._tpm_status = TpmStatus.UNPROGRAMMED
                     with self._hardware_lock:
                         if self.tile.is_programmed():
                             self._tpm_status = TpmStatus.PROGRAMMED
-                            self._is_programmed = True
-                    target.logger.debug("Connected to tile")
-                    target.update_communication_status(CommunicationStatus.ESTABLISHED)
-                "Update relevant attributes"
+
+                    self._is_programmed = True
+                    self.logger.debug("Connected to tile")
+                    self.update_communication_status(CommunicationStatus.ESTABLISHED)
+                    self._is_tile_connected = True
+
+                self.logger.debug("Updating key hardware attributes...")
+                self._fpga1_temperature = self.tile.get_fpga0_temperature()
+                self._fpga2_temperature = self.tile.get_fpga1_temperature()
+                self._board_temperature = self.tile.get_temperature()
+                self._voltage = self.tile.get_voltage()
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:

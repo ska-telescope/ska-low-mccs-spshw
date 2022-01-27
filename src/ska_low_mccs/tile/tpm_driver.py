@@ -210,6 +210,7 @@ class TpmDriver(MccsComponentManager):
                         self._is_tpm_connected = False
                         self.tile.tpm = None
                         self.logger.debug("Tile disconnected from tpm.")
+                        time.sleep(10.0)
                         return
                 self.tpm_connected()
         else:

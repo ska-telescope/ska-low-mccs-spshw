@@ -27,8 +27,10 @@ __all__ = [
     "TpmDriver",
     "demo_tile_device",
     "plugins",
+    "TpmStatus",
 ]
 
+from .tpm_status import TpmStatus
 from .base_tpm_simulator import BaseTpmSimulator
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator

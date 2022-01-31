@@ -239,6 +239,7 @@ class TileOrchestrator:
             if _initial_state is not None and len(_initial_state) > 3
             else CommunicationStatus.DISABLED
         )
+        self._tpm_power_mode_on = PowerMode.UNKNOWN  # default mode if turned on
 
         self._decision_table: dict[
             StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]
@@ -290,6 +291,7 @@ class TileOrchestrator:
             commencing the command
         """
         with self.__lock:
+            self._tpm_power_mode_on = PowerMode.ON
             return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
 
     def desire_off(self: TileOrchestrator) -> ResultCode:
@@ -302,6 +304,18 @@ class TileOrchestrator:
         """
         with self.__lock:
             return cast(ResultCode, self._act(Stimulus.DESIRE_OFF))
+
+    def desire_standby(self: TileOrchestrator) -> ResultCode:
+        """
+        Advise that the operator desires the TPM to be standby.
+
+        :return: a result code: either ResultCode.QUEUED if the command
+            could not commenced immediately, or the initial result of
+            commencing the command
+        """
+        with self.__lock:
+            self._tpm_power_mode_on = PowerMode.STANDBY
+            return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
 
     def update_subrack_communication_status(
         self: TileOrchestrator,
@@ -402,7 +416,7 @@ class TileOrchestrator:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
         self._logger.debug(f"TileOrchestrator: {key} ==> {actions}")
-        print(f"TileOrchestrator: {key} ==> {actions}")
+        # print(f"TileOrchestrator: {key} ==> {actions}")
 
         result_code = None
         for action in actions:

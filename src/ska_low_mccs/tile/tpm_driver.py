@@ -16,10 +16,13 @@ case, or a NotImplementedError exception raised.
 
 from __future__ import annotations  # allow forward references in type hints
 
+import time
 import copy
 import logging
+import threading
 import numpy as np
 from typing import Any, Callable, cast, List, Optional
+from pyfabil.base.definitions import LibraryError
 
 from pyfabil.base.definitions import Device
 
@@ -28,6 +31,8 @@ from ska_low_mccs.component import (
     CommunicationStatus,
     MccsComponentManager,
 )
+from .tpm_status import TpmStatus
+
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
 
@@ -44,7 +49,7 @@ class TpmDriver(MccsComponentManager):
     FPGA2_TEMPERATURE = 37.5
     ADC_RMS = tuple(float(i) for i in range(32))
     FPGAS_TIME = [1, 2]
-    CURRENT_TILE_BEAMFORMER_FRAME = 23
+    CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "itpm_v1_6.bit"
@@ -62,6 +67,7 @@ class TpmDriver(MccsComponentManager):
         self: TpmDriver,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
+        tile_id: int,
         ip: str,
         port: int,
         tpm_version: str,
@@ -76,6 +82,7 @@ class TpmDriver(MccsComponentManager):
         :param logger: a logger for this simulator to use
         :param push_change_event: method to call when the base classes
             want to send an event
+        :param tile_id: the unique ID for the tile
         :param ip: IP address for hardware tile
         :param port: IP address for hardware tile control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -85,11 +92,12 @@ class TpmDriver(MccsComponentManager):
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
         """
+        self._hardware_lock = threading.RLock()
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
 
-        self._tile_id = 0
+        self._tile_id = tile_id
         self._station_id = 0
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -98,6 +106,7 @@ class TpmDriver(MccsComponentManager):
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
+        self._current_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
@@ -110,6 +119,7 @@ class TpmDriver(MccsComponentManager):
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._ip = ip
         self._port = port
+        self._tpm_status = TpmStatus.UNKNOWN
         self._tpm_version: str | None  # type hint only
         if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
             self.logger.warning(
@@ -138,6 +148,7 @@ class TpmDriver(MccsComponentManager):
 
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
+        self.logger.debug("Establish communication with the TPM")
         super().start_communicating()
         connect_to_tile_command = self.ConnectToTile(target=self)
         _ = self.enqueue(connect_to_tile_command)
@@ -157,12 +168,48 @@ class TpmDriver(MccsComponentManager):
             :return: a result code and message
             """
             target = self.target
-            target.tile.connect()
+            target.logger.debug("Trying to connect to tile")
+            self._is_programmed = False
+            with target._hardware_lock:
+                target.tile.connect()
             if target.tile.tpm is not None:
+                self._tpm_status = TpmStatus.UNPROGRAMMED
+                with target._hardware_lock:
+                    if target.tile.is_programmed():
+                        self._tpm_status = TpmStatus.PROGRAMMED
+                        self._is_programmed = True
+                target.logger.debug("Connected to tile")
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
                 return ResultCode.OK, "Connected to Tile"
 
-            return ResultCode.FAILED, "Could not connect to Tile"
+            self._tpm_status = TpmStatus.UNCONNECTED
+            timeout = 0
+            max_time = 4  # 15 seconds
+            while target.tile.tpm is None:
+                time.sleep(0.5)
+                with target._hardware_lock:
+                    target.tile.connect()  # this takes 2 seconds to fail
+                timeout = timeout + 1
+                if timeout > max_time:
+                    break
+            if target.tile.tpm is not None:
+                self._tpm_status = TpmStatus.UNPROGRAMMED
+                with target._hardware_lock:
+                    if target.tile.is_programmed():
+                        self._tpm_status = TpmStatus.PROGRAMMED
+                        self._is_programmed = True
+                target.logger.debug("Connected to tile")
+                target.update_communication_status(CommunicationStatus.ESTABLISHED)
+                return ResultCode.OK, "Connected to Tile"
+            else:
+                target.logger.error(
+                    f"Connection to tile failed after {timeout*3} seconds"
+                )
+                target.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            return (
+                ResultCode.FAILED,
+                "Could not connect to Tile",
+            )
 
     def stop_communicating(self: TpmDriver) -> None:
         """
@@ -172,7 +219,53 @@ class TpmDriver(MccsComponentManager):
             disconnect() method that we can call here?
         """
         super().stop_communicating()
+        self._tpm_status = TpmStatus.UNCONNECTED
+        self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        self._is_programmed = False
         self.tile.tpm = None
+
+    @property
+    def tpm_status(self: TpmDriver) -> TpmStatus:
+        """
+        Return the TPM status.
+
+        :return: the TPM status
+        """
+        if self._tpm_status in [TpmStatus.UNKNOWN, TpmStatus.UNCONNECTED]:
+            # The status in unknown, either because it has not been tested or
+            # because it comes from an unconnected state.
+            # try to determine the status. Successive tests until one fails
+            # if self.power_mode != PowerMode.ON:
+            #     self._tpm_status = TpmStatus.OFF
+            if self.communication_status != CommunicationStatus.ESTABLISHED:
+                self._tpm_status = TpmStatus.UNCONNECTED
+            else:
+                with self._hardware_lock:
+                    self._is_programmed = self.tile.is_programmed()
+                if self._is_programmed is False:
+                    self._tpm_status = TpmStatus.UNPROGRAMMED
+                elif self._tile_id != self.get_tile_id():
+                    self._tpm_status = TpmStatus.PROGRAMMED
+                elif self.tile.current_frame == 0:
+                    self._tpm_status = TpmStatus.INITIALISED
+                else:
+                    self._tpm_status = TpmStatus.SYNCHRONISED
+        return self._tpm_status
+
+    def get_tile_id(self: TpmDriver) -> int:
+        """
+        Get the tile ID stored in the FPGA.
+
+        :returns: tile ID
+        :raises: LibraryError
+        """
+        with self._hardware_lock:
+            try:
+                tile_id = self.tile.get_tile_id()
+            except LibraryError:
+                tile_id = 0
+        self._tile_id = tile_id
+        return tile_id
 
     @property
     def firmware_available(self: TpmDriver) -> list[dict[str, Any]]:
@@ -182,7 +275,8 @@ class TpmDriver(MccsComponentManager):
         :return: the firmware list
         """
         self.logger.debug("TpmDriver: firmware_available")
-        self._firmware_list = self.tile.get_firmware_list()
+        with self._hardware_lock:
+            self._firmware_list = self.tile.get_firmware_list()
         return copy.deepcopy(self._firmware_list)
 
     @property
@@ -222,8 +316,6 @@ class TpmDriver(MccsComponentManager):
 
         :return: whether this TPM is programmed
         """
-        self._is_programmed = self.tile.is_programmed()
-        self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
     def download_firmware(self: TpmDriver, bitfile: str) -> None:
@@ -232,10 +324,20 @@ class TpmDriver(MccsComponentManager):
 
         :param bitfile: a binary firmware blob
         """
-        self.logger.debug("TpmDriver: download_firmware")
-        self.tile.program_fpgas(bitfile)
+        with self._hardware_lock:
+            self.logger.debug("TpmDriver: download_firmware")
+            self.tile.program_fpgas(bitfile)
         self._firmware_name = bitfile
         self._is_programmed = True
+        self._tpm_status = TpmStatus.PROGRAMMED
+
+    def erase_fpga(self: TpmDriver) -> None:
+        """Erase FPGA programming to reduce FPGA power consumption."""
+        with self._hardware_lock:
+            self.logger.debug("TpmDriver: erase_fpga")
+            self.tile.erase_fpga()
+        self._is_programmed = False
+        self._tpm_status = TpmStatus.UNPROGRAMMED
 
     def cpld_flash_write(self: TpmDriver, bitfile: bytes) -> None:
         """
@@ -249,17 +351,59 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
+    class Initialise(BaseCommand):
+        """Long running command for Tile initialisation."""
+
+        def do(  # type: ignore[override]
+            self: TpmDriver.Initialise,
+        ) -> tuple[ResultCode, str]:
+            """
+            Download firmware, if not already downloaded, and initializes tile.
+
+            :return: a result code and message
+            """
+            target = self.target
+            #
+            # If not programmed, program it.
+            # TODO: there is no way to check whether the TPM is already correctly initialised.
+            # If it is, re-initialising it is bad.
+            #
+            target.logger.debug("TpmDriver: initialise")
+            with target._hardware_lock:
+                if target.tile.is_programmed() is False:
+                    target.tile.program_fpgas(target._firmware_name)
+            #
+            # Initialisation after programming the FPGA
+            #
+            if target.tile.is_programmed():
+                target._is_programmed = True
+                target._tpm_status = TpmStatus.PROGRAMMED
+                #
+                # Base initialisation
+                #
+                with target._hardware_lock:
+                    target.tile.initialise()
+                    target.tile.set_station_id(0, 0)
+                #
+                # extra steps required to have it working
+                #
+                with target._hardware_lock:
+                    target.initialise_beamformer(128, 8, True, True)
+                with target._hardware_lock:
+                    target.tile.post_synchronisation()
+                    target.tile.set_station_id(target._tile_id, target._station_id)
+                target._tpm_status = TpmStatus.INITIALISED
+                target.logger.debug("TpmDriver: initialisation completed")
+                return (ResultCode.OK, "Initialsation completed")
+            else:
+                target._tpm_status = TpmStatus.UNPROGRAMMED
+                target.logger.error("TpmDriver: Cannot initialise board")
+                return (ResultCode.FAILED, "Cannot initialise board")
+
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initializes tile."""
-        assert self.tile.tpm is not None  # for the type checker
-        self.logger.debug("TpmDriver: initialise")
-        if self.tile.tpm is None or not self.tile.tpm.is_programmed():
-            self.tile.program_fpgas(self._firmware_name)
-        if self.tile.tpm.is_programmed():
-            self._is_programmed = True
-            self.tile.initialise()
-        else:
-            self.logger.error("TpmDriver: Cannot initialise board")
+        initialise_command = self.Initialise(target=self)
+        _ = self.enqueue(initialise_command)
 
     @property
     def tile_id(self: TpmDriver) -> int:
@@ -278,7 +422,8 @@ class TpmDriver(MccsComponentManager):
         :param value: assigned tile Id value
         """
         self._tile_id = value
-        self.tile.set_station_id(self._station_id, self._tile_id)
+        with self._hardware_lock:
+            self.tile.set_station_id(self._station_id, self._tile_id)
 
     @property
     def station_id(self: TpmDriver) -> int:
@@ -297,7 +442,8 @@ class TpmDriver(MccsComponentManager):
         :param value: assigned station Id value
         """
         self._station_id = value
-        self.tile.set_station_id(self._station_id, self._tile_id)
+        with self._hardware_lock:
+            self.tile.set_station_id(self._station_id, self._tile_id)
 
     @property
     def board_temperature(self: TpmDriver) -> float:
@@ -307,7 +453,8 @@ class TpmDriver(MccsComponentManager):
         :return: the temperature of the TPM
         """
         self.logger.debug("TpmDriver: board_temperature")
-        self._board_temperature = self.tile.get_temperature()
+        with self._hardware_lock:
+            self._board_temperature = self.tile.get_temperature()
         return self._board_temperature
 
     @property
@@ -318,7 +465,8 @@ class TpmDriver(MccsComponentManager):
         :return: the voltage of the TPM
         """
         self.logger.debug("TpmDriver: voltage")
-        self._voltage = self.tile.get_voltage()
+        with self._hardware_lock:
+            self._voltage = self.tile.get_voltage()
         return self._voltage
 
     @property
@@ -329,7 +477,8 @@ class TpmDriver(MccsComponentManager):
         :return: the current of the TPM
         """
         self.logger.debug("TpmDriver: current")
-        self._current = self.tile.get_current()
+        # not implemented
+        self._current = 1.0
         return self._current
 
     @property
@@ -340,7 +489,8 @@ class TpmDriver(MccsComponentManager):
         :return: the temperature of FPGA 1
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        self._fpga1_temperature = self.tile.get_fpga0_temperature()
+        with self._hardware_lock:
+            self._fpga1_temperature = self.tile.get_fpga0_temperature()
         return self._fpga1_temperature
 
     @property
@@ -351,7 +501,8 @@ class TpmDriver(MccsComponentManager):
         :return: the temperature of FPGA 2
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        self._fpga2_temperature = self.tile.get_fpga1_temperature()
+        with self._hardware_lock:
+            self._fpga2_temperature = self.tile.get_fpga1_temperature()
         return self._fpga2_temperature
 
     @property
@@ -362,7 +513,8 @@ class TpmDriver(MccsComponentManager):
         :return: the RMS power of the TPM's ADC
         """
         self.logger.debug("TpmDriver: adc_rms")
-        self._adc_rms = self.tile.get_adc_rms()
+        with self._hardware_lock:
+            self._adc_rms = self.tile.get_adc_rms()
         return list(self._adc_rms)
 
     @property
@@ -376,10 +528,11 @@ class TpmDriver(MccsComponentManager):
         :return: the FPGAs clock time
         """
         self.logger.debug("TpmDriver: fpgas_time")
-        self._fpgas_time = [
-            self.tile.get_fpga_time(Device.FPGA_1),
-            self.tile.get_fpga_time(Device.FPGA_2),
-        ]
+        with self._hardware_lock:
+            self._fpgas_time = [
+                self.tile.get_fpga_time(Device.FPGA_1),
+                self.tile.get_fpga_time(Device.FPGA_2),
+            ]
         return self._fpgas_time
 
     @property
@@ -390,7 +543,8 @@ class TpmDriver(MccsComponentManager):
         :return: PPS delay
         """
         self.logger.debug("TpmDriver: get_pps_delay")
-        self._pps_delay = self.tile.get_pps_delay()
+        with self._hardware_lock:
+            self._pps_delay = self.tile.get_pps_delay()
         return self._pps_delay
 
     @property
@@ -402,7 +556,8 @@ class TpmDriver(MccsComponentManager):
         """
         assert self.tile.tpm is not None  # for the type checker
         self.logger.warning("TpmDriver: register_list too big to be transmitted")
-        regmap = self.tile.tpm.find_register("")
+        with self._hardware_lock:
+            regmap = self.tile.tpm.find_register("")
         reglist = []
         for reg in regmap:
             reglist.append(reg.name)
@@ -430,7 +585,8 @@ class TpmDriver(MccsComponentManager):
             devname = ""
         regname = devname + register_name
         if len(self.tile.tpm.find_register(regname)) == 0:
-            self.logger.error("Register '" + regname + "' not present")
+            with self._hardware_lock:
+                self.logger.error("Register '" + regname + "' not present")
             value = None
             return []
         else:
@@ -488,7 +644,8 @@ class TpmDriver(MccsComponentManager):
                 + "of type "
                 + str(type(current_address))
             )
-            values.append(cast(int, self.tile[current_address]))
+            with self._hardware_lock:
+                values.append(cast(int, self.tile[current_address]))
             current_address = current_address + 4
         return values
 
@@ -504,7 +661,8 @@ class TpmDriver(MccsComponentManager):
         #
         current_address = int(address & 0xFFFFFFFC)
         for value in values:
-            self.tile[current_address] = value
+            with self._hardware_lock:
+                self.tile[current_address] = value
             current_address = current_address + 4
 
     def configure_40g_core(
@@ -529,9 +687,10 @@ class TpmDriver(MccsComponentManager):
         :param dst_port: port of the destination
         """
         self.logger.debug("TpmDriver: configure_40g_core")
-        self.tile.configure_40g_core(
-            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
-        )
+        with self._hardware_lock:
+            self.tile.configure_40g_core(
+                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+            )
 
     def get_40g_configuration(
         self: TpmDriver, core_id: Optional[int] = -1, arp_table_entry: int = 0
@@ -550,16 +709,18 @@ class TpmDriver(MccsComponentManager):
         self._forty_gb_core_list = []
         if core_id == -1:
             for core in range(0, 8):
-                dict_to_append = self.tile.get_40g_core_configuration(
-                    core, arp_table_entry
-                )
+                with self._hardware_lock:
+                    dict_to_append = self.tile.get_40g_core_configuration(
+                        core, arp_table_entry
+                    )
                 if dict_to_append is not None:
                     self._forty_gb_core_list.append(dict_to_append)
 
         else:
-            self._forty_gb_core_list = self.tile.get_40g_core_configuration(
-                core_id, arp_table_entry
-            )
+            with self._hardware_lock:
+                self._forty_gb_core_list = self.tile.get_40g_core_configuration(
+                    core_id, arp_table_entry
+                )
         return self._forty_gb_core_list
 
     @property
@@ -574,7 +735,8 @@ class TpmDriver(MccsComponentManager):
         :return: list of core id and arp table populated
         """
         self.logger.debug("TpmDriver: arp_table")
-        self._arp_table = self.tile.get_arp_table()
+        with self._hardware_lock:
+            self._arp_table = self.tile.get_arp_table()
         return self._arp_table
 
     def set_lmc_download(
@@ -598,9 +760,10 @@ class TpmDriver(MccsComponentManager):
         :param lmc_mac: LMC MAC address, defaults to None
         """
         self.logger.debug("TpmDriver: set_lmc_download")
-        self.tile.set_lmc_download(
-            mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
-        )
+        with self._hardware_lock:
+            self.tile.set_lmc_download(
+                mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
+            )
 
     def set_channeliser_truncation(self: TpmDriver, array: list[list[int]]) -> None:
         """
@@ -614,7 +777,8 @@ class TpmDriver(MccsComponentManager):
         for chan in range(nb_chan):
             trunc = [0] * 512
             trunc[0:nb_freq] = array[chan]
-            self.tile.set_channeliser_truncation(trunc, chan)
+            with self._hardware_lock:
+                self.tile.set_channeliser_truncation(trunc, chan)
 
     def set_beamformer_regions(self: TpmDriver, regions: list[int]) -> None:
         """
@@ -626,7 +790,8 @@ class TpmDriver(MccsComponentManager):
             and a substation ID (not used)
         """
         self.logger.debug("TpmDriver: set_beamformer_regions")
-        self.tile.set_beamformer_regions(regions)
+        with self._hardware_lock:
+            self.tile.set_beamformer_regions(regions)
 
     def initialise_beamformer(
         self: TpmDriver,
@@ -644,7 +809,10 @@ class TpmDriver(MccsComponentManager):
         :param is_last: whether this is the last (?)
         """
         self.logger.debug("TpmDriver: initialise_beamformer")
-        self.tile.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
+        with self._hardware_lock:
+            self.tile.initialise_beamformer(
+                start_channel, nof_channels, is_first, is_last
+            )
 
     def load_calibration_coefficients(
         self: TpmDriver, antenna: int, calibration_coefficients: list[int]
@@ -660,7 +828,8 @@ class TpmDriver(MccsComponentManager):
             coefficients, flattened into a list
         """
         self.logger.debug("TpmDriver: load_calibration_coefficients")
-        self.tile.load_calibration_coefficients(calibration_coefficients)
+        with self._hardware_lock:
+            self.tile.load_calibration_coefficients(calibration_coefficients)
 
     def load_calibration_curve(
         self: TpmDriver, antenna: int, beam: int, calibration_coefficients: list[int]
@@ -721,7 +890,8 @@ class TpmDriver(MccsComponentManager):
             switch
         """
         self.logger.debug("TpmDriver: switch_calibration_bank")
-        self.tile.switch_calibration_bank(switch_time=0)
+        with self._hardware_lock:
+            self.tile.switch_calibration_bank(switch_time=0)
 
     def compute_calibration_coefficients(self: TpmDriver) -> None:
         """
@@ -732,7 +902,8 @@ class TpmDriver(MccsComponentManager):
         followed by switch_calibration_bank() to make these active.
         """
         self.logger.debug("TpmDriver: compute_calibration_coefficients")
-        self.tile.compute_calibration_coefficients()
+        with self._hardware_lock:
+            self.tile.compute_calibration_coefficients()
 
     def set_pointing_delay(
         self: TpmDriver, delay_array: list[float], beam_index: int
@@ -760,7 +931,8 @@ class TpmDriver(MccsComponentManager):
         :param load_time: time at which to load the pointing delay
         """
         self.logger.debug("TpmDriver: load_pointing_delay")
-        self.tile.load_pointing_delay(load_time)
+        with self._hardware_lock:
+            self.tile.load_pointing_delay(load_time)
 
     def start_beamformer(
         self: TpmDriver, start_time: int = 0, duration: int = -1
@@ -774,13 +946,15 @@ class TpmDriver(MccsComponentManager):
             defaults to -1 (run forever)
         """
         self.logger.debug("TpmDriver: Start beamformer")
-        if self.tile.start_beamformer(start_time, duration):
-            self._is_beamformer_running = True
+        with self._hardware_lock:
+            if self.tile.start_beamformer(start_time, duration):
+                self._is_beamformer_running = True
 
     def stop_beamformer(self: TpmDriver) -> None:
         """Stop the beamformer."""
         self.logger.debug("TpmDriver: Stop beamformer")
-        self.tile.stop_beamformer()
+        with self._hardware_lock:
+            self.tile.stop_beamformer()
         self._is_beamformer_running = False
 
     def configure_integrated_channel_data(
@@ -801,11 +975,12 @@ class TpmDriver(MccsComponentManager):
         :param last_channel: last channel
         """
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
-        self.tile.configure_integrated_channel_data(
-            integration_time,
-            first_channel,
-            last_channel,
-        )
+        with self._hardware_lock:
+            self.tile.configure_integrated_channel_data(
+                integration_time,
+                first_channel,
+                last_channel,
+            )
 
     def configure_integrated_beam_data(
         self: TpmDriver,
@@ -825,16 +1000,18 @@ class TpmDriver(MccsComponentManager):
         :param last_channel: last channel
         """
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
-        self.tile.configure_integrated_beam_data(
-            integration_time,
-            first_channel,
-            last_channel,
-        )
+        with self._hardware_lock:
+            self.tile.configure_integrated_beam_data(
+                integration_time,
+                first_channel,
+                last_channel,
+            )
 
     def stop_integrated_data(self: TpmDriver) -> None:
         """Stop the integrated data."""
         self.logger.debug("TpmDriver: Stop integrated data")
-        self.tile.stop_integrated_data()
+        with self._hardware_lock:
+            self.tile.stop_integrated_data()
 
     def send_raw_data(
         self: TpmDriver,
@@ -850,7 +1027,8 @@ class TpmDriver(MccsComponentManager):
         :param seconds: delay with respect to timestamp, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_raw_data")
-        self.tile.send_raw_data(sync=sync, timestamp=timestamp, seconds=seconds)
+        with self._hardware_lock:
+            self.tile.send_raw_data(sync=sync, timestamp=timestamp, seconds=seconds)
 
     def send_channelised_data(
         self: TpmDriver,
@@ -870,13 +1048,14 @@ class TpmDriver(MccsComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_channelised_data")
-        self.tile.send_channelised_data(
-            number_of_samples=number_of_samples,
-            first_channel=first_channel,
-            last_channel=last_channel,
-            timestamp=timestamp,
-            seconds=seconds,
-        )
+        with self._hardware_lock:
+            self.tile.send_channelised_data(
+                number_of_samples=number_of_samples,
+                first_channel=first_channel,
+                last_channel=last_channel,
+                timestamp=timestamp,
+                seconds=seconds,
+            )
 
     def send_channelised_data_continuous(
         self: TpmDriver,
@@ -898,13 +1077,14 @@ class TpmDriver(MccsComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_channelised_data_continuous")
-        self.tile.send_channelised_data_continuous(
-            channel_id,
-            number_of_samples=number_of_samples,
-            wait_seconds=wait_seconds,
-            timestamp=timestamp,
-            seconds=seconds,
-        )
+        with self._hardware_lock:
+            self.tile.send_channelised_data_continuous(
+                channel_id,
+                number_of_samples=number_of_samples,
+                wait_seconds=wait_seconds,
+                timestamp=timestamp,
+                seconds=seconds,
+            )
 
     def send_beam_data(
         self: TpmDriver, timestamp: Optional[str] = None, seconds: float = 0.2
@@ -916,12 +1096,14 @@ class TpmDriver(MccsComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_beam_data")
-        self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
+        with self._hardware_lock:
+            self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
 
     def stop_data_transmission(self: TpmDriver) -> None:
         """Stop data transmission for send_channelised_data_continuous."""
         self.logger.debug("TpmDriver: stop_data_transmission")
-        self.tile.stop_data_transmission()
+        with self._hardware_lock:
+            self.tile.stop_data_transmission()
 
     def start_acquisition(
         self: TpmDriver, start_time: Optional[int] = None, delay: int = 2
@@ -934,7 +1116,9 @@ class TpmDriver(MccsComponentManager):
         :param delay: delay start, defaults to 2
         """
         self.logger.debug("TpmDriver:Start acquisition")
-        self.tile.start_acquisition(start_time, delay)
+        with self._hardware_lock:
+            self.tile.start_acquisition(start_time, delay)
+        self._tpm_status = TpmStatus.SYNCHRONISED
 
     def set_time_delays(self: TpmDriver, delays: list[int]) -> None:
         """
@@ -944,7 +1128,8 @@ class TpmDriver(MccsComponentManager):
             A positive delay adds delay to the signal stream
         """
         self.logger.debug("TpmDriver: set_time_delays")
-        self.tile.set_time_delays(delays)
+        with self._hardware_lock:
+            self.tile.set_time_delays(delays)
 
     def set_csp_rounding(self: TpmDriver, rounding: float) -> None:
         """
@@ -982,15 +1167,16 @@ class TpmDriver(MccsComponentManager):
         :param lmc_mac: MAC address of destination, defaults to None
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
-        self.tile.set_lmc_integrated_download(
-            mode,
-            channel_payload_length,
-            beam_payload_length,
-            dst_ip,
-            src_port,
-            dst_port,
-            lmc_mac,
-        )
+        with self._hardware_lock:
+            self.tile.set_lmc_integrated_download(
+                mode,
+                channel_payload_length,
+                beam_payload_length,
+                dst_ip,
+                src_port,
+                dst_port,
+                lmc_mac,
+            )
 
     def send_raw_data_synchronised(
         self: TpmDriver, timestamp: Optional[str] = None, seconds: float = 0.2
@@ -1002,17 +1188,33 @@ class TpmDriver(MccsComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_raw_data_synchronised")
-        self.tile.send_raw_data(timestamp, seconds, sync=True)
+        with self._hardware_lock:
+            self.tile.send_raw_data(timestamp, seconds, sync=True)
 
     @property
-    def current_tile_beamformer_frame(self: TpmDriver) -> int:
+    def current_tile_frame(self: TpmDriver) -> int:
         """
         Return current frame, in units of 256 ADC frames.
 
         :return: current tile beamformer frame
         """
         self.logger.debug("TpmDriver: current_tile_beamformer_frame")
-        self._current_tile_beamformer_frame = self.tile.current_tile_beamformer_frame()
+        with self._hardware_lock:
+            self._current_tile_frame = self.tile.current_tile_beamformer_frame()
+        return self._current_tile_frame
+
+    @property
+    def current_tile_beamformer_frame(self: TpmDriver) -> int:
+        """
+        Return current tile beamformer frame, in units of 256 ADC frames.
+
+        :return: current tile beamformer frame
+        """
+        self.logger.debug("TpmDriver: current_tile_beamformer_frame")
+        with self._hardware_lock:
+            self._current_tile_beamformer_frame = (
+                self.tile.current_tile_beamformer_frame()
+            )
         return self._current_tile_beamformer_frame
 
     @property
@@ -1023,7 +1225,8 @@ class TpmDriver(MccsComponentManager):
         :return: whether the beamformer is currently running
         """
         self.logger.debug("TpmDriver: beamformer_is_running")
-        self._is_beamformer_running = self.tile.beamformer_is_running()
+        with self._hardware_lock:
+            self._is_beamformer_running = self.tile.beamformer_is_running()
         return self._is_beamformer_running
 
     def check_pending_data_requests(self: TpmDriver) -> bool:
@@ -1033,7 +1236,9 @@ class TpmDriver(MccsComponentManager):
         :return: whether there are pending send data requests
         """
         self.logger.debug("TpmDriver: check_pending_data_requests")
-        return self.tile.check_pending_data_requests()
+        with self._hardware_lock:
+            request = self.tile.check_pending_data_requests()
+        return request
 
     def send_channelised_data_narrowband(
         self: TpmDriver,
@@ -1057,9 +1262,15 @@ class TpmDriver(MccsComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
-        self.tile.send_channelised_data_narrowband(
-            frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds
-        )
+        with self._hardware_lock:
+            self.tile.send_channelised_data_narrowband(
+                frequency,
+                round_bits,
+                number_of_samples,
+                wait_seconds,
+                timestamp,
+                seconds,
+            )
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -1106,7 +1317,8 @@ class TpmDriver(MccsComponentManager):
         TODO Private method or must be available externally?
         """
         self.logger.debug("TpmDriver: post_synchronisation")
-        self.tile.post_synchronisation()
+        with self._hardware_lock:
+            self.tile.post_synchronisation()
 
     def sync_fpgas(self: TpmDriver) -> None:
         """
@@ -1115,7 +1327,8 @@ class TpmDriver(MccsComponentManager):
         TODO Method appears to be mostly internal (private).
         """
         self.logger.debug("TpmDriver: sync_fpgas")
-        self.tile.sync_fpgas()
+        with self._hardware_lock:
+            self.tile.sync_fpgas()
 
     @property
     def test_generator_active(self: TpmDriver) -> bool:
@@ -1172,14 +1385,15 @@ class TpmDriver(MccsComponentManager):
             + " Hz"
         )
         # If load time not specified, is "now" + 30 ms
-        if load_time == 0:
-            load_time = self.tile.get_fpga_timestamp() + 108
-        # Set everything at same time
-        self.tile.set_test_generator_tone(0, frequency0, amplitude0, 0.0, load_time)
-        self.tile.set_test_generator_tone(1, frequency1, amplitude1, 0.0, load_time)
-        self.tile.set_test_generator_noise(amplitude_noise, load_time)
-        self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
-        end_time = self.tile.get_fpga_timestamp()
+        with self._hardware_lock:
+            if load_time == 0:
+                load_time = self.tile.get_fpga_timestamp() + 108
+            # Set everything at same time
+            self.tile.set_test_generator_tone(0, frequency0, amplitude0, 0.0, load_time)
+            self.tile.set_test_generator_tone(1, frequency1, amplitude1, 0.0, load_time)
+            self.tile.set_test_generator_noise(amplitude_noise, load_time)
+            self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
+            end_time = self.tile.get_fpga_timestamp()
         if end_time < load_time:
             self.logger.warning(
                 "Test generator: load time="
@@ -1197,7 +1411,8 @@ class TpmDriver(MccsComponentManager):
         :param inputs: Bit mask of inputs using test signal
         """
         self.logger.debug("Test generator: set inputs " + hex(inputs))
-        self.tile.test_generator_input_select(inputs)
+        with self._hardware_lock:
+            self.tile.test_generator_input_select(inputs)
 
     @staticmethod
     def calculate_delay(

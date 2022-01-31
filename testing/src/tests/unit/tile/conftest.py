@@ -323,6 +323,7 @@ def switching_tpm_component_manager(
         test_mode,
         logger,
         lrc_result_changed_callback,
+        1,  # default tile_id
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -380,6 +381,7 @@ def tile_component_manager(
         test_mode,
         logger,
         lrc_result_changed_callback,
+        1,  # default tile_id
         tpm_ip,
         tpm_cpld_port,
         tpm_version,

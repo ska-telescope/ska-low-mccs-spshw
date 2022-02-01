@@ -2,16 +2,16 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """Module for MCCS utils."""
 
 from __future__ import annotations  # allow forward references in type hints
 
 import functools
+import importlib.resources
 import json
-import pkg_resources
 import threading
 from types import FunctionType
 from typing import Any, Callable, Optional
@@ -21,6 +21,8 @@ import jsonschema
 
 def call_with_json(func: Callable, **kwargs: Any) -> Any:
     """
+    Call a command with a json string.
+
     Allows the calling of a command that accepts a JSON string as input, with the actual
     unserialised parameters.
 
@@ -51,6 +53,8 @@ def call_with_json(func: Callable, **kwargs: Any) -> Any:
 
 class json_input:  # noqa: N801
     """
+    Parse and validate json string input.
+
     Method decorator that parses and validates JSON input into a python dictionary,
     which is then passed to the method as kwargs. The wrapped method is thus called with
     a JSON string, but can be implemented as if it had been passed a sequence of named
@@ -75,8 +79,9 @@ class json_input:  # noqa: N801
 
     def __init__(self: json_input, schema_path: Optional[str] = None):
         """
-        Initialises a callable json_input object, to function as a device method
-        generator.
+        Initialise a callable json_input object.
+
+        To function as a device method generator.
 
         :param schema_path: an optional path to a schema against which
             the JSON should be validated. Not working at the moment, so
@@ -85,13 +90,15 @@ class json_input:  # noqa: N801
         self.schema = None
 
         if schema_path is not None:
-            schema_string = pkg_resources.resource_string(
+            schema_string = importlib.resources.read_text(
                 "ska_low_mccs.schemas", schema_path
             )
             self.schema = json.loads(schema_string)
 
     def __call__(self: json_input, func: Callable) -> Callable:
         """
+        Make a class callable.
+
         The decorator method. Makes this class callable, and ensures that when called on
         a device method, a wrapped method is returned.
 
@@ -103,7 +110,7 @@ class json_input:  # noqa: N801
         @functools.wraps(func)
         def wrapped(obj: object, json_string: str) -> object:
             """
-            The wrapped function.
+            Wrap a function.
 
             :param obj: the object that owns the method to be wrapped
                 i.e. the value passed into the method as "self"
@@ -119,7 +126,7 @@ class json_input:  # noqa: N801
 
     def _parse(self: json_input, json_string: str) -> dict[str, str]:
         """
-        Parses and validates the JSON string input.
+        Parse and validate the JSON string input.
 
         :param json_string: a string, purportedly a JSON-encoded object
 
@@ -136,13 +143,13 @@ class json_input:  # noqa: N801
 CHECK_THREAD_SAFETY = False
 
 
-class ThreadsafeCheckingMeta(type):
+class ThreadsafeCheckingMeta(type):  # pragma: no cover
     """Metaclass that checks for methods being run by multiple concurrent threads."""
 
     @staticmethod
     def _init_wrap(func: Callable) -> Callable:
         """
-        Wrapper for ``__init__`` that adds thread safety checking stuff.
+        Wrap ``__init__`` to add thread safety checking stuff.
 
         :param func: the ``__init__`` method being wrapped
 
@@ -159,7 +166,7 @@ class ThreadsafeCheckingMeta(type):
     @staticmethod
     def _check_wrap(func: Callable) -> Callable:
         """
-        Wrapper for class methods that injects thread safety checks.
+        Wrap the class methods that injects thread safety checks.
 
         :param func: the method being wrapped
 
@@ -202,7 +209,7 @@ class ThreadsafeCheckingMeta(type):
         cls: type[ThreadsafeCheckingMeta], name: str, bases: tuple[type], attrs: dict
     ) -> ThreadsafeCheckingMeta:
         """
-        Class constructor.
+        Construct Class.
 
         :param name: name of the new class
         :param bases: parent classes of the new class
@@ -223,9 +230,9 @@ class ThreadsafeCheckingMeta(type):
         return super(ThreadsafeCheckingMeta, cls).__new__(cls, name, bases, attrs)
 
 
-def threadsafe(func: Callable) -> Callable:
+def threadsafe(func: Callable) -> Callable:  # pragma: no cover
     """
-    Decorator for marking a method as threadsafe.
+    Use this method as a decorator for marking a method as threadsafe.
 
     This tells the ``ThreadsafeCheckingMeta`` metaclass that it is okay
     for the decorated method to have more than one thread in it at a

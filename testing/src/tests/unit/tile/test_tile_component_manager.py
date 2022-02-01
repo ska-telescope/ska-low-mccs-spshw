@@ -3,26 +3,25 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the tile component manage."""
 from __future__ import annotations
 
 import time
-from typing import Any, Union
+from typing import Any, Union, Optional, Callable
+import logging
+
 import unittest.mock
 
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-import tango
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
+from ska_tango_base.control_model import SimulationMode, TestMode
 
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     StaticTpmSimulator,
@@ -32,118 +31,8 @@ from ska_low_mccs.tile import (
     SwitchingTpmComponentManager,
     TileComponentManager,
 )
-from ska_low_mccs.tile.tile_component_manager import _SubrackProxy
 
-from ska_low_mccs.testing.mock import MockCallable
-
-
-class TestTileSubrackProxy:
-    """Tests of the _SubrackProxy class."""
-
-    def test_communication(
-        self: TestTileSubrackProxy,
-        tile_subrack_proxy: _SubrackProxy,
-        communication_status_changed_callback: MockCallable,
-    ) -> None:
-        """
-        Test this tile subrack proxy's communication with the tile.
-
-        :param tile_subrack_proxy: a proxy to the tile's subrack device.
-        :param communication_status_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        """
-        assert tile_subrack_proxy.communication_status == CommunicationStatus.DISABLED
-        tile_subrack_proxy.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        assert (
-            tile_subrack_proxy.communication_status == CommunicationStatus.ESTABLISHED
-        )
-
-        tile_subrack_proxy.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
-        assert tile_subrack_proxy.communication_status == CommunicationStatus.DISABLED
-
-    def test_power_command(
-        self: TestTileSubrackProxy,
-        tile_subrack_proxy: _SubrackProxy,
-        mock_subrack_device_proxy: unittest.mock.Mock,
-        subrack_tpm_id: int,
-    ) -> None:
-        """
-        Test that this tile subrack proxy can control the power mode of the tile.
-
-        :param tile_subrack_proxy: a proxy to the tile's subrack device.
-        :param mock_subrack_device_proxy: a mock device proxy to an subrack
-            device.
-        :param subrack_tpm_id: the id of the tile in its subrack
-            device.
-        """
-        with pytest.raises(
-            ConnectionError,
-            match="Not connected",
-        ):
-            tile_subrack_proxy.on()
-
-        assert tile_subrack_proxy.power_mode is None
-
-        tile_subrack_proxy.start_communicating()
-        time.sleep(0.1)
-        # communication_status is ESTABLISHED because MccsSubrack's
-        # state is OFF, from which it can be inferred that the tile
-        # itself is powered off.
-        assert tile_subrack_proxy.power_mode == PowerMode.OFF
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
-
-        tile_subrack_proxy.on()
-        mock_subrack_device_proxy.On.assert_next_call()
-
-        # Fake an event that tells this proxy that the subrack has been turned on.
-        tile_subrack_proxy._device_state_changed(
-            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
-        )
-        assert tile_subrack_proxy.power_mode == PowerMode.ON
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
-
-        time.sleep(0.1)
-        assert tile_subrack_proxy.power_on() == ResultCode.QUEUED
-        mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
-
-        # The tile power mode won't update until an event confirms that the tile is on.
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
-
-        # Fake an event that tells this proxy that the tile is now on as requested
-        tile_subrack_proxy._tpm_power_mode_changed(
-            "areTpmsOn", [True, True, True], tango.AttrQuality.ATTR_VALID
-        )
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.ON
-
-        assert tile_subrack_proxy.power_on() is None
-        mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.ON
-
-        assert tile_subrack_proxy.power_off() == ResultCode.QUEUED
-        mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
-
-        # The power mode won't update until an event confirms that the tile is on.
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.ON
-
-        # Fake an event that tells this proxy that the tile is now off as requested
-        tile_subrack_proxy._tpm_power_mode_changed(
-            "areTpmsOn", [False, True, True], tango.AttrQuality.ATTR_VALID
-        )
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
-
-        assert tile_subrack_proxy.power_off() is None
-        mock_subrack_device_proxy.PowerOffTpm.assert_not_called()
-        assert tile_subrack_proxy.supplied_power_mode == PowerMode.OFF
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 class TestTileComponentManager:
@@ -156,10 +45,12 @@ class TestTileComponentManager:
     itself.
     """
 
+    @pytest.mark.parametrize("power_mode", list(ExtendedPowerMode))
     def test_communication(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         communication_status_changed_callback: MockCallable,
+        power_mode: ExtendedPowerMode,
     ) -> None:
         """
         Test communication between the tile component manager and its tile.
@@ -169,6 +60,77 @@ class TestTileComponentManager:
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param power_mode: the power mode of the TPM when we break off
+            comms
+        """
+        assert (
+            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        )
+
+        # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+        tile_component_manager.start_communicating()
+
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        if power_mode == ExtendedPowerMode.UNKNOWN:
+            tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.UNKNOWN)
+        elif power_mode == ExtendedPowerMode.NO_SUPPLY:
+            tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
+        elif power_mode == ExtendedPowerMode.OFF:
+            pass  # test harness starts with TPM off
+        elif power_mode == ExtendedPowerMode.ON:
+            tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
+            communication_status_changed_callback.assert_next_call(
+                CommunicationStatus.ESTABLISHED
+            )
+
+        tile_component_manager.stop_communicating()
+
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
+        assert (
+            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        )
+
+    # TODO: find out if TPM has standby mode, and if so add this case
+    @pytest.mark.parametrize(
+        "second_power_mode",
+        [
+            ExtendedPowerMode.UNKNOWN,
+            ExtendedPowerMode.NO_SUPPLY,
+            ExtendedPowerMode.OFF,
+            ExtendedPowerMode.ON,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "first_power_mode",
+        [
+            ExtendedPowerMode.UNKNOWN,
+            ExtendedPowerMode.NO_SUPPLY,
+            ExtendedPowerMode.OFF,
+            ExtendedPowerMode.ON,
+        ],
+    )
+    def test_power_mode_changes(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+        communication_status_changed_callback: MockCallable,
+        first_power_mode: ExtendedPowerMode,
+        second_power_mode: ExtendedPowerMode,
+    ) -> None:
+        """
+        Test handling of notifications of TPM power mode changes from the subrack.
+
+        :param tile_component_manager: the tile component manager
+            under test
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param first_power_mode: the power mode of the initial event
+        :param second_power_mode: the power mode of the subsequent event
         """
         assert (
             tile_component_manager.communication_status == CommunicationStatus.DISABLED
@@ -179,22 +141,67 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+
         assert (
             tile_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
+            == CommunicationStatus.NOT_ESTABLISHED
         )
 
-        tile_component_manager.stop_communicating()
+        tile_component_manager._tpm_power_mode_changed(first_power_mode)
+
+        if first_power_mode == ExtendedPowerMode.ON:
+            communication_status_changed_callback.assert_next_call(
+                CommunicationStatus.ESTABLISHED
+            )
+        else:
+            communication_status_changed_callback.assert_not_called()
+
+        tile_component_manager._tpm_power_mode_changed(second_power_mode)
+
+        if (
+            first_power_mode != ExtendedPowerMode.ON
+            and second_power_mode == ExtendedPowerMode.ON
+        ):
+            communication_status_changed_callback.assert_next_call(
+                CommunicationStatus.ESTABLISHED
+            )
+        else:
+            communication_status_changed_callback.assert_not_called()
+
+    def test_off_on(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+        communication_status_changed_callback: MockCallable,
+        subrack_tpm_id: int,
+        mock_subrack_device_proxy: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test that we can turn the TPM on and off when the subrack is on.
+
+        :param tile_component_manager: the tile component manager
+            under test
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param subrack_tpm_id: This tile's position in its subrack
+        :param mock_subrack_device_proxy: a mock device proxy to a
+            subrack device.
+        """
+        tile_component_manager.start_communicating()
 
         communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
+            CommunicationStatus.NOT_ESTABLISHED
         )
-        assert (
-            tile_component_manager.communication_status == CommunicationStatus.DISABLED
-        )
+
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
+
+        tile_component_manager.on()
+        mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
+
+        tile_component_manager.off()
+        mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
@@ -220,7 +227,9 @@ class TestTileComponentManager:
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
         """
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="TPM cannot be turned off / on when not online."
+        ):
             tile_component_manager.on()
 
         tile_component_manager.start_communicating()
@@ -228,16 +237,17 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+
+        # mock an event from subrack announcing it to be turned off
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
 
         assert tile_component_manager.on() == ResultCode.QUEUED
 
         # no action taken initialially because the subrack is switched off
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
-        tile_component_manager._subrack_power_mode_changed(PowerMode.ON)
+        # mock an event from subrack announcing it to be turned on
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
         # now that the tile has been notified that the subrack is on,
         # it tells it to turn on its TPM
@@ -261,20 +271,7 @@ class TestStaticSimulatorCommon:
     """
 
     @pytest.fixture()
-    def initial_subrack_state(self: TestStaticSimulatorCommon) -> tango.DevState:
-        """
-        Return the state in which the mock subrack should start.
-
-        Overridden here to put the subrack into ON state, so that we
-        don't have to fiddle around with state change events to get the
-        tile component manager communicating with its tile.
-
-        :return: the state in which the mock subrack should start.
-        """
-        return tango.DevState.ON
-
-    @pytest.fixture()
-    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> PowerMode:
+    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> ExtendedPowerMode:
         """
         Return the initial power mode of the TPM.
 
@@ -284,7 +281,7 @@ class TestStaticSimulatorCommon:
 
         :return: the initial power mode of the TPM.
         """
-        return PowerMode.ON
+        return ExtendedPowerMode.ON
 
     @pytest.fixture(
         params=[
@@ -357,11 +354,6 @@ class TestStaticSimulatorCommon:
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.NOT_ESTABLISHED
             )
-            communication_status_changed_callback.assert_next_call(
-                CommunicationStatus.ESTABLISHED
-            )
-            time.sleep(0.1)
-            tile_component_manager.on()
             time.sleep(0.1)
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
@@ -398,9 +390,10 @@ class TestStaticSimulatorCommon:
         expected_value: Any,
     ) -> None:
         """
-        Tests that read-only attributes take certain known initial values. This is a
-        weak test; over time we should find ways to more thoroughly test each of these
-        independently.
+        Tests that read-only attributes take certain known initial values.
+
+        This is a weak test; over time we should find ways to more thoroughly
+        test each of these independently.
 
         :param tile: the tile class object under test.
         :param attribute_name: the name of the attribute under test
@@ -427,7 +420,9 @@ class TestStaticSimulatorCommon:
         values_to_write: list,
     ) -> None:
         """
-        Tests that read-write attributes take certain known initial values, and that
+        Test read-write attributes.
+
+        Take certain known initial values, and that
         their values can be updated.
 
         This is a weak test; over time we should find ways to more
@@ -497,7 +492,9 @@ class TestStaticSimulatorCommon:
         num_args: int,
     ) -> None:
         """
-        Test of commands that aren't implemented yet. Since the comands don't really do
+        Test of commands that aren't implemented yet.
+
+        Since the commands don't really do
         anything, these tests simply check that the command can be called.
 
         :param mocker: fixture that wraps unittest.mock
@@ -523,6 +520,7 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         """
+        tile.erase_fpga()
         assert not tile.is_programmed
         tile.initialise()
         assert tile.is_programmed
@@ -539,24 +537,26 @@ class TestStaticSimulatorCommon:
         mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
-        Test of:
+        Test.
 
+        Tests that:
         * the download_firmware command.
         * the is_programmed attribute
 
         :param tile: the tile class object under test.
         :param mocker: fixture that wraps unittest.mock
         """
+        tile.erase_fpga()
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
         tile.download_firmware(mock_bitfile)
         assert tile.is_programmed
 
-    @pytest.mark.parametrize("device", (0, 1))
-    @pytest.mark.parametrize("register", tuple(f"test-reg{i}" for i in (1, 4)))
-    @pytest.mark.parametrize("read_offset", (0, 2))
-    @pytest.mark.parametrize("read_length", (0, 4))
-    @pytest.mark.parametrize("write_offset", (0, 3))
+    @pytest.mark.parametrize("device", (1,))
+    @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
+    @pytest.mark.parametrize("read_offset", (2,))
+    @pytest.mark.parametrize("read_length", (4,))
+    @pytest.mark.parametrize("write_offset", (3,))
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
     def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
@@ -574,8 +574,9 @@ class TestStaticSimulatorCommon:
         write_values: list[int],
     ) -> None:
         """
-        Test of.
+        Test read and write registers.
 
+        Test the:
         * read_register command
         * write_register command
 
@@ -591,14 +592,19 @@ class TestStaticSimulatorCommon:
         buffer = [0] * buffer_size
         for (index, value) in enumerate(write_values):
             buffer[write_offset + index] = value
-        expected_read = tuple(buffer[read_offset : (read_offset + read_length)])
+        expected_read = buffer[read_offset : (read_offset + read_length)]
         tile.write_register(register, write_values, write_offset, device)
         assert (
             tile.read_register(register, read_length, read_offset, device)
             == expected_read
         )
 
-    @pytest.mark.parametrize("write_address", [9, 11])
+    @pytest.mark.parametrize(
+        "write_address",
+        [
+            9,
+        ],
+    )
     @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
     @pytest.mark.parametrize("read_address", [10])
     @pytest.mark.parametrize("read_length", [0, 4])
@@ -616,8 +622,9 @@ class TestStaticSimulatorCommon:
         read_length: int,
     ) -> None:
         """
-        Test of.
+        Test read and write address registers.
 
+        Test the:
         * read_address command
         * write_address command
 
@@ -633,8 +640,7 @@ class TestStaticSimulatorCommon:
 
         def buffer_slice(address: int, length: int) -> slice:
             """
-            Helper function that returns a slice that tells you where to read from or
-            write to the buffer.
+            Return a slice that tells you where to read from or write to the buffer.
 
             :param address: the start address being read from or written
                 to
@@ -646,7 +652,7 @@ class TestStaticSimulatorCommon:
             return slice(address - min_address, address - min_address + length)
 
         buffer[buffer_slice(write_address, len(write_values))] = write_values
-        expected_read = tuple(buffer[buffer_slice(read_address, read_length)])
+        expected_read = list(buffer[buffer_slice(read_address, read_length)])
 
         tile.write_address(write_address, write_values)
         assert tile.read_address(read_address, read_length) == expected_read
@@ -661,8 +667,9 @@ class TestStaticSimulatorCommon:
         ],
     ) -> None:
         """
-        Test of:
+        Test start and stop beamformer.
 
+        Test that:
         * the start_beamformer command.
         * the stop_beamformer command.
         * the is_beamformer_running attribute
@@ -685,39 +692,40 @@ class TestStaticSimulatorCommon:
         ],
     ) -> None:
         """
-        Test of:
+        Test 40G configuration.
 
+        Test that:
         * the configure_40g_core command
         * the get_40g_configuration command
 
         :param tile: the tile class object under test.
         """
         assert tile.get_40g_configuration(-1, 0) == []
-        assert tile.get_40g_configuration("mock_core_id") is None
+        assert tile.get_40g_configuration(9) is None
 
         tile.configure_40g_core(
-            "mock_core_id",
-            "mock_arp_table_entry",
+            2,
+            1,
             "mock_src_mac",
             "mock_src_ip",
-            "mock_src_port",
+            8888,
             "mock_dst_ip",
-            "mock_dst_port",
+            3333,
         )
 
         expected = {
-            "CoreID": "mock_core_id",
-            "ArpTableEntry": "mock_arp_table_entry",
-            "SrcMac": "mock_src_mac",
-            "SrcIP": "mock_src_ip",
-            "SrcPort": "mock_src_port",
-            "DstIP": "mock_dst_ip",
-            "DstPort": "mock_dst_port",
+            "core_id": 2,
+            "arp_table_entry": 1,
+            "src_mac": "mock_src_mac",
+            "src_ip": "mock_src_ip",
+            "src_port": 8888,
+            "dst_ip": "mock_dst_ip",
+            "dst_port": 3333,
         }
 
         assert tile.get_40g_configuration(-1, 0) == [expected]
-        assert tile.get_40g_configuration("mock_core_id") == expected
-        assert tile.get_40g_configuration("another_core_id") is None
+        assert tile.get_40g_configuration(2) == expected
+        assert tile.get_40g_configuration(10) is None
 
 
 class TestDynamicSimulatorCommon:
@@ -748,20 +756,7 @@ class TestDynamicSimulatorCommon:
         return TestMode.NONE
 
     @pytest.fixture()
-    def initial_subrack_state(self: TestDynamicSimulatorCommon) -> tango.DevState:
-        """
-        Return the state in which the mock subrack should start.
-
-        Overridden here to put the subrack into ON state, so that we
-        don't have to fiddle around with state change events to get the
-        tile component manager communicating with its tile.
-
-        :return: the state in which the mock subrack should start.
-        """
-        return tango.DevState.ON
-
-    @pytest.fixture()
-    def initial_tpm_power_mode(self: TestDynamicSimulatorCommon) -> PowerMode:
+    def initial_tpm_power_mode(self: TestDynamicSimulatorCommon) -> ExtendedPowerMode:
         """
         Return the initial power mode of the TPM.
 
@@ -771,7 +766,7 @@ class TestDynamicSimulatorCommon:
 
         :return: the initial power mode of the TPM.
         """
-        return PowerMode.ON
+        return ExtendedPowerMode.ON
 
     @pytest.fixture(
         params=[
@@ -829,7 +824,6 @@ class TestDynamicSimulatorCommon:
         elif request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
             time.sleep(0.1)
-            tile_component_manager.on()
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 
@@ -853,7 +847,9 @@ class TestDynamicSimulatorCommon:
         attribute_name: str,
     ) -> None:
         """
-        Tests that dynamic attributes can be read, and that the are NOT equal to the
+        Tests that dynamic attributes can be read.
+
+        Check that they are NOT equal to the
         static value assigned in the static dynamic simulator.
 
         :param tile: the tile class object under test.
@@ -922,7 +918,9 @@ class TestDriverCommon:
     @pytest.fixture()
     def simulation_mode(self: TestDriverCommon) -> SimulationMode:
         """
-        Return the simulation mode to be used when initialising the tile class object
+        Return the simulation mode.
+
+        To be used when initialising the tile class object
         under test.
 
         :return: the simulation mode to be used when initialising the
@@ -930,61 +928,170 @@ class TestDriverCommon:
         """
         return SimulationMode.FALSE
 
-    @pytest.fixture(
-        params=[
-            "tpm_driver",
-            "switching_tpm_component_manager",
-        ]
-    )
-    def tile(
+    @pytest.fixture()
+    def hardware_tile_mock(self: TestDriverCommon) -> unittest.mock.Mock:
+        """
+        Provide a mock for the hardware tile.
+
+        :return: An hardware tile mock
+        """
+        return unittest.mock.Mock()
+
+    class PatchedTpmDriver(TpmDriver):
+        """Patched TpmDriver class."""
+
+        def __init__(
+            self: TestDriverCommon.PatchedTpmDriver,
+            logger: logging.Logger,
+            push_change_event: Optional[Callable],
+            ip: str,
+            port: int,
+            tpm_version: str,
+            communication_status_changed_callback: Callable[
+                [CommunicationStatus], None
+            ],
+            component_fault_callback: Callable[[bool], None],
+            aavs_tile: unittest.mock.Mock,
+        ) -> None:
+            """
+            Initialise a new patched TPM driver instance.
+
+            :param logger: a logger for this simulator to use
+            :param push_change_event: method to call when the base classes
+                want to send an event
+            :param ip: IP address for hardware tile
+            :param port: IP address for hardware tile control
+            :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+            :param communication_status_changed_callback: callback to be
+                called when the status of the communications channel between
+                the component manager and its component changes
+            :param component_fault_callback: callback to be called when the
+                component faults (or stops faulting)
+            :param aavs_tile: a mock of the hardware tile
+            """
+            super().__init__(
+                logger,
+                push_change_event,
+                1,  # default tile_id
+                ip,
+                port,
+                tpm_version,
+                communication_status_changed_callback,
+                component_fault_callback,
+            )
+            self.tile = aavs_tile
+
+    @pytest.fixture()
+    def patched_tpm_driver(
         self: TestDriverCommon,
-        tpm_driver: TpmDriver,
-        switching_tpm_component_manager: SwitchingTpmComponentManager,
-        request: SubRequest,
-    ) -> Union[TpmDriver, SwitchingTpmComponentManager]:
+        logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
+        tpm_ip: str,
+        tpm_cpld_port: int,
+        tpm_version: str,
+        communication_status_changed_callback: MockCallable,
+        component_fault_callback: MockCallable,
+        hardware_tile_mock: unittest.mock.Mock,
+    ) -> PatchedTpmDriver:
         """
-        Return the tile component under test.
+        Return a patched TPM driver.
 
-        This is parametrised to return
+        :param logger: the logger to be used by this object.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
+        :param tpm_ip: the IP address of the tile
+        :param tpm_cpld_port: the port at which the tile is accessed for control
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_fault_callback: callback to be called when the
+            component faults (or stops faulting)
+        :param hardware_tile_mock: a mock of the hardware tile
 
-        * a TPM driver,
-
-        * a component manager that can switch between TPM simulator and
-          TPM driver.
-
-        So any test that relies on this fixture will be run twice.
-
-        :param tpm_driver: the TPM driver
-        :param switching_tpm_component_manager: the component manager
-            that switches between TPM simulator and TPM driver to return
-        :param request: A pytest object giving access to the requesting test
-            context.
-
-        :raises ValueError: if parametrized with an unrecognised option
-
-        :return: the tile class object under test
+        :return: a patched TPM driver
         """
-        if request.param == "tpm_driver":
-            return tpm_driver
-        elif request.param == "switching_tpm_component_manager":
-            return switching_tpm_component_manager
-        raise ValueError("Tile fixture parametrized with unrecognised option")
+        return self.PatchedTpmDriver(
+            logger,
+            lrc_result_changed_callback,
+            tpm_ip,
+            tpm_cpld_port,
+            tpm_version,
+            communication_status_changed_callback,
+            component_fault_callback,
+            hardware_tile_mock,
+        )
 
     def test_communication_fails(
-        self: TestDriverCommon, tile: Union[TpmDriver, SwitchingTpmComponentManager]
+        self: TestDriverCommon,
+        patched_tpm_driver: PatchedTpmDriver,
+        hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
-        Test was can create the driver but not start communication with the component.
+        Test we can create the driver but not start communication with the component.
 
         We can create the tile class object under test, but will not be
         able to use it to establish communication with the component
         (which is a hardware TPM that does not exist in this test
         harness).
 
-        :param tile: the tile class object under test.
+        :param patched_tpm_driver: the patched tpm driver under test.
+        :param hardware_tile_mock: An hardware tile mock
         """
-        assert tile.communication_status == CommunicationStatus.DISABLED
-        tile.start_communicating()
-        assert tile.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        hardware_tile_mock.tpm = None
+        assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
+        patched_tpm_driver.start_communicating()
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
+        # Wait for the message to execute
+        time.sleep(3.1)
+        hardware_tile_mock.connect.assert_called_with()
+        assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
+        assert patched_tpm_driver._queue_manager._task_result[1] == str(
+            ResultCode.FAILED.value
+        )
+        assert (
+            patched_tpm_driver._queue_manager._task_result[2]
+            == "Could not connect to Tile"
+        )
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+    def test_communication(
+        self: TestDriverCommon,
+        patched_tpm_driver: PatchedTpmDriver,
+        hardware_tile_mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test we can create the driver and start communication with the component.
+
+        We can create the tile class object under test, and we will mock
+        the underlying component (which is a hardware TPM that does not exist
+        in this test harness).
+
+        :param patched_tpm_driver: the patched tpm driver under test.
+        :param hardware_tile_mock: An hardware tile mock
+        """
+        hardware_tile_mock.tpm = True
+        assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
+        patched_tpm_driver.start_communicating()
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Wait for the message to execute
         time.sleep(0.1)
-        assert tile.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        hardware_tile_mock.connect.assert_called_once()
+        assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
+        assert patched_tpm_driver._queue_manager._task_result[1] == str(
+            ResultCode.OK.value
+        )
+        assert patched_tpm_driver._queue_manager._task_result[2] == "Connected to Tile"
+        assert (
+            patched_tpm_driver.communication_status == CommunicationStatus.ESTABLISHED
+        )

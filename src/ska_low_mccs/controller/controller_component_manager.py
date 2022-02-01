@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements component management for the MCCS controller."""
 from __future__ import annotations
 
@@ -14,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Optional, Iterable
+from typing import Callable, Hashable, Optional, Iterable
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
@@ -25,40 +23,106 @@ from ska_low_mccs.component import (
     DeviceComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 from ska_low_mccs.controller import ControllerResourceManager
-
+from ska_low_mccs.resource_manager import ResourceManager, ResourcePool
 
 __all__ = ["ControllerComponentManager"]
 
 
 class _StationProxy(DeviceComponentManager):
-    """A station's proxy to a subarray."""
+    """A controller's proxy to a station."""
 
-    @check_communicating
-    @check_on
-    def write_subarray_id(
+    def __init__(
         self: _StationProxy,
-        new_subarray_id: int,
+        fqdn: str,
+        subarray_fqdns: Iterable[str],
+        logger: logging.Logger,
+        push_change_event: Optional[Callable],
+        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        component_fault_callback: Optional[Callable[[bool], None]],
+        health_changed_callback: Optional[
+            Callable[[Optional[HealthState]], None]
+        ] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param subarray_fqdns: the FQDNs of subarrays which channel
+            blocks can be assigned to.
+        :param logger: the logger to be used by this object.
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_power_mode_changed_callback: callback to be
+            called when the component power mode changes
+        :param component_fault_callback: callback to be called when the
+            component faults (or stops faulting)
+        :param health_changed_callback: callback to be called when the
+            health state of the device changes. The value it is called
+            with will normally be a HealthState, but may be None if the
+            admin mode of the device indicates that the device's health
+            should not be included in upstream health rollup.
+        """
+        self._channel_block_pool = ResourcePool(channel_blocks=range(1, 49))
+        self._resource_manager = ResourceManager(
+            subarray_fqdns,
+            channel_blocks=range(1, 49),
+        )
+
+        super().__init__(
+            fqdn,
+            logger,
+            push_change_event,
+            communication_status_changed_callback,
+            component_power_mode_changed_callback,
+            component_fault_callback,
+            health_changed_callback,
+        )
+
+    def allocate(
+        self: _StationProxy, subarray_fqdn: str, channel_blocks: int
     ) -> ResultCode:
         """
-        Set the station's subarrayId attribute.
+        Allocate channel blocks to a subarray.
 
-        :param new_subarray_id: the station's new subarray id.
+        This method removes the requested number of channel blocks from
+        the available pool and assigns them to the provided subarray fqdn.
 
-        :return: a result code
+        :param subarray_fqdn: The fqdn of the subarray to which the channel
+            blocks are to be assigned.
+        :param channel_blocks: The number of channel blocks to assign to the
+            subarray.
+
+        :return: a result code.
         """
-        return self._write_subarray_id(new_subarray_id)
-
-    @enqueue
-    def _write_subarray_id(
-        self: _StationProxy,
-        new_subarray_id: int,
-    ) -> ResultCode:
-        assert self._proxy is not None
-        self._proxy.subarrayId = new_subarray_id
+        channel_blocks_to_allocate = []
+        for _ in range(channel_blocks):
+            channel_blocks_to_allocate.append(
+                self._channel_block_pool.get_free_resource("channel_blocks")
+            )
+        self._resource_manager.allocate(
+            subarray_fqdn, channel_blocks=channel_blocks_to_allocate
+        )
         return ResultCode.OK
+
+    def release_from_subarray(self: _StationProxy, subarray_fqdn: str) -> None:
+        """
+        Release all channel blocks assigned to a subarray.
+
+        Channel blocks are released from the subarray and marked as free in the
+            station proxy's device pool for reallocation whenever needed.
+
+        :param subarray_fqdn: The fqdn of the subarray from which this station
+            proxy's channel blocks are to be released.
+        """
+        channel_blocks_to_release = self._resource_manager.get_allocated(subarray_fqdn)
+        self._resource_manager.deallocate_from(subarray_fqdn)
+        self._channel_block_pool.free_resources(channel_blocks_to_release)
 
 
 class _SubarrayProxy(DeviceComponentManager):
@@ -66,11 +130,11 @@ class _SubarrayProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def assign_resources(
         self: _SubarrayProxy,
-        station_fqdns: Iterable[str],
+        station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
+        station_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
     ) -> ResultCode:
         """
@@ -79,26 +143,27 @@ class _SubarrayProxy(DeviceComponentManager):
         :param station_fqdns: FQDNs of stations assigned to the subarray
         :param subarray_beam_fqdns: FQDNs of subarray beams assigned to
             the subarray
+        :param station_beam_fqdns: FQDNs of station beams assigned to
+            the subarray
         :param channel_blocks: the channel block numbers assigned to the
             subarray
 
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.AssignResources(
-            json.dumps(
-                {
-                    "stations": sorted(station_fqdns),
-                    "subarray_beams": sorted(subarray_beam_fqdns),
-                    "channel_blocks": sorted(channel_blocks),
-                }
-            )
+        args = json.dumps(
+            {
+                "stations": sorted(station_fqdns),
+                "subarray_beams": sorted(subarray_beam_fqdns),
+                "station_beams": sorted(station_beam_fqdns),
+                "channel_blocks": sorted(channel_blocks),
+            }
         )
+        ([result_code], _) = self._proxy.AssignResources(args)
         return result_code
 
     @check_communicating
     @check_on
-    @enqueue
     def release_all_resources(
         self: _SubarrayProxy,
     ) -> ResultCode:
@@ -108,12 +173,11 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.ReleaseAllResources()
+        ([result_code], _) = self._proxy.ReleaseAllResources()
         return result_code
 
     @check_communicating
     @check_on
-    @enqueue
     def restart(
         self: _SubarrayProxy,
     ) -> ResultCode:
@@ -123,8 +187,108 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.Restart()
+        ([result_code], _) = self._proxy.Restart()
         return result_code
+
+
+class _SubarrayBeamProxy(DeviceComponentManager):
+    """A controller's proxy to a subarray beam."""
+
+    @check_communicating
+    @check_on
+    def write_station_ids(
+        self: _SubarrayBeamProxy,
+        new_station_ids: list[int],
+    ) -> ResultCode:
+        """
+        Set the station beam's stationIds attribute.
+
+        :param new_station_ids: the station beam's new station ids.
+
+        :return: a result code
+        """
+        return self._write_station_ids(new_station_ids)
+
+    def _write_station_ids(
+        self: _SubarrayBeamProxy,
+        new_station_ids: list[int],
+    ) -> ResultCode:
+        assert self._proxy is not None
+        self._proxy.stationIds = new_station_ids
+        return ResultCode.OK
+
+
+class _StationBeamProxy(DeviceComponentManager):
+    """A controller's proxy to a station beam."""
+
+    @check_communicating
+    @check_on
+    def write_station_id(
+        self: _StationBeamProxy,
+        new_station_id: int,
+    ) -> ResultCode:
+        """
+        Set the station beam's stationId attribute.
+
+        :param new_station_id: the station beam's new station id.
+
+        :return: a result code
+        """
+        return self._write_station_id(new_station_id)
+
+    def _write_station_id(
+        self: _StationBeamProxy,
+        new_station_id: int,
+    ) -> ResultCode:
+        assert self._proxy is not None
+        self._proxy.stationId = new_station_id
+        return ResultCode.OK
+
+    @check_communicating
+    @check_on
+    def write_subarray_id(
+        self: _StationBeamProxy,
+        new_subarray_id: int,
+    ) -> ResultCode:
+        """
+        Set the station beam's stationId attribute.
+
+        :param new_subarray_id: the station beam's new subaray id.
+
+        :return: a result code
+        """
+        return self._write_subarray_id(new_subarray_id)
+
+    def _write_subarray_id(
+        self: _StationBeamProxy,
+        new_subarray_id: int,
+    ) -> ResultCode:
+        assert self._proxy is not None
+        self._proxy.subarrayId = new_subarray_id
+        return ResultCode.OK
+
+    @check_communicating
+    @check_on
+    def write_station_fqdn(
+        self: _StationBeamProxy,
+        new_station_fqdn: str,
+    ) -> ResultCode:
+        """
+        Set the station beam's stationId attribute.
+
+        :param new_station_fqdn: the station beam's new station fqdn.
+
+        :return: a result code
+        """
+        return self._write_station_fqdn(new_station_fqdn)
+
+    def _write_station_fqdn(
+        self: _StationBeamProxy,
+        new_station_fqdn: str,
+    ) -> ResultCode:
+        assert self._proxy is not None
+        self._proxy.stationFqdn = new_station_fqdn
+        return ResultCode.OK
 
 
 class ControllerComponentManager(MccsComponentManager):
@@ -146,7 +310,9 @@ class ControllerComponentManager(MccsComponentManager):
         subrack_fqdns: Iterable[str],
         station_fqdns: Iterable[str],
         subarray_beam_fqdns: Iterable[str],
+        station_beam_fqdns: Iterable[str],
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -154,36 +320,46 @@ class ControllerComponentManager(MccsComponentManager):
         subarray_beam_health_changed_callback: Callable[
             [str, Optional[HealthState]], None
         ],
+        station_beam_health_changed_callback: Callable[
+            [str, Optional[HealthState]], None
+        ],
     ) -> None:
         """
         Initialise a new instance.
 
-        :param logger: the logger to be used by this object.
         :param subarray_fqdns: FQDNS of all subarray devices
         :param subrack_fqdns: FQDNS of all subrack devices
         :param station_fqdns: FQDNS of all station devices
         :param subarray_beam_fqdns: FQDNS of all subarray beam devices
+        :param station_beam_fqdns: FQDNS of all station beam devices
+        :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
             called when the component power mode changes
         :param subrack_health_changed_callback: callback to be called
-            when the health of this station's APIU changes
+            when the health of one of this controller's subracks changes
         :param station_health_changed_callback: callback to be called
-            when the health of this station's APIU changes
+            when the health of one of this controller's stations changes
         :param subarray_beam_health_changed_callback: callback to be
-            called when the health of this station's APIU changes
+            called when the health of one of this controller's subarray beams changes
+        :param station_beam_health_changed_callback: callback to be
+            called when the health of one of this controller's station beams changes
         """
         self._station_health_changed_callback = station_health_changed_callback
         self._subarray_beam_health_changed_callback = (
             subarray_beam_health_changed_callback
         )
+        self._station_beam_health_changed_callback = (
+            station_beam_health_changed_callback
+        )
 
         self.__communication_status_lock = threading.Lock()
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
 
-        self.__power_mode_lock = threading.Lock()
         self._station_power_modes: dict[str, PowerMode] = {}
         self._subrack_power_modes: dict[str, PowerMode] = {}
 
@@ -201,18 +377,22 @@ class ControllerComponentManager(MccsComponentManager):
         for fqdn in subarray_beam_fqdns:
             self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
 
+        for fqdn in station_beam_fqdns:
+            self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
+
         self._resource_manager = ControllerResourceManager(
             subarray_fqdns,
             subrack_fqdns,
-            station_fqdns,
             subarray_beam_fqdns,
-            range(1, 48),
+            station_beam_fqdns,
+            range(1, 49),
         )
 
         self._subarrays: dict[str, _SubarrayProxy] = {
             fqdn: _SubarrayProxy(
                 fqdn,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -224,6 +404,7 @@ class ControllerComponentManager(MccsComponentManager):
             fqdn: DeviceComponentManager(
                 fqdn,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._subrack_power_mode_changed, fqdn),
                 None,
@@ -231,10 +412,12 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subrack_fqdns
         }
-        self._stations: dict[str, _StationProxy] = {
+        self._stations: dict[Hashable, _StationProxy] = {
             fqdn: _StationProxy(
                 fqdn,
+                subarray_fqdns,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 functools.partial(self._station_power_mode_changed, fqdn),
                 None,
@@ -242,10 +425,11 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in station_fqdns
         }
-        self._subarray_beams: dict[str, DeviceComponentManager] = {
-            fqdn: DeviceComponentManager(
+        self._subarray_beams: dict[Hashable, _SubarrayBeamProxy] = {
+            fqdn: _SubarrayBeamProxy(
                 fqdn,
                 logger,
+                push_change_event,
                 functools.partial(self._device_communication_status_changed, fqdn),
                 None,
                 None,
@@ -253,12 +437,24 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_beam_fqdns
         }
+        self._station_beams: dict[Hashable, _StationBeamProxy] = {
+            fqdn: _StationBeamProxy(
+                fqdn,
+                logger,
+                push_change_event,
+                functools.partial(self._device_communication_status_changed, fqdn),
+                None,
+                None,
+                functools.partial(self._station_beam_health_changed, fqdn),
+            )
+            for fqdn in station_beam_fqdns
+        }
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
-            None,
             None,
         )
 
@@ -274,6 +470,8 @@ class ControllerComponentManager(MccsComponentManager):
             station_proxy.start_communicating()
         for subarray_beam_proxy in self._subarray_beams.values():
             subarray_beam_proxy.start_communicating()
+        for station_beam_proxy in self._station_beams.values():
+            station_beam_proxy.start_communicating()
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
@@ -287,6 +485,8 @@ class ControllerComponentManager(MccsComponentManager):
             station_proxy.stop_communicating()
         for subarray_beam_proxy in self._subarray_beams.values():
             subarray_beam_proxy.stop_communicating()
+        for station_beam_proxy in self._station_beams.values():
+            station_beam_proxy.stop_communicating()
 
     def _device_communication_status_changed(
         self: ControllerComponentManager,
@@ -332,7 +532,8 @@ class ControllerComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        self._subrack_power_modes[fqdn] = power_mode
+        with self._power_mode_lock:
+            self._subrack_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     def _station_power_mode_changed(
@@ -340,7 +541,8 @@ class ControllerComponentManager(MccsComponentManager):
         fqdn: str,
         power_mode: PowerMode,
     ) -> None:
-        self._station_power_modes[fqdn] = power_mode
+        with self._power_mode_lock:
+            self._station_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     def _evaluate_power_mode(self: ControllerComponentManager) -> None:
@@ -348,7 +550,7 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self.__power_mode_lock:
+        with self._power_mode_lock:
             for power_mode in [
                 PowerMode.UNKNOWN,
                 PowerMode.OFF,
@@ -360,6 +562,12 @@ class ControllerComponentManager(MccsComponentManager):
                     or power_mode in self._station_power_modes.values()
                 ):
                     break
+            self.logger.info(
+                "In ControllerComponentManager._evaluatePowerMode with:\n"
+                f"\tsubracks: {self._subrack_power_modes}\n"
+                f"\tstations: {self._station_power_modes}\n"
+                f"\tresult: {str(power_mode)}"
+            )
             self.update_component_power_mode(power_mode)
 
     def _subarray_health_changed(
@@ -393,9 +601,6 @@ class ControllerComponentManager(MccsComponentManager):
         :param health: the new health state of the station, or None if
             the station's health should not be taken into account.
         """
-        self._resource_manager.set_health(
-            "stations", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
-        )  # False for None
         if self._station_health_changed_callback is not None:
             self._station_health_changed_callback(fqdn, health)
 
@@ -419,6 +624,26 @@ class ControllerComponentManager(MccsComponentManager):
         if self._subarray_beam_health_changed_callback is not None:
             self._subarray_beam_health_changed_callback(fqdn, health)
 
+    def _station_beam_health_changed(
+        self: ControllerComponentManager,
+        fqdn: str,
+        health: HealthState | None,
+    ) -> None:
+        """
+        Handle a change in the health of a station_beam.
+
+        :param fqdn: the FQDN of the station_beam whose health has
+            changed.
+        :param health: the new health state of the station_beam, or
+            None if the station_beam's health should not be taken into
+            account.
+        """
+        self._resource_manager.set_health(
+            "station_beams", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+        )  # False for None
+        if self._station_beam_health_changed_callback is not None:
+            self._station_beam_health_changed_callback(fqdn, health)
+
     @check_communicating
     def off(
         self: ControllerComponentManager,
@@ -441,7 +666,7 @@ class ControllerComponentManager(MccsComponentManager):
         self: ControllerComponentManager,
     ) -> ResultCode:
         """
-        Put the MCCS subsystem into low power standby more.
+        Put the MCCS subsystem into low power standby mode.
 
         :return: a result code
         """
@@ -466,7 +691,6 @@ class ControllerComponentManager(MccsComponentManager):
         results = [station_proxy.on() for station_proxy in self._stations.values()] + [
             subrack_proxy.on() for subrack_proxy in self._subracks.values()
         ]
-
         if ResultCode.FAILED in results:
             return ResultCode.FAILED
         else:
@@ -477,7 +701,7 @@ class ControllerComponentManager(MccsComponentManager):
     def allocate(
         self: ControllerComponentManager,
         subarray_id: int,
-        station_fqdns: Iterable[str],
+        station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
     ) -> ResultCode:
@@ -486,30 +710,93 @@ class ControllerComponentManager(MccsComponentManager):
 
         :param subarray_id: id of the subarray to which resources are to
             be allocated
-        :param station_fqdns: FQDNs of the stations to be allocated to
-            the subarray
+        :param station_fqdns: lists of FQDNs of the stations to be allocated to
+            each subarray beam
         :param subarray_beam_fqdns: FQDNs of the subarray beams to be
             allocated to the subarray
-        :param channel_blocks: ordinal numbers of the channel blocks to
-            be allocated to the subarray
+        :param channel_blocks: numbers of the channel blocks to be allocated
+            to the subarray from each station in the associated grouping
+
+        :raises ValueError: if trying to assign a station not in the controller's Stations
 
         :return: a result code
         """
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
+        flattened_station_fqdns = []
+        station_groups = []
+
+        station_fqdns = list(station_fqdns)
+        subarray_beam_fqdns = list(subarray_beam_fqdns)
+        channel_blocks = list(channel_blocks)
+
+        for group_index, station_group in enumerate(station_fqdns):
+            station_groups.append(list(station_group))
+            for station_fqdn in station_group:
+                # stations are not managed by the resource manager, so we have to explicitely check if
+                # they're valid FQDNs here
+                if station_fqdn not in self._stations.keys():
+                    raise ValueError(f"Unsupported resources: {station_fqdn}.")
+                if (
+                    not self._stations[station_fqdn].allocate(
+                        subarray_fqdn, channel_blocks[group_index]
+                    )
+                    == ResultCode.OK
+                ):
+                    raise ValueError(
+                        f"Station {station_fqdn} has no more frequency channel capacity"
+                        f"(attempted to allocate {channel_blocks[group_index]} blocks)."
+                    )
+                flattened_station_fqdns.append(station_fqdn)
+
+        # need (subarray-beams * stations) number of station-beams from pool
+        station_beam_fqdns = []
+        station_beams_required = len(list(subarray_beam_fqdns)) * len(
+            flattened_station_fqdns
+        )
+        for _ in range(station_beams_required):
+            station_beam_fqdns.append(
+                str(
+                    self._resource_manager.resource_pool.get_free_resource(
+                        "station_beams"
+                    )
+                )
+            )
+
         self._resource_manager.allocate(
             subarray_fqdn,
-            stations=station_fqdns,
             subarray_beams=subarray_beam_fqdns,
+            station_beams=station_beam_fqdns,
             channel_blocks=channel_blocks,
         )
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            station_fqdns, subarray_beam_fqdns, channel_blocks
+            station_fqdns,
+            subarray_beam_fqdns,
+            station_beam_fqdns,
+            channel_blocks,
         )
-        if result_code != ResultCode.FAILED:
-            for station_fqdn in station_fqdns:
-                self._stations[station_fqdn].write_subarray_id(subarray_id)
+
+        # don't forget to release resources if allocate was unsuccessful:
+        if result_code == ResultCode.FAILED:
+            self.deallocate_all(subarray_id)
+        else:
+            for i, subarray_beam_fqdn in enumerate(subarray_beam_fqdns):
+                self._subarray_beams[subarray_beam_fqdn].write_station_ids(
+                    [
+                        int(station_fqdn.split("/")[2])
+                        for station_fqdn in station_groups[i]
+                    ]
+                )
+                for j, station_fqdn in enumerate(station_fqdns[i]):
+                    station_beam_index = i * (j + 1)
+                    self._station_beams[
+                        station_beam_fqdns[station_beam_index]
+                    ].write_station_id(int(station_fqdn.split("/")[2]))
+                    self._station_beams[
+                        station_beam_fqdns[station_beam_index]
+                    ].write_subarray_id(subarray_id)
+
         return result_code
 
     @check_communicating
@@ -534,8 +821,17 @@ class ControllerComponentManager(MccsComponentManager):
 
         self._resource_manager.deallocate_from(subarray_fqdn)
 
-        for station_fqdn in allocated.get("stations", []):
-            self._stations[station_fqdn].write_subarray_id(0)
+        station_beams = allocated.get("station_beams", [])
+        for station_beam_fqdn in station_beams:
+            self._station_beams[station_beam_fqdn].write_subarray_id(0)
+            self._station_beams[station_beam_fqdn].write_station_id(0)
+            self._station_beams[station_beam_fqdn].write_station_fqdn("")
+        self._resource_manager.resource_pool.free_resources(
+            {"station_beams": station_beams}
+        )
+
+        for station_proxy in self._stations.values():
+            station_proxy.release_from_subarray(subarray_fqdn)
 
         return self._subarrays[subarray_fqdn].release_all_resources()
 

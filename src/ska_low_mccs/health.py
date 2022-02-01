@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements infrastructure for health management in the MCCS subsystem."""
 
 from __future__ import annotations  # allow forward references in type hints
@@ -18,7 +19,7 @@ __all__ = ["HealthModel"]
 
 class HealthModel:
     """
-    A simple health model the supports:
+    A simple health model the supports.
 
     * HealthState.UNKNOWN -- when communication with the component is
       not established.

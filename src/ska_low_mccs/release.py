@@ -3,14 +3,15 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """Release information for SKA MCCS Python Package."""
 import sys
 from typing import Optional
 
 
 name = "ska_low_mccs"
-version = "0.8.6"
+version = "0.9.0"
 version_info = version.split(".")
 description = "A set of Low MCCS tango devices for the SKA Telescope."
 author = "Team MCCS"
@@ -27,7 +28,6 @@ def get_release_info(clsname: Optional[str] = None) -> str:
     Return a formatted release info string.
 
     :param clsname: optional name of class to add to the info
-    :type clsname: str
 
     :return: str
     """

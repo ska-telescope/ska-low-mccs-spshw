@@ -1,13 +1,10 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for MccsStationBeam."""
 from __future__ import annotations
 from typing import Any
@@ -31,7 +28,7 @@ def device_to_load() -> DeviceToLoadType:
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
-        "device": "beam_001",
+        "device": "beam_01",
         "proxy": MccsDeviceProxy,
     }
 
@@ -50,7 +47,7 @@ class TestMccsStationBeam(object):
 
         :return: the device under test
         """
-        return tango_harness.get_device("low-mccs/beam/001")
+        return tango_harness.get_device("low-mccs/beam/01")
 
     def test_healthState(
         self: TestMccsStationBeam,
@@ -130,26 +127,26 @@ class TestMccsStationBeam(object):
         """
         assert device_under_test.beamId == beam_id
 
-    def test_stationIds(
+    def test_stationId(
         self: TestMccsStationBeam,
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test stationIds attribute.
+        Test stationId attribute.
 
         This is a very weak test that simply checks that the attribute
-        starts as an empty list, and when we write a new value to it,
+        starts as zero, and when we write a new value to it,
         the write sticks.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert list(device_under_test.stationIds) == []
+        assert device_under_test.stationId == 0
 
-        value_to_write = [3, 4, 5, 6]
-        device_under_test.stationIds = value_to_write
-        assert list(device_under_test.stationIds) == value_to_write
+        value_to_write = 3
+        device_under_test.stationId = value_to_write
+        assert device_under_test.stationId == value_to_write
 
     @pytest.mark.parametrize(
         "attribute",

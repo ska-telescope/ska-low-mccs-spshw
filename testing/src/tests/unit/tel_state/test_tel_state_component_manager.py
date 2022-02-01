@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the tel state component manager."""
 from __future__ import annotations
 
@@ -14,8 +21,7 @@ from ska_low_mccs.tel_state import (
 
 class TestTelState:
     """
-    Class for testing commands common to the tel state component and its component
-    manager.
+    Class for testing commands common to the component and its component manager.
 
     Because the tel state component manager passes commands down to the
     tel state component, many commands are common. Here we test those

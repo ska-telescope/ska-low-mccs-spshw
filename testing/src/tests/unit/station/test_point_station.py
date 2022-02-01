@@ -1,20 +1,20 @@
-########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-########################################################################
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for the ska_low_mccs.point_station module."""
 from __future__ import annotations
 
 import pytest
+from typing import Any
 
 import numpy as np
 from astropy.time.core import Time
 
-from ska_low_mccs.station.point_station import (  # type:ignore[attr-defined]
+from ska_low_mccs.station.point_station import (
     Pointing,
     StationInformation,
 )
@@ -43,6 +43,7 @@ class TestPointStation:
         # Set station reference position to array centre
         station.set_location(stat_lat, stat_lon, stat_height)
         # We have 256 elements and therefore expect a 256 x 3 array
+        assert station.antennas.xyz is not None  # for the type checker
         assert station.antennas.xyz.shape == (256, 3)
         # Check location data
         assert station.latitude == stat_lat
@@ -50,7 +51,7 @@ class TestPointStation:
         assert station.ellipsoidalheight == stat_height
         pointing = Pointing(station)
 
-        point_kwargs = {
+        point_kwargs: dict[str, Any] = {
             "altitude": "90.0d",
             "azimuth": "0.0d",
         }
@@ -75,4 +76,4 @@ class TestPointStation:
         # Delays should be ns-scale
         assert np.mean(np.absolute(pointing._delays)) > 1e-9
         # Delay rates will be sub ps-scale
-        assert np.mean(np.absolute(pointing._delay_rate)) > 1e-13
+        assert np.mean(np.absolute(pointing._delay_rates)) > 1e-13

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains pytest-specific test harness for MCCS unit tests."""
 from typing import Callable, Optional
 import unittest
@@ -18,9 +25,6 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
     :param item: the collected test for which this hook is called
     """
-    # TODO: use of item.fixturenames is all over the interwebs, and it works, but it
-    # doesn't seem to exist in the pytest docs or source code, and mypy thinks that
-    # "Item" has no attribute "fixturenames". We need to understand this mystery.
     if "tango_harness" in item.fixturenames:  # type: ignore[attr-defined]
         item.add_marker("forked")
 
@@ -61,38 +65,6 @@ def devices_to_load(
         device_spec["devices"][0]["patch"] = device_to_load["patch"]
 
     return device_spec
-
-
-@pytest.fixture()
-def mock_callback_called_timeout() -> float:
-    """
-    Return the time to wait for a mock callback to be called when a call is expected.
-
-    This is a high value because calls will usually arrive much much
-    sooner, but we should be prepared to wait plenty of time before
-    giving up and failing a test.
-
-    :return: the time to wait for a mock callback to be called when a
-        call is asserted.
-    """
-    return 10.0
-
-
-@pytest.fixture()
-def mock_callback_not_called_timeout() -> float:
-    """
-    Return the time to wait for a mock callback to be called when a call is unexpected.
-
-    An assertion that a callback has not been called can only be passed
-    once we have waited the full timeout period without a call being
-    received. Thus, having a high value for this timeout will make such
-    assertions very slow. It is better to keep this value fairly low,
-    and accept the risk of an assertion passing prematurely.
-
-    :return: the time to wait for a mock callback to be called when a
-        call is unexpected.
-    """
-    return 0.5
 
 
 @pytest.fixture()
@@ -222,6 +194,23 @@ def component_fault_callback(
 
     :return: a mock callback to be called when the component manager
         detects that its component has faulted.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
+def component_progress_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for component progress.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that its component progress value has changed.
     """
     return mock_callback_factory()
 

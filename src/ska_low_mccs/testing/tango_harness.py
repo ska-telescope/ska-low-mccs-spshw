@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements a MCCS test harness for Tango devices."""
 from __future__ import annotations
 
@@ -30,8 +28,8 @@ import unittest.mock
 import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
-
-import ska_tango_base
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.control_model import TestMode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
@@ -60,7 +58,7 @@ DeviceSpecType = TypedDict(
     {
         "name": str,
         "proxy": Type[MccsDeviceProxy],
-        "patch": Type[ska_tango_base.base.SKABaseDevice],
+        "patch": Type[SKABaseDevice],
     },
     total=False,
 )
@@ -70,7 +68,7 @@ DeviceConfigType = TypedDict(
     "DeviceConfigType",
     {
         "server": "str",
-        "class": Type[ska_tango_base.base.SKABaseDevice],
+        "class": Type[SKABaseDevice],
         "fqdn": "str",
         "properties": PropertiesType,
         "memorized": MemorizedType,
@@ -91,7 +89,7 @@ MdtcDeviceInfoType = TypedDict(
 MdtcInfoType = TypedDict(
     "MdtcInfoType",
     {
-        "class": Type[ska_tango_base.base.SKABaseDevice],
+        "class": Type[SKABaseDevice],
         "devices": List[MdtcDeviceInfoType],
     },
 )
@@ -113,7 +111,7 @@ DeviceToLoadType = TypedDict(
         "package": str,
         "device": str,
         "proxy": Type[MccsDeviceProxy],
-        "patch": Type[ska_tango_base.base.SKABaseDevice],
+        "patch": Type[SKABaseDevice],
     },
     total=False,
 )
@@ -121,8 +119,9 @@ DeviceToLoadType = TypedDict(
 
 class MccsDeviceInfo:
     """
-    Data structure class that loads and holds information about devices,
-    and can provide that information in the format required by
+    Data structure class that loads and holds information about devices.
+
+    It can provide that information in the format required by
     :py:class:`tango.test_context.MultiDeviceTestContext`.
     """
 
@@ -156,7 +155,7 @@ class MccsDeviceInfo:
         self: MccsDeviceInfo,
         name: str,
         proxy: type[MccsDeviceProxy],
-        patch: Optional[type[ska_tango_base.base.SKABaseDevice]] = None,
+        patch: Optional[type[SKABaseDevice]] = None,
     ) -> None:
         """
         Include a device in this specification.
@@ -217,7 +216,7 @@ class MccsDeviceInfo:
     @property
     def fqdn_map(self: MccsDeviceInfo) -> dict[str, str]:
         """
-        A dictionary that maps device names onto FQDNs.
+        Return a dictionary that maps device names onto FQDNs.
 
         :return: a mapping from device names to FQDNs
         """
@@ -234,14 +233,13 @@ class MccsDeviceInfo:
 
     def as_mdtc_device_info(self: MccsDeviceInfo) -> list[MdtcInfoType]:
         """
-        Return this device info in a format required by
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
+        Return this device info in a format required by MultiDeviceTestContext.
 
         :return: device info in a format required by
             :py:class:`tango.test_context.MultiDeviceTestContext`.
         """
         devices_by_class: dict[
-            type[ska_tango_base.base.SKABaseDevice], list[MdtcDeviceInfoType]
+            type[SKABaseDevice], list[MdtcDeviceInfoType]
         ] = defaultdict(list)
         for device in self._devices.values():
             devices_by_class[device["class"]].append(
@@ -260,7 +258,9 @@ class MccsDeviceInfo:
 
 class TangoHarness:
     """
-    Abstract base class for Tango test harnesses. This does very little, because it
+    Abstract base class for Tango test harnesses.
+
+    This does very little, because it
     needs to support both harnesses that directly interact with Tango, and wrapper
     harnesses that add functionality to another harness.
 
@@ -281,7 +281,7 @@ class TangoHarness:
     @property
     def connection_factory(self: TangoHarness) -> Callable[[str], tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to devices.
+        Establish connections to devices with this factory.
 
         :raises NotImplementedError: because this method is abstract
         """
@@ -290,7 +290,7 @@ class TangoHarness:
     @property
     def fqdns(self: TangoHarness) -> list[str]:
         """
-        The FQDNs of devices in this harness.
+        Return FQDNs of devices in this harness.
 
         :raises NotImplementedError: because this method is abstract
         """
@@ -369,7 +369,7 @@ class BaseTangoHarness(TangoHarness):
         self: BaseTangoHarness,
     ) -> Callable[[str], tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to devices.
+        Establish connections to devices with this factory.
 
         This class uses :py:class:`tango.DeviceProxy` as its connection
         factory.
@@ -381,7 +381,7 @@ class BaseTangoHarness(TangoHarness):
     @property
     def fqdns(self: BaseTangoHarness) -> list[str]:
         """
-        The FQDNs of devices in this harness.
+        Return the FQDNs of devices in this harness.
 
         :return: a list of FQDNs of devices in this harness.
         """
@@ -471,14 +471,13 @@ class TestContextTangoHarness(BaseTangoHarness):
 
         def _get_open_port() -> int:
             """
-            Helper function that returns an available port on the local machine.
+            Return an available port on the local machine.
 
             TODO: Note the possibility of a race condition here. By the
             time the calling method tries to make use of this port, it
             might already have been taken by another process.
 
             :return: An open port
-            :rtype: int
             """
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind(("", 0))
@@ -496,6 +495,10 @@ class TestContextTangoHarness(BaseTangoHarness):
                 process=process,
                 host=self._host,
                 port=self._port,
+                timeout=10,  # because some devices do slow I/O during initialisation
+                # debug=5,
+                # uncomment this to get debug info, including cppTango debugging symbols
+                # when run against a 'Debug' cppTango build.
             )
         super().__init__(device_info, logger, *args, **kwargs)
 
@@ -504,7 +507,7 @@ class TestContextTangoHarness(BaseTangoHarness):
         self: TestContextTangoHarness,
     ) -> Callable[[str], tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to devices.
+        Establish connections to devices with this factory.
 
         This class uses :py:class:`tango.DeviceProxy` but patches it to
         use the long-form FQDN, as a workaround to an issue with
@@ -616,7 +619,7 @@ class WrapperTangoHarness(TangoHarness):
         self: WrapperTangoHarness,
     ) -> Callable[[str], tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to devices.
+        Establish connections to devices with this factory.
 
         This just uses the connection factory of the wrapped harness.
 
@@ -652,7 +655,9 @@ class WrapperTangoHarness(TangoHarness):
 
 class StartingStateTangoHarness(WrapperTangoHarness):
     """
-    A test harness for testing Tango devices, that provides for certain actions and
+    A test harness for testing Tango devices.
+
+    It provides for certain actions and
     checks that ensure that devices are in a desired initial state prior to testing.
 
     Specifically, it can:
@@ -707,7 +712,7 @@ class StartingStateTangoHarness(WrapperTangoHarness):
         return self
 
     def _make_devices_ready(self: StartingStateTangoHarness) -> None:
-        """Helper method that ensures that devices are ready to be tested."""
+        """Ensure that devices are ready to be tested."""
         if self._bypass_cache or self._check_ready or self._set_test_mode:
             for fqdn in self.fqdns:
                 device = self.get_device(fqdn)
@@ -716,7 +721,9 @@ class StartingStateTangoHarness(WrapperTangoHarness):
                 if self._check_ready:
                     assert device.check_initialised()
                 if self._set_test_mode:
-                    device.testMode = ska_tango_base.control_model.TestMode.TEST
+                    device.testMode = TestMode.TEST
+                else:
+                    device.testMode = TestMode.NONE
 
 
 class MockingTangoHarness(WrapperTangoHarness):
@@ -753,7 +760,7 @@ class MockingTangoHarness(WrapperTangoHarness):
         self: MockingTangoHarness,
     ) -> Callable[[str], tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to devices.
+        Establish connections to devices with this factory.
 
         This is where we check whether the requested device is on our
         list. Devices on the list are passed to the connection factory

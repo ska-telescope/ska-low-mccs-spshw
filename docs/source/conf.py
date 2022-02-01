@@ -9,9 +9,12 @@ import sys
 import os
 import typing
 
-# Do we need this
-# import sphinx_rtd_theme
-
+# WORKAROUND: https://github.com/sphinx-doc/sphinx/issues/9243
+import sphinx.builders.html
+import sphinx.builders.latex
+import sphinx.builders.texinfo
+import sphinx.builders.text
+import sphinx.ext.autodoc
 
 # This is an elaborate hack to insert write property into _all_
 # mock decorators. It is needed for getting @attribute to build
@@ -48,14 +51,19 @@ autodoc_mock_imports = [
     "jsonschema",
     "numpy",
     "pyfabil",
+    "pyaavs",
     "scipy",
     "ska_tango_base",
     "tango",
     "uritools",
+    "yaml",
 ]
 
 
-autodoc_default_options = {"special-members": "__init__"}
+autodoc_default_options = {
+    "members": True,
+    "special-members": "__init__",
+}
 
 
 def setup(app):
@@ -87,7 +95,11 @@ nitpick_ignore = [
     ("py:exc", "BoardError"),
     ("py:exc", "LibraryError"),
     ("py:exc", "PluginError"),
-    ("py:exc", "fire.core.FireError")
+    ("py:exc", "fire.core.FireError"),
+    ("py:exc", "Status"),
+    ("py:exc", "yaml.YAMLError"),
+    ("py:class", "ska_tango_base.control_model.PowerMode")
+    # TODO: Remove once our ska_tango_base version contains the rename to PowerState
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

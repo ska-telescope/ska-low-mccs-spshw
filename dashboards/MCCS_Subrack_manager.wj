@@ -1,0 +1,1289 @@
+{
+  "id": "619b30fd8d6b7f001819eafc",
+  "name": "MCCS_Subrack_manager",
+  "version": "1.1.5",
+  "user": "user1",
+  "insertTime": "2021-11-22T05:56:13.083Z",
+  "updateTime": "2021-11-25T11:08:44.187Z",
+  "group": null,
+  "groupWriteAccess": false,
+  "lastUpdatedBy": "user1",
+  "widget": [
+    {
+      "id": "1",
+      "x": 66,
+      "y": 2,
+      "canvas": "0",
+      "width": 38,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "MCCS Subrack manager",
+        "textColor": "#000000",
+        "backgroundColor": "#babdb6",
+        "size": 2,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 0
+    },
+    {
+      "id": "4",
+      "x": 17,
+      "y": 14,
+      "canvas": "0",
+      "width": 26,
+      "height": 5,
+      "type": "LABEL",
+      "inputs": {
+        "text": " STATE OVERVIEW 01",
+        "textColor": "#000000",
+        "backgroundColor": "#babdb6",
+        "size": 1.5,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 1
+    },
+    {
+      "id": "5",
+      "x": 12,
+      "y": 24,
+      "canvas": "0",
+      "width": 34,
+      "height": 5,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "status",
+          "label": "Status"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 2
+    },
+    {
+      "id": "6",
+      "x": 12,
+      "y": 29,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "adminmode",
+          "label": "adminMode"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 3
+    },
+    {
+      "id": "7",
+      "x": 12,
+      "y": 35,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "buildstate",
+          "label": "buildState"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 4
+    },
+    {
+      "id": "8",
+      "x": 12,
+      "y": 47,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "healthstate",
+          "label": "healthState"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 5
+    },
+    {
+      "id": "9",
+      "x": 12,
+      "y": 41,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "controlmode",
+          "label": "controlMode"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 6
+    },
+    {
+      "id": "12",
+      "x": 12,
+      "y": 20,
+      "canvas": "0",
+      "width": 34,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/subrack/01",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 7
+    },
+    {
+      "id": "13",
+      "x": 84,
+      "y": 24,
+      "canvas": "0",
+      "width": 26,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "Off",
+          "acceptedType": "DevVoid"
+        },
+        "title": "MCCS subrack 01 Off",
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#f79898",
+        "size": 1,
+        "font": "Courier new"
+      },
+      "order": 8
+    },
+    {
+      "id": "14",
+      "x": 84,
+      "y": 40,
+      "canvas": "0",
+      "width": 26,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "Reset",
+          "acceptedType": "DevVoid"
+        },
+        "title": "MCCS subrack 01 RESET",
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 9
+    },
+    {
+      "id": "15",
+      "x": 84,
+      "y": 28,
+      "canvas": "0",
+      "width": 26,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "On",
+          "acceptedType": "DevVoid"
+        },
+        "title": "MCCS subrack 01 ON",
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#bef698",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 10
+    },
+    {
+      "id": "16",
+      "x": 84,
+      "y": 32,
+      "canvas": "0",
+      "width": 26,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "PowerDownTpms",
+          "acceptedType": "DevVoid"
+        },
+        "title": "TPM Power Down",
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#f79898",
+        "size": 1,
+        "font": "Courier new"
+      },
+      "order": 11
+    },
+    {
+      "id": "17",
+      "x": 84,
+      "y": 36,
+      "canvas": "0",
+      "width": 26,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "PowerUpTpms",
+          "acceptedType": "DevVoid"
+        },
+        "title": "Power up TPM",
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#bef698",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 12
+    },
+    {
+      "id": "18",
+      "x": 74,
+      "y": 14,
+      "canvas": "0",
+      "width": 20,
+      "height": 5,
+      "type": "LABEL",
+      "inputs": {
+        "text": "COMMANDS 01",
+        "textColor": "#000000",
+        "backgroundColor": "#babdb6",
+        "size": 1.5,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 13
+    },
+    {
+      "id": "19",
+      "x": 84,
+      "y": 20,
+      "canvas": "0",
+      "width": 26,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "Init",
+          "acceptedType": "DevVoid"
+        },
+        "title": "MCCS subrack 01 INIT",
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 14
+    },
+    {
+      "id": "20",
+      "x": 88,
+      "y": 114,
+      "canvas": "0",
+      "width": 38,
+      "height": 27,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "backplanetemperatures",
+          "label": "Backplane temperatures"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 15
+    },
+    {
+      "id": "21",
+      "x": 73,
+      "y": 74,
+      "canvas": "0",
+      "width": 13,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "PLOTS",
+        "textColor": "#000000",
+        "backgroundColor": "#888a85",
+        "size": 2,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 16
+    },
+    {
+      "id": "22",
+      "x": 47,
+      "y": 86,
+      "canvas": "0",
+      "width": 38,
+      "height": 27,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "subrackfanmode",
+          "label": "Subrack Fan Mode"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 17
+    },
+    {
+      "id": "23",
+      "x": 88,
+      "y": 86,
+      "canvas": "0",
+      "width": 38,
+      "height": 27,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "boardtemperatures",
+          "label": "Subrack board temperatures"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 18
+    },
+    {
+      "id": "24",
+      "x": 4,
+      "y": 114,
+      "canvas": "0",
+      "width": 38,
+      "height": 27,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "subrackfanspeedspercent",
+          "label": "Subrack fans speeds (%)"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 19
+    },
+    {
+      "id": "25",
+      "x": 46,
+      "y": 114,
+      "canvas": "0",
+      "width": 38,
+      "height": 27,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "subrackfanspeeds",
+          "label": "Subrack fans speeds (RPM)"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 20
+    },
+    {
+      "id": "26",
+      "x": 12,
+      "y": 53,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "logginglevel",
+          "label": "loggingLevel"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 21
+    },
+    {
+      "id": "27",
+      "x": 12,
+      "y": 59,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "testmode",
+          "label": "testMode"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 22
+    },
+    {
+      "id": "28",
+      "x": 12,
+      "y": 65,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "versionid",
+          "label": "versionId"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 23
+    },
+    {
+      "id": "29",
+      "x": 68,
+      "y": 176,
+      "canvas": "0",
+      "width": 20,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 24
+    },
+    {
+      "id": "31",
+      "x": 47,
+      "y": 144,
+      "canvas": "0",
+      "width": 40,
+      "height": 24,
+      "type": "TIMELINE",
+      "inputs": {
+        "timeWindow": 100,
+        "overflow": false,
+        "groupAttributes": false,
+        "attributes": [
+          {
+            "attribute": {
+              "device": "low-mccs/subrack/01",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "yAxisDisplay": "Label",
+            "showAttribute": "Label",
+            "yAxis": "left"
+          }
+        ]
+      },
+      "order": 25
+    },
+    {
+      "id": "33",
+      "x": 139,
+      "y": 20,
+      "canvas": "0",
+      "width": 14,
+      "height": 16,
+      "type": "LABEL",
+      "inputs": {
+        "text": "AdminMode Key:  0 - Online       1-Offline      2-Maintainance  3-NotFitted  4-Reserved",
+        "textColor": "#000000",
+        "backgroundColor": "#729fcf",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 26
+    },
+    {
+      "id": "34",
+      "x": 139,
+      "y": 37,
+      "canvas": "0",
+      "width": 14,
+      "height": 13,
+      "type": "LABEL",
+      "inputs": {
+        "text": "HealthState Key:  0 - OK             1-Degraded 2-Failed 3-Unknown",
+        "textColor": "#000000",
+        "backgroundColor": "#729fcf",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 27
+    },
+    {
+      "id": "35",
+      "x": 131,
+      "y": 14,
+      "canvas": "0",
+      "width": 9,
+      "height": 5,
+      "type": "LABEL",
+      "inputs": {
+        "text": "KEYS",
+        "textColor": "#000000",
+        "backgroundColor": "#babdb6",
+        "size": 1.5,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 28
+    },
+    {
+      "id": "37",
+      "x": 49,
+      "y": 20,
+      "canvas": "0",
+      "width": 30,
+      "height": 8,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "Apply admin mode",
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "adminmode",
+          "label": "adminMode"
+        },
+        "showDevice": false,
+        "showAttribute": "None",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 29
+    },
+    {
+      "id": "38",
+      "x": 49,
+      "y": 30,
+      "canvas": "0",
+      "width": 30,
+      "height": 8,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "Apply simulation mode",
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "simulationmode",
+          "label": "simulationMode"
+        },
+        "showDevice": false,
+        "showAttribute": "None",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 30
+    },
+    {
+      "id": "39",
+      "x": 84,
+      "y": 44,
+      "canvas": "0",
+      "width": 26,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "GetVersionInfo",
+          "acceptedType": "DevVoid"
+        },
+        "title": "",
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 31
+    },
+    {
+      "id": "40",
+      "x": 17,
+      "y": 91,
+      "canvas": "0",
+      "width": 20,
+      "height": 20,
+      "type": "ATTRIBUTE_DIAL",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "boardcurrent",
+          "label": "Board current"
+        },
+        "min": 0,
+        "max": 10,
+        "label": "attribute",
+        "showWriteValue": true
+      },
+      "order": 32
+    },
+    {
+      "id": "44",
+      "x": 49,
+      "y": 41,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "COMMAND_ARRAY",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "IsTpmOn",
+          "acceptedType": "DevULong"
+        },
+        "showDevice": false,
+        "showCommand": false,
+        "requireConfirmation": true,
+        "displayOutput": true,
+        "OutputMaxSize": 20,
+        "timeDisplayOutput": 3000,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "title": "Is TPM ON?"
+      },
+      "order": 33
+    },
+    {
+      "id": "46",
+      "x": 63,
+      "y": 62,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "LED_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "healthstate",
+          "label": "healthState"
+        },
+        "relation": "<",
+        "compare": 1,
+        "trueColor": "#3ac73a",
+        "falseColor": "#ff0000",
+        "ledSize": 1,
+        "textSize": 1,
+        "showAttributeValue": false,
+        "showDeviceName": false,
+        "showAttribute": "None"
+      },
+      "order": 34
+    },
+    {
+      "id": "47",
+      "x": 72,
+      "y": 62,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "LED_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "healthstate",
+          "label": "healthState"
+        },
+        "relation": "<",
+        "compare": 1,
+        "trueColor": "#3ac73a",
+        "falseColor": "#ff0000",
+        "ledSize": 1,
+        "textSize": 1,
+        "showAttributeValue": false,
+        "showDeviceName": false,
+        "showAttribute": "None"
+      },
+      "order": 35
+    },
+    {
+      "id": "48",
+      "x": 82,
+      "y": 62,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "LED_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "healthstate",
+          "label": "healthState"
+        },
+        "relation": "<",
+        "compare": 1,
+        "trueColor": "#3ac73a",
+        "falseColor": "#ff0000",
+        "ledSize": 1,
+        "textSize": 1,
+        "showAttributeValue": false,
+        "showDeviceName": false,
+        "showAttribute": "None"
+      },
+      "order": 36
+    },
+    {
+      "id": "49",
+      "x": 92,
+      "y": 62,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "LED_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "healthstate",
+          "label": "healthState"
+        },
+        "relation": "<",
+        "compare": 1,
+        "trueColor": "#3ac73a",
+        "falseColor": "#ff0000",
+        "ledSize": 1,
+        "textSize": 1,
+        "showAttributeValue": false,
+        "showDeviceName": false,
+        "showAttribute": "None"
+      },
+      "order": 37
+    },
+    {
+      "id": "50",
+      "x": 61,
+      "y": 54,
+      "canvas": "0",
+      "width": 7,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "TPM1",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 38
+    },
+    {
+      "id": "51",
+      "x": 70,
+      "y": 54,
+      "canvas": "0",
+      "width": 7,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "TPM2",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 39
+    },
+    {
+      "id": "52",
+      "x": 80,
+      "y": 54,
+      "canvas": "0",
+      "width": 7,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "TPM3",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 40
+    },
+    {
+      "id": "53",
+      "x": 91,
+      "y": 54,
+      "canvas": "0",
+      "width": 7,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "TPM4",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 41
+    },
+    {
+      "id": "54",
+      "x": 62,
+      "y": 58,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0001",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": false,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 42
+    },
+    {
+      "id": "55",
+      "x": 71,
+      "y": 58,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0002",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": false,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 43
+    },
+    {
+      "id": "56",
+      "x": 81,
+      "y": 58,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0003",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": false,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 44
+    },
+    {
+      "id": "57",
+      "x": 91,
+      "y": 58,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0004",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": false,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 45
+    },
+    {
+      "id": "58",
+      "x": 53,
+      "y": 58,
+      "canvas": "0",
+      "width": 7,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "State",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 46
+    },
+    {
+      "id": "59",
+      "x": 53,
+      "y": 62,
+      "canvas": "0",
+      "width": 7,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Health",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 47
+    },
+    {
+      "id": "60",
+      "x": 36,
+      "y": 4,
+      "canvas": "0",
+      "width": 4,
+      "height": 4,
+      "type": "LED_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "simulationmode",
+          "label": "simulationMode"
+        },
+        "relation": ">",
+        "compare": 0,
+        "trueColor": "#3ac73a",
+        "falseColor": "#ff0000",
+        "ledSize": 1,
+        "textSize": 1,
+        "showAttributeValue": false,
+        "showDeviceName": false,
+        "showAttribute": "None"
+      },
+      "order": 48
+    },
+    {
+      "id": "61",
+      "x": 27,
+      "y": 3,
+      "canvas": "0",
+      "width": 10,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Simulation mode",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 49
+    },
+    {
+      "id": "62",
+      "x": 118,
+      "y": 20,
+      "canvas": "0",
+      "width": 19,
+      "height": 18,
+      "type": "LABEL",
+      "inputs": {
+        "text": "To run commands 1.Ensure admin  mode 0 2. Turn on MCCS subrack           3. Turn on TPMs using power up 4.Power down in reverse order.",
+        "textColor": "#000000",
+        "backgroundColor": "#729fcf",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 50
+    },
+    {
+      "id": "63",
+      "x": 58,
+      "y": 49,
+      "canvas": "0",
+      "width": 10,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/subrack/01",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 51
+    },
+    {
+      "id": "64",
+      "x": 86,
+      "y": 49,
+      "canvas": "0",
+      "width": 5,
+      "height": 4,
+      "type": "LED_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "healthstate",
+          "label": "healthState"
+        },
+        "relation": "<",
+        "compare": 1,
+        "trueColor": "#3ac73a",
+        "falseColor": "#ff0000",
+        "ledSize": 1,
+        "textSize": 1,
+        "showAttributeValue": false,
+        "showDeviceName": false,
+        "showAttribute": "None"
+      },
+      "order": 52
+    },
+    {
+      "id": "65",
+      "x": 48,
+      "y": 49,
+      "canvas": "0",
+      "width": 10,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "SUBRACK",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 53
+    },
+    {
+      "id": "66",
+      "x": 69,
+      "y": 49,
+      "canvas": "0",
+      "width": 17,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "SUBRACK HEALTH",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 54
+    }
+  ],
+  "variables": []
+}

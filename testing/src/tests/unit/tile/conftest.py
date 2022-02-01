@@ -1,30 +1,27 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defined a pytest test harness for testing the MCCS tile module."""
 from __future__ import annotations
 
 import logging
 import unittest.mock
+from typing import Type
 
 import pytest
-import tango
 from tango.server import command
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
+from ska_tango_base.control_model import SimulationMode, TestMode
 
 from ska_low_mccs import MccsDeviceProxy, MccsTile
+from ska_low_mccs.component import ExtendedPowerMode
+
 from ska_low_mccs.tile import (
-    TpmDriver,
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
@@ -32,7 +29,6 @@ from ska_low_mccs.tile import (
     SwitchingTpmComponentManager,
     TileComponentManager,
 )
-from ska_low_mccs.tile.tile_component_manager import _SubrackProxy
 
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
@@ -75,16 +71,6 @@ def subrack_fqdn() -> str:
 
 
 @pytest.fixture()
-def initial_subrack_state() -> tango.DevState:
-    """
-    Return the state in which the mock subrack should start.
-
-    :return: the state in which the mock subrack should start.
-    """
-    return tango.DevState.OFF
-
-
-@pytest.fixture()
 def subrack_tpm_id() -> int:
     """
     Return the tile's position in the subrack.
@@ -95,57 +81,30 @@ def subrack_tpm_id() -> int:
 
 
 @pytest.fixture()
-def initial_tpm_power_mode() -> int:
+def initial_tpm_power_mode() -> ExtendedPowerMode:
     """
     Return the initial power mode of the TPM.
 
     :return: the initial power mode of the TPM.
     """
-    return PowerMode.OFF
-
-
-@pytest.fixture()
-def initial_are_tpms_on(
-    subrack_tpm_id: int,
-    initial_tpm_power_mode: PowerMode,
-) -> list[bool]:
-    """
-    Return whether each TPM is initially on in the subrack.
-
-    The TPM under test will be set off or on in accordance with the
-    initial_tpm_power_mode argument. All other TPMs will initially be
-    set off.
-
-    :param subrack_tpm_id: the id of the TPM under test.
-    :param initial_tpm_power_mode: whether the TPM under test is
-        initially on.
-
-    :return: whether each TPM is initially on in the subrack.
-    """
-    are_tpms_on = [False] * subrack_tpm_id
-    are_tpms_on[subrack_tpm_id - 1] = initial_tpm_power_mode == PowerMode.ON
-    return are_tpms_on
+    return ExtendedPowerMode.OFF
 
 
 @pytest.fixture()
 def mock_subrack(
-    initial_are_tpms_on: list[bool],
-    initial_subrack_state: tango.DevState,
+    subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerMode
 ) -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsSubrack device.
 
-    :param initial_are_tpms_on: whether each TPM is initially turned on
-        in this subrack
-    :param initial_subrack_state: the state in which the mock subrack
-        should start.
+    :param subrack_tpm_id: This tile's position in its subrack
+    :param initial_tpm_power_mode: the initial power mode of the
+        specified TPM.
 
     :return: a mock MccsSubrack device.
     """
     builder = MockDeviceBuilder()
-    builder.set_state(initial_subrack_state)
-    builder.add_result_command("On", ResultCode.OK)
-    builder.add_attribute("areTpmsOn", initial_are_tpms_on)
+    builder.add_attribute(f"tpm{subrack_tpm_id}PowerMode", initial_tpm_power_mode)
     builder.add_result_command("PowerOnTpm", ResultCode.OK)
     builder.add_result_command("PowerOffTpm", ResultCode.OK)
     return builder()
@@ -189,54 +148,17 @@ def mock_subrack_device_proxy(
 
 
 @pytest.fixture()
-def tile_power_mode_changed_callback() -> MockChangeEventCallback:
+def tile_power_mode_changed_callback(subrack_tpm_id: int) -> MockChangeEventCallback:
     """
     Return a mock callback for tile power mode change.
+
+    :param subrack_tpm_id: This tile's position in its subrack
 
     :return: a mock change event callback to be registered with the tile
         device via a change event subscription, so that it gets called
         when the tile device health state changes.
     """
-    return MockChangeEventCallback("areTpmsOn")
-
-
-@pytest.fixture()
-def tile_subrack_proxy(
-    tango_harness: TangoHarness,
-    subrack_fqdn: str,
-    subrack_tpm_id: int,
-    logger: logging.Logger,
-    communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    tile_power_mode_changed_callback: MockCallable,
-) -> _SubrackProxy:
-    """
-    Return an tile subrack proxy for testing.
-
-    This is a pytest fixture.
-
-    :param tango_harness: a test harness for MCCS tango devices
-    :param subrack_fqdn: FQDN of the tile's subrack device
-    :param subrack_tpm_id: the id of the tile in the subrack device
-    :param logger: a loger for the tile component manager to use
-    :param communication_status_changed_callback: callback to be called
-        when the status of the communications channel between the
-        component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be called
-        when the component power mode changes
-    :param tile_power_mode_changed_callback: the callback to be called
-        when the power mode of an antenna changes
-
-    :return: an tile subrack proxy
-    """
-    return _SubrackProxy(
-        subrack_fqdn,
-        subrack_tpm_id,
-        logger,
-        communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        tile_power_mode_changed_callback,
-    )
+    return MockChangeEventCallback(f"tpm{subrack_tpm_id}PowerMode")
 
 
 @pytest.fixture()
@@ -267,42 +189,6 @@ def tpm_version() -> str:
     :return: the TPM version
     """
     return "tpm_v1_6"
-
-
-@pytest.fixture()
-def tpm_driver(
-    logger: logging.Logger,
-    tpm_ip: str,
-    tpm_cpld_port: int,
-    tpm_version: str,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-) -> TpmDriver:
-    """
-    Return a TPM driver.
-
-    (This is a pytest fixture.)
-
-    :param logger: the logger to be used by this object.
-    :param tpm_ip: the IP address of the tile
-    :param tpm_cpld_port: the port at which the tile is accessed for control
-    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param communication_status_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-
-    :return: a TPM driver
-    """
-    return TpmDriver(
-        logger,
-        tpm_ip,
-        tpm_cpld_port,
-        tpm_version,
-        communication_status_changed_callback,
-        component_fault_callback,
-    )
 
 
 @pytest.fixture()
@@ -338,6 +224,7 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 @pytest.fixture()
 def static_tpm_simulator_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> StaticTpmSimulatorComponentManager:
@@ -347,6 +234,8 @@ def static_tpm_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -357,6 +246,7 @@ def static_tpm_simulator_component_manager(
     """
     return StaticTpmSimulatorComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )
@@ -365,6 +255,7 @@ def static_tpm_simulator_component_manager(
 @pytest.fixture()
 def dynamic_tpm_simulator_component_manager(
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> DynamicTpmSimulatorComponentManager:
@@ -374,6 +265,8 @@ def dynamic_tpm_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -384,6 +277,7 @@ def dynamic_tpm_simulator_component_manager(
     """
     return DynamicTpmSimulatorComponentManager(
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_fault_callback,
     )
@@ -394,6 +288,7 @@ def switching_tpm_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -409,6 +304,8 @@ def switching_tpm_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -425,6 +322,8 @@ def switching_tpm_component_manager(
         simulation_mode,
         test_mode,
         logger,
+        lrc_result_changed_callback,
+        1,  # default tile_id
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -439,6 +338,7 @@ def tile_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -458,6 +358,8 @@ def tile_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -478,6 +380,8 @@ def tile_component_manager(
         simulation_mode,
         test_mode,
         logger,
+        lrc_result_changed_callback,
+        1,  # default tile_id
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -490,12 +394,9 @@ def tile_component_manager(
 
 
 @pytest.fixture()
-def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> MccsTile:
+def patched_tile_device_class() -> Type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
-
-    :param initial_are_tpms_on: whether each TPM is off or on in the
-        mock subrack that supplies power to the tile under test.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -517,17 +418,17 @@ def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> MccsTile:
         """
 
         @command()
-        def MockTilePoweredOn(self: PatchedTileDevice) -> None:
-            are_tpms_on = list(initial_are_tpms_on)
-            are_tpms_on[self.SubrackBay - 1] = True
-            self.component_manager._power_supply_component_manager._tpm_power_mode_changed(
-                "areTpmsOn",
-                are_tpms_on,
-                tango.AttrQuality.ATTR_VALID,
-            )
+        def MockTpmOff(self: PatchedTileDevice) -> None:
+            """
+            Mock the subrack being turned on.
+
+            Make the tile device think it has received a state change
+            event from its subrack indicating that the suback is now ON.
+            """
+            self.component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
         @command()
-        def MockSubrackOff(self: PatchedTileDevice) -> None:
+        def MockTpmNoSupply(self: PatchedTileDevice) -> None:
             """
             Mock the subrack being turned off.
 
@@ -535,20 +436,10 @@ def patched_tile_device_class(initial_are_tpms_on: list[bool]) -> MccsTile:
             event from its subrack indicating that the subrack is now
             OFF.
             """
-            self.component_manager._power_supply_component_manager._device_state_changed(
-                "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
-            )
+            self.component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
 
         @command()
-        def MockSubrackOn(self: PatchedTileDevice) -> None:
-            """
-            Mock the subrack being turned on.
-
-            Make the tile device think it has received a state change
-            event from its subrack indicating that the suback is now ON.
-            """
-            self.component_manager._power_supply_component_manager._device_state_changed(
-                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
-            )
+        def MockTpmOn(self: PatchedTileDevice) -> None:
+            self.component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
 
     return PatchedTileDevice

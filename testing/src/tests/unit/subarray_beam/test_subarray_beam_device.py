@@ -1,13 +1,10 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for MccsSubarrayBeam."""
 from __future__ import annotations
 from typing import Any
@@ -109,7 +106,9 @@ class TestMccsSubarrayBeam(object):
             attribute.
         :param write_value: a value to write to check that it sticks
         """
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(device_under_test, attribute)
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -135,7 +134,9 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.stationIds
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -167,7 +168,9 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :param attribute: name of the attribute under test.
         """
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = getattr(device_under_test, attribute)
         device_under_test.adminMode = AdminMode.ONLINE
         assert getattr(device_under_test, attribute) is None
@@ -187,7 +190,9 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(tango.DevFailed, match="Not connected"):
+        with pytest.raises(
+            tango.DevFailed, match="Communication with component is not established"
+        ):
             _ = device_under_test.desiredPointing
         device_under_test.adminMode = AdminMode.ONLINE
 

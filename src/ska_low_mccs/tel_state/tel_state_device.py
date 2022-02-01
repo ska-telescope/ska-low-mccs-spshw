@@ -1,16 +1,14 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS tel state device."""
 from __future__ import annotations
 
+import tango
 from tango.server import attribute
 
 
@@ -35,6 +33,16 @@ class MccsTelState(SKATelState):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsTelState) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsTelState) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
@@ -51,22 +59,25 @@ class MccsTelState(SKATelState):
         """
         return TelStateComponentManager(
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
         )
 
     class InitCommand(SKATelState.InitCommand):
         """Class that implements device initialisation for this device."""
 
-        def do(self):
+        def do(  # type:ignore[override]
+            self: MccsTelState.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
-            Stateless hook for device initialisation: initialises the attributes and
+            Initialise TelState device.
+
+            Initialises the attributes and
             properties of the :py:class:`.MccsTelState` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -111,7 +122,7 @@ class MccsTelState(SKATelState):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def health_changed(self, health):
+    def health_changed(self: MccsTelState, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -121,7 +132,6 @@ class MccsTelState(SKATelState):
         date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -132,94 +142,86 @@ class MccsTelState(SKATelState):
     # Attributes
     # ----------
     @attribute(dtype="DevString")
-    def elementsStates(self):
+    def elementsStates(self: MccsTelState) -> str:
         """
         Return the elementsStates attribute.
 
         :todo: What is this?
 
         :return: the elementsStates attribute
-        :rtype: str
         """
         return self.component_manager.elements_states
 
-    @elementsStates.write
-    def elementsStates(self, value):
+    @elementsStates.write  # type: ignore[no-redef]
+    def elementsStates(self: MccsTelState, value: str) -> None:
         """
         Set the elementsStates attribute.
 
         :todo: What is this?
 
         :param value: the new elementsStates attribute value
-        :type value: str
         """
         self.component_manager.elements_states = value
 
     @attribute(dtype="DevString")
-    def observationsStates(self):
+    def observationsStates(self: MccsTelState) -> str:
         """
         Return the observationsStates attribute.
 
         :todo: What is this?
 
         :return: the observationsStates attribute
-        :rtype: str
         """
         return self.component_manager.observations_states
 
-    @observationsStates.write
-    def observationsStates(self, value):
+    @observationsStates.write  # type: ignore[no-redef]
+    def observationsStates(self: MccsTelState, value: str) -> None:
         """
         Set the observationsStates attribute.
 
         :todo: What is this?
 
         :param value: the new observationsStates attribute value
-        :type value: str
         """
         self.component_manager.observations_states = value
 
     @attribute(dtype="DevString")
-    def algorithms(self):
+    def algorithms(self: MccsTelState) -> str:
         """
         Return the algorithms attribute.
 
         :todo: What is this? TBD
 
         :return: the algorithms attribute
-        :rtype: str
         """
         return self.component_manager.algorithms
 
-    @algorithms.write
-    def algorithms(self, value):
+    @algorithms.write  # type: ignore[no-redef]
+    def algorithms(self: MccsTelState, value: str) -> None:
         """
         Set the algorithms attribute.
 
         :todo: What is this? TBD
 
         :param value: the new value for the algorithms attribute
-        :type value: str
         """
         self.component_manager.algorithms = value
 
     @attribute(dtype="DevString")
-    def algorithmsVersion(self):
+    def algorithmsVersion(self: MccsTelState) -> str:
         """
         Return the algorithm version.
 
         :return: the algorithm version
-        :rtype: str
         """
         return self.component_manager.algorithms_version
 
-    @algorithmsVersion.write
-    def algorithmsVersion(self, value):
+    @algorithmsVersion.write  # type: ignore[no-redef]
+    def algorithmsVersion(self: MccsTelState, value: str) -> None:
         """
         Set the algorithm version.
 
         :param value: the new value for the algorithm version
-        :type value: str
         """
         self.component_manager.algorithms_version = value
 
@@ -227,19 +229,16 @@ class MccsTelState(SKATelState):
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
-    return MccsTelState.run_server(args=args, **kwargs)
+    return MccsTelState.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

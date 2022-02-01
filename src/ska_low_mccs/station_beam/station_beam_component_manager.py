@@ -3,19 +3,16 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements component management for station beams."""
 from __future__ import annotations
 
 import logging
 from typing import Callable, Optional, cast
-from typing_extensions import Literal
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -23,7 +20,6 @@ from ska_low_mccs.component import (
     MccsComponentManager,
     check_communicating,
     check_on,
-    enqueue,
 )
 
 
@@ -35,7 +31,6 @@ class _StationProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    @enqueue
     def apply_pointing(self: _StationProxy, pointing_args: list[float]) -> ResultCode:
         """
         Apply the provided pointing arguments to the station.
@@ -45,7 +40,7 @@ class _StationProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
-        (result_code, _) = self._proxy.ApplyPointing(pointing_args)
+        ([result_code], _) = self._proxy.ApplyPointing(pointing_args)
         return result_code
 
 
@@ -56,6 +51,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         station_health_changed_callback: Callable[[Optional[HealthState]], None],
@@ -66,6 +62,8 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :param beam_id: the beam id of this station beam
         :param logger: the logger to be used by this object.
+        :param push_change_event: method to call when the base classes
+            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -78,7 +76,7 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         self._subarray_id = 0
         self._beam_id = beam_id
-        self._station_ids: list[int] = []
+        self._station_id = 0
         self._logical_beam_id = 0
         self._update_rate = 0.0
         self._is_beam_locked = False
@@ -99,6 +97,7 @@ class StationBeamComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             None,
@@ -120,44 +119,6 @@ class StationBeamComponentManager(MccsComponentManager):
         if self._station_proxy is not None:
             self._station_proxy.stop_communicating()
 
-    def power_mode(self: StationBeamComponentManager) -> Literal[PowerMode.ON]:
-        """
-        Return the power mode to the station beam.
-
-        The station beam is an always-on device, so this method always
-        return ON.
-
-        :return: the power mode of the station beam.
-        """
-        return PowerMode.ON
-
-    def off(self: StationBeamComponentManager) -> None:
-        """
-        Turn off the station beam.
-
-        :raises NotImplementedError: because station beam is an
-            always-on device.
-        """
-        raise NotImplementedError("MccsStationBeam is an always-on device.")
-
-    def standby(self: StationBeamComponentManager) -> None:
-        """
-        Put the station beam into standby mode.
-
-        :raises NotImplementedError: because station beam is an
-            always-on device.
-        """
-        raise NotImplementedError("MccsStationBeam is an always-on device.")
-
-    def on(self: StationBeamComponentManager) -> None:
-        """
-        Turn on the station beam.
-
-        :raises NotImplementedError: because station beam is an
-            always-on device.
-        """
-        raise NotImplementedError("MccsStationBeam is an always-on device.")
-
     def _device_communication_status_changed(
         self: StationBeamComponentManager,
         communication_status: CommunicationStatus,
@@ -170,8 +131,9 @@ class StationBeamComponentManager(MccsComponentManager):
     @property
     def station_fqdn(self: StationBeamComponentManager) -> Optional[str]:
         """
-        Return the station FQDN. If the station FQDN is not set, return the empty
-        string.
+        Return the station FQDN.
+
+        If the station FQDN is not set, return the empty string.
 
         :return: the station FQDN
         """
@@ -180,8 +142,9 @@ class StationBeamComponentManager(MccsComponentManager):
     @station_fqdn.setter
     def station_fqdn(self: StationBeamComponentManager, value: Optional[str]) -> None:
         """
-        Set the station FQDN. The string must be either a valid FQDN for a station, or
-        the empty string.
+        Set the station FQDN.
+
+        The string must be either a valid FQDN for a station, or the empty string.
 
         :param value: the new station FQDN, or the empty string
         """
@@ -199,6 +162,7 @@ class StationBeamComponentManager(MccsComponentManager):
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
                     self.logger,
+                    self._push_change_event,
                     self._device_communication_status_changed,
                     None,
                     self._station_fault_changed_callback,
@@ -225,23 +189,32 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         return self._subarray_id
 
-    @property
-    def station_ids(self: StationBeamComponentManager) -> list[int]:
+    @subarray_id.setter
+    def subarray_id(self: StationBeamComponentManager, value: int) -> None:
         """
-        Return the station ids.
+        Set the Subarray ID.
+
+        :param value: the new subarray id
+        """
+        self._subarray_id = value
+
+    @property
+    def station_id(self: StationBeamComponentManager) -> int:
+        """
+        Return the station id.
 
         :return: the station ids
         """
-        return list(self._station_ids)
+        return self._station_id
 
-    @station_ids.setter
-    def station_ids(self: StationBeamComponentManager, value: list[int]) -> None:
+    @station_id.setter
+    def station_id(self: StationBeamComponentManager, value: int) -> None:
         """
-        Set the station ids.
+        Set the station id.
 
-        :param value: the new station ids
+        :param value: the new station id
         """
-        self._station_ids = value
+        self._station_id = value
 
     @property
     def logical_beam_id(self: StationBeamComponentManager) -> int:
@@ -378,7 +351,7 @@ class StationBeamComponentManager(MccsComponentManager):
     def configure(
         self: StationBeamComponentManager,
         beam_id: int,
-        station_ids: list[int],
+        station_id: int,
         update_rate: float,
         channels: list[list[int]],
         desired_pointing: list[float],
@@ -389,7 +362,7 @@ class StationBeamComponentManager(MccsComponentManager):
         Configure this station beam for scanning.
 
         :param beam_id: the id of this station beam
-        :param station_ids: the ids of participating stations
+        :param station_id: the ids of participating stations
         :param update_rate: the update rate of the scan
         :param channels: ids of channels configured for this station beam
         :param desired_pointing: sky coordinates for this beam to point at
@@ -399,7 +372,7 @@ class StationBeamComponentManager(MccsComponentManager):
         :return: a result code
         """
         self._beam_id = beam_id
-        self._station_ids = list(station_ids)
+        self._station_id = station_id
         self._channels = list(list(i) for i in channels)  # deep copy
         self._update_rate = update_rate
         self._desired_pointing = list(desired_pointing)

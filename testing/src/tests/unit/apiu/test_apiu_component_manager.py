@@ -1,13 +1,10 @@
-###############################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-###############################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the APIU component manager and simulator."""
 from __future__ import annotations
 
@@ -32,6 +29,8 @@ from ska_low_mccs.testing.mock import MockCallable
 
 class TestApiuCommon:
     """
+    Common tests.
+
     Because the ApiuComponentManager is designed to pass commands through to the
     ApiuSimulator or (or actual APIU) that it is driving, many commands are common to.
 
@@ -131,7 +130,9 @@ class TestApiuCommon:
         random_voltage: Callable[[], float],
     ) -> None:
         """
-        Test that the APIU properties, such as current, humidity, temperature and
+        Test that the APIU properties.
+
+        e.g. current, humidity, temperature and
         voltage, can be read, and that we can simulate changing values for them.
 
         :param apiu: the APIU component class object under test
@@ -170,7 +171,7 @@ class TestApiuCommon:
         apiu: Union[ApiuSimulator, ApiuSimulatorComponentManager, ApiuComponentManager],
     ) -> None:
         """
-        Test that the APIU object:
+        Test the APIU object.
 
         * can turn antennas on and off
         * can retrieve voltage, current and temperature values from the
@@ -240,8 +241,9 @@ class TestApiuCommon:
 
         def check_all_antennas_on_off(mode: bool) -> None:
             """
-            Helper function to check that all antennas are on, or that all antennas are
-            off, depending on the mode.
+            Check all antennas.
+
+            Verify they are on, or that all antennas are off, depending on the mode.
 
             :param mode: whether all antennas are expected to be on or
                 off. If true, all antennas are expected to be on. If
@@ -307,7 +309,8 @@ class TestApiuComponentManager:
         antenna_id: int,
     ) -> None:
         """
-        Test that the callback is called when we change the power mode of an antenna
+        Test that the callback is called when we change the power mode of an antenna.
+
         (i.e. turn it on or off).
 
         :param apiu_antenna_count: number of antennas managed by the

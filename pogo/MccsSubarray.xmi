@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="MccsSubarray" pogoRevision="9.6">
-    <description description="MccsSubarray is the Tango device class for the MCCS Subarray prototype.&#xA;&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="MCCS Subarray" sourcePath="/home/osboxes/ska-low-mccs/pogo" language="PythonHL" filestogenerate="XMI   file" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
+    <description description="MccsSubarray is the Tango device class for the MCCS Subarray prototype.&#xA;&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="MCCS Subarray" sourcePath="/home/osboxes/ska-low-mccs/pogo" language="PythonHL" filestogenerate="XMI   file" license="BSD-3" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="SKAObsDevice" sourcePath="../../lmc-base-classes/pogo"/>
       <inheritances classname="SKASubarray" sourcePath="/home/osboxes/ska-low-mccs/pogo/../../lmc-base-classes/pogo"/>

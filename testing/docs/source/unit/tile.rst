@@ -10,6 +10,11 @@ conftest
 .. automodule:: ska_low_mccs.tests.unit.tile.conftest
    :members:
 
+test_tile_orchestrator
+=======================
+.. automodule:: ska_low_mccs.tests.unit.tile.test_tile_orchestrator
+   :members:
+
 test_tile_component_manager
 ===========================
 .. automodule:: ska_low_mccs.tests.unit.tile.test_tile_component_manager

@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements an abstract object component."""
 from __future__ import annotations  # allow forward references in type hints
 
@@ -79,9 +80,14 @@ class ObjectComponent:
         """
         Return the power mode of the component.
 
-        :raises NotImplementedError: because this class is abstract.
+        Here we implement a default functionality for components that do
+        not manage their own power mode. From their own point of view
+        they are always-on devices, though there may be an upstream
+        power supply device that supplies/denies them power.
+
+        :return: the power mode of the component.
         """
-        raise NotImplementedError("ObjectComponent is abstract.")
+        return PowerMode.ON
 
     def set_power_mode_changed_callback(
         self: ObjectComponent,
@@ -110,7 +116,7 @@ class ObjectComponent:
 
         :raises NotImplementedError: because this class is abstract.
         """
-        raise NotImplementedError("ObjectComponent is abstract.")
+        raise NotImplementedError("This is an always-on component.")
 
     def standby(self: ObjectComponent) -> ResultCode | None:
         """
@@ -118,7 +124,7 @@ class ObjectComponent:
 
         :raises NotImplementedError: because this class is abstract.
         """
-        raise NotImplementedError("ObjectComponent is abstract.")
+        raise NotImplementedError("This is an always-on component.")
 
     def on(self: ObjectComponent) -> ResultCode | None:
         """
@@ -126,7 +132,7 @@ class ObjectComponent:
 
         :raises NotImplementedError: because this class is abstract.
         """
-        raise NotImplementedError("ObjectComponent is abstract.")
+        raise NotImplementedError("This is an always-on component.")
 
     def reset(self: ObjectComponent) -> ResultCode | None:
         """

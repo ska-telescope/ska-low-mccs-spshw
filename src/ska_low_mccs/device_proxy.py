@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements a base device proxy for MCCS devices."""
 
 from __future__ import annotations  # allow forward references in type hints
@@ -49,8 +50,9 @@ class MccsDeviceProxy:
         cls: Type[MccsDeviceProxy], connection_factory: ConnectionFactory
     ) -> None:
         """
-        Set the default connection factory for this class. This is super
-        useful for unit testing: we can mock out
+        Set the default connection factory for this class.
+
+        This is super useful for unit testing: we can mock out
         :py:class:`tango.DeviceProxy` altogether, by simply setting this
         class's default connection factory to a mock factory.
 
@@ -294,7 +296,7 @@ class MccsDeviceProxy:
         not ready, in which case subscription will fail and a
         :py:class:`tango.DevFailed` exception will be raised. Here, we
         attempt subscription in a backoff-retry, and only raise the
-        exception one our retries are exhausted. (The alternative option
+        exception once our retries are exhausted. (The alternative option
         of subscribing with "stateless=True" could not be made to work.)
 
         :param attribute_name: the name of the attribute for which
@@ -313,7 +315,7 @@ class MccsDeviceProxy:
 
     def _change_event_received(self: MccsDeviceProxy, event: tango.EventData) -> None:
         """
-        Callback called by the tango system when a subscribed event occurs.
+        Handle subscribe events from the Tango system with this callback.
 
         It in turn invokes all its own callbacks.
 
@@ -323,8 +325,11 @@ class MccsDeviceProxy:
         # handling, but it seems like the safer way to go
         with self._change_event_lock:
             attribute_data = self._process_event(event)
-            for callback in self._change_event_callbacks[attribute_data.name.lower()]:
-                self._call_callback(callback, attribute_data)
+            if attribute_data is not None:
+                for callback in self._change_event_callbacks[
+                    attribute_data.name.lower()
+                ]:
+                    self._call_callback(callback, attribute_data)
 
     def _call_callback(
         self: MccsDeviceProxy,
@@ -342,7 +347,7 @@ class MccsDeviceProxy:
 
     def _process_event(
         self: MccsDeviceProxy, event: tango.EventData
-    ) -> tango.DeviceAttribute:
+    ) -> Optional[tango.DeviceAttribute]:
         """
         Process a received event.
 
@@ -354,21 +359,26 @@ class MccsDeviceProxy:
 
         :return: the attribute value data
         """
-        if event.attr_value is None:
+        if event.err:
+            self._logger.warning(
+                f"Received failed change event: error stack is {event.errors}."
+            )
+            return None
+        elif event.attr_value is None:
             warning_message = (
                 "Received change event with empty value. Falling back to manual "
                 f"attribute read. Event.err is {event.err}. Event.errors is\n"
                 f"{event.errors}."
             )
             warnings.warn(UserWarning(warning_message))
-            self._logger.warn(warning_message)
+            self._logger.warning(warning_message)
             return self._read(event.attr_name)
         else:
             return event.attr_value
 
     def _read(self: MccsDeviceProxy, attribute_name: str) -> Any:
         """
-        Manually read an attribute.
+        Read an attribute manually.
 
         Used when we receive an event with empty attribute data.
 
@@ -378,14 +388,26 @@ class MccsDeviceProxy:
         """
         return self._device.read_attribute(attribute_name)
 
-    def __del__(self: MccsDeviceProxy) -> None:
-        """Cleanup before destruction."""
-        for subscription_id in self._change_event_subscription_ids:
-            self._device.unsubscribe_event(subscription_id)
+    # TODO: This method is commented out because it is implicated in our segfault
+    # issues:
+    # a) We know that any time we access Tango from a python-native thread, we have to
+    #    wrap it in ``with tango.EnsureOmniThread():`` to avoid segfaults.
+    # b) Although we don't explicitly launch a thread here, the ``__del__`` method is
+    #    run on the python garbage collection thread, which is a python-native thread!
+    # c) Wrapping a __del__ method in ``with tango.EnsureOmniThread():`` seems fraught
+    #    with danger of re-entrancy / deadlock.
+    # Therefore this method is commented out for now. Unfortunately this means we don't
+    # clean up properly after ourselves, so we should find a better solution if
+    # possible.
+    #
+    # def __del__(self: MccsDeviceProxy) -> None:
+    #     """Cleanup before destruction."""
+    #     for subscription_id in self._change_event_subscription_ids:
+    #         self._device.unsubscribe_event(subscription_id)
 
     def __setattr__(self: MccsDeviceProxy, name: str, value: Any) -> None:
         """
-        Handler for setting attributes on this object.
+        Handle the setting of attributes on this object.
 
         If the name matches an attribute that this object already has,
         we update it. But we refuse to create any new attributes.
@@ -406,7 +428,7 @@ class MccsDeviceProxy:
 
     def __getattr__(self: MccsDeviceProxy, name: str, default_value: Any = None) -> Any:
         """
-        Handler for any requested attribute not found in the usual way.
+        Handle any requested attribute not found in the usual way.
 
         If this proxy is in pass-through mode, then we try to get this
         attribute from the underlying proxy.

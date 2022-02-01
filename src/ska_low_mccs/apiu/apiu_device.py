@@ -3,16 +3,15 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements the MCCS APIU device."""
 
 from __future__ import annotations  # allow forward references in type hints
 
 from typing import List, Optional, Tuple
 
+import tango
 from tango.server import attribute, command, device_property
 
 from ska_tango_base.base import SKABaseDevice
@@ -64,6 +63,16 @@ class MccsAPIU(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def init_device(self: MccsAPIU) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        util = tango.Util.instance()
+        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        super().init_device()
+
     def _init_state_model(self: MccsAPIU) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
@@ -82,6 +91,7 @@ class MccsAPIU(SKABaseDevice):
             SimulationMode.TRUE,
             len(self.AntennaFQDNs),
             self.logger,
+            self.push_change_event,
             self._component_communication_status_changed,
             self._component_power_mode_changed,
             self._component_fault,
@@ -253,7 +263,6 @@ class MccsAPIU(SKABaseDevice):
         Report the simulation mode of the device.
 
         :return: the current simulation mode
-        :rtype: int
         """
         return self.component_manager.simulation_mode
 
@@ -573,7 +582,7 @@ class MccsAPIU(SKABaseDevice):
 # ----------
 
 
-def main(*args: str, **kwargs: str) -> int:
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
 

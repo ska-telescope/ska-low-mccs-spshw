@@ -1,11 +1,10 @@
-########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-########################################################################
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests for MccsSubarray."""
 from __future__ import annotations
 
@@ -86,7 +85,9 @@ def device_to_load(
 @pytest.fixture()
 def mock_factory() -> Callable[[], unittest.mock.Mock]:
     """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
+    Fixture that provides a mock factory for device proxy mocks.
+
+    This default factory
     provides vanilla mocks, but this fixture can be overridden by test modules/classes
     to provide mocks with specified behaviours.
 
@@ -164,6 +165,7 @@ class TestMccsSubarray:
     def test_GetVersionInfo(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for GetVersionInfo.
@@ -171,9 +173,33 @@ class TestMccsSubarray:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
-        version_info = release.get_release_info(device_under_test.info().dev_class)
-        assert device_under_test.GetVersionInfo() == [version_info]
+        # Subscribe to controller's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+
+        ([result_code], [unique_id]) = device_under_test.GetVersionInfo()
+        assert result_code == ResultCode.QUEUED
+        assert "GetVersionInfo" in unique_id
+
+        vinfo = release.get_release_info(device_under_test.info().dev_class)
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            str([vinfo]),
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
     def test_buildState(
         self: TestMccsSubarray,
@@ -230,15 +256,19 @@ class TestMccsSubarray:
 
     def test_assignResources(
         self: TestMccsSubarray,
+        lrc_result_changed_callback: MockChangeEventCallback,
         device_under_test: MccsDeviceProxy,
         device_admin_mode_changed_callback: MockChangeEventCallback,
         station_on_fqdn: str,
         subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
     ) -> None:
         """
         Test for assignResources.
 
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -247,6 +277,8 @@ class TestMccsSubarray:
         :param station_on_fqdn: the FQDN of a station that is powered
             on.
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
+            on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
             on.
         :param channel_blocks: a list of channel blocks.
         """
@@ -264,28 +296,63 @@ class TestMccsSubarray:
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         assert device_under_test.state() == DevState.ON
+        assert device_under_test.obsState == ObsState.EMPTY
+        time.sleep(0.1)
 
-        ([result_code], [message]) = device_under_test.AssignResources(
+        ([result_code], _) = device_under_test.AssignResources(
             json.dumps(
                 {
-                    "stations": [station_on_fqdn],
+                    "stations": [[station_on_fqdn]],
                     "subarray_beams": [subarray_beam_on_fqdn],
+                    "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,
                 }
             )
         )
         assert result_code == ResultCode.OK
         time.sleep(0.1)
-        assert list(device_under_test.assignedResources) == [
-            station_on_fqdn,
-            subarray_beam_on_fqdn,
-        ]
+        assert device_under_test.assignedResources == json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "subarray_beam_ids": [subarray_beam_on_fqdn.split("/")[-1].lstrip("0")],
+                "station_ids": [[station_on_fqdn.split("/")[-1].lstrip("0")]],
+                "channel_blocks": channel_blocks,
+            }
+        )
 
         assert device_under_test.state() == DevState.ON
-        ([result_code], [message]) = device_under_test.ReleaseAllResources()
-        assert result_code == ResultCode.OK
-        time.sleep(0.1)
-        assert device_under_test.assignedResources is None
+
+        # Subscribe to controller's LRC result attribute
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+        time.sleep(0.1)  # allow event system time to run
+        initial_lrc_result = ("", "", "")
+        assert device_under_test.longRunningCommandResult == initial_lrc_result
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+        ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
+        assert result_code == ResultCode.QUEUED
+        assert "ReleaseAllResourcesCommand" in unique_id
+
+        lrc_result = (
+            unique_id,
+            str(ResultCode.OK.value),
+            "ReleaseAllResources command completed OK",
+        )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
+        assert device_under_test.assignedResources == json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "subarray_beam_ids": [],
+                "station_ids": [],
+                "channel_blocks": [],
+            }
+        )
 
     def test_configure(
         self: TestMccsSubarray,
@@ -295,6 +362,7 @@ class TestMccsSubarray:
         station_on_fqdn: str,
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
     ) -> None:
         """
@@ -313,6 +381,8 @@ class TestMccsSubarray:
             powered on.
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is
+            powered on.
         :param channel_blocks: a list of channel blocks.
         """
         device_under_test.add_change_event_callback(
@@ -326,13 +396,16 @@ class TestMccsSubarray:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
+        assert device_under_test.state() == DevState.ON
         assert device_under_test.obsState == ObsState.EMPTY
+        time.sleep(0.1)
 
-        ([result_code], [message]) = device_under_test.AssignResources(
+        ([result_code], _) = device_under_test.AssignResources(
             json.dumps(
                 {
-                    "stations": [station_on_fqdn],
+                    "stations": [[station_on_fqdn]],
                     "subarray_beams": [subarray_beam_on_fqdn],
+                    "station_beams": [station_beam_on_fqdn],
                     "channel_blocks": channel_blocks,
                 }
             )
@@ -341,7 +414,7 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.obsState == ObsState.IDLE
 
-        ([result_code], [message]) = device_under_test.Configure(
+        ([result_code], _) = device_under_test.Configure(
             json.dumps(
                 {
                     "stations": [{"station_id": station_on_id}],

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains tests of the object_component_manager module."""
 from __future__ import annotations
 
@@ -7,9 +14,12 @@ import unittest.mock
 import pytest
 import pytest_mock
 
-from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager
-
+from ska_low_mccs.component import (
+    CommunicationStatus,
+    ObjectComponentManager,
+)
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 class TestObjectComponentManager:
@@ -34,6 +44,7 @@ class TestObjectComponentManager:
         self: TestObjectComponentManager,
         component: unittest.mock.Mock,
         logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
         communication_status_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
         component_fault_callback: MockCallable,
@@ -44,6 +55,8 @@ class TestObjectComponentManager:
         :param component: the component to be managed by the component
             manager.
         :param logger: a logger for the component manager to use
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -57,6 +70,7 @@ class TestObjectComponentManager:
         return ObjectComponentManager(
             component,
             logger,
+            lrc_result_changed_callback,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -166,7 +180,9 @@ class TestObjectComponentManager:
         """
         setattr(component, command, MockCallable())
 
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, command)()
         getattr(component, command).assert_not_called()
 

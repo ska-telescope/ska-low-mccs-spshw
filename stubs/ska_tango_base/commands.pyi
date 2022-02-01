@@ -1,8 +1,16 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 import enum
 import logging
 from typing import Any, Optional
 
-from ska_tango_base.base import OpStateModel
+from ska_tango_base.base.op_state_model import OpStateModel
+from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 
 class ResultCode(enum.IntEnum):
     OK = 0
@@ -53,3 +61,18 @@ class CompletionCommand(StateModelCommand):
     ) -> None: ...
 
     def completed(self: CompletionCommand) -> None: ...
+
+
+class ObservationCommand(StateModelCommand):
+    def __init__(
+        self: ObservationCommand,
+        target: object,
+        obs_state_model: SubarrayObsStateModel,
+        action_slug: str,
+        op_state_model: OpStateModel,
+        *args: list[Any],
+        logger: Optional[logging.Logger]=None,
+        **kwargs: dict[str,Any],
+    ) -> None: ...
+    def is_allowed(self: ObservationCommand, raise_if_disallowed: bool=False) -> bool: ...
+    

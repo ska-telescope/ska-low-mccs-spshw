@@ -1,7 +1,13 @@
-# type: ignore
 # -*- coding: utf-8 -*-
-"""An implementation of a static TPM simulator."""
-from __future__ import annotations
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""An implementation of a TPM simulator."""
+
+from __future__ import annotations  # allow forward references in type hints
 
 import logging
 
@@ -17,10 +23,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
 
-    def __init__(
-        self: StaticTpmSimulator,
-        logger: logging.Logger,
-    ) -> None:
+    def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new TPM simulator instance.
 
@@ -35,51 +38,46 @@ class StaticTpmSimulator(BaseTpmSimulator):
         super().__init__(logger)
 
     @property
-    def board_temperature(self):
+    def board_temperature(self: StaticTpmSimulator) -> float:
         """
         Return the temperature of the TPM.
 
         :return: the temperature of the TPM
-        :rtype: float
         """
         return self._board_temperature
 
     @property
-    def voltage(self):
+    def voltage(self: StaticTpmSimulator) -> float:
         """
         Return the voltage of the TPM.
 
         :return: the voltage of the TPM
-        :rtype: float
         """
         return self._voltage
 
     @property
-    def current(self):
+    def current(self: StaticTpmSimulator) -> float:
         """
         Return the current of the TPM.
 
         :return: the current of the TPM
-        :rtype: float
         """
         return self._current
 
     @property
-    def fpga1_temperature(self):
+    def fpga1_temperature(self: StaticTpmSimulator) -> float:
         """
         Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
-        :rtype: float
         """
         return self._fpga1_temperature
 
     @property
-    def fpga2_temperature(self):
+    def fpga2_temperature(self: StaticTpmSimulator) -> float:
         """
         Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
-        :rtype: float
         """
         return self._fpga2_temperature

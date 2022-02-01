@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the station beam component manager."""
 from __future__ import annotations
 
@@ -28,6 +35,7 @@ class TestSubarrayComponentManager:
         communication_status_changed_callback: MockCallable,
         station_on_fqdn: str,
         subarray_beam_on_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
     ) -> None:
         """
@@ -43,6 +51,8 @@ class TestSubarrayComponentManager:
             powered on.
         :param subarray_beam_on_fqdn: the FQDN of a mock subarray beam
             that is powered on
+        :param station_beam_on_fqdn: the FQDN of a mock station beam
+            that is powered on
         :param channel_blocks: a mock list of channel blocks
         """
         subarray_component_manager.start_communicating()
@@ -57,13 +67,13 @@ class TestSubarrayComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [station_on_fqdn],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
@@ -104,6 +114,8 @@ class TestSubarrayComponentManager:
         station_on_fqdn: str,
         subarray_beam_off_fqdn: str,
         subarray_beam_on_fqdn: str,
+        station_beam_off_fqdn: str,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
         assign_completed_callback: MockCallable,
         release_completed_callback: MockCallable,
@@ -122,6 +134,10 @@ class TestSubarrayComponentManager:
             off.
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
+        :param station_beam_off_fqdn: the FQDN of a station beam that is powered
+            off.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
+            on.
         :param channel_blocks: a list of channel blocks.
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
@@ -133,16 +149,21 @@ class TestSubarrayComponentManager:
         subarray_component_manager.start_communicating()
         assert subarray_component_manager.power_mode == PowerMode.ON
 
-        assert subarray_component_manager.assigned_resources == set()
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": list(),
+            "subarray_beams": list(),
+            "station_beams": list(),
+            "channel_blocks": list(),
+        }
 
         # Assignment from empty
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [[station_off_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,
@@ -153,22 +174,25 @@ class TestSubarrayComponentManager:
         )
 
         assign_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == {
-            station_off_fqdn,
-            subarray_beam_off_fqdn,
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": [[station_off_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
         }
+
         resources_changed_callback.assert_next_call(
-            {station_off_fqdn}, {subarray_beam_off_fqdn}
+            {station_off_fqdn}, {subarray_beam_off_fqdn}, {station_beam_off_fqdn}
         )
 
         # Further assign
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [[station_on_fqdn]],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,
@@ -179,42 +203,53 @@ class TestSubarrayComponentManager:
         )
 
         assign_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == {
-            station_off_fqdn,
-            station_on_fqdn,
-            subarray_beam_off_fqdn,
-            subarray_beam_on_fqdn,
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": [[station_off_fqdn], [station_on_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn, subarray_beam_on_fqdn],
+            "station_beams": [station_beam_off_fqdn, station_beam_on_fqdn],
+            "channel_blocks": channel_blocks + channel_blocks,
         }
+
         resources_changed_callback.assert_next_call(
             {station_off_fqdn, station_on_fqdn},
             {subarray_beam_off_fqdn, subarray_beam_on_fqdn},
-        )
-
-        # Release
-        result_code = subarray_component_manager.release(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
-        assert result_code == ResultCode.OK
-
-        release_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == {
-            station_on_fqdn,
-            subarray_beam_on_fqdn,
-        }
-        resources_changed_callback.assert_next_call(
-            {station_on_fqdn}, {subarray_beam_on_fqdn}
+            {station_beam_off_fqdn, station_beam_on_fqdn},
         )
 
         # Release all
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
         release_completed_callback.assert_next_call()
-        assert subarray_component_manager.assigned_resources == set()
-        resources_changed_callback.assert_next_call(set(), set())
+        resources_changed_callback.assert_next_call(set(), set(), set())
+
+        assert subarray_component_manager.assigned_resources_dict == {
+            "stations": list(),
+            "subarray_beams": list(),
+            "station_beams": list(),
+            "channel_blocks": list(),
+        }
+
+    def test_release(
+        self: TestSubarrayComponentManager,
+        subarray_component_manager: SubarrayComponentManager,
+        station_off_fqdn: str,
+    ) -> None:
+        """
+        Test the component manager's handling of the release command.
+
+        :param subarray_component_manager: the subarray component
+            manager under test.
+        :param station_off_fqdn: the FQDN of a station that is powered
+            off.
+        """
+        subarray_component_manager.start_communicating()
+        assert subarray_component_manager.power_mode == PowerMode.ON
+        release_json = json.dumps({"station_beams": [station_off_fqdn]})
+        with pytest.raises(
+            NotImplementedError,
+            match="MCCS Subarray cannot partially release resources.",
+        ):
+            subarray_component_manager.release(release_json)
 
     def test_configure(
         self: TestSubarrayComponentManager,
@@ -231,6 +266,8 @@ class TestSubarrayComponentManager:
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
         mock_subarray_beam_on: unittest.mock.Mock,
+        station_beam_on_fqdn: str,
+        station_beam_off_fqdn: str,
         channel_blocks: list[int],
         assign_completed_callback: MockCallable,
         configure_completed_callback: MockCallable,
@@ -261,6 +298,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
         :param mock_subarray_beam_on: a mock subarray beam that is powered on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
+            on.
+        :param station_beam_off_fqdn: the FQDN of a station beam that is powered
+            off.
         :param channel_blocks: a list of channel blocks.
         :param assign_completed_callback: callback to be called when the
             component completes a resource assignment.
@@ -273,13 +314,13 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.power_mode == PowerMode.ON
 
         # can't configure when resources are OFF
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [[station_off_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
 
         # subarray connects to stations, subscribes to change events on power mode,
@@ -302,13 +343,13 @@ class TestSubarrayComponentManager:
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
 
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_off_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [[station_on_fqdn]],
+            "subarray_beams": [subarray_beam_off_fqdn],
+            "station_beams": [station_beam_off_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
@@ -334,13 +375,13 @@ class TestSubarrayComponentManager:
 
         result_code = subarray_component_manager.release_all()
         assert result_code == ResultCode.OK
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_off_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [[station_off_fqdn]],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
@@ -367,13 +408,13 @@ class TestSubarrayComponentManager:
         assert result_code == ResultCode.OK
 
         # CAN configure when resources are ON
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [[station_on_fqdn]],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
@@ -430,6 +471,8 @@ class TestSubarrayComponentManager:
         subarray_beam_on_id: int,
         subarray_beam_on_fqdn: str,
         mock_subarray_beam_on: unittest.mock.Mock,
+        station_beam_on_id: int,
+        station_beam_on_fqdn: str,
         channel_blocks: list[int],
         scan_id: int,
         start_time: float,
@@ -449,6 +492,10 @@ class TestSubarrayComponentManager:
         :param subarray_beam_on_fqdn: the FQDN of a subarray beam that is powered
             on.
         :param mock_subarray_beam_on: a mock subarray beam that is powered on.
+        :param station_beam_on_id: the id number of a station beam that is
+            powered on.
+        :param station_beam_on_fqdn: the FQDN of a station beam that is powered
+            on.
         :param channel_blocks: a list of channel blocks.
         :param scan_id: a scan id for use in testing
         :param start_time: a scan start time for use in testing
@@ -458,13 +505,13 @@ class TestSubarrayComponentManager:
         subarray_component_manager.start_communicating()
         assert subarray_component_manager.power_mode == PowerMode.ON
 
-        result_code = subarray_component_manager.assign(
-            {
-                "stations": [station_on_fqdn],
-                "subarray_beams": [subarray_beam_on_fqdn],
-                "channel_blocks": channel_blocks,
-            }
-        )
+        resource_spec = {
+            "stations": [[station_on_fqdn]],
+            "subarray_beams": [subarray_beam_on_fqdn],
+            "station_beams": [station_beam_on_fqdn],
+            "channel_blocks": channel_blocks,
+        }
+        result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
         time.sleep(0.1)
 
@@ -472,6 +519,7 @@ class TestSubarrayComponentManager:
             {
                 "stations": [{"station_id": station_on_id}],
                 "subarray_beams": [{"subarray_beam_id": subarray_beam_on_id}],
+                "station_beams": [{"station_beam_id": station_beam_on_id}],
             }
         )
         assert result_code == ResultCode.QUEUED

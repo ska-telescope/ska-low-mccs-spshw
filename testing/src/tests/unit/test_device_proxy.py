@@ -1,11 +1,10 @@
-########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-########################################################################
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains unit tests for the ska_low_mccs.device_proxy module."""
 from __future__ import annotations  # allow forward references in type hints
 
@@ -101,6 +100,7 @@ class TestMccsDeviceProxy:
             event_quality = f"mock_quality_{i+1}"
 
             mock_event = mocker.Mock()
+            mock_event.err = False
             mock_event.attr_value.name = event_name
             mock_event.attr_value.value = event_value
             mock_event.attr_value.quality = event_quality

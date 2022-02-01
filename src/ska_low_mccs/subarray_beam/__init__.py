@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This subpackage implements subarray beam functionality for MCCS."""
 
 
@@ -19,4 +20,4 @@ from .subarray_beam import SubarrayBeam
 from .subarray_beam_component_manager import SubarrayBeamComponentManager
 from .subarray_beam_health_model import SubarrayBeamHealthModel
 from .subarray_beam_obs_state_model import SubarrayBeamObsStateModel
-from .subarray_beam_device import MccsSubarrayBeam  # type: ignore[attr-defined]
+from .subarray_beam_device import MccsSubarrayBeam

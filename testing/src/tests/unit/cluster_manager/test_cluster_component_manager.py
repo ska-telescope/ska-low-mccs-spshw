@@ -1,35 +1,36 @@
-#########################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the cluster simulator."""
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import cast, Union
 
 import pytest
 from _pytest.fixtures import SubRequest  # for type hinting
 
 from ska_tango_base.control_model import HealthState, SimulationMode
 
-from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus  # type: ignore[attr-defined]
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 from ska_low_mccs.cluster_manager import (
-    ClusterComponentManager,  # type: ignore[attr-defined]
+    ClusterComponentManager,
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
 
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 class TestClusterCommon:
     """
+    Common tests.
+
     Because the ClusterComponentManager is designed to pass commands through to the
     ClusterSimulator or ClusterDriver that it is driving, many commands are common to.
 
@@ -205,31 +206,31 @@ class TestClusterCommon:
         (
             (
                 "memory_avail",
-                ClusterSimulator.CONFIGURATION["memory_total"]
-                - ClusterSimulator.RESOURCE_STATS["memory_used"],
+                cast(float, ClusterSimulator.CONFIGURATION["memory_total"])
+                - cast(float, ClusterSimulator.RESOURCE_STATS["memory_used"]),
             ),
             (
                 "nodes_avail",
-                ClusterSimulator.CONFIGURATION["nodes_total"]
-                - ClusterSimulator.RESOURCE_STATS["nodes_in_use"],
+                cast(int, ClusterSimulator.CONFIGURATION["nodes_total"])
+                - cast(int, ClusterSimulator.RESOURCE_STATS["nodes_in_use"]),
             ),
             (
                 "master_cpus_allocated_percent",
-                ClusterSimulator.RESOURCE_STATS["master_cpus_used"]
+                cast(float, ClusterSimulator.RESOURCE_STATS["master_cpus_used"])
                 * 100.0
-                / ClusterSimulator.CONFIGURATION["master_cpus_total"],
+                / cast(float, ClusterSimulator.CONFIGURATION["master_cpus_total"]),
             ),
             (
                 "master_disk_percent",
-                ClusterSimulator.RESOURCE_STATS["master_disk_used"]
+                cast(float, ClusterSimulator.RESOURCE_STATS["master_disk_used"])
                 * 100.0
-                / ClusterSimulator.CONFIGURATION["master_disk_total"],
+                / cast(float, ClusterSimulator.CONFIGURATION["master_disk_total"]),
             ),
             (
                 "master_mem_percent",
-                ClusterSimulator.RESOURCE_STATS["master_mem_used"]
+                cast(float, ClusterSimulator.RESOURCE_STATS["master_mem_used"])
                 * 100
-                / ClusterSimulator.CONFIGURATION["master_mem_total"],
+                / cast(float, ClusterSimulator.CONFIGURATION["master_mem_total"]),
             ),
         ),
     )
@@ -254,8 +255,9 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test that resources relate to each other as they should. For
-        example:
+        Test that resources relate to each other as they should.
+
+        For example:
 
         * used + available = total
         * 100 * used / total = percent
@@ -286,7 +288,9 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test the ping master node command. This command has not been implemented, so the
+        Test the ping master node command.
+
+        This command has not been implemented, so the
         test is correspondingly weak.
 
         :param cluster: the simulated cluster
@@ -307,20 +311,21 @@ class TestClusterCommon:
         :param cluster: the object under test: either a simulator or a
             component manager.
         """
-        assert cluster.shadow_master_pool_status == (
+        assert cluster.shadow_master_pool_status == [
             HealthState.OK,
             HealthState.OK,
             HealthState.OK,
             HealthState.OK,
-        )
+        ]
 
     def test_submit_job(
         self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test that when we submit a job, we get a job id for it, and the status of the
-        job is STAGING.
+        Test that when we submit a job, we get a job id for it.
+
+        Also, the status of the job is STAGING.
 
         :param cluster: the simulated cluster
         """
@@ -374,8 +379,9 @@ class TestClusterSimulator:
         self: TestClusterSimulator, cluster_simulator: ClusterSimulator
     ) -> None:
         """
-        Test for the master node id is as expected, and that it changes if we simulate
-        node failure.
+        Test for the master node id is as expected.
+
+        Also, that it changes if we simulate node failure.
 
         We're going to repeatedly make the master node fail, and watch
         the cluster choose a new master from the master pool, until
@@ -414,13 +420,17 @@ class TestClusterComponentManager:
     """Contains tests specific to ClusterComponentManager."""
 
     def test_init_simulation_mode(
-        self: TestClusterComponentManager, logger: logging.Logger
+        self: TestClusterComponentManager,
+        logger: logging.Logger,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that we can't create a cluster manager that's not in simulation mode.
 
         :param logger: a logger for the ClusterComponentManager instance
             that this test will try to initialise.
+        :param lrc_result_changed_callback: a callback to
+            be used to subscribe to device LRC result changes
         """
         with pytest.raises(
             NotImplementedError,
@@ -428,6 +438,7 @@ class TestClusterComponentManager:
         ):
             _ = ClusterComponentManager(
                 logger,
+                lrc_result_changed_callback,
                 SimulationMode.FALSE,
                 None,
                 None,
@@ -465,10 +476,10 @@ class TestClusterComponentManager:
         """
         cluster_component_manager.start_communicating()
         component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            (HealthState.OK, HealthState.OK, HealthState.OK, HealthState.OK)
+            [HealthState.OK, HealthState.OK, HealthState.OK, HealthState.OK]
         )
 
         cluster_component_manager._component.simulate_node_failure(1, True)
         component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            (HealthState.FAILED, HealthState.OK, HealthState.OK, HealthState.OK)
+            [HealthState.FAILED, HealthState.OK, HealthState.OK, HealthState.OK]
         )

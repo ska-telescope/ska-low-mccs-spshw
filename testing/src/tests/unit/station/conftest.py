@@ -1,14 +1,10 @@
-#########################################################################
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-#########################################################################
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module defined a pytest harness for testing the MCCS station module."""
 from __future__ import annotations
 
@@ -26,7 +22,11 @@ from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
 
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockDeviceBuilder,
+    MockChangeEventCallback,
+)
 
 
 @pytest.fixture()
@@ -256,6 +256,7 @@ def station_component_manager(
     antenna_fqdns: list[str],
     tile_fqdns: list[str],
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     apiu_health_changed_callback: MockCallable,
@@ -275,6 +276,8 @@ def station_component_manager(
     :param tile_fqdns: FQDNs of the Tango devices that manage this
         station's tiles
     :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -297,6 +300,7 @@ def station_component_manager(
         antenna_fqdns,
         tile_fqdns,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         apiu_health_changed_callback,
@@ -339,7 +343,9 @@ def mock_component_manager(mocker: pytest_mock.MockerFixture) -> unittest.mock.M
 
 
 @pytest.fixture()
-def patched_station_class(mock_component_manager: unittest.mock.Mock) -> MccsStation:
+def patched_station_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsStation]:
     """
     Return a station device class that has been patched for testing.
 

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains the tests of the station component manager."""
 from __future__ import annotations
 
@@ -54,7 +61,6 @@ class TestStationComponentManager:
             station_component_manager.communication_status
             == CommunicationStatus.ESTABLISHED
         )
-        return
 
         is_configured_changed_callback.assert_next_call(False)
 
@@ -103,13 +109,16 @@ class TestStationComponentManager:
         station_component_manager.on()
 
         apiu_proxy.On.assert_next_call()
+
+        # pretend to receive APIU power mode changed event
+        station_component_manager._apiu_power_mode_changed(PowerMode.ON)
+
         for tile_proxy in tile_proxies:
             tile_proxy.On.assert_next_call()
         for antenna_proxy in antenna_proxies:
             antenna_proxy.On.assert_next_call()
 
-        # pretend to receive events
-        station_component_manager._apiu_power_mode_changed(PowerMode.ON)
+        # pretend to receive tile and antenna events
         for fqdn in tile_fqdns:
             station_component_manager._tile_power_mode_changed(fqdn, PowerMode.ON)
         for fqdn in antenna_fqdns:
@@ -164,6 +173,7 @@ class TestStationComponentManager:
         station_id: int,
         tile_fqdns: list[str],
         logger: logging.Logger,
+        communication_status_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -178,9 +188,17 @@ class TestStationComponentManager:
         :param tile_fqdns: FQDNs of the Tango devices that manage this
             station's tiles.
         :param logger: a logger
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
         """
         station_component_manager.start_communicating()
-        time.sleep(0.1)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
 
         # receive notification that the tile is on
         for tile_proxy in station_component_manager._tile_proxies:
@@ -200,6 +218,8 @@ class TestStationComponentManager:
         tile_fqdns: list[str],
         logger: logging.Logger,
         pointing_delays: unittest.mock.Mock,
+        communication_status_changed_callback: MockCallable,
+        component_power_mode_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -214,9 +234,26 @@ class TestStationComponentManager:
             station's tiles.
         :param logger: a logger
         :param pointing_delays: some mock pointing delays
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_power_mode_changed_callback: callback to be
+            called when the component power mode changes
         """
         station_component_manager.start_communicating()
-        time.sleep(0.1)
+
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+
+        # TODO: Using "last" instead of "next" here is a sneaky way of forcing a delay
+        # so that we don't start faking receipt of events below until the real events
+        # have all been received.
+        component_power_mode_changed_callback.assert_last_call(PowerMode.UNKNOWN)
+        assert station_component_manager.power_mode == PowerMode.UNKNOWN
 
         # Tell this station each of its components is on, so that it thinks it is on
         station_component_manager._apiu_proxy._device_state_changed(
@@ -230,6 +267,9 @@ class TestStationComponentManager:
             antenna_proxy._device_state_changed(
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
+
+        component_power_mode_changed_callback.assert_last_call(PowerMode.ON)
+        assert station_component_manager.power_mode == PowerMode.ON
 
         station_component_manager.apply_pointing(pointing_delays)
         for tile_fqdn in tile_fqdns:

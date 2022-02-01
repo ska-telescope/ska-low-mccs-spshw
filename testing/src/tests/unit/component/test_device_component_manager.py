@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module contains tests of the device_component_manager module."""
 from __future__ import annotations
 
@@ -10,10 +17,14 @@ import tango
 
 from ska_tango_base.control_model import AdminMode, HealthState
 
-from ska_low_mccs.component import CommunicationStatus, DeviceComponentManager
+from ska_low_mccs.component import (
+    CommunicationStatus,
+    DeviceComponentManager,
+)
 
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -21,6 +32,7 @@ def component_manager(
     tango_harness: TangoHarness,
     fqdn: str,
     logger: logging.Logger,
+    lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
@@ -33,6 +45,8 @@ def component_manager(
     :param fqdn: the FQDN of the device to be managed by this component
         manager.
     :param logger: a logger for the component manager to use.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -51,6 +65,7 @@ def component_manager(
     return DeviceComponentManager(
         fqdn,
         logger,
+        lrc_result_changed_callback,
         communication_status_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
@@ -111,7 +126,9 @@ class TestDeviceComponentManager:
         :param device_command: the name of the command that is expected
             to be called on the device.
         """
-        with pytest.raises(ConnectionError, match="Not connected"):
+        with pytest.raises(
+            ConnectionError, match="Communication with component is not established"
+        ):
             getattr(component_manager, component_manager_command)()
         getattr(mock_proxy, device_command).assert_not_called()
 

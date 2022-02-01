@@ -1,21 +1,18 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """An implementation of a cluster simulator for SKA-Low-MCCS."""
-from __future__ import annotations
+from __future__ import annotations  # allow forward references in type hints
 
 from enum import IntEnum
 from itertools import count
-from typing import Callable, Optional
+from typing import Any, cast, Callable, Iterator, Optional, Tuple
 
-from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.control_model import HealthState
 from ska_low_mccs.component import ObjectComponent
 
 
@@ -96,12 +93,11 @@ class JobConfig:
     pointer to the job to be run.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self: JobConfig, **kwargs: Any) -> None:
         """
         Create a new JobConfig instance.
 
         :param kwargs: dummy kwargs
-        :type kwargs: dict
         """
         self.kwargs = kwargs
 
@@ -109,24 +105,26 @@ class JobConfig:
 class JobIdGenerator:
     """A generator of job ids."""
 
-    def __init__(self, id_format="sim.{}", start=1):
+    def __init__(
+        self: JobIdGenerator, id_format: str = "sim.{}", start: int = 1
+    ) -> None:
         """
         Create a new instance.
 
         :param id_format: a format for the job id
-        :type id_format: str
         :param start: the initial job number
-        :type start: int
         """
         self._id_format = id_format
         self._counter = count(start=start)
 
-    def __next__(self):
+    def __iter__(self: JobIdGenerator) -> Iterator:
+        return self
+
+    def __next__(self: JobIdGenerator) -> str:
         """
         Return the next job id.
 
         :return: the next job id
-        :rtype: str
         """
         return self._id_format.format(next(self._counter))
 
@@ -195,7 +193,7 @@ class ClusterSimulator(ObjectComponent):
 
     NODE_STATUSES = {
         node_id: HealthState.OK
-        for node_id in range(1, CONFIGURATION["nodes_total"] + 1)
+        for node_id in range(1, cast(int, CONFIGURATION["nodes_total"]) + 1)
     }
 
     JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE = "Job cannot be started: not staging."
@@ -236,7 +234,7 @@ class ClusterSimulator(ObjectComponent):
         """
         self._fault_callback = fault_callback
         if fault_callback is not None:
-            fault_callback(self.faulty)
+            fault_callback(self._faulty)
 
     def set_shadow_master_pool_node_health_changed_callback(
         self: ClusterSimulator,
@@ -264,7 +262,7 @@ class ClusterSimulator(ObjectComponent):
                 self.shadow_master_pool_status
             )
 
-    def update_shadow_master_pool_node_health(self) -> None:
+    def update_shadow_master_pool_node_health(self: ClusterSimulator) -> None:
         """Update the shadow master pool node health, calling callbacks as required."""
         if self._shadow_master_pool_node_health_changed_callback is not None:
             self._shadow_master_pool_node_health_changed_callback(
@@ -272,7 +270,7 @@ class ClusterSimulator(ObjectComponent):
             )
 
     @property
-    def faulty(self: ObjectComponent) -> bool:
+    def faulty(self: ClusterSimulator) -> bool:
         """
         Return whether this component is faulty.
 
@@ -283,43 +281,7 @@ class ClusterSimulator(ObjectComponent):
         """
         return self._faulty
 
-    @property
-    def power_mode(self: ObjectComponent) -> PowerMode:
-        """
-        Return the power mode of the component.
-
-        This is assumed to be an always-on service, so this property
-        will always be ``PowerMode.ON``.
-
-        :return: the power mode of the component. i.e. PowerMode.ON
-        """
-        return PowerMode.ON
-
-    def off(self: ObjectComponent) -> None:
-        """
-        Turn the component off.
-
-        :raises NotImplementedError: because this simulator is modelled
-            as an always-on device, so this method has not been
-            implemented.
-        """
-        raise NotImplementedError("ClusterSimulator is an always-on component.")
-
-    def standby(self: ObjectComponent) -> None:
-        """
-        Put the component into low-power standby mode.
-
-        :raises NotImplementedError: because this simulator is modelled
-            as an always-on device, so this method has not been
-            implemented.
-        """
-        raise NotImplementedError("ClusterSimulator is an always-on component.")
-
-    def on(self: ObjectComponent) -> None:
-        """Turn the component on."""
-        pass
-
-    def reset(self: ObjectComponent) -> None:
+    def reset(self: ClusterSimulator) -> None:
         """
         Reset the component (from fault state).
 
@@ -329,301 +291,273 @@ class ClusterSimulator(ObjectComponent):
         raise NotImplementedError("ClusterSimulator reset not implemented.")
 
     @property
-    def jobs_errored(self):
+    def jobs_errored(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that have errored.
 
         :return: the number of jobs that have errored
-        :rtype: int
         """
         return self._job_stats[JobStatus.ERRORED]
 
     @property
-    def jobs_failed(self):
+    def jobs_failed(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that have failed.
 
         :return: the number of jobs that have failed
-        :rtype: int
         """
         return self._job_stats[JobStatus.FAILED]
 
     @property
-    def jobs_finished(self):
+    def jobs_finished(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that have finished.
 
         :return: the number of jobs that have finished
-        :rtype: int
         """
         return self._job_stats[JobStatus.FINISHED]
 
     @property
-    def jobs_killed(self):
+    def jobs_killed(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that have been killed.
 
         :return: the number of jobs that have been killed
-        :rtype: int
         """
         return self._job_stats[JobStatus.KILLED]
 
     @property
-    def jobs_lost(self):
+    def jobs_lost(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that have been lost.
 
         :return: the number of jobs that have been lost
-        :rtype: int
         """
         return self._job_stats[JobStatus.LOST]
 
-    def _num_open_jobs_by_status(self, status):
+    def _num_open_jobs_by_status(self: ClusterSimulator, status: JobStatus) -> int:
         """
         Return the number of open jobs with a given status.
 
         :param status: the job status for which the number of open jobs
             are sought
-        :type status: :py:class:`.JobStatus`
 
         :return: the number of open jobs with a given status
-        :rtype: int
         """
         return sum(value == status for value in self._open_jobs.values())
 
     @property
-    def jobs_staging(self):
+    def jobs_staging(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that are currently staging.
 
         :return: the number of jobs that are currently staging
-        :rtype: int
         """
         return self._num_open_jobs_by_status(JobStatus.STAGING)
 
     @property
-    def jobs_starting(self):
+    def jobs_starting(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that are currently starting.
 
         :return: the number of jobs that are currently starting
-        :rtype: int
         """
         return self._num_open_jobs_by_status(JobStatus.STARTING)
 
     @property
-    def jobs_running(self):
+    def jobs_running(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that are currently running.
 
         :return: the number of jobs that are currently running
-        :rtype: int
         """
         return self._num_open_jobs_by_status(JobStatus.RUNNING)
 
     @property
-    def jobs_killing(self):
+    def jobs_killing(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that are currently being killed.
 
         :return: the number of jobs that are currently being killed
-        :rtype: int
         """
         return self._num_open_jobs_by_status(JobStatus.KILLING)
 
     @property
-    def jobs_unreachable(self):
+    def jobs_unreachable(self: ClusterSimulator) -> int:
         """
         Return the number of jobs that are currently unreachable.
 
         :return: the number of jobs that are currently unreachable
-        :rtype: int
         """
         return self._num_open_jobs_by_status(JobStatus.UNREACHABLE)
 
     @property
-    def memory_total(self):
+    def memory_total(self: ClusterSimulator) -> float:
         """
         Return the total memory of the cluster.
 
         :return: the total memory of the cluster
-        :rtype: float
         """
-        return self._configuration["memory_total"]
+        return cast(float, self._configuration["memory_total"])
 
     @property
-    def memory_used(self):
+    def memory_used(self: ClusterSimulator) -> float:
         """
         Return the used memory of the cluster.
 
         :return: the used memory of the cluster
-        :rtype: float
         """
-        return self._resource_stats["memory_used"]
+        return cast(float, self._resource_stats["memory_used"])
 
     @property
-    def memory_avail(self):
+    def memory_avail(self: ClusterSimulator) -> float:
         """
         Return the available memory of the cluster.
 
         :return: the available memory of the cluster
-        :rtype: float
         """
         return self.memory_total - self.memory_used
 
     @property
-    def nodes_total(self):
+    def nodes_total(self: ClusterSimulator) -> int:
         """
         Return the total number of nodes in the cluster.
 
         :return: the total number of nodes in the cluster
-        :rtype: int
         """
-        return self._configuration["nodes_total"]
+        return cast(int, self._configuration["nodes_total"])
 
     @property
-    def nodes_in_use(self):
+    def nodes_in_use(self: ClusterSimulator) -> int:
         """
         Return the number of nodes in use in the cluster.
 
         :return: the number of nodes in use in the cluster
-        :rtype: int
         """
-        return self._resource_stats["nodes_in_use"]
+        return cast(int, self._resource_stats["nodes_in_use"])
 
     @property
-    def nodes_avail(self):
+    def nodes_avail(self: ClusterSimulator) -> int:
         """
         Return the number of available nodes in the cluster.
 
         :return: the number of available nodes in the cluster
-        :rtype: int
         """
         return self.nodes_total - self.nodes_in_use
 
     @property
-    def master_cpus_total(self):
+    def master_cpus_total(self: ClusterSimulator) -> int:
         """
         Return the total number of CPUs on the master node.
 
         :return: the total number of CPUs on the master node
-        :rtype: int
         """
-        return self._configuration["master_cpus_total"]
+        return cast(int, self._configuration["master_cpus_total"])
 
     @property
-    def master_cpus_used(self):
+    def master_cpus_used(self: ClusterSimulator) -> int:
         """
         Return the total number of CPUs in use on the master node.
 
         :return: the total number of CPUs in use on the master node
-        :rtype: int
         """
-        return self._resource_stats["master_cpus_used"]
+        return cast(int, self._resource_stats["master_cpus_used"])
 
     @property
-    def master_cpus_allocated_percent(self):
+    def master_cpus_allocated_percent(self: ClusterSimulator) -> float:
         """
         Return the percent of CPUs allocated on master.
 
         :return: the percent of CPUs allocated on master
-        :rtype: float
         """
         return self.master_cpus_used * 100.0 / self.master_cpus_total
 
     @property
-    def master_disk_total(self):
+    def master_disk_total(self: ClusterSimulator) -> float:
         """
         Return the total disk size on the master node.
 
         :return: the total disk size on the master node
-        :rtype: float
         """
-        return self._configuration["master_disk_total"]
+        return cast(float, self._configuration["master_disk_total"])
 
     @property
-    def master_disk_used(self):
+    def master_disk_used(self: ClusterSimulator) -> float:
         """
         Return the total disk usage on the master node.
 
         :return: the total disk usage on the master node
-        :rtype: float
         """
         return self._resource_stats["master_disk_used"]
 
     @property
-    def master_disk_percent(self):
+    def master_disk_percent(self: ClusterSimulator) -> float:
         """
         Return the percent of disk used on master.
 
         :return: the percent of disk used on master
-        :rtype: float
         """
         return self.master_disk_used * 100.0 / self.master_disk_total
 
     @property
-    def master_mem_total(self):
+    def master_mem_total(self: ClusterSimulator) -> float:
         """
         Return the total memory size on the master node.
 
         :return: the total memory size on the master node
-        :rtype: float
         """
-        return self._configuration["master_mem_total"]
+        return cast(float, self._configuration["master_mem_total"])
 
     @property
-    def master_mem_used(self):
+    def master_mem_used(self: ClusterSimulator) -> float:
         """
         Return the total memory usage on the master node.
 
         :return: the total memory usage on the master node
-        :rtype: float
         """
         return self._resource_stats["master_mem_used"]
 
     @property
-    def master_mem_percent(self):
+    def master_mem_percent(self: ClusterSimulator) -> float:
         """
         Return the percent of memory used on master.
 
         :return: the percent of memory used on master
-        :rtype: float
         """
         return self.master_mem_used * 100.0 / self.master_mem_total
 
     @property
-    def master_node_id(self):
+    def master_node_id(self: ClusterSimulator) -> int:
         """
         Return the id of the master node.
 
         :return: the id of the master node
-        :rtype: int
         """
-        return self._configuration["master_node_id"]
+        return cast(int, self._configuration["master_node_id"])
 
     @property
-    def shadow_master_pool_node_ids(self):
+    def shadow_master_pool_node_ids(self: ClusterSimulator) -> tuple[int]:
         """
         Return the ids of nodes in the shadow master pool.
 
         :return: the ids of nodes in the shadow master pool
-        :rtype: tuple(int)
         """
-        return self._configuration["shadow_master_pool_node_ids"]
+        return cast(Tuple[int], self._configuration["shadow_master_pool_node_ids"])
 
     @property
-    def shadow_master_pool_status(self):
+    def shadow_master_pool_status(
+        self: ClusterSimulator,
+    ) -> list[HealthState]:
         """
         Return the statuses of nodes in the shadow master pool.
 
         :return: the statuses of nodes in the shadow master pool
-        :rtype: tuple(py:class:`~ska_tango_base.control_model.HealthState`)
         """
-        return tuple(
+        return [
             self._node_statuses[node_id] for node_id in self.shadow_master_pool_node_ids
-        )
+        ]
 
-    def ping_master_pool(self):
+    def ping_master_pool(self: ClusterSimulator) -> None:
         """
         Ping the master pool nodes to make sure they are ok.
 
@@ -636,27 +570,27 @@ class ClusterSimulator(ObjectComponent):
             "ClusterSimulator.ping_master_pool has not been implemented"
         )
 
-    def clear_job_stats(self):
+    def clear_job_stats(self: ClusterSimulator) -> None:
         """Clear stats for closed jobs."""
         for status in JobStatus:
             self._job_stats[status] = 0
 
-    def get_job_status(self, job_id):
+    def get_job_status(self: ClusterSimulator, job_id: str) -> JobStatus:
         """
         Return the status of an open job.
 
         :param job_id: the id of the job
-        :type job_id: str
+
         :raises ValueError: if the job id does not match a current job
+
         :return: the status of the job
-        :rtype: str
         """
         try:
             return self._open_jobs[job_id]
         except KeyError as key_error:
             raise ValueError(self.NONEXISTENT_JOB_MESSAGE) from key_error
 
-    def submit_job(self, job_config):
+    def submit_job(self: ClusterSimulator, job_config: JobConfig) -> str:
         """
         Submit a job to the cluster.
 
@@ -665,21 +599,19 @@ class ClusterSimulator(ObjectComponent):
         job, and returns the job id.
 
         :param job_config: specification of the submitted job
-        :type job_config: :py:class:`.JobConfig`
 
         :return: the job_id
-        :rtype: int
         """
         job_id = next(self._job_id_generator)
         self._open_jobs[job_id] = JobStatus.STAGING
         return job_id
 
-    def start_job(self, job_id):
+    def start_job(self: ClusterSimulator, job_id: str) -> None:
         """
         Start a specified job.
 
         :param job_id: The id of the job to be started
-        :type job_id: str
+
         :raises ValueError: If the job does not exist
         """
         if self.get_job_status(job_id) == JobStatus.STAGING:
@@ -687,12 +619,12 @@ class ClusterSimulator(ObjectComponent):
         else:
             raise ValueError(self.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE)
 
-    def stop_job(self, job_id):
+    def stop_job(self: ClusterSimulator, job_id: str) -> None:
         """
         Stop a specified job.
 
         :param job_id: The id of the job to be stopped
-        :type job_id: str
+
         :raises ValueError: If the job does not exist
         """
         try:
@@ -702,16 +634,16 @@ class ClusterSimulator(ObjectComponent):
         else:
             self._job_stats[JobStatus.KILLED] += 1
 
-    def simulate_node_failure(self, node_id, failed):
+    def simulate_node_failure(
+        self: ClusterSimulator, node_id: int, failed: bool
+    ) -> None:
         """
         Tells this simulator to simulate the failure of one of its nodes.
 
         :param node_id: id of the node whose failure status is to be
             changed
-        :type node_id: int
         :param failed: Whether the node should fail; pass False to
             simulate restoration of a previously failed node
-        :type failed: bool
         """
         if failed:
             self._node_statuses[node_id] = HealthState.FAILED
@@ -722,7 +654,7 @@ class ClusterSimulator(ObjectComponent):
             self.update_shadow_master_pool_node_health()
         self._update_master_node()
 
-    def _update_master_node(self):
+    def _update_master_node(self: ClusterSimulator) -> None:
         """Update the master node when the current master fails."""
         if self._node_statuses[self.master_node_id] != HealthState.OK:
             try:
@@ -737,7 +669,7 @@ class ClusterSimulator(ObjectComponent):
                 self._faulty = False
                 self.component_fault(False)
 
-    def component_fault(self, faulty) -> None:
+    def component_fault(self: ClusterSimulator, faulty: bool) -> None:
         """
         Handle notification that the component has faulted.
 

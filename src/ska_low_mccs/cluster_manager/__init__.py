@@ -2,8 +2,9 @@
 #
 # This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """
 This subpackage implements cluster manager functionality for MCCS.
 
@@ -20,9 +21,9 @@ __all__ = [
 ]
 
 from .cluster_health_model import ClusterHealthModel
-from .cluster_simulator import ClusterSimulator  # type: ignore[attr-defined]
+from .cluster_simulator import ClusterSimulator
 from .cluster_component_manager import (
     ClusterSimulatorComponentManager,
     ClusterComponentManager,
 )
-from .cluster_manager_device import MccsClusterManagerDevice  # type: ignore[attr-defined]
+from .cluster_manager_device import MccsClusterManagerDevice

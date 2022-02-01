@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """An implementation of a health model for a cluster."""
 from __future__ import annotations
 
@@ -24,7 +22,8 @@ class ClusterHealthModel(HealthModel):
     """A health model for a cluster manager."""
 
     def __init__(
-        self: ClusterHealthModel, health_changed_callback: Callable[[HealthState], None]
+        self: ClusterHealthModel,
+        health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -61,7 +60,7 @@ class ClusterHealthModel(HealthModel):
         return HealthState.OK
 
     def shadow_master_pool_node_health_changed(
-        self: ClusterHealthModel, shadow_master_pool_node_health_ok: list[bool]
+        self: ClusterHealthModel, shadow_master_pool_node_healths: list[HealthState]
     ) -> None:
         """
         Handle a change in health of a node in the shadow master pool.
@@ -69,9 +68,12 @@ class ClusterHealthModel(HealthModel):
         This is a callback hook that is called when a node that belongs
         to the shadow master pool experiences a change in health.
 
-        :param shadow_master_pool_node_health_ok: whether the health
+        :param shadow_master_pool_node_healths: whether the health
             of each node in the shadow master pool is okay
         """
+        shadow_master_pool_node_health_ok = [
+            (health == HealthState.OK) for health in shadow_master_pool_node_healths
+        ]
         if all(shadow_master_pool_node_health_ok):
             self._node_health = HealthState.OK
         elif any(shadow_master_pool_node_health_ok):

@@ -3,10 +3,8 @@
 # This file is part of the SKA Low MCCS project
 #
 #
-#
-# Distributed under the terms of the GPL license.
-# See LICENSE.txt for more info.
-
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module implements component management for APIUs."""
 from __future__ import annotations
 
@@ -38,6 +36,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_antenna_power_changed_callback: Optional[
@@ -50,6 +49,8 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -61,6 +62,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             ApiuSimulator(antenna_count),
             logger,
+            push_change_event,
             communication_status_changed_callback,
             None,
             component_fault_callback,
@@ -152,6 +154,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_antenna_power_changed_callback: Callable[[list[bool]], None],
@@ -163,6 +166,8 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
             component should start in
         :param antenna_count: number of antennas managed by this APIU
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param communication_status_changed_callback: callback to be
@@ -176,6 +181,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         apiu_simulator = ApiuSimulatorComponentManager(
             antenna_count,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_fault_callback,
             component_antenna_power_changed_callback,
@@ -191,6 +197,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
+        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
@@ -205,6 +212,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
+        :param push_change_event: mechanism to inform the base classes
+            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -223,6 +232,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             initial_simulation_mode,
             antenna_count,
             logger,
+            push_change_event,
             self._hardware_communication_status_changed,
             self.component_fault_changed,
             component_antenna_power_changed_callback,
@@ -230,6 +240,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
+            push_change_event,
             self._power_supply_communication_status_changed,
             self.component_power_mode_changed,
             _initial_power_mode,
@@ -238,9 +249,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
+            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
+            None,
         )
 
     @property
@@ -276,7 +289,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        self._hardware_component_manager.turn_off_antennas()  # type: ignore[attr-defined]
+        cast(
+            SwitchingApiuComponentManager, self._hardware_component_manager
+        ).turn_off_antennas()
         return super().off()
 
     def __getattr__(

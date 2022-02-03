@@ -230,15 +230,10 @@ class TpmDriver(MccsComponentManager):
                 self.tile.tpm = None
                 self.logger.debug("Tile disconnected from tpm.")
                 return
+            time.sleep(2.0)
             try:
                 with self._hardware_lock:
                     self.tile["0x30000000"]
-                self.logger.debug("Updating key hardware attributes...")
-                self._fpga1_temperature = self.tile.get_fpga0_temperature()
-                self._fpga2_temperature = self.tile.get_fpga1_temperature()
-                self._board_temperature = self.tile.get_temperature()
-                self._voltage = self.tile.get_voltage()
-                time.sleep(2.0)
             except LibraryError:
                 self.logger.warning("Connection to tpm lost!")
                 self._tpm_status = TpmStatus.UNCONNECTED
@@ -246,22 +241,27 @@ class TpmDriver(MccsComponentManager):
                 self._is_tpm_connected = False
                 self.tile.tpm = None
                 self.update_component_fault(True)
+            if self.tile.is_programmed():
+                self.logger.debug("Updating key hardware attributes...")
+                self._fpga1_temperature = self.tile.get_fpga0_temperature()
+                self._fpga2_temperature = self.tile.get_fpga1_temperature()
+                self._board_temperature = self.tile.get_temperature()
+                self._voltage = self.tile.get_voltage()
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
-        if self.tile.tpm is not None:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
-            self._is_tpm_connected = True
-            self.update_component_fault(False)
-            self.logger.debug("Tpm connected to tile.")
-            self._tpm_status = TpmStatus.UNPROGRAMMED
-            self._is_programmed = False
-            with self._hardware_lock:
-                if self.tile.is_programmed():
-                    self._tpm_status = TpmStatus.PROGRAMMED
-                    self._is_programmed = True
-            if self._is_programmed:
-                self.logger.debug("Tpm programmed.")
+        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self._is_tpm_connected = True
+        self.update_component_fault(False)
+        self.logger.debug("Tpm connected to tile.")
+        self._tpm_status = TpmStatus.UNPROGRAMMED
+        self._is_programmed = False
+        with self._hardware_lock:
+            if self.tile.is_programmed():
+                self._tpm_status = TpmStatus.PROGRAMMED
+                self._is_programmed = True
+        if self._is_programmed:
+            self.logger.debug("Tpm programmed.")
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:

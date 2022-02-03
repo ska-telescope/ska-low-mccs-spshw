@@ -487,7 +487,7 @@ class TestStaticSimulatorCommon:
             SwitchingTpmComponentManager,
             TileComponentManager,
         ],
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.MockerFixture,
         command_name: str,
         num_args: int,
     ) -> None:
@@ -534,7 +534,7 @@ class TestStaticSimulatorCommon:
             SwitchingTpmComponentManager,
             TileComponentManager,
         ],
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
         Test.

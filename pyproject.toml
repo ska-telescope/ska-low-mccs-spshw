@@ -1,0 +1,103 @@
+[tool.poetry]
+name = "ska-low-mccs"
+version = "0.8.6"
+description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
+license = "BSD-3-Clause"
+authors = ["MCCS team"]
+readme = "README.md"
+documentation = "https://developer.skatelescope.org/projects/ska-low-mccs"
+include = ["./pyfabil-1.0-py3-none-any.whl"]
+
+[[tool.poetry.source]]
+name = 'ska-nexus'
+url = 'https://artefact.skao.int/repository/pypi-internal/simple'
+
+[tool.poetry.dependencies]
+python = "~3.7"
+astropy = "^4.3.1"
+backoff = "^1.11.1"
+fire = "^0.4.0"
+future = "^0.18.2"
+jsonschema = "^3.2.0"
+numpy = "^1.19.2"
+pytango = "^9.3.3"
+pyfabil = {path = "./pyfabil-1.0-py3-none-any.whl"}
+pyyaml = "^5.4.1"
+requests = "^2.26.0"
+scipy = "^1.7.1"
+ska-ser-logging = "~0.4.1"
+ska-tango-base = "~0.11.3"
+transitions = "^0.8.8"
+
+[tool.poetry.dev-dependencies]
+pre-commit = "^2.14.0"
+pytest = "^6.2"
+pytest-bdd = "^4.0.2"
+pytest-cov = "^2.12.1"
+pytest-json-report = "^1.4.0"
+pytest-mock = "^3.6.1"
+pytest-xdist = "~1.34.0"
+pytest-report = "^0.2.1"
+coverage = "^5.5"
+black = "^21.7b0"
+docformatter = "^1.4"
+darglint = "^1.8.0"
+flake8 = "^3.9.2"
+flake8-formatter-junit-xml = "^0.0.6"
+flake8-black = "^0.2.3"
+flake8-builtins = "^1.5.3"
+flake8-docstrings = "^1.6.0"
+flake8-fixme = "^1.1.1"
+flake8-use-fstring = "^1.1"
+flake8-rst-docstrings = "^0.2.3"
+mypy = "^0.910"
+pep8-naming = "^0.12.1"
+types-pkg-resources = "^0.1.3"
+types-requests = "^2.25.6"
+types-pyyaml = "^5.4.6"
+
+[tool.poetry.scripts]
+MccsAntenna = "ska_low_mccs.antenna.antenna_device:main"
+MccsAPIU = "ska_low_mccs.apiu.apiu_device:main"
+MccsController = "ska_low_mccs.controller.controller_device:main"
+MccsSubarray = "ska_low_mccs.subarray.subarray_device:main"
+MccsSubarrayBeam = "ska_low_mccs.subarray_beam.subarray_beam_device:main"
+MccsSubrack = "ska_low_mccs.subrack.subrack_device:main"
+MccsStation = "ska_low_mccs.station.station_device:main"
+MccsStationBeam = "ska_low_mccs.station_beam.station_beam_device:main"
+MccsTile = "ska_low_mccs.tile.tile_device:main"
+MccsTelState = "ska_low_mccs.tel_state.tel_state_device:main"
+mccs-controller = "ska_low_mccs.controller.controller_cli:main"
+mccs-tile = "ska_low_mccs.tile.tile_cli:main"
+
+[tool.pytest.ini_options]
+testpaths = "testing/src/"
+addopts = "--json-report --json-report-file=build/reports/report.json --cov-report html:build/htmlcov --cov-report xml:build/reports/code-coverage.xml --cov-report term:skip-covered --cov=ska_low_mccs --junitxml=build/reports/unit-tests.xml --verbose"
+console_output_style = "progress"
+junit_family = "legacy"
+
+[tool.coverage.paths]
+source = [
+    "src",
+    ".tox/py/lib/python3.7/site-packages",
+    ".tox/py37/lib/python3.7/site-packages",
+]
+
+[tool.coverage.run]
+data_file = ".coverage/.coverage"
+branch = true
+source = ["ska_low_mccs"]
+
+omit=[
+    # team decision that testing of CLIs is unnecessary
+    "*/*_cli.py",
+    # legacy code, no point investing in test coverage
+    "*/tile_1_2.py",
+]
+
+[tool.coverage.report]
+show_missing = false
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

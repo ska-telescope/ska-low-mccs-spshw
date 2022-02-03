@@ -136,7 +136,7 @@ def pool_member_component_fault_callback(
 
 @pytest.fixture()
 def mock_component_manager_factory(
-    mocker: pytest_mock.mocker,
+    mocker: pytest_mock.MockerFixture,
 ) -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that can be called to provide a mock component manager.

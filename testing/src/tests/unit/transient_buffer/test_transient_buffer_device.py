@@ -37,7 +37,8 @@ class TestMccsTransientBuffer:
 
     @pytest.fixture()
     def mock_component_manager(
-        self: TestMccsTransientBuffer, mocker: pytest_mock.mocker
+        self: TestMccsTransientBuffer,
+        mocker: pytest_mock.MockerFixture,
     ) -> unittest.mock.Mock:
         """
         Return a mock to be used as a component manager for the transient buffer device.
@@ -133,7 +134,7 @@ class TestMccsTransientBuffer:
     )
     def test_attributes(
         self: TestMccsTransientBuffer,
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.MockerFixture,
         device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
         device_attribute: str,

@@ -29,7 +29,7 @@ import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.control_model import TestMode
+from ska_tango_base.control_model import AdminMode, TestMode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
@@ -173,6 +173,7 @@ class MccsDeviceInfo:
         for server in self._source_data["servers"]:
             if name in self._source_data["servers"][server]:
                 device_spec = self._source_data["servers"][server][name]
+                print('device_spec = ', device_spec)
                 class_name = next(iter(device_spec))
                 fqdn = next(iter(device_spec[class_name]))
                 properties = device_spec[class_name][fqdn]["properties"]
@@ -185,6 +186,7 @@ class MccsDeviceInfo:
                     for name, value in attribute_properties.items()
                     if "__value" in value
                 }
+                self.memorized = memorized # this will be changed
 
                 if patch is None:
                     package = __import__(self._package, fromlist=[class_name])
@@ -230,6 +232,15 @@ class MccsDeviceInfo:
         :return: a map from FQDN to proxy type
         """
         return dict(self._proxies)
+
+    def get_memorized_attributes(self: MccsDeviceInfo, name: str):
+        """
+        Return a map of attributes associated with a device from the device's fqdn
+        """
+        print(self.memorized)
+        #return self.memorized[fqdn]
+        return self._devices[name]['memorized']
+
 
     def as_mdtc_device_info(self: MccsDeviceInfo) -> list[MdtcInfoType]:
         """
@@ -419,6 +430,8 @@ class ClientProxyTangoHarness(BaseTangoHarness):
         :param args: additional positional arguments
         :param kwargs: additional keyword arguments
         """
+        print('ClientProxyTangoHarness initialiser')
+        print('device_info = ', device_info.fqdn_map)
         if device_info is None:
             self._proxy_map = {}
         else:
@@ -468,7 +481,8 @@ class TestContextTangoHarness(BaseTangoHarness):
         :param kwargs: additional keyword arguments
         """
         self._host = get_host_ip()
-
+        print('TestContextTangoHarness initialiser')
+        print('device_info = ', device_info.fqdn_map)
         def _get_open_port() -> int:
             """
             Return an available port on the local machine.
@@ -562,6 +576,48 @@ class TestContextTangoHarness(BaseTangoHarness):
             return super().__exit__(None, None, None)
         else:
             return super().__exit__(exc_type, exception, trace)
+
+
+class DeploymentContextTangoHarness(ClientProxyTangoHarness):
+    """
+    A test harness for testing running MCCS Tango devices.
+
+    It stands up a
+    :py:class:`tango.test_context.MultiDeviceTestContext` with the
+    specified devices.
+    """
+
+    def __init__(
+        self: TestContextTangoHarness,
+        device_info: Optional[MccsDeviceInfo],
+        logger: logging.Logger,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Some text
+        """
+        print("DeploymentContextTangoHarness initialization")
+        super().__init__(device_info, logger, *args, **kwargs)
+        print('super init complete')
+        self._device_info = device_info
+        if self._device_info:
+            self._setup_devices()
+
+    def _setup_devices(self: TestContextTangoHarness):
+        for name in self._device_info.fqdn_map.keys():
+            print('Setting up device ', name)
+            self._write_memorized(name)
+
+    def _write_memorized(self, name: str):
+        memorized = self._device_info.get_memorized_attributes(name)
+        print('memorized = ', memorized)
+        device = self.get_device(self._device_info.fqdn_map[name])
+        print('we have the device', name)
+        if 'adminMode' in memorized:
+            print('writing adminMode = ', int(memorized['adminMode'][0]))
+            device.write_attribute('adminMode', int(memorized['adminMode'][0]))
+            print('adminMode = ', device.adminmode)
 
 
 class WrapperTangoHarness(TangoHarness):
@@ -713,9 +769,15 @@ class StartingStateTangoHarness(WrapperTangoHarness):
 
     def _make_devices_ready(self: StartingStateTangoHarness) -> None:
         """Ensure that devices are ready to be tested."""
+        print('In _make_devices_ready')
+        print('_bypass_cache = ', self._bypass_cache,
+        '_check_ready = ', self._check_ready,
+        '_set_test_mode = ', self._set_test_mode
+        )
         if self._bypass_cache or self._check_ready or self._set_test_mode:
             for fqdn in self.fqdns:
                 device = self.get_device(fqdn)
+                #print('device adminMode = ', fqdn, device.adminmode)
                 if self._bypass_cache:
                     device.set_source(tango.DevSource.DEV)
                 if self._check_ready:
@@ -724,6 +786,10 @@ class StartingStateTangoHarness(WrapperTangoHarness):
                     device.testMode = TestMode.TEST
                 else:
                     device.testMode = TestMode.NONE
+
+                #print(device.get_attribute_config_ex('adminMode'))
+                #print('device adminMode = ', fqdn, device.adminmode)
+                #print(device.write_adminMode)
 
 
 class MockingTangoHarness(WrapperTangoHarness):

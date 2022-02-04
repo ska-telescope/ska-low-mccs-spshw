@@ -30,6 +30,7 @@ from ska_low_mccs.testing.tango_harness import (
     StartingStateTangoHarness,
     TangoHarness,
     TestContextTangoHarness,
+    DeploymentContextTangoHarness
 )
 
 
@@ -199,6 +200,19 @@ def tango_harness_factory(
 
         pass
 
+    class _CPDCTangoHarness(DeploymentContextTangoHarness):
+        """
+        A Tango test harness.
+
+        With the client proxy functionality of
+        :py:class:`~ska_low_mccs.testing.tango_harness.ClientProxyTangoHarness`
+        within the kubernetes deployment test context provided by
+        :py:class:`~ska_low_mccs.testing.tango_harness.DeploymentContextTangoHarness`.
+        """
+        # In DeploymentContextTangoHarness we'll set the attribute values
+
+        pass
+
     testbed = request.config.getoption("--testbed")
 
     def build_harness(
@@ -224,10 +238,15 @@ def tango_harness_factory(
             device_info = None
         else:
             device_info = MccsDeviceInfo(**devices_to_load)
+            print("device_info.fqdns = ", device_info.fqdns)
 
         tango_harness: TangoHarness  # type hint only
+        print("testbed = ", testbed)
+        print("tango_config = ", tango_config)
         if testbed == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
+        elif testbed == "local":
+            tango_harness = _CPDCTangoHarness(device_info, logger, **tango_config)
         else:
             tango_harness = ClientProxyTangoHarness(device_info, logger)
 

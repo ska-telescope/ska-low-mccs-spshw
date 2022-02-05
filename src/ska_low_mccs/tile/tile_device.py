@@ -593,9 +593,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
-        max_value=50.0,
+        max_value=70.0,
         min_alarm=16.0,
-        max_alarm=47.0,
+        max_alarm=65.0,
     )
     def boardTemperature(self: MccsTile) -> float:
         """
@@ -609,9 +609,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
-        max_value=70.0,
+        max_value=75.0,
         min_alarm=16.0,
-        max_alarm=65.0,
+        max_alarm=68.0,
     )
     def fpga1Temperature(self: MccsTile) -> float:
         """
@@ -625,9 +625,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.2,
         min_value=15.0,
-        max_value=70.0,
+        max_value=75.0,
         min_alarm=16.0,
-        max_alarm=65.0,
+        max_alarm=68.0,
     )
     def fpga2Temperature(self: MccsTile) -> float:
         """

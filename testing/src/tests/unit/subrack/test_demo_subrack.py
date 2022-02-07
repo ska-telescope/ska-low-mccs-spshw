@@ -11,7 +11,6 @@ from __future__ import annotations
 import time
 
 import pytest
-
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
@@ -40,9 +39,7 @@ class TestDemoSubrack:
     """This class contains the tests for the DemoSubrack device class."""
 
     @pytest.fixture()
-    def device_under_test(
-        self: TestDemoSubrack, tango_harness: TangoHarness
-    ) -> MccsDeviceProxy:
+    def device_under_test(self: TestDemoSubrack, tango_harness: TangoHarness) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -52,9 +49,7 @@ class TestDemoSubrack:
         """
         return tango_harness.get_device("low-mccs/subrack/01")
 
-    def test_demo_subrack(
-        self: TestDemoSubrack, device_under_test: MccsDeviceProxy
-    ) -> None:
+    def test_demo_subrack(self: TestDemoSubrack, device_under_test: MccsDeviceProxy) -> None:
         """
         Test.
 
@@ -73,8 +68,7 @@ class TestDemoSubrack:
             """
             for (i, is_on) in enumerate(expected):
                 assert (
-                    device_under_test.read_attribute(f"tpm{i+1}PowerMode").value
-                    == ExtendedPowerMode.ON
+                    device_under_test.read_attribute(f"tpm{i+1}PowerMode").value == ExtendedPowerMode.ON
                     if is_on
                     else ExtendedPowerMode.OFF
                 )

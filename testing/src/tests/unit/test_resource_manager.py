@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from typing import Iterable
+
 import pytest
 
 from ska_low_mccs.resource_manager import ResourcePool
@@ -25,9 +26,7 @@ def channel_blocks() -> list[int]:
 
 
 @pytest.fixture()
-def resource_pool(
-    channel_blocks: Iterable[int],
-) -> ResourcePool:
+def resource_pool(channel_blocks: Iterable[int],) -> ResourcePool:
     """
     Return a resource pool for testing.
 
@@ -35,17 +34,13 @@ def resource_pool(
 
     :return: a resource pool for testing
     """
-    return ResourcePool(
-        channel_blocks=channel_blocks,
-    )
+    return ResourcePool(channel_blocks=channel_blocks,)
 
 
 class TestResourcePool:
     """Tests of the resource pool."""
 
-    def test_get_free_resource(
-        self: TestResourcePool, resource_pool: ResourcePool
-    ) -> None:
+    def test_get_free_resource(self: TestResourcePool, resource_pool: ResourcePool) -> None:
         """
         Test the resource pool's get_free_resource() method.
 
@@ -53,30 +48,22 @@ class TestResourcePool:
         """
         assert resource_pool.get_free_resource("channel_blocks") == 0
         assert resource_pool.get_free_resource("channel_blocks") == 1
-        with pytest.raises(
-            ValueError, match=r"No free resources of type: channel_blocks"
-        ):
+        with pytest.raises(ValueError, match=r"No free resources of type: channel_blocks"):
             resource_pool.get_free_resource("channel_blocks")
 
-    def test_free_resources(
-        self: TestResourcePool, resource_pool: ResourcePool
-    ) -> None:
+    def test_free_resources(self: TestResourcePool, resource_pool: ResourcePool) -> None:
         """
         Test the resource pool's free_resources() method.
 
         :param resource_pool: the resource pool under test.
         """
         channel_block_1 = resource_pool.get_free_resource("channel_blocks")
-        with pytest.raises(
-            ValueError, match=r"Resource unknown_channel_block not in pool."
-        ):
+        with pytest.raises(ValueError, match=r"Resource unknown_channel_block not in pool."):
             resource_pool.free_resources({"channel_blocks": ["unknown_channel_block"]})
         resource_pool.free_resources({"channel_blocks": [channel_block_1]})
         assert channel_block_1 == resource_pool.get_free_resource("channel_blocks")
 
-    def test_free_all_resources(
-        self: TestResourcePool, resource_pool: ResourcePool
-    ) -> None:
+    def test_free_all_resources(self: TestResourcePool, resource_pool: ResourcePool) -> None:
         """
         Test the resource pool's free_all_resource() method.
 
@@ -92,7 +79,5 @@ class TestResourcePool:
 
         assert resource_pool.get_free_resource("channel_blocks") == 0
         assert resource_pool.get_free_resource("channel_blocks") == 1
-        with pytest.raises(
-            ValueError, match=r"No free resources of type: channel_blocks"
-        ):
+        with pytest.raises(ValueError, match=r"No free resources of type: channel_blocks"):
             resource_pool.get_free_resource("channel_blocks")

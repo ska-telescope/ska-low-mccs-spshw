@@ -9,20 +9,14 @@
 from __future__ import annotations
 
 import tango
-from tango.server import attribute
-
-
 from ska_tango_base import SKATelState
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
+from tango.server import attribute
 
 import ska_low_mccs.release as release
-
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.tel_state import (
-    TelStateComponentManager,
-    TelStateHealthModel,
-)
+from ska_low_mccs.tel_state import TelStateComponentManager, TelStateHealthModel
 
 __all__ = ["MccsTelState", "main"]
 
@@ -49,18 +43,14 @@ class MccsTelState(SKATelState):
         self._health_model = TelStateHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsTelState,
-    ) -> TelStateComponentManager:
+    def create_component_manager(self: MccsTelState,) -> TelStateComponentManager:
         """
         Create and return a component manager for this device.
 
         :return: a component manager for this device.
         """
         return TelStateComponentManager(
-            self.logger,
-            self.push_change_event,
-            self._component_communication_status_changed,
+            self.logger, self.push_change_event, self._component_communication_status_changed,
         )
 
     class InitCommand(SKATelState.InitCommand):
@@ -95,8 +85,7 @@ class MccsTelState(SKATelState):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsTelState,
-        communication_status: CommunicationStatus,
+        self: MccsTelState, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -118,9 +107,7 @@ class MccsTelState(SKATelState):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
     def health_changed(self: MccsTelState, health: HealthState) -> None:
         """

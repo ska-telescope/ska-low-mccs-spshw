@@ -9,28 +9,21 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import logging
 import json
+import logging
 from typing import Any, List, Optional, Tuple
 
 import tango
+from ska_tango_base.base.op_state_model import OpStateModel
+from ska_tango_base.commands import ObservationCommand, ResponseCommand, ResultCode, StateModelCommand
+from ska_tango_base.control_model import HealthState
+from ska_tango_base.subarray import SKASubarray
+from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 from tango.server import attribute, command
 
-from ska_tango_base.subarray import SKASubarray
-from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import (
-    ObservationCommand,
-    ResponseCommand,
-    ResultCode,
-    StateModelCommand,
-)
-from ska_tango_base.control_model import HealthState
-from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
-
+import ska_low_mccs.release as release
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subarray import SubarrayComponentManager, SubarrayHealthModel
-import ska_low_mccs.release as release
-
 
 __all__ = ["MccsSubarray", "main"]
 
@@ -64,9 +57,7 @@ class MccsSubarray(SKASubarray):
         self._health_model = SubarrayHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsSubarray,
-    ) -> SubarrayComponentManager:
+    def create_component_manager(self: MccsSubarray,) -> SubarrayComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -98,10 +89,7 @@ class MccsSubarray(SKASubarray):
         self.register_command_object(
             "SendTransientBuffer",
             self.SendTransientBufferCommand(
-                self.component_manager,
-                self.op_state_model,
-                self.obs_state_model,
-                self.logger,
+                self.component_manager, self.op_state_model, self.obs_state_model, self.logger,
             ),
         )
 
@@ -138,8 +126,7 @@ class MccsSubarray(SKASubarray):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsSubarray,
-        communication_status: CommunicationStatus,
+        self: MccsSubarray, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -161,13 +148,9 @@ class MccsSubarray(SKASubarray):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _assign_completed(
-        self: MccsSubarray,
-    ) -> None:
+    def _assign_completed(self: MccsSubarray,) -> None:
         """
         Handle completion of the assign command.
 
@@ -176,9 +159,7 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("assign_completed")
 
-    def _release_completed(
-        self: MccsSubarray,
-    ) -> None:
+    def _release_completed(self: MccsSubarray,) -> None:
         """
         Handle completion of the release or release_all command.
 
@@ -187,9 +168,7 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("release_completed")
 
-    def _configure_completed(
-        self: MccsSubarray,
-    ) -> None:
+    def _configure_completed(self: MccsSubarray,) -> None:
         """
         Handle completion of the configure command.
 
@@ -198,9 +177,7 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("configure_completed")
 
-    def _abort_completed(
-        self: MccsSubarray,
-    ) -> None:
+    def _abort_completed(self: MccsSubarray,) -> None:
         """
         Handle completion of the abort command.
 
@@ -209,9 +186,7 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("abort_completed")
 
-    def _obsreset_completed(
-        self: MccsSubarray,
-    ) -> None:
+    def _obsreset_completed(self: MccsSubarray,) -> None:
         """
         Handle completion of the obs_reset command.
 
@@ -220,9 +195,7 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("obsreset_completed")
 
-    def _restart_completed(
-        self: MccsSubarray,
-    ) -> None:
+    def _restart_completed(self: MccsSubarray,) -> None:
         """
         Handle completion of the restart command.
 
@@ -254,14 +227,9 @@ class MccsSubarray(SKASubarray):
             self.obs_state_model.perform_action("component_resourced")
         else:
             self.obs_state_model.perform_action("component_unresourced")
-        self._health_model.resources_changed(
-            station_fqdns, subarray_beam_fqdns, station_beam_fqdns
-        )
+        self._health_model.resources_changed(station_fqdns, subarray_beam_fqdns, station_beam_fqdns)
 
-    def _configured_changed(
-        self: MccsSubarray,
-        is_configured: bool,
-    ) -> None:
+    def _configured_changed(self: MccsSubarray, is_configured: bool,) -> None:
         """
         Handle change in whether the subarray is configured.
 
@@ -275,10 +243,7 @@ class MccsSubarray(SKASubarray):
         else:
             self.obs_state_model.perform_action("component_unconfigured")
 
-    def _scanning_changed(
-        self: MccsSubarray,
-        is_scanning: bool,
-    ) -> None:
+    def _scanning_changed(self: MccsSubarray, is_scanning: bool,) -> None:
         """
         Handle change in whether the subarray is scanning.
 
@@ -292,9 +257,7 @@ class MccsSubarray(SKASubarray):
         else:
             self.obs_state_model.perform_action("component_not_scanning")
 
-    def _obs_fault_occurred(
-        self: MccsSubarray,
-    ) -> None:
+    def _obs_fault_occurred(self: MccsSubarray,) -> None:
         """
         Handle occurrence of an observation fault.
 
@@ -358,12 +321,9 @@ class MccsSubarray(SKASubarray):
         resource_dict = self.component_manager.assigned_resources_dict
         stations = []
         for station_group in resource_dict["stations"]:
-            stations.append(
-                [station.split("/")[-1].lstrip("0") for station in station_group]
-            )
+            stations.append([station.split("/")[-1].lstrip("0") for station in station_group])
         subarray_beams = [
-            subarray_beam.split("/")[-1].lstrip("0")
-            for subarray_beam in resource_dict["subarray_beams"]
+            subarray_beam.split("/")[-1].lstrip("0") for subarray_beam in resource_dict["subarray_beams"]
         ]
         channel_blocks = resource_dict["channel_blocks"]
         return json.dumps(
@@ -378,9 +338,7 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    class AssignResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
+    class AssignResourcesCommand(ObservationCommand, ResponseCommand, StateModelCommand):
         """
         A class for MccsSubarray's AssignResources() command.
 
@@ -415,9 +373,7 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(
-                target, obs_state_model, "assign", op_state_model, logger=logger
-            )
+            super().__init__(target, obs_state_model, "assign", op_state_model, logger=logger)
 
         def do(  # type: ignore[override]
             self: MccsSubarray.AssignResourcesCommand, argin: str
@@ -451,9 +407,7 @@ class MccsSubarray(SKASubarray):
         (return_code, message) = handler(params)
         return ([return_code], [message])
 
-    class ReleaseResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
+    class ReleaseResourcesCommand(ObservationCommand, ResponseCommand, StateModelCommand):
         """
         A class for MccsSubarray's ReleaseResources() command.
 
@@ -488,9 +442,7 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(
-                target, obs_state_model, "release", op_state_model, logger=logger
-            )
+            super().__init__(target, obs_state_model, "release", op_state_model, logger=logger)
 
         def do(  # type: ignore[override]
             self: MccsSubarray.ReleaseResourcesCommand, argin: str
@@ -508,9 +460,7 @@ class MccsSubarray(SKASubarray):
             result_code = component_manager.release(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
 
-    class ReleaseAllResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
+    class ReleaseAllResourcesCommand(ObservationCommand, ResponseCommand, StateModelCommand):
         """
         A class for MccsSubarray's ReleaseAllResources() command.
 
@@ -545,9 +495,7 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(
-                target, obs_state_model, "release", op_state_model, logger=logger
-            )
+            super().__init__(target, obs_state_model, "release", op_state_model, logger=logger)
 
         def do(  # type: ignore[override]
             self: MccsSubarray.ReleaseAllResourcesCommand,
@@ -598,13 +546,10 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(
-                target, obs_state_model, "configure", op_state_model, logger=logger
-            )
+            super().__init__(target, obs_state_model, "configure", op_state_model, logger=logger)
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.ConfigureCommand,
-            argin: dict,
+            self: MccsSubarray.ConfigureCommand, argin: dict,
         ) -> tuple[ResultCode, str]:
             """
             Implement the functionality of the configure command.
@@ -834,9 +779,7 @@ class MccsSubarray(SKASubarray):
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SendTransientBuffer(
-        self: MccsSubarray, argin: list[int]
-    ) -> DevVarLongStringArrayType:
+    def SendTransientBuffer(self: MccsSubarray, argin: list[int]) -> DevVarLongStringArrayType:
         """
         Cause the subarray to send the requested segment of the transient buffer to SDP.
 

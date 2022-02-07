@@ -90,9 +90,7 @@ class json_input:  # noqa: N801
         self.schema = None
 
         if schema_path is not None:
-            schema_string = importlib.resources.read_text(
-                "ska_low_mccs.schemas", schema_path
-            )
+            schema_string = importlib.resources.read_text("ska_low_mccs.schemas", schema_path)
             self.schema = json.loads(schema_string)
 
     def __call__(self: json_input, func: Callable) -> Callable:
@@ -190,9 +188,7 @@ class ThreadsafeCheckingMeta(type):  # pragma: no cover
             except AssertionError:
                 raise
             except Exception as exception:
-                raise ValueError(
-                    f"Exception when trying to run method {func}"
-                ) from exception
+                raise ValueError(f"Exception when trying to run method {func}") from exception
 
             self._thread_id[func] = thread_id
             try:

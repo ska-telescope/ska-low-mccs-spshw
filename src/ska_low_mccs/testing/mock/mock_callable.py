@@ -9,11 +9,11 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import queue
-from typing import Any, Optional, Sequence, Tuple
 import unittest.mock
-from ska_tango_base.commands import ResultCode
+from typing import Any, Optional, Sequence, Tuple
 
 import tango
+from ska_tango_base.commands import ResultCode
 
 __all__ = ["MockCallable", "MockChangeEventCallback"]
 
@@ -242,9 +242,7 @@ class MockChangeEventCallback(MockCallable):
         super().__init__(None, called_timeout, not_called_timeout)
 
     def assert_next_change_event(
-        self: MockChangeEventCallback,
-        value: Any,
-        quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
+        self: MockChangeEventCallback, value: Any, quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
     ) -> None:
         """
         Assert the arguments of the next call to this mock callback.
@@ -264,9 +262,7 @@ class MockChangeEventCallback(MockCallable):
         assert (
             call_name.lower() == self._event_name
         ), f"Event name '{call_name.lower()}'' does not match expected name '{self._event_name}'"
-        assert (
-            call_value == value
-        ), f"Call value {call_value} does not match expected value {value}"
+        assert call_value == value, f"Call value {call_value} does not match expected value {value}"
         assert (
             call_quality == quality
         ), f"Call quality {call_quality} does not match expected quality {quality}"
@@ -302,8 +298,7 @@ class MockChangeEventCallback(MockCallable):
 
             if call_name.lower() != self._event_name:
                 failure_message = (
-                    f"Event name '{call_name.lower()}' does not match expected name "
-                    f"'{self._event_name}'"
+                    f"Event name '{call_name.lower()}' does not match expected name " f"'{self._event_name}'"
                 )
                 called_mock = None
                 break
@@ -360,11 +355,7 @@ class MockChangeEventCallback(MockCallable):
         failure_message = "Callback has not been called"
 
         while True:
-            timeout = (
-                self._called_timeout
-                if called_mock is None
-                else self._not_called_timeout
-            )
+            timeout = self._called_timeout if called_mock is None else self._not_called_timeout
             try:
                 called_mock = self._queue.get(timeout=timeout)
             except queue.Empty:
@@ -375,24 +366,18 @@ class MockChangeEventCallback(MockCallable):
 
             if call_name.lower() != self._event_name:
                 failure_message = (
-                    f"Event name '{call_name.lower()}' does not match expected name "
-                    f"'{self._event_name}'"
+                    f"Event name '{call_name.lower()}' does not match expected name " f"'{self._event_name}'"
                 )
                 called_mock = None
                 continue
 
             if call_value != value:
-                failure_message = (
-                    f"Call value {call_value} does not match expected value {value}"
-                )
+                failure_message = f"Call value {call_value} does not match expected value {value}"
                 called_mock = None
                 continue
 
             if call_quality != quality:
-                failure_message = (
-                    f"Call quality {call_quality} does not match expected quality "
-                    f"{quality}"
-                )
+                failure_message = f"Call quality {call_quality} does not match expected quality " f"{quality}"
                 called_mock = None
                 continue
 

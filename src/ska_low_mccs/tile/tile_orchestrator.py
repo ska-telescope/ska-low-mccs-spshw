@@ -13,8 +13,8 @@ import importlib.resources
 import logging
 import threading
 from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
-import yaml
 
+import yaml
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 
@@ -79,35 +79,15 @@ class Stimulus(enum.IntEnum):
 
 StateTupleType = Union[
     Tuple[CommunicationStatus],
-    Tuple[
-        CommunicationStatus,
-        Optional[bool],
-        ExtendedPowerMode,
-    ],
-    Tuple[
-        CommunicationStatus,
-        Optional[bool],
-        ExtendedPowerMode,
-        CommunicationStatus,
-    ],
+    Tuple[CommunicationStatus, Optional[bool], ExtendedPowerMode,],
+    Tuple[CommunicationStatus, Optional[bool], ExtendedPowerMode, CommunicationStatus,],
 ]
 
 
 StateStimulusTupleType = Union[
     Tuple[Stimulus, CommunicationStatus],
-    Tuple[
-        Stimulus,
-        CommunicationStatus,
-        Optional[bool],
-        ExtendedPowerMode,
-    ],
-    Tuple[
-        Stimulus,
-        CommunicationStatus,
-        Optional[bool],
-        ExtendedPowerMode,
-        CommunicationStatus,
-    ],
+    Tuple[Stimulus, CommunicationStatus, Optional[bool], ExtendedPowerMode,],
+    Tuple[Stimulus, CommunicationStatus, Optional[bool], ExtendedPowerMode, CommunicationStatus,],
 ]
 
 
@@ -151,9 +131,7 @@ class TileOrchestrator:
         # initialise an instance. (We can't hardcode a relative path here, because
         # sphinx-build imports this with a different current directory.)
         if cls.RULES is None:
-            rules_string = importlib.resources.read_text(
-                __package__, "orchestration_rules.yaml"
-            )
+            rules_string = importlib.resources.read_text(__package__, "orchestration_rules.yaml")
             cls.RULES = yaml.load(rules_string, Loader=yaml.Loader) or {}
             # we've no logger so there's no point catching any exceptions.
         return cls.RULES
@@ -198,23 +176,15 @@ class TileOrchestrator:
         """
         self.__lock = threading.RLock()
 
-        self._start_communicating_with_subrack = (
-            start_communicating_with_subrack_callback
-        )
-        self._stop_communicating_with_subrack_callback = (
-            stop_communicating_with_subrack_callback
-        )
+        self._start_communicating_with_subrack = start_communicating_with_subrack_callback
+        self._stop_communicating_with_subrack_callback = stop_communicating_with_subrack_callback
         self._start_communicating_with_tpm = start_communicating_with_tpm_callback
-        self._stop_communicating_with_tpm_callback = (
-            stop_communicating_with_tpm_callback
-        )
+        self._stop_communicating_with_tpm_callback = stop_communicating_with_tpm_callback
 
         self._turn_tpm_off = turn_tpm_off_callback
         self._turn_tpm_on = turn_tpm_on_callback
 
-        self._communication_status_changed_callback = (
-            communication_status_changed_callback
-        )
+        self._communication_status_changed_callback = communication_status_changed_callback
         self._power_mode_changed_callback = power_mode_changed_callback
 
         self._logger = logger
@@ -241,17 +211,12 @@ class TileOrchestrator:
         )
         self._tpm_power_mode_on = PowerMode.UNKNOWN  # default mode if turned on
 
-        self._decision_table: dict[
-            StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]
-        ] = {}
+        self._decision_table: dict[StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]] = {}
 
         for state, actions in self._load_rules().items():
             action_calls = [getattr(self, f"_{action}") for action in actions]
             if len(state) == 2:
-                self._decision_table[
-                    Stimulus[state[0]],
-                    CommunicationStatus[state[1]],
-                ] = action_calls
+                self._decision_table[Stimulus[state[0]], CommunicationStatus[state[1]],] = action_calls
             elif len(state) == 4:
                 self._decision_table[
                     (
@@ -318,8 +283,7 @@ class TileOrchestrator:
             return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
 
     def update_subrack_communication_status(
-        self: TileOrchestrator,
-        communication_status: CommunicationStatus,
+        self: TileOrchestrator, communication_status: CommunicationStatus,
     ) -> None:
         """
         Update status of communications between the component manager and the subrack.
@@ -346,8 +310,7 @@ class TileOrchestrator:
                 raise NotImplementedError()
 
     def update_tpm_communication_status(
-        self: TileOrchestrator,
-        communication_status: CommunicationStatus,
+        self: TileOrchestrator, communication_status: CommunicationStatus,
     ) -> None:
         """
         Update status of communications between the component manager and the TPM.
@@ -372,10 +335,7 @@ class TileOrchestrator:
             else:
                 raise NotImplementedError()
 
-    def update_tpm_power_mode(
-        self: TileOrchestrator,
-        power_mode: ExtendedPowerMode,
-    ) -> None:
+    def update_tpm_power_mode(self: TileOrchestrator, power_mode: ExtendedPowerMode,) -> None:
         """
         Update the current power mode of the TPM.
 
@@ -437,9 +397,7 @@ class TileOrchestrator:
     def _report_communication_established(self: TileOrchestrator) -> None:
         self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
 
-    def _report_tpm_no_power_supply(
-        self: TileOrchestrator,
-    ) -> None:
+    def _report_tpm_no_power_supply(self: TileOrchestrator,) -> None:
         self._tpm_power_mode = ExtendedPowerMode.NO_SUPPLY
         self._power_mode_changed_callback(PowerMode.OFF)
 
@@ -466,20 +424,14 @@ class TileOrchestrator:
     def _set_no_desire(self: TileOrchestrator) -> None:
         self._operator_desire = None
 
-    def _stop_communicating_with_subrack(
-        self: TileOrchestrator,
-    ) -> None:
+    def _stop_communicating_with_subrack(self: TileOrchestrator,) -> None:
         self._subrack_communication_status = CommunicationStatus.DISABLED
         self._stop_communicating_with_subrack_callback()
 
-    def _set_subrack_communication_established(
-        self: TileOrchestrator,
-    ) -> None:
+    def _set_subrack_communication_established(self: TileOrchestrator,) -> None:
         self._subrack_communication_status = CommunicationStatus.ESTABLISHED
 
-    def _set_subrack_communication_not_established(
-        self: TileOrchestrator,
-    ) -> None:
+    def _set_subrack_communication_not_established(self: TileOrchestrator,) -> None:
         self._subrack_communication_status = CommunicationStatus.NOT_ESTABLISHED
 
     def _stop_communicating_with_tpm(self: TileOrchestrator) -> None:

@@ -23,20 +23,20 @@ These assumptions may need to change in future.
 """
 from __future__ import annotations  # allow forward references in type hints
 
-import time
 import logging
-from typing import Callable, cast, List, Optional
+import time
+from typing import Callable, List, Optional, cast
+
+from ska_tango_base.commands import BaseCommand, ResultCode
 
 from ska_low_mccs.component import (
-    ControlMode,
     CommunicationStatus,
-    MccsComponentManager,
+    ControlMode,
     ExtendedPowerMode,
+    MccsComponentManager,
     WebHardwareClient,
 )
-from ska_tango_base.commands import ResultCode, BaseCommand
 from ska_low_mccs.subrack import SubrackData
-
 
 __all__ = ["SubrackDriver"]
 
@@ -122,16 +122,10 @@ class SubrackDriver(MccsComponentManager):
 
         self._client = WebHardwareClient(self._ip, self._port)
 
-        self._component_tpm_power_changed_callback = (
-            component_tpm_power_changed_callback
-        )
+        self._component_tpm_power_changed_callback = component_tpm_power_changed_callback
         self._component_progress_changed_callback = component_progress_changed_callback
         super().__init__(
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            logger, push_change_event, communication_status_changed_callback, None, component_fault_callback,
         )
 
     def start_communicating(self: SubrackDriver) -> None:
@@ -311,13 +305,10 @@ class SubrackDriver(MccsComponentManager):
         """
         if logical_tpm_id < 1 or logical_tpm_id > self.bay_count:
             raise ValueError(
-                f"Cannot access TPM {logical_tpm_id}; "
-                f"this subrack has {self.tpm_count} boards."
+                f"Cannot access TPM {logical_tpm_id}; " f"this subrack has {self.tpm_count} boards."
             )
         if self._tpm_present[logical_tpm_id - 1] is False:
-            raise ValueError(
-                f"Cannot access TPM {logical_tpm_id}; " "TPM not present in this bay"
-            )
+            raise ValueError(f"Cannot access TPM {logical_tpm_id}; " "TPM not present in this bay")
 
     @property
     def tpm_temperatures(self: SubrackDriver) -> list[float]:
@@ -450,8 +441,7 @@ class SubrackDriver(MccsComponentManager):
         if response["status"] == "OK":
             are_tpms_on = cast(List[bool], response["value"])
             self._tpm_power_modes = [
-                ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF
-                for is_tpm_on in are_tpms_on
+                ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF for is_tpm_on in are_tpms_on
             ]
         return self._tpm_power_modes
 
@@ -479,9 +469,7 @@ class SubrackDriver(MccsComponentManager):
         """
         self._check_tpm_id(logical_tpm_id)
         response = self._client.execute_command("turn_off_tpm", str(logical_tpm_id))
-        self.logger.debug(
-            "TpmDriver:" + response["command"] + ": " + response["status"]
-        )
+        self.logger.debug("TpmDriver:" + response["command"] + ": " + response["status"])
         timeout = 10
         while self._client.execute_command("command_completed")["retvalue"] is False:
             self.logger.debug("waiting...")
@@ -508,9 +496,7 @@ class SubrackDriver(MccsComponentManager):
         """
         self._check_tpm_id(logical_tpm_id)
         response = self._client.execute_command("turn_on_tpm", str(logical_tpm_id))
-        self.logger.debug(
-            "TpmDriver:" + response["command"] + ": " + response["status"]
-        )
+        self.logger.debug("TpmDriver:" + response["command"] + ": " + response["status"])
         timeout = 10
         while self._client.execute_command("command_completed")["retvalue"] is False:
             self.logger.debug("waiting...")
@@ -533,9 +519,7 @@ class SubrackDriver(MccsComponentManager):
         :return: success value
         """
         response = self._client.execute_command("turn_on_tpms")
-        self.logger.debug(
-            "TpmDriver:" + response["command"] + ": " + response["status"]
-        )
+        self.logger.debug("TpmDriver:" + response["command"] + ": " + response["status"])
         timeout = 20
         while self._client.execute_command("command_completed")["retvalue"] is False:
             self.logger.debug("waiting...")
@@ -558,9 +542,7 @@ class SubrackDriver(MccsComponentManager):
         :return: success value
         """
         response = self._client.execute_command("turn_off_tpms")
-        self.logger.debug(
-            "TpmDriver:" + response["command"] + ": " + response["status"]
-        )
+        self.logger.debug("TpmDriver:" + response["command"] + ": " + response["status"])
         timeout = 20
         while self._client.execute_command("command_completed")["retvalue"] is False:
             self.logger.debug("waiting...")
@@ -576,9 +558,7 @@ class SubrackDriver(MccsComponentManager):
             response = self._client.execute_command("abort_command")
         return timeout > 0
 
-    def set_subrack_fan_speed(
-        self: SubrackDriver, fan_id: int, speed_percent: float
-    ) -> bool:
+    def set_subrack_fan_speed(self: SubrackDriver, fan_id: int, speed_percent: float) -> bool:
         """
         Set the subrack backplane fan speed in percent.
 
@@ -590,18 +570,11 @@ class SubrackDriver(MccsComponentManager):
         params = str(fan_id) + "," + str(speed_percent)
         response = self._client.execute_command("set_subrack_fan_speed", params)
         self.logger.debug(
-            "TpmDriver:"
-            + response["command"]
-            + ": "
-            + response["status"]
-            + " = "
-            + response["retvalue"]
+            "TpmDriver:" + response["command"] + ": " + response["status"] + " = " + response["retvalue"]
         )
         return True
 
-    def set_subrack_fan_modes(
-        self: SubrackDriver, fan_id: int, mode: ControlMode
-    ) -> bool:
+    def set_subrack_fan_modes(self: SubrackDriver, fan_id: int, mode: ControlMode) -> bool:
         """
         Set Fan Operational Mode for the subrack's fan.
 
@@ -613,12 +586,7 @@ class SubrackDriver(MccsComponentManager):
         params = str(fan_id) + "," + str(mode)
         response = self._client.execute_command("set_fan_modes", params)
         self.logger.debug(
-            "TpmDriver:"
-            + response["command"]
-            + ": "
-            + response["status"]
-            + " = "
-            + response["retvalue"]
+            "TpmDriver:" + response["command"] + ": " + response["status"] + " = " + response["retvalue"]
         )
         return True
 
@@ -636,11 +604,6 @@ class SubrackDriver(MccsComponentManager):
         params = str(power_supply_fan_id) + "," + str(speed_percent)
         response = self._client.execute_command("set_power_supply_fan_speed", params)
         self.logger.debug(
-            "TpmDriver:"
-            + response["command"]
-            + ": "
-            + response["status"]
-            + " = "
-            + response["retvalue"]
+            "TpmDriver:" + response["command"] + ": " + response["status"] + " = " + response["retvalue"]
         )
         return True

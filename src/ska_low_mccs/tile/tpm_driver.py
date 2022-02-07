@@ -16,25 +16,21 @@ case, or a NotImplementedError exception raised.
 
 from __future__ import annotations  # allow forward references in type hints
 
-import time
 import copy
 import logging
 import threading
+import time
+from typing import Any, Callable, List, Optional, cast
+
 import numpy as np
-from typing import Any, Callable, cast, List, Optional
-from pyfabil.base.definitions import LibraryError
-
-from pyfabil.base.definitions import Device
-
-from ska_tango_base.commands import ResultCode, BaseCommand
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    MccsComponentManager,
-)
-from .tpm_status import TpmStatus
-
-from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
+from pyaavs.tile_wrapper import Tile as HwTile
+from pyfabil.base.definitions import Device, LibraryError
+from ska_tango_base.commands import BaseCommand, ResultCode
+
+from ska_low_mccs.component import CommunicationStatus, MccsComponentManager
+
+from .tpm_status import TpmStatus
 
 
 class TpmDriver(MccsComponentManager):
@@ -132,18 +128,11 @@ class TpmDriver(MccsComponentManager):
             self._tpm_version = tpm_version
 
         self.tile = cast(
-            Tile12,
-            HwTile(
-                ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
-            ),
+            Tile12, HwTile(ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version),
         )
 
         super().__init__(
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            logger, push_change_event, communication_status_changed_callback, None, component_fault_callback,
         )
 
     def start_communicating(self: TpmDriver) -> None:
@@ -202,9 +191,7 @@ class TpmDriver(MccsComponentManager):
                 target.update_communication_status(CommunicationStatus.ESTABLISHED)
                 return ResultCode.OK, "Connected to Tile"
             else:
-                target.logger.error(
-                    f"Connection to tile failed after {timeout*3} seconds"
-                )
+                target.logger.error(f"Connection to tile failed after {timeout*3} seconds")
                 target.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             return (
                 ResultCode.FAILED,
@@ -639,10 +626,7 @@ class TpmDriver(MccsComponentManager):
         current_address = int(address & 0xFFFFFFFC)
         for _i in range(nvalues):
             self.logger.debug(
-                "Reading address "
-                + str(current_address)
-                + "of type "
-                + str(type(current_address))
+                "Reading address " + str(current_address) + "of type " + str(type(current_address))
             )
             with self._hardware_lock:
                 values.append(cast(int, self.tile[current_address]))
@@ -710,17 +694,13 @@ class TpmDriver(MccsComponentManager):
         if core_id == -1:
             for core in range(0, 8):
                 with self._hardware_lock:
-                    dict_to_append = self.tile.get_40g_core_configuration(
-                        core, arp_table_entry
-                    )
+                    dict_to_append = self.tile.get_40g_core_configuration(core, arp_table_entry)
                 if dict_to_append is not None:
                     self._forty_gb_core_list.append(dict_to_append)
 
         else:
             with self._hardware_lock:
-                self._forty_gb_core_list = self.tile.get_40g_core_configuration(
-                    core_id, arp_table_entry
-                )
+                self._forty_gb_core_list = self.tile.get_40g_core_configuration(core_id, arp_table_entry)
         return self._forty_gb_core_list
 
     @property
@@ -761,9 +741,7 @@ class TpmDriver(MccsComponentManager):
         """
         self.logger.debug("TpmDriver: set_lmc_download")
         with self._hardware_lock:
-            self.tile.set_lmc_download(
-                mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
-            )
+            self.tile.set_lmc_download(mode, payload_length, dst_ip, src_port, dst_port, lmc_mac)
 
     def set_channeliser_truncation(self: TpmDriver, array: list[list[int]]) -> None:
         """
@@ -794,11 +772,7 @@ class TpmDriver(MccsComponentManager):
             self.tile.set_beamformer_regions(regions)
 
     def initialise_beamformer(
-        self: TpmDriver,
-        start_channel: int,
-        nof_channels: int,
-        is_first: bool,
-        is_last: bool,
+        self: TpmDriver, start_channel: int, nof_channels: int, is_first: bool, is_last: bool,
     ) -> None:
         """
         Initialise the beamformer.
@@ -810,9 +784,7 @@ class TpmDriver(MccsComponentManager):
         """
         self.logger.debug("TpmDriver: initialise_beamformer")
         with self._hardware_lock:
-            self.tile.initialise_beamformer(
-                start_channel, nof_channels, is_first, is_last
-            )
+            self.tile.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
 
     def load_calibration_coefficients(
         self: TpmDriver, antenna: int, calibration_coefficients: list[int]
@@ -864,9 +836,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: load_beam_angle")
         self.tile.load_beam_angle(angle_coefficients)
 
-    def load_antenna_tapering(
-        self: TpmDriver, beam: int, tapering_coefficients: list[float]
-    ) -> None:
+    def load_antenna_tapering(self: TpmDriver, beam: int, tapering_coefficients: list[float]) -> None:
         """
         Loat the antenna tapering coefficients.
 
@@ -877,9 +847,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: load_antenna_tapering")
         self.tile.load_antenna_tapering(beam, tapering_coefficients)
 
-    def switch_calibration_bank(
-        self: TpmDriver, switch_time: Optional[int] = 0
-    ) -> None:
+    def switch_calibration_bank(self: TpmDriver, switch_time: Optional[int] = 0) -> None:
         """
         Switch the calibration bank.
 
@@ -905,9 +873,7 @@ class TpmDriver(MccsComponentManager):
         with self._hardware_lock:
             self.tile.compute_calibration_coefficients()
 
-    def set_pointing_delay(
-        self: TpmDriver, delay_array: list[float], beam_index: int
-    ) -> None:
+    def set_pointing_delay(self: TpmDriver, delay_array: list[float], beam_index: int) -> None:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -934,9 +900,7 @@ class TpmDriver(MccsComponentManager):
         with self._hardware_lock:
             self.tile.load_pointing_delay(load_time)
 
-    def start_beamformer(
-        self: TpmDriver, start_time: int = 0, duration: int = -1
-    ) -> None:
+    def start_beamformer(self: TpmDriver, start_time: int = 0, duration: int = -1) -> None:
         """
         Start the beamformer at the specified time.
 
@@ -958,10 +922,7 @@ class TpmDriver(MccsComponentManager):
         self._is_beamformer_running = False
 
     def configure_integrated_channel_data(
-        self: TpmDriver,
-        integration_time: float = 0.5,
-        first_channel: int = 0,
-        last_channel: int = 511,
+        self: TpmDriver, integration_time: float = 0.5, first_channel: int = 0, last_channel: int = 511,
     ) -> None:
         """
         Configure and start the transmission of integrated channel data.
@@ -977,16 +938,11 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
         with self._hardware_lock:
             self.tile.configure_integrated_channel_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel,
             )
 
     def configure_integrated_beam_data(
-        self: TpmDriver,
-        integration_time: float = 0.5,
-        first_channel: int = 0,
-        last_channel: int = 191,
+        self: TpmDriver, integration_time: float = 0.5, first_channel: int = 0, last_channel: int = 191,
     ) -> None:
         """
         Configure and start the transmission of integrated channel data.
@@ -1002,9 +958,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
         with self._hardware_lock:
             self.tile.configure_integrated_beam_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel,
             )
 
     def stop_integrated_data(self: TpmDriver) -> None:
@@ -1014,10 +968,7 @@ class TpmDriver(MccsComponentManager):
             self.tile.stop_integrated_data()
 
     def send_raw_data(
-        self: TpmDriver,
-        sync: bool = False,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
+        self: TpmDriver, sync: bool = False, timestamp: Optional[str] = None, seconds: float = 0.2,
     ) -> None:
         """
         Transmit a snapshot containing raw antenna data.
@@ -1086,9 +1037,7 @@ class TpmDriver(MccsComponentManager):
                 seconds=seconds,
             )
 
-    def send_beam_data(
-        self: TpmDriver, timestamp: Optional[str] = None, seconds: float = 0.2
-    ) -> None:
+    def send_beam_data(self: TpmDriver, timestamp: Optional[str] = None, seconds: float = 0.2) -> None:
         """
         Transmit a snapshot containing beamformed data.
 
@@ -1105,9 +1054,7 @@ class TpmDriver(MccsComponentManager):
         with self._hardware_lock:
             self.tile.stop_data_transmission()
 
-    def start_acquisition(
-        self: TpmDriver, start_time: Optional[int] = None, delay: int = 2
-    ) -> None:
+    def start_acquisition(self: TpmDriver, start_time: Optional[int] = None, delay: int = 2) -> None:
         """
         Start data acquisition.
 
@@ -1169,13 +1116,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
         with self._hardware_lock:
             self.tile.set_lmc_integrated_download(
-                mode,
-                channel_payload_length,
-                beam_payload_length,
-                dst_ip,
-                src_port,
-                dst_port,
-                lmc_mac,
+                mode, channel_payload_length, beam_payload_length, dst_ip, src_port, dst_port, lmc_mac,
             )
 
     def send_raw_data_synchronised(
@@ -1212,9 +1153,7 @@ class TpmDriver(MccsComponentManager):
         """
         self.logger.debug("TpmDriver: current_tile_beamformer_frame")
         with self._hardware_lock:
-            self._current_tile_beamformer_frame = (
-                self.tile.current_tile_beamformer_frame()
-            )
+            self._current_tile_beamformer_frame = self.tile.current_tile_beamformer_frame()
         return self._current_tile_beamformer_frame
 
     @property
@@ -1264,12 +1203,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
         with self._hardware_lock:
             self.tile.send_channelised_data_narrowband(
-                frequency,
-                round_bits,
-                number_of_samples,
-                wait_seconds,
-                timestamp,
-                seconds,
+                frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds,
             )
 
     #
@@ -1377,12 +1311,7 @@ class TpmDriver(MccsComponentManager):
         :param load_time: Time to start the generator.
         """
         self.logger.debug(
-            "Test generator: set tone 0: "
-            + str(frequency0)
-            + " Hz"
-            + ", tone 1: "
-            + str(frequency1)
-            + " Hz"
+            "Test generator: set tone 0: " + str(frequency0) + " Hz" + ", tone 1: " + str(frequency1) + " Hz"
         )
         # If load time not specified, is "now" + 30 ms
         with self._hardware_lock:
@@ -1396,10 +1325,7 @@ class TpmDriver(MccsComponentManager):
             end_time = self.tile.get_fpga_timestamp()
         if end_time < load_time:
             self.logger.warning(
-                "Test generator: load time="
-                + str(load_time)
-                + " after current time "
-                + str(end_time)
+                "Test generator: load time=" + str(load_time) + " after current time " + str(end_time)
             )
 
     def test_generator_input_select(self: TpmDriver, inputs: int = 0) -> None:
@@ -1415,9 +1341,7 @@ class TpmDriver(MccsComponentManager):
             self.tile.test_generator_input_select(inputs)
 
     @staticmethod
-    def calculate_delay(
-        current_delay: float, current_tc: int, ref_lo: float, ref_hi: float
-    ) -> None:
+    def calculate_delay(current_delay: float, current_tc: int, ref_lo: float, ref_hi: float) -> None:
         """
         Calculate the delay.
 

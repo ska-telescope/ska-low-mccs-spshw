@@ -15,10 +15,11 @@ from __future__ import annotations
 
 import functools
 import logging
+import unittest
 from typing import Any, Callable, Generator, Set, cast
+
 import pytest
 import tango
-import unittest
 import yaml
 
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
@@ -105,18 +106,11 @@ def pytest_collection_modifyitems(
 
     prefix = "needs_"
     for item in items:
-        needs_tags = set(
-            tag[len(prefix) :] for tag in item.keywords if tag.startswith(prefix)
-        )
+        needs_tags = set(tag[len(prefix) :] for tag in item.keywords if tag.startswith(prefix))
         unmet_tags = list(needs_tags - available_tags)
         if unmet_tags:
             item.add_marker(
-                pytest.mark.skip(
-                    reason=(
-                        f"Testbed '{testbed}' does not meet test needs: "
-                        f"{unmet_tags}."
-                    )
-                )
+                pytest.mark.skip(reason=(f"Testbed '{testbed}' does not meet test needs: " f"{unmet_tags}."))
             )
 
 
@@ -152,12 +146,7 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 def tango_harness_factory(
     request: pytest.FixtureRequest, logger: logging.Logger
 ) -> Callable[
-    [
-        dict[str, Any],
-        DevicesToLoadType,
-        Callable[[], unittest.mock.Mock],
-        dict[str, unittest.mock.Mock],
-    ],
+    [dict[str, Any], DevicesToLoadType, Callable[[], unittest.mock.Mock], dict[str, unittest.mock.Mock],],
     TangoHarness,
 ]:
     """
@@ -233,9 +222,7 @@ def tango_harness_factory(
 
         starting_state_harness = StartingStateTangoHarness(tango_harness)
 
-        mocking_harness = MockingTangoHarness(
-            starting_state_harness, mock_factory, initial_mocks
-        )
+        mocking_harness = MockingTangoHarness(starting_state_harness, mock_factory, initial_mocks)
 
         return mocking_harness
 
@@ -257,12 +244,7 @@ def tango_config() -> dict[str, Any]:
 @pytest.fixture()
 def tango_harness(
     tango_harness_factory: Callable[
-        [
-            dict[str, Any],
-            DevicesToLoadType,
-            Callable[[], unittest.mock.Mock],
-            dict[str, unittest.mock.Mock],
-        ],
+        [dict[str, Any], DevicesToLoadType, Callable[[], unittest.mock.Mock], dict[str, unittest.mock.Mock],],
         TangoHarness,
     ],
     tango_config: dict[str, str],
@@ -285,9 +267,7 @@ def tango_harness(
 
     :yields: a tango test harness
     """
-    with tango_harness_factory(
-        tango_config, devices_to_load, mock_factory, initial_mocks
-    ) as harness:
+    with tango_harness_factory(tango_config, devices_to_load, mock_factory, initial_mocks) as harness:
         yield harness
 
 
@@ -335,8 +315,7 @@ def mock_callback_not_called_timeout() -> float:
 
 @pytest.fixture()
 def mock_change_event_callback_factory(
-    mock_callback_called_timeout: float,
-    mock_callback_not_called_timeout: float,
+    mock_callback_called_timeout: float, mock_callback_not_called_timeout: float,
 ) -> Callable[[str], MockChangeEventCallback]:
     """
     Return a factory that returns a new mock change event callback each call.

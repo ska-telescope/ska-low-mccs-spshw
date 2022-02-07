@@ -14,14 +14,12 @@ import unittest.mock
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station import StationComponentManager
-
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -45,33 +43,18 @@ class TestStationComponentManager:
         :param is_configured_changed_callback: callback to be called
             when whether the station is configured changes
         """
-        assert (
-            station_component_manager.communication_status
-            == CommunicationStatus.DISABLED
-        )
+        assert station_component_manager.communication_status == CommunicationStatus.DISABLED
 
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        assert (
-            station_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        assert station_component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         is_configured_changed_callback.assert_next_call(False)
 
         station_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
-        assert (
-            station_component_manager.communication_status
-            == CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
+        assert station_component_manager.communication_status == CommunicationStatus.DISABLED
 
     def test_power_commands(
         self: TestStationComponentManager,
@@ -100,12 +83,8 @@ class TestStationComponentManager:
             antenna devices
         """
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_last_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_last_call(CommunicationStatus.ESTABLISHED)
         station_component_manager.on()
 
         apiu_proxy.On.assert_next_call()
@@ -150,15 +129,11 @@ class TestStationComponentManager:
         time.sleep(0.1)  # to let the UNKNOWN events subside
 
         for antenna_proxy in station_component_manager._antenna_proxies:
-            antenna_proxy._device_state_changed(
-                "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
-            )
+            antenna_proxy._device_state_changed("state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID)
             assert station_component_manager.power_mode == PowerMode.UNKNOWN
             component_power_mode_changed_callback.assert_not_called()
         for tile_proxy in station_component_manager._tile_proxies:
-            tile_proxy._device_state_changed(
-                "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
-            )
+            tile_proxy._device_state_changed("state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID)
             assert station_component_manager.power_mode == PowerMode.UNKNOWN
             component_power_mode_changed_callback.assert_not_called()
         station_component_manager._apiu_proxy._device_state_changed(
@@ -193,18 +168,12 @@ class TestStationComponentManager:
             the component manager and its component changes
         """
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
 
         # receive notification that the tile is on
         for tile_proxy in station_component_manager._tile_proxies:
-            tile_proxy._device_state_changed(
-                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
-            )
+            tile_proxy._device_state_changed("state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID)
         time.sleep(0.1)
 
         for logical_tile_id, tile_fqdn in enumerate(tile_fqdns):
@@ -242,12 +211,8 @@ class TestStationComponentManager:
         """
         station_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
 
         # TODO: Using "last" instead of "next" here is a sneaky way of forcing a delay
         # so that we don't start faking receipt of events below until the real events
@@ -260,13 +225,9 @@ class TestStationComponentManager:
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
         for tile_proxy in station_component_manager._tile_proxies:
-            tile_proxy._device_state_changed(
-                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
-            )
+            tile_proxy._device_state_changed("state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID)
         for antenna_proxy in station_component_manager._antenna_proxies:
-            antenna_proxy._device_state_changed(
-                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
-            )
+            antenna_proxy._device_state_changed("state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID)
 
         component_power_mode_changed_callback.assert_last_call(PowerMode.ON)
         assert station_component_manager.power_mode == PowerMode.ON
@@ -300,12 +261,8 @@ class TestStationComponentManager:
         :param station_id: the id of the station
         """
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
 
         is_configured_changed_callback.assert_next_call(False)
         assert not station_component_manager.is_configured

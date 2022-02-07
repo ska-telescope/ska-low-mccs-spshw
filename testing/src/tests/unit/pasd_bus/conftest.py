@@ -11,23 +11,16 @@
 from __future__ import annotations
 
 import logging
-
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import pytest_mock
 import yaml
-
 from ska_tango_base.control_model import SimulationMode
 
-from ska_low_mccs.pasd_bus import (
-    PasdBusSimulator,
-    PasdBusSimulatorComponentManager,
-    PasdBusComponentManager,
-)
-
 from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.pasd_bus import PasdBusComponentManager, PasdBusSimulator, PasdBusSimulatorComponentManager
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
@@ -76,11 +69,7 @@ def pasd_config(pasd_config_path: str, station_id: int) -> dict:
 
 
 @pytest.fixture()
-def pasd_bus_simulator(
-    pasd_config_path: str,
-    station_id: int,
-    logger: logging.Logger,
-) -> PasdBusSimulator:
+def pasd_bus_simulator(pasd_config_path: str, station_id: int, logger: logging.Logger,) -> PasdBusSimulator:
     """
     Fixture that returns a PaSD bus simulator.
 
@@ -97,8 +86,7 @@ def pasd_bus_simulator(
 
 @pytest.fixture()
 def mock_pasd_bus_simulator(
-    mocker: pytest_mock.MockerFixture,
-    pasd_bus_simulator: PasdBusSimulator,
+    mocker: pytest_mock.MockerFixture, pasd_bus_simulator: PasdBusSimulator,
 ) -> unittest.mock.Mock:
     """
     Return a mock PaSD bus simulator.
@@ -152,9 +140,7 @@ def mock_pasd_bus_simulator(
         setattr(
             type(mock_simulator),
             property_name,
-            mocker.PropertyMock(
-                return_value=getattr(pasd_bus_simulator, property_name)
-            ),
+            mocker.PropertyMock(return_value=getattr(pasd_bus_simulator, property_name)),
         )
 
     return mock_simulator

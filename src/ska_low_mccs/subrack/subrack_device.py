@@ -14,25 +14,13 @@ import threading
 from typing import List, Optional, Tuple
 
 import tango
-from tango.server import attribute, command, device_property
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import (
-    HealthState,
-    PowerMode,
-    SimulationMode,
-    TestMode,
-    AdminMode,
-)
+from ska_tango_base.control_model import AdminMode, HealthState, PowerMode, SimulationMode, TestMode
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
-from ska_low_mccs.subrack import (
-    SubrackComponentManager,
-    SubrackData,
-    SubrackHealthModel,
-)
-
+from ska_low_mccs.subrack import SubrackComponentManager, SubrackData, SubrackHealthModel
 
 __all__ = ["MccsSubrack", "main"]
 
@@ -98,9 +86,7 @@ class MccsSubrack(SKABaseDevice):
         self._health_model = SubrackHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsSubrack,
-    ) -> SubrackComponentManager:
+    def create_component_manager(self: MccsSubrack,) -> SubrackComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -137,10 +123,7 @@ class MccsSubrack(SKABaseDevice):
             ("SetPowerSupplyFanSpeed", self.SetPowerSupplyFanSpeedCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(
-                    self.component_manager, self.op_state_model, self.logger
-                ),
+                command_name, command_object(self.component_manager, self.op_state_model, self.logger),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -174,8 +157,7 @@ class MccsSubrack(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsSubrack,
-        communication_status: CommunicationStatus,
+        self: MccsSubrack, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -198,50 +180,34 @@ class MccsSubrack(SKABaseDevice):
             PowerMode.OFF: "component_off",
             PowerMode.ON: "component_on",
         }
-        self.logger.debug(
-            "Component communication status changed to " + str(communication_status)
-        )
+        self.logger.debug("Component communication status changed to " + str(communication_status))
 
         action = action_map[communication_status]
         if action is not None:
             self.op_state_model.perform_action(action)
         else:
-            power_supply_status = (
-                self.component_manager._power_supply_component_manager.supplied_power_mode
-            )
+            power_supply_status = self.component_manager._power_supply_component_manager.supplied_power_mode
             if (
-                self.admin_mode_model.admin_mode
-                in [
-                    AdminMode.ONLINE,
-                    AdminMode.MAINTENANCE,
-                ]
+                self.admin_mode_model.admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE,]
                 and power_supply_status is not None
             ):
                 action = power_map[power_supply_status]
                 self.logger.debug(
-                    "Switch component according to power supply status"
-                    + str(power_supply_status)
+                    "Switch component according to power supply status" + str(power_supply_status)
                 )
                 self.op_state_model.perform_action(action)
             else:
                 self.op_state_model.perform_action("component_unknown")
                 self.logger.debug("Power supply status unknown")
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
         power_status = self.component_manager.power_mode
-        self.logger.debug(
-            f"Power mode: {power_status}, Communicating: {self._health_model._communicating}"
-        )
+        self.logger.debug(f"Power mode: {power_status}, Communicating: {self._health_model._communicating}")
         if (power_status == PowerMode.ON) and self._health_model._communicating:
             self.logger.debug("Checking tpm power modes")
             self.component_manager.check_tpm_power_modes()
 
-    def _component_power_mode_changed(
-        self: MccsSubrack,
-        power_mode: PowerMode,
-    ) -> None:
+    def _component_power_mode_changed(self: MccsSubrack, power_mode: PowerMode,) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -264,10 +230,7 @@ class MccsSubrack(SKABaseDevice):
             self.logger.debug("Checking tpm power modes")
             self.component_manager.check_tpm_power_modes()
 
-    def _component_fault(
-        self: MccsSubrack,
-        is_fault: bool,
-    ) -> None:
+    def _component_fault(self: MccsSubrack, is_fault: bool,) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -316,9 +279,7 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
-    def _tpm_power_modes_changed(
-        self: MccsSubrack, tpm_power_modes: list[ExtendedPowerMode]
-    ) -> None:
+    def _tpm_power_modes_changed(self: MccsSubrack, tpm_power_modes: list[ExtendedPowerMode]) -> None:
         """
         Update the power mode of a specified TPM.
 
@@ -329,10 +290,7 @@ class MccsSubrack(SKABaseDevice):
         :param tpm_power_modes: the power modes of the TPMs
         """
         self.logger.debug(
-            "TPM power modes changed: old"
-            + str(self._tpm_power_modes)
-            + "new: "
-            + str(tpm_power_modes)
+            "TPM power modes changed: old" + str(self._tpm_power_modes) + "new: " + str(tpm_power_modes)
         )
 
         with self._tpm_power_modes_lock:
@@ -345,9 +303,7 @@ class MccsSubrack(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(
-        dtype=SimulationMode,
-        memorized=True,
-        hw_memorized=True,
+        dtype=SimulationMode, memorized=True, hw_memorized=True,
     )
     def simulationMode(self: MccsSubrack) -> SimulationMode:
         """
@@ -367,9 +323,7 @@ class MccsSubrack(SKABaseDevice):
         self.component_manager.simulation_mode = value
 
     @attribute(
-        dtype=TestMode,
-        memorized=True,
-        hw_memorized=True,
+        dtype=TestMode, memorized=True, hw_memorized=True,
     )
     def testMode(self: MccsSubrack) -> TestMode:
         """
@@ -388,9 +342,7 @@ class MccsSubrack(SKABaseDevice):
         """
         self.component_manager.test_mode = TestMode(value)
 
-    @attribute(
-        dtype=("DevFloat",), max_dim_x=2, label="Backplane temperatures", unit="Celsius"
-    )
+    @attribute(dtype=("DevFloat",), max_dim_x=2, label="Backplane temperatures", unit="Celsius")
     def backplaneTemperatures(self: MccsSubrack) -> tuple[float]:
         """
         Return the temperatures of the subrack backplane.
@@ -403,10 +355,7 @@ class MccsSubrack(SKABaseDevice):
         return self.component_manager.backplane_temperatures
 
     @attribute(
-        dtype=("DevFloat",),
-        max_dim_x=2,
-        label="Subrack board temperatures",
-        unit="Celsius",
+        dtype=("DevFloat",), max_dim_x=2, label="Subrack board temperatures", unit="Celsius",
     )
     def boardTemperatures(self: MccsSubrack) -> tuple[float]:
         """
@@ -545,8 +494,7 @@ class MccsSubrack(SKABaseDevice):
         return self.component_manager.tpm_count
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 1 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 1 power mode",
     )
     def tpm1PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -557,8 +505,7 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[0]
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 2 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 2 power mode",
     )
     def tpm2PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -569,8 +516,7 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[1]
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 3 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 3 power mode",
     )
     def tpm3PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -581,8 +527,7 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[2]
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 4 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 4 power mode",
     )
     def tpm4PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -593,8 +538,7 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[3]
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 5 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 5 power mode",
     )
     def tpm5PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -605,8 +549,7 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[4]
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 6 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 6 power mode",
     )
     def tpm6PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -617,8 +560,7 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[5]
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 7 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 7 power mode",
     )
     def tpm7PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -629,8 +571,7 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[6]
 
     @attribute(
-        dtype=ExtendedPowerMode,
-        label="TPM bay 8 power mode",
+        dtype=ExtendedPowerMode, label="TPM bay 8 power mode",
     )
     def tpm8PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -724,8 +665,7 @@ class MccsSubrack(SKABaseDevice):
         return handler.is_allowed()
 
     @command(
-        dtype_in="DevULong",
-        dtype_out="DevVarLongStringArray",
+        dtype_in="DevULong", dtype_out="DevVarLongStringArray",
     )
     def PowerOnTpm(self: MccsSubrack, argin: int) -> DevVarLongStringArrayType:
         """
@@ -784,8 +724,7 @@ class MccsSubrack(SKABaseDevice):
         return handler.is_allowed()
 
     @command(
-        dtype_in="DevULong",
-        dtype_out="DevVarLongStringArray",
+        dtype_in="DevULong", dtype_out="DevVarLongStringArray",
     )
     def PowerOffTpm(self: MccsSubrack, argin: int) -> DevVarLongStringArrayType:
         """
@@ -840,9 +779,7 @@ class MccsSubrack(SKABaseDevice):
         handler = self.get_command_object("PowerUpTpms")
         return handler.is_allowed()
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray",)
     def PowerUpTpms(self: MccsSubrack) -> DevVarLongStringArrayType:
         """
         Power up the TPMs.
@@ -939,9 +876,7 @@ class MccsSubrack(SKABaseDevice):
             fan_id = params.get("FanID", None)
             speed_percent = params.get("SpeedPWN%", None)
             if fan_id or speed_percent is None:
-                component_manager.logger.error(
-                    "fan_ID and fan speed are mandatory parameters"
-                )
+                component_manager.logger.error("fan_ID and fan speed are mandatory parameters")
                 raise ValueError("fan_ID and fan speed are mandatory parameters")
 
             success = component_manager.set_subrack_fan_speed(fan_id, speed_percent)
@@ -996,9 +931,7 @@ class MccsSubrack(SKABaseDevice):
             fan_id = params.get("fan_id", None)
             mode = params.get("mode", None)
             if fan_id or mode is None:
-                component_manager.logger.error(
-                    "Fan_id and mode are mandatory parameters"
-                )
+                component_manager.logger.error("Fan_id and mode are mandatory parameters")
                 raise ValueError("Fan_id and mode are mandatory parameter")
 
             success = component_manager.set_subrack_fan_modes(fan_id, mode)
@@ -1057,19 +990,13 @@ class MccsSubrack(SKABaseDevice):
                 component_manager.logger.error(
                     "power_supply_fan_id and speed_percent are mandatory " "parameters"
                 )
-                raise ValueError(
-                    "power_supply_fan_id and speed_percent are mandatory " "parameters"
-                )
+                raise ValueError("power_supply_fan_id and speed_percent are mandatory " "parameters")
 
-            success = component_manager.set_power_supply_fan_speed(
-                power_supply_fan_id, speed_percent
-            )
+            success = component_manager.set_power_supply_fan_speed(power_supply_fan_id, speed_percent)
             return create_return(success, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetPowerSupplyFanSpeed(
-        self: MccsSubrack, argin: str
-    ) -> DevVarLongStringArrayType:
+    def SetPowerSupplyFanSpeed(self: MccsSubrack, argin: str) -> DevVarLongStringArrayType:
         """
         Set the selected power supply fan speed.
 

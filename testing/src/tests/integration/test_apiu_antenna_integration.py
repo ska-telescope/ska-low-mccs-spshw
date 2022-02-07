@@ -12,12 +12,10 @@ import time
 import unittest.mock
 
 import pytest
+from ska_tango_base.control_model import AdminMode
 from tango import DevState
 
-from ska_tango_base.control_model import AdminMode
-
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
@@ -78,9 +76,7 @@ def initial_mocks(mock_tile: unittest.mock.Mock) -> dict[str, unittest.mock.Mock
 class TestApiuAntennaIntegration:
     """Integration test cases for interactions between APIU and antenna."""
 
-    def test_apiu_antenna_integration(
-        self: TestApiuAntennaIntegration, tango_harness: TangoHarness
-    ) -> None:
+    def test_apiu_antenna_integration(self: TestApiuAntennaIntegration, tango_harness: TangoHarness) -> None:
         """
         Test the integration of antenna within the APIU.
 

@@ -14,7 +14,6 @@ import pytest
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station_beam import StationBeamComponentManager
-
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -44,52 +43,24 @@ class TestStationBeamComponentManager:
             state.
         """
         station_beam_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        assert (
-            station_beam_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        assert station_beam_component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         station_beam_component_manager.station_fqdn = mock_station_off_fqdn
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        assert (
-            station_beam_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        assert station_beam_component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         station_beam_component_manager.station_fqdn = mock_station_on_fqdn
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        assert (
-            station_beam_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        assert station_beam_component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         station_beam_component_manager.station_fqdn = None
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        assert (
-            station_beam_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        assert station_beam_component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value", "write_value"),
@@ -134,9 +105,7 @@ class TestStationBeamComponentManager:
 
         if write_value is not None:
             setattr(station_beam_component_manager, attribute_name, write_value)
-            assert (
-                getattr(station_beam_component_manager, attribute_name) == write_value
-            )
+            assert getattr(station_beam_component_manager, attribute_name) == write_value
 
     def test_beam_id(
         self: TestStationBeamComponentManager,
@@ -156,8 +125,7 @@ class TestStationBeamComponentManager:
         assert station_beam_component_manager.beam_id == beam_id
 
     def test_desired_pointing(
-        self: TestStationBeamComponentManager,
-        station_beam_component_manager: StationBeamComponentManager,
+        self: TestStationBeamComponentManager, station_beam_component_manager: StationBeamComponentManager,
     ) -> None:
         """
         Test the desired pointing attribute.
@@ -173,13 +141,10 @@ class TestStationBeamComponentManager:
 
         value_to_write = [1585619550.0, 192.85948, 2.0, 27.12825, 1.0]
         station_beam_component_manager.desired_pointing = value_to_write
-        assert station_beam_component_manager.desired_pointing == pytest.approx(
-            value_to_write
-        )
+        assert station_beam_component_manager.desired_pointing == pytest.approx(value_to_write)
 
     def test_configure(
-        self: TestStationBeamComponentManager,
-        station_beam_component_manager: StationBeamComponentManager,
+        self: TestStationBeamComponentManager, station_beam_component_manager: StationBeamComponentManager,
     ) -> None:
         """
         Test the configure method.
@@ -196,25 +161,13 @@ class TestStationBeamComponentManager:
         phase_centre = [0.0, 0.0]
 
         station_beam_component_manager.configure(
-            beam_id,
-            station_id,
-            update_rate,
-            channels,
-            desired_pointing,
-            antenna_weights,
-            phase_centre,
+            beam_id, station_id, update_rate, channels, desired_pointing, antenna_weights, phase_centre,
         )
 
         assert station_beam_component_manager.beam_id == beam_id
         assert station_beam_component_manager.station_id == station_id
         assert station_beam_component_manager.update_rate == pytest.approx(update_rate)
         assert station_beam_component_manager.channels == channels
-        assert station_beam_component_manager.desired_pointing == pytest.approx(
-            desired_pointing
-        )
-        assert station_beam_component_manager.antenna_weights == pytest.approx(
-            antenna_weights
-        )
-        assert station_beam_component_manager.phase_centre == pytest.approx(
-            phase_centre
-        )
+        assert station_beam_component_manager.desired_pointing == pytest.approx(desired_pointing)
+        assert station_beam_component_manager.antenna_weights == pytest.approx(antenna_weights)
+        assert station_beam_component_manager.phase_centre == pytest.approx(phase_centre)

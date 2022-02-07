@@ -13,12 +13,8 @@ from typing import Callable
 
 import pytest
 
-from ska_low_mccs.tel_state import (
-    TelState,
-    TelStateComponentManager,
-)
-
 from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.tel_state import TelState, TelStateComponentManager
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
@@ -53,7 +49,5 @@ def tel_state_component_manager(
     :return: a tel state component manager
     """
     return TelStateComponentManager(
-        logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
+        logger, lrc_result_changed_callback, communication_status_changed_callback,
     )

@@ -9,28 +9,20 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
-
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockDeviceBuilder,
-    MockChangeEventCallback,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockDeviceBuilder
 
 
 @pytest.fixture()
-def assign_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def assign_completed_callback(mock_callback_factory: Callable[[], unittest.mock.Mock],) -> unittest.mock.Mock:
     """
     Return a mock callback.
 
@@ -81,9 +73,7 @@ def configure_completed_callback(
 
 
 @pytest.fixture()
-def abort_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def abort_completed_callback(mock_callback_factory: Callable[[], unittest.mock.Mock],) -> unittest.mock.Mock:
     """
     Return a mock callback to be called when the subarray completes an abort.
 
@@ -169,9 +159,7 @@ def configured_changed_callback(
 
 
 @pytest.fixture()
-def scanning_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def scanning_changed_callback(mock_callback_factory: Callable[[], unittest.mock.Mock],) -> unittest.mock.Mock:
     """
     Return a mock callback to be called when whether the subarray is scanning changes.
 
@@ -186,9 +174,7 @@ def scanning_changed_callback(
 
 
 @pytest.fixture()
-def obs_fault_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def obs_fault_callback(mock_callback_factory: Callable[[], unittest.mock.Mock],) -> unittest.mock.Mock:
     """
     Return a mock callback to be called when an observation fault occurs or stops.
 

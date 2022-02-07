@@ -22,7 +22,6 @@ from ska_low_mccs.component import (
     check_on,
 )
 
-
 __all__ = ["StationBeamComponentManager"]
 
 
@@ -96,11 +95,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_fault_changed_callback = station_fault_changed_callback
 
         super().__init__(
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            None,
+            logger, push_change_event, communication_status_changed_callback, None, None,
         )
 
     def start_communicating(self: StationBeamComponentManager) -> None:
@@ -120,8 +115,7 @@ class StationBeamComponentManager(MccsComponentManager):
             self._station_proxy.stop_communicating()
 
     def _device_communication_status_changed(
-        self: StationBeamComponentManager,
-        communication_status: CommunicationStatus,
+        self: StationBeamComponentManager, communication_status: CommunicationStatus,
     ) -> None:
         if communication_status == CommunicationStatus.ESTABLISHED:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
@@ -329,9 +323,7 @@ class StationBeamComponentManager(MccsComponentManager):
         return self._pointing_delay_rate
 
     @pointing_delay_rate.setter
-    def pointing_delay_rate(
-        self: StationBeamComponentManager, value: list[float]
-    ) -> None:
+    def pointing_delay_rate(self: StationBeamComponentManager, value: list[float]) -> None:
         """
         Set the pointing delay rate.
 
@@ -389,13 +381,9 @@ class StationBeamComponentManager(MccsComponentManager):
         :return: a result code
         """
         zipped_delays_and_rates = [
-            item
-            for pair in zip(self.pointing_delay, self.pointing_delay_rate + [0])
-            for item in pair
+            item for pair in zip(self.pointing_delay, self.pointing_delay_rate + [0]) for item in pair
         ]
-        station_pointing_args = [
-            cast(float, self.logical_beam_id)
-        ] + zipped_delays_and_rates
+        station_pointing_args = [cast(float, self.logical_beam_id)] + zipped_delays_and_rates
 
         assert self._station_proxy is not None
         return self._station_proxy.apply_pointing(station_pointing_args)

@@ -10,21 +10,17 @@
 from __future__ import annotations
 
 import json
-from typing import Tuple, List, Optional
+from typing import List, Optional, Tuple
 
 import tango
-from tango.server import attribute, command
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
+from tango.server import attribute, command
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.pasd_bus import (
-    PasdBusComponentManager,
-    PasdBusHealthModel,
-)
+from ska_low_mccs.pasd_bus import PasdBusComponentManager, PasdBusHealthModel
 
 __all__ = ["MccsPasdBus", "main"]
 
@@ -80,9 +76,7 @@ class MccsPasdBus(SKABaseDevice):
         self._health_model = PasdBusHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsPasdBus,
-    ) -> PasdBusComponentManager:
+    def create_component_manager(self: MccsPasdBus,) -> PasdBusComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -116,10 +110,7 @@ class MccsPasdBus(SKABaseDevice):
             ("TurnAntennaOff", self.TurnAntennaOffCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(
-                    self.component_manager, self.op_state_model, self.logger
-                ),
+                command_name, command_object(self.component_manager, self.op_state_model, self.logger),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -156,8 +147,7 @@ class MccsPasdBus(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsPasdBus,
-        communication_status: CommunicationStatus,
+        self: MccsPasdBus, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -179,9 +169,7 @@ class MccsPasdBus(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
     def _component_power_mode_changed(self: MccsPasdBus, power_mode: PowerMode) -> None:
         """
@@ -202,10 +190,7 @@ class MccsPasdBus(SKABaseDevice):
 
         self.op_state_model.perform_action(action_map[power_mode])
 
-    def _component_fault(
-        self: MccsPasdBus,
-        is_fault: bool,
-    ) -> None:
+    def _component_fault(self: MccsPasdBus, is_fault: bool,) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -335,9 +320,7 @@ class MccsPasdBus(SKABaseDevice):
         self.component_manager.set_fndh_service_led_on(led_on)
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_FNDH_PORTS,
-        label="fndhPortsPowerSensed",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_FNDH_PORTS, label="fndhPortsPowerSensed",
     )
     def fndhPortsPowerSensed(self: MccsPasdBus) -> list[bool]:
         """
@@ -348,9 +331,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.fndh_ports_power_sensed
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_FNDH_PORTS,
-        label="fndhPortsConnected",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_FNDH_PORTS, label="fndhPortsConnected",
     )
     def fndhPortsConnected(self: MccsPasdBus) -> list[bool]:
         """
@@ -362,9 +343,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.fndh_ports_connected
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_FNDH_PORTS,
-        label="fndhPortsForced",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_FNDH_PORTS, label="fndhPortsForced",
     )
     def fndhPortsForced(self: MccsPasdBus) -> list[bool]:
         """
@@ -373,14 +352,10 @@ class MccsPasdBus(SKABaseDevice):
         :return: whether each FNDH port has had its power locally
             forced.
         """
-        return [
-            forcing is not None for forcing in self.component_manager.fndh_port_forcings
-        ]
+        return [forcing is not None for forcing in self.component_manager.fndh_port_forcings]
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_FNDH_PORTS,
-        label="fndhPortsDesiredPowerOnline",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_FNDH_PORTS, label="fndhPortsDesiredPowerOnline",
     )
     def fndhPortsDesiredPowerOnline(self: MccsPasdBus) -> list[bool]:
         """
@@ -392,9 +367,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.fndh_ports_desired_power_online
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_FNDH_PORTS,
-        label="fndhPortsDesiredPowerOffline",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_FNDH_PORTS, label="fndhPortsDesiredPowerOffline",
     )
     def fndhPortsDesiredPowerOffline(self: MccsPasdBus) -> list[bool]:
         """
@@ -406,9 +379,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.fndh_ports_desired_power_offline
 
     @attribute(
-        dtype=("float",),
-        max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION,
-        label="smartboxInputVoltages",
+        dtype=("float",), max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION, label="smartboxInputVoltages",
     )
     def smartboxInputVoltages(self: MccsPasdBus) -> list[float]:
         """
@@ -432,9 +403,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.smartbox_power_supply_output_voltages
 
     @attribute(
-        dtype=("DevString",),
-        max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION,
-        label="smartboxStatuses",
+        dtype=("DevString",), max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION, label="smartboxStatuses",
     )
     def smartboxStatuses(self: MccsPasdBus) -> list[str]:
         """
@@ -445,9 +414,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.smartbox_statuses
 
     @attribute(
-        dtype=("float",),
-        max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION,
-        label="smartboxPowerSupplyTemperatures",
+        dtype=("float",), max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION, label="smartboxPowerSupplyTemperatures",
     )
     def smartboxPowerSupplyTemperatures(self: MccsPasdBus) -> list[float]:
         """
@@ -458,9 +425,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.smartbox_power_supply_temperatures
 
     @attribute(
-        dtype=("float",),
-        max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION,
-        label="smartboxOutsideTemperatures",
+        dtype=("float",), max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION, label="smartboxOutsideTemperatures",
     )
     def smartboxOutsideTemperatures(self: MccsPasdBus) -> list[float]:
         """
@@ -471,9 +436,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.smartbox_outside_temperatures
 
     @attribute(
-        dtype=("float",),
-        max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION,
-        label="smartboxPcbTemperatures",
+        dtype=("float",), max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION, label="smartboxPcbTemperatures",
     )
     def smartboxPcbTemperatures(self: MccsPasdBus) -> list[float]:
         """
@@ -484,9 +447,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.smartbox_pcb_temperatures
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION,
-        label="smartboxServiceLedsOn",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION, label="smartboxServiceLedsOn",
     )
     def smartboxServiceLedsOn(self: MccsPasdBus) -> list[bool]:
         """
@@ -498,9 +459,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.smartbox_service_leds_on
 
     @attribute(
-        dtype=("int",),
-        max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION,
-        label="smartboxFndhPorts",
+        dtype=("int",), max_dim_x=NUMBER_OF_SMARTBOXES_PER_STATION, label="smartboxFndhPorts",
     )
     def smartboxFndhPorts(self: MccsPasdBus) -> list[int]:
         """
@@ -539,9 +498,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.smartbox_desired_power_offline
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION,
-        label="antennasOnline",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION, label="antennasOnline",
     )
     def antennasOnline(self: MccsPasdBus) -> list[bool]:
         """
@@ -553,9 +510,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.antennas_online
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION,
-        label="antennasForced",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION, label="antennasForced",
     )
     def antennasForced(self: MccsPasdBus) -> list[bool]:
         """
@@ -564,14 +519,10 @@ class MccsPasdBus(SKABaseDevice):
         :return: a list of booleans indicating whether each antenna is
             forces
         """
-        return [
-            forcing is not None for forcing in self.component_manager.antenna_forcings
-        ]
+        return [forcing is not None for forcing in self.component_manager.antenna_forcings]
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION,
-        label="antennasTripped",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION, label="antennasTripped",
     )
     def antennasTripped(self: MccsPasdBus) -> list[bool]:
         """
@@ -583,9 +534,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.antennas_tripped
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION,
-        label="antennaPowerStates",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION, label="antennaPowerStates",
     )
     def antennasPowerSensed(self: MccsPasdBus) -> list[bool]:
         """
@@ -597,9 +546,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.antennas_power_sensed
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION,
-        label="antennasDesiredPowerOnline",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION, label="antennasDesiredPowerOnline",
     )
     def antennasDesiredPowerOnline(self: MccsPasdBus) -> list[bool]:
         """
@@ -611,9 +558,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.antennas_desired_on_online
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION,
-        label="antennasDesiredPowerOffline",
+        dtype=("DevBoolean",), max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION, label="antennasDesiredPowerOffline",
     )
     def antennasDesiredPowerOffline(self: MccsPasdBus) -> list[bool]:
         """
@@ -625,9 +570,7 @@ class MccsPasdBus(SKABaseDevice):
         return self.component_manager.antennas_desired_on_offline
 
     @attribute(
-        dtype=("float",),
-        max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION,
-        label="antennaCurrents",
+        dtype=("float",), max_dim_x=NUMBER_OF_ANTENNAS_PER_STATION, label="antennaCurrents",
     )
     def antennaCurrents(self: MccsPasdBus) -> list[float]:
         """
@@ -876,9 +819,7 @@ class MccsPasdBus(SKABaseDevice):
             return create_return(success, f"smartbox {argin} service LED on")
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOn(
-        self: MccsPasdBus, argin: int
-    ) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox's blue service LED.
 
@@ -914,9 +855,7 @@ class MccsPasdBus(SKABaseDevice):
             return create_return(success, f"smartbox {argin} service LED off")
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOff(
-        self: MccsPasdBus, argin: int
-    ) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox's blue service LED.
 

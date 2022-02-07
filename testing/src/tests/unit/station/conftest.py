@@ -9,24 +9,18 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
 import unittest.mock
+from typing import Callable, Iterable
 
 import pytest
 import pytest_mock
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
-
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockDeviceBuilder,
-    MockChangeEventCallback,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockDeviceBuilder
 
 
 @pytest.fixture()
@@ -173,9 +167,7 @@ def initial_mocks(
         test harness.
     """
     initial_mocks = {apiu_fqdn: mock_apiu}
-    initial_mocks.update(
-        {antenna_fqdn: mock_antenna_factory() for antenna_fqdn in antenna_fqdns}
-    )
+    initial_mocks.update({antenna_fqdn: mock_antenna_factory() for antenna_fqdn in antenna_fqdns})
     initial_mocks.update({tile_fqdn: mock_tile_factory() for tile_fqdn in tile_fqdns})
     return initial_mocks
 
@@ -343,9 +335,7 @@ def mock_component_manager(mocker: pytest_mock.MockerFixture) -> unittest.mock.M
 
 
 @pytest.fixture()
-def patched_station_class(
-    mock_component_manager: unittest.mock.Mock,
-) -> type[MccsStation]:
+def patched_station_class(mock_component_manager: unittest.mock.Mock,) -> type[MccsStation]:
     """
     Return a station device class that has been patched for testing.
 
@@ -358,9 +348,7 @@ def patched_station_class(
     class PatchedStation(MccsStation):
         """A station class that has had its component manager mocked out for testing."""
 
-        def create_component_manager(
-            self: PatchedStation,
-        ) -> unittest.mock.Mock:
+        def create_component_manager(self: PatchedStation,) -> unittest.mock.Mock:
             """
             Return a mock component manager instead of the usual one.
 
@@ -385,9 +373,7 @@ def apiu_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def tile_proxies(
-    tile_fqdns: Iterable[str], logger: logging.Logger
-) -> list[MccsDeviceProxy]:
+def tile_proxies(tile_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to tile devices.
 
@@ -400,9 +386,7 @@ def tile_proxies(
 
 
 @pytest.fixture()
-def antenna_proxies(
-    antenna_fqdns: Iterable[str], logger: logging.Logger
-) -> list[MccsDeviceProxy]:
+def antenna_proxies(antenna_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to antenna devices.
 

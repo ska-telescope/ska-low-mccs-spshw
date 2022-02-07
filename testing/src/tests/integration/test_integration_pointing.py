@@ -9,20 +9,17 @@
 from __future__ import annotations
 
 import time
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
-
 
 # some constants to refer to in the tests
 BEAM_1_ID = 1
@@ -155,9 +152,7 @@ def initial_mocks(
 class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
-    def test_stationbeam_apply_pointing(
-        self: TestMccsIntegration, tango_harness: TangoHarness
-    ) -> None:
+    def test_stationbeam_apply_pointing(self: TestMccsIntegration, tango_harness: TangoHarness) -> None:
         """
         Test that a MccsStationBeam can apply delays to associated MccsTiles.
 

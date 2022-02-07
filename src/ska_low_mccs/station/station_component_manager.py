@@ -12,8 +12,8 @@ import functools
 import logging
 import threading
 from typing import Callable, Optional, Sequence
-import tango
 
+import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode
 
@@ -25,7 +25,6 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.utils import threadsafe
-
 
 __all__ = ["StationComponentManager"]
 
@@ -43,9 +42,7 @@ class _TileProxy(DeviceComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[
-            Callable[[Optional[HealthState]], None]
-        ] = None,
+        health_changed_callback: Optional[Callable[[Optional[HealthState]], None]] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -108,10 +105,7 @@ class _TileProxy(DeviceComponentManager):
             return result_code, message
 
     def _device_state_changed(
-        self: _TileProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
+        self: _TileProxy, event_name: str, event_value: tango.DevState, event_quality: tango.AttrQuality,
     ) -> None:
         if self._connecting and event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
@@ -211,9 +205,7 @@ class StationComponentManager(MccsComponentManager):
                 antenna_fqdn,
                 logger,
                 push_change_event,
-                functools.partial(
-                    self._device_communication_status_changed, antenna_fqdn
-                ),
+                functools.partial(self._device_communication_status_changed, antenna_fqdn),
                 functools.partial(self._antenna_power_mode_changed, antenna_fqdn),
                 None,
                 functools.partial(antenna_health_changed_callback, antenna_fqdn),
@@ -264,9 +256,7 @@ class StationComponentManager(MccsComponentManager):
         self._apiu_proxy.stop_communicating()
 
     def _device_communication_status_changed(
-        self: StationComponentManager,
-        fqdn: str,
-        communication_status: CommunicationStatus,
+        self: StationComponentManager, fqdn: str, communication_status: CommunicationStatus,
     ) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
@@ -280,17 +270,13 @@ class StationComponentManager(MccsComponentManager):
 
             if CommunicationStatus.DISABLED in self._communication_statuses.values():
                 self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-            elif (
-                CommunicationStatus.NOT_ESTABLISHED
-                in self._communication_statuses.values()
-            ):
+            elif CommunicationStatus.NOT_ESTABLISHED in self._communication_statuses.values():
                 self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             else:
                 self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
     def update_communication_status(
-        self: StationComponentManager,
-        communication_status: CommunicationStatus,
+        self: StationComponentManager, communication_status: CommunicationStatus,
     ) -> None:
         """
         Update the status of communication with the component.
@@ -307,30 +293,19 @@ class StationComponentManager(MccsComponentManager):
             self._is_configured_changed_callback(self._is_configured)
 
     @threadsafe
-    def _antenna_power_mode_changed(
-        self: StationComponentManager,
-        fqdn: str,
-        power_mode: PowerMode,
-    ) -> None:
+    def _antenna_power_mode_changed(self: StationComponentManager, fqdn: str, power_mode: PowerMode,) -> None:
         with self._power_mode_lock:
             self._antenna_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     @threadsafe
-    def _tile_power_mode_changed(
-        self: StationComponentManager,
-        fqdn: str,
-        power_mode: PowerMode,
-    ) -> None:
+    def _tile_power_mode_changed(self: StationComponentManager, fqdn: str, power_mode: PowerMode,) -> None:
         with self._power_mode_lock:
             self._tile_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     @threadsafe
-    def _apiu_power_mode_changed(
-        self: StationComponentManager,
-        power_mode: PowerMode,
-    ) -> None:
+    def _apiu_power_mode_changed(self: StationComponentManager, power_mode: PowerMode,) -> None:
         with self._power_mode_lock:
             self._apiu_power_mode = power_mode
         self._evaluate_power_mode()
@@ -338,9 +313,7 @@ class StationComponentManager(MccsComponentManager):
             self._on_called = False
             _ = self._turn_on_tiles_and_antennas()
 
-    def _evaluate_power_mode(
-        self: StationComponentManager,
-    ) -> None:
+    def _evaluate_power_mode(self: StationComponentManager,) -> None:
         with self._power_mode_lock:
             power_modes = (
                 [self._apiu_power_mode]
@@ -364,9 +337,7 @@ class StationComponentManager(MccsComponentManager):
             self.update_component_power_mode(evaluated_power_mode)
 
     @check_communicating
-    def off(
-        self: StationComponentManager,
-    ) -> ResultCode:
+    def off(self: StationComponentManager,) -> ResultCode:
         """
         Turn off this station.
 
@@ -384,9 +355,7 @@ class StationComponentManager(MccsComponentManager):
             return ResultCode.OK
 
     @check_communicating
-    def on(
-        self: StationComponentManager,
-    ) -> ResultCode:
+    def on(self: StationComponentManager,) -> ResultCode:
         """
         Turn on this station.
 
@@ -403,29 +372,21 @@ class StationComponentManager(MccsComponentManager):
         return ResultCode.OK
 
     @check_communicating
-    def _turn_on_tiles_and_antennas(
-        self: StationComponentManager,
-    ) -> ResultCode:
+    def _turn_on_tiles_and_antennas(self: StationComponentManager,) -> ResultCode:
         """
         Turn on tiles and antennas if not already on.
 
         :return: a result code
         """
         with self._power_mode_lock:
-            if not all(
-                power_mode == PowerMode.ON
-                for power_mode in self._tile_power_modes.values()
-            ):
+            if not all(power_mode == PowerMode.ON for power_mode in self._tile_power_modes.values()):
                 results = []
                 for proxy in self._tile_proxies:
                     result_code = proxy.on()
                     results.append(result_code)
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
-            if not all(
-                power_mode == PowerMode.ON
-                for power_mode in self._antenna_power_modes.values()
-            ):
+            if not all(power_mode == PowerMode.ON for power_mode in self._antenna_power_modes.values()):
                 results = [proxy.on() for proxy in self._antenna_proxies]
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
@@ -433,10 +394,7 @@ class StationComponentManager(MccsComponentManager):
 
     @check_communicating
     @check_on
-    def apply_pointing(
-        self: StationComponentManager,
-        delays: list[float],
-    ) -> ResultCode:
+    def apply_pointing(self: StationComponentManager, delays: list[float],) -> ResultCode:
         """
         Apply the pointing configuration by setting the delays on each tile.
 
@@ -445,9 +403,7 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        results = [
-            tile_proxy.set_pointing_delay(delays) for tile_proxy in self._tile_proxies
-        ]
+        results = [tile_proxy.set_pointing_delay(delays) for tile_proxy in self._tile_proxies]
         if ResultCode.FAILED in results:
             return ResultCode.FAILED
         elif ResultCode.QUEUED in results:
@@ -465,10 +421,7 @@ class StationComponentManager(MccsComponentManager):
         return self._is_configured
 
     @check_communicating
-    def configure(
-        self: StationComponentManager,
-        station_id: int,
-    ) -> ResultCode:
+    def configure(self: StationComponentManager, station_id: int,) -> ResultCode:
         """
         Configure the station.
 
@@ -488,10 +441,7 @@ class StationComponentManager(MccsComponentManager):
         self._update_is_configured(True)
         return ResultCode.OK
 
-    def _update_is_configured(
-        self: StationComponentManager,
-        is_configured: bool,
-    ) -> None:
+    def _update_is_configured(self: StationComponentManager, is_configured: bool,) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured
             self._is_configured_changed_callback(is_configured)

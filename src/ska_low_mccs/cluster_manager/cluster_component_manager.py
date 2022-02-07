@@ -15,12 +15,11 @@ from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
 from ska_low_mccs.component import (
-    check_communicating,
     CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
+    check_communicating,
 )
-
 
 __all__ = ["ClusterComponentManager"]
 
@@ -30,14 +29,10 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         self: ClusterSimulatorComponentManager,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
-        communication_status_changed_callback: Optional[
-            Callable[[CommunicationStatus], None]
-        ],
+        communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
         power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         fault_callback: Optional[Callable[[bool], None]],
-        shadow_master_pool_node_health_changed_callback: Optional[
-            Callable[[list[HealthState]], None]
-        ],
+        shadow_master_pool_node_health_changed_callback: Optional[Callable[[list[HealthState]], None]],
     ) -> None:
         self._fault_callback = fault_callback
         self._shadow_master_pool_node_health_changed_callback = (
@@ -79,23 +74,15 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
 
     def start_communicating(self: ClusterSimulatorComponentManager) -> None:
         super().start_communicating()
-        cast(
-            ClusterSimulator, self._component
-        ).set_shadow_master_pool_node_health_changed_callback(
+        cast(ClusterSimulator, self._component).set_shadow_master_pool_node_health_changed_callback(
             self.component_shadow_master_pool_node_health_changed
         )
 
     def stop_communicating(self: ClusterSimulatorComponentManager) -> None:
         super().stop_communicating()
-        cast(
-            ClusterSimulator, self._component
-        ).set_shadow_master_pool_node_health_changed_callback(None)
+        cast(ClusterSimulator, self._component).set_shadow_master_pool_node_health_changed_callback(None)
 
-    def __getattr__(
-        self: ClusterSimulatorComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: ClusterSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -152,10 +139,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: ClusterSimulatorComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: ClusterSimulatorComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -175,9 +159,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         initial_simulation_mode: SimulationMode,
-        communication_status_changed_callback: Optional[
-            Callable[[CommunicationStatus], None]
-        ],
+        communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         component_shadow_master_pool_node_health_changed_callback: Optional[

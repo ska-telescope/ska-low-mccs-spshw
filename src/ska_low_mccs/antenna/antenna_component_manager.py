@@ -12,7 +12,6 @@ import logging
 from typing import Callable, Optional
 
 import tango
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 
@@ -24,7 +23,6 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
-
 
 __all__ = ["AntennaComponentManager"]
 
@@ -63,9 +61,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :raises AssertionError: if parameters are out of bounds
         """
-        assert (
-            logical_antenna_id > 0
-        ), "An APIU's logical antenna id must be positive integer."
+        assert logical_antenna_id > 0, "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
 
         self._antenna_change_registered = False
@@ -167,14 +163,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         return self._proxy.get_antenna_temperature(self._logical_antenna_id)
 
     def _device_state_changed(
-        self: _ApiuProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
+        self: _ApiuProxy, event_name: str, event_value: tango.DevState, event_quality: tango.AttrQuality,
     ) -> None:
-        assert (
-            event_name.lower() == "state"
-        ), "state changed callback called but event_name is {event_name}."
+        assert event_name.lower() == "state", "state changed callback called but event_name is {event_name}."
 
         super()._device_state_changed(event_name, event_value, event_quality)
         if event_value == tango.DevState.ON and not self._antenna_change_registered:
@@ -185,17 +176,12 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
     def _register_are_antennas_on_callback(self: _ApiuProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(
-            "areAntennasOn",
-            self._antenna_power_mode_changed,
-            stateless=True,
+            "areAntennasOn", self._antenna_power_mode_changed, stateless=True,
         )
         self._antenna_change_registered = True
 
     def _antenna_power_mode_changed(
-        self: _ApiuProxy,
-        event_name: str,
-        event_value: list[bool],
-        event_quality: tango.AttrQuality,
+        self: _ApiuProxy, event_name: str, event_value: list[bool], event_quality: tango.AttrQuality,
     ) -> None:
         """
         Handle change in antenna power mode.
@@ -209,8 +195,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         :param event_quality: the quality of the change event
         """
         assert event_name.lower() == "areAntennasOn".lower(), (
-            "APIU 'areAntennasOn' attribute changed callback called but "
-            f"event_name is {event_name}."
+            "APIU 'areAntennasOn' attribute changed callback called but " f"event_name is {event_name}."
         )
         self.update_supplied_power_mode(
             PowerMode.ON if event_value[self._logical_antenna_id - 1] else PowerMode.OFF
@@ -258,9 +243,7 @@ class _TileProxy(DeviceComponentManager):
             component faults (or stops faulting)
         :raises AssertionError: if parameters are out of bounds
         """
-        assert (
-            logical_antenna_id > 0
-        ), "An APIU's logical antenna id must be positive integer."
+        assert logical_antenna_id > 0, "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
 
         super().__init__(
@@ -284,9 +267,7 @@ class _TileProxy(DeviceComponentManager):
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
-        raise NotImplementedError(
-            "Antenna power mode is not controlled via Tile device."
-        )
+        raise NotImplementedError("Antenna power mode is not controlled via Tile device.")
 
     def standby(self: _TileProxy) -> None:
         """
@@ -301,9 +282,7 @@ class _TileProxy(DeviceComponentManager):
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
-        raise NotImplementedError(
-            "Antenna power mode is not controlled via Tile device."
-        )
+        raise NotImplementedError("Antenna power mode is not controlled via Tile device.")
 
     def on(self: _TileProxy) -> None:
         """
@@ -317,9 +296,7 @@ class _TileProxy(DeviceComponentManager):
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
-        raise NotImplementedError(
-            "Antenna power mode is not controlled via Tile device."
-        )
+        raise NotImplementedError("Antenna power mode is not controlled via Tile device.")
 
     def reset(self: _TileProxy) -> None:
         """
@@ -379,12 +356,8 @@ class AntennaComponentManager(MccsComponentManager):
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._target_power_mode: Optional[PowerMode] = None
 
-        self._apiu_communication_status: CommunicationStatus = (
-            CommunicationStatus.DISABLED
-        )
-        self._tile_communication_status: CommunicationStatus = (
-            CommunicationStatus.DISABLED
-        )
+        self._apiu_communication_status: CommunicationStatus = (CommunicationStatus.DISABLED)
+        self._tile_communication_status: CommunicationStatus = (CommunicationStatus.DISABLED)
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
@@ -470,10 +443,7 @@ class AntennaComponentManager(MccsComponentManager):
                 return
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
-    def _apiu_power_mode_changed(
-        self: AntennaComponentManager,
-        apiu_power_mode: PowerMode,
-    ) -> None:
+    def _apiu_power_mode_changed(self: AntennaComponentManager, apiu_power_mode: PowerMode,) -> None:
         with self._power_mode_lock:
             self._apiu_power_mode = apiu_power_mode
 
@@ -486,41 +456,28 @@ class AntennaComponentManager(MccsComponentManager):
                 pass
         self._review_power()
 
-    def _antenna_power_mode_changed(
-        self: AntennaComponentManager,
-        antenna_power_mode: PowerMode,
-    ) -> None:
+    def _antenna_power_mode_changed(self: AntennaComponentManager, antenna_power_mode: PowerMode,) -> None:
         with self._power_mode_lock:
             self.update_component_power_mode(antenna_power_mode)
         self._review_power()
 
-    def _apiu_component_fault_changed(
-        self: AntennaComponentManager,
-        faulty: bool,
-    ) -> None:
+    def _apiu_component_fault_changed(self: AntennaComponentManager, faulty: bool,) -> None:
         """
         Handle a change in antenna fault status as reported via the APIU.
 
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_apiu = faulty
-        self.update_component_fault(
-            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
-        )
+        self.update_component_fault(self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile)
 
-    def _tile_component_fault_changed(
-        self: AntennaComponentManager,
-        faulty: bool,
-    ) -> None:
+    def _tile_component_fault_changed(self: AntennaComponentManager, faulty: bool,) -> None:
         """
         Handle a change in antenna fault status as reported via the tile.
 
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_tile = faulty
-        self.update_component_fault(
-            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
-        )
+        self.update_component_fault(self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile)
 
     # @check_communicating
     def off(self: AntennaComponentManager) -> ResultCode | None:
@@ -568,17 +525,11 @@ class AntennaComponentManager(MccsComponentManager):
 
             if self._apiu_power_mode != PowerMode.ON:
                 return ResultCode.QUEUED
-            if (
-                self.power_mode == PowerMode.OFF
-                and self._target_power_mode == PowerMode.ON
-            ):
+            if self.power_mode == PowerMode.OFF and self._target_power_mode == PowerMode.ON:
                 result_code = self._apiu_proxy.power_on()
                 self._target_power_mode = None
                 return result_code
-            if (
-                self.power_mode == PowerMode.ON
-                and self._target_power_mode == PowerMode.OFF
-            ):
+            if self.power_mode == PowerMode.ON and self._target_power_mode == PowerMode.OFF:
                 result_code = self._apiu_proxy.power_off()
                 self._target_power_mode = None
                 return result_code

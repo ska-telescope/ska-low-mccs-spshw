@@ -11,10 +11,10 @@ from __future__ import annotations
 # import json
 from time import sleep
 
-# import pytest
-from pytest_bdd import scenario, given, parsers, then, when
 import tango
 
+# import pytest
+from pytest_bdd import given, parsers, scenario, then, when
 from ska_tango_base.control_model import AdminMode  # , HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -27,9 +27,7 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback
 # from ska_low_mccs.testing.tango_harness import TangoHarness
 
 
-@scenario(
-    "features/controller_subarray_interactions.feature", "MCCS Turn on low telescope"
-)
+@scenario("features/controller_subarray_interactions.feature", "MCCS Turn on low telescope")
 def test_turn_on_low_telescope(
     controller: MccsDeviceProxy,
     subarrays: dict[int, MccsDeviceProxy],
@@ -98,12 +96,8 @@ def we_have_mvplow_running_an_instance_of(
     if subsystem_name == "tmc":
         return
 
-    controller.add_change_event_callback(
-        "state", controller_device_state_changed_callback
-    )
-    controller_device_state_changed_callback.assert_next_change_event(
-        tango.DevState.DISABLE
-    )
+    controller.add_change_event_callback("state", controller_device_state_changed_callback)
+    controller_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
     # TODO: Looking for a very stable way to bring the MCCS devices into
     # ONLINE state. Doing that all at once has been seen to be unstable.
@@ -152,16 +146,12 @@ def we_have_mvplow_running_an_instance_of(
             else:
                 break
 
-    controller_device_state_changed_callback.assert_last_change_event(
-        tango.DevState.OFF
-    )
+    controller_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
 
 @given(parsers.parse("{subsystem_name} is ready to {direction} on command"))
 def subsystem_is_ready_to_receive_on_command(
-    subsystem_name: str,
-    direction: str,
-    controller: MccsDeviceProxy,
+    subsystem_name: str, direction: str, controller: MccsDeviceProxy,
 ) -> None:
     """
     Assert that a subsystem is ready to receive an on command.
@@ -273,10 +263,7 @@ def check_mccs_controller_state(
 
 
 @then(parsers.parse("all mccs station states are {state}"))
-def all_mccs_station_states_are_onoff(
-    state_name: str,
-    stations: dict[int, MccsDeviceProxy],
-) -> None:
+def all_mccs_station_states_are_onoff(state_name: str, stations: dict[int, MccsDeviceProxy],) -> None:
     """
     Assert that online or maintenance mccs station devices are on/off.
 

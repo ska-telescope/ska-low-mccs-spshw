@@ -14,7 +14,6 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["StationBeamHealthModel"]
 
 
@@ -22,8 +21,7 @@ class StationBeamHealthModel(HealthModel):
     """A health model for station beams."""
 
     def __init__(
-        self: StationBeamHealthModel,
-        health_changed_callback: Callable[[HealthState], None],
+        self: StationBeamHealthModel, health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -38,9 +36,7 @@ class StationBeamHealthModel(HealthModel):
 
         super().__init__(health_changed_callback)
 
-    def evaluate_health(
-        self: StationBeamHealthModel,
-    ) -> HealthState:
+    def evaluate_health(self: StationBeamHealthModel,) -> HealthState:
         """
         Compute overall health of the station beam.
 
@@ -51,9 +47,7 @@ class StationBeamHealthModel(HealthModel):
         """
         super_health = super().evaluate_health()
 
-        station_fault_health = (
-            HealthState.FAILED if self._station_fault else HealthState.OK
-        )
+        station_fault_health = HealthState.FAILED if self._station_fault else HealthState.OK
 
         for health in [HealthState.FAILED, HealthState.UNKNOWN, HealthState.DEGRADED]:
             if super_health == health:
@@ -67,9 +61,7 @@ class StationBeamHealthModel(HealthModel):
 
         return HealthState.OK
 
-    def is_beam_locked_changed(
-        self: StationBeamHealthModel, is_beam_locked: bool
-    ) -> None:
+    def is_beam_locked_changed(self: StationBeamHealthModel, is_beam_locked: bool) -> None:
         """
         Handle a change in whether the station beam is locked.
 
@@ -81,9 +73,7 @@ class StationBeamHealthModel(HealthModel):
         self._beam_health = HealthState.OK if is_beam_locked else HealthState.DEGRADED
         self.update_health()
 
-    def station_health_changed(
-        self: StationBeamHealthModel, station_health: Optional[HealthState]
-    ) -> None:
+    def station_health_changed(self: StationBeamHealthModel, station_health: Optional[HealthState]) -> None:
         """
         Handle a change in the health of the station device that this beam controls.
 
@@ -98,10 +88,7 @@ class StationBeamHealthModel(HealthModel):
         self._station_health = station_health
         self.update_health()
 
-    def station_fault_changed(
-        self: StationBeamHealthModel,
-        station_fault: bool,
-    ) -> None:
+    def station_fault_changed(self: StationBeamHealthModel, station_fault: bool,) -> None:
         """
         Handle a change in the fault state of the station beam's station device.
 

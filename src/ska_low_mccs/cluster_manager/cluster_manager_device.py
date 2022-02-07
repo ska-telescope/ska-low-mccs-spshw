@@ -18,18 +18,16 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from tango import DevState
-from tango.server import attribute, command
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
+from tango import DevState
+from tango.server import attribute, command
 
-from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
-from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus, JobConfig
-from ska_low_mccs.component import CommunicationStatus
 import ska_low_mccs.release as release
-
+from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
+from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsClusterManagerDevice", "main"]
 
@@ -55,15 +53,11 @@ class MccsClusterManagerDevice(SKABaseDevice):
     def _init_state_model(self: MccsClusterManagerDevice) -> None:
         """Initialise the state model."""
         super()._init_state_model()
-        self._health_state: Optional[
-            HealthState
-        ] = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_state: Optional[HealthState] = None  # SKABaseDevice.InitCommand.do() does this too late.
         self._health_model = ClusterHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsClusterManagerDevice,
-    ) -> ClusterComponentManager:
+    def create_component_manager(self: MccsClusterManagerDevice,) -> ClusterComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -97,8 +91,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             ("PingMasterPool", self.PingMasterPoolCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(self.component_manager, self.logger),
+                command_name, command_object(self.component_manager, self.logger),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -133,8 +126,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # Callback hooks
     # --------------
     def _component_communication_status_changed(
-        self: MccsClusterManagerDevice,
-        communication_status: CommunicationStatus,
+        self: MccsClusterManagerDevice, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -156,14 +148,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _component_power_mode_changed(
-        self: MccsClusterManagerDevice,
-        power_mode: PowerMode,
-    ) -> None:
+    def _component_power_mode_changed(self: MccsClusterManagerDevice, power_mode: PowerMode,) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -182,10 +169,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         self.op_state_model.perform_action(action_map[power_mode])
 
-    def _component_fault(
-        self: MccsClusterManagerDevice,
-        is_fault: bool,
-    ) -> None:
+    def _component_fault(self: MccsClusterManagerDevice, is_fault: bool,) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -224,9 +208,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(
-        dtype=SimulationMode,
-        memorized=True,
-        hw_memorized=True,
+        dtype=SimulationMode, memorized=True, hw_memorized=True,
     )
     def simulationMode(self: MccsClusterManagerDevice) -> SimulationMode:
         """
@@ -533,9 +515,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartJob(
-        self: MccsClusterManagerDevice, argin: str
-    ) -> DevVarLongStringArrayType:
+    def StartJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
         """
         Command to start a particular job.
 
@@ -577,9 +557,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StopJob(
-        self: MccsClusterManagerDevice, argin: str
-    ) -> DevVarLongStringArrayType:
+    def StopJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
         """
         Command to stop a particular job.
 

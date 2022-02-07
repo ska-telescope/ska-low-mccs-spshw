@@ -9,22 +9,21 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Optional
+from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.apiu import ApiuSimulator
 from ska_low_mccs.component import (
-    check_communicating,
-    check_on,
     CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
+    check_communicating,
+    check_on,
 )
-
 
 __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 
@@ -39,9 +38,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Optional[
-            Callable[[list[bool]], None]
-        ] = None,
+        component_antenna_power_changed_callback: Optional[Callable[[list[bool]], None]] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -67,9 +64,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
             None,
             component_fault_callback,
         )
-        self._component_antenna_power_changed_callback = (
-            component_antenna_power_changed_callback
-        )
+        self._component_antenna_power_changed_callback = component_antenna_power_changed_callback
 
     def start_communicating(self: ApiuSimulatorComponentManager) -> None:
         """Establish communication with the APIU simulator."""
@@ -83,11 +78,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         super().stop_communicating()
         cast(ApiuSimulator, self._component).set_antenna_power_changed_callback(None)
 
-    def __getattr__(
-        self: ApiuSimulatorComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: ApiuSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -131,10 +122,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: ApiuSimulatorComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: ApiuSimulatorComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -263,9 +251,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the simulation mode of this component manager.
         """
-        return cast(
-            SwitchingApiuComponentManager, self._hardware_component_manager
-        ).simulation_mode
+        return cast(SwitchingApiuComponentManager, self._hardware_component_manager).simulation_mode
 
     @simulation_mode.setter
     def simulation_mode(self: ApiuComponentManager, mode: SimulationMode) -> None:
@@ -274,9 +260,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param mode: the new simulation mode of this component manager
         """
-        cast(
-            SwitchingApiuComponentManager, self._hardware_component_manager
-        ).simulation_mode = mode
+        cast(SwitchingApiuComponentManager, self._hardware_component_manager).simulation_mode = mode
 
     def off(self: ApiuComponentManager) -> ResultCode | None:
         """
@@ -289,16 +273,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        cast(
-            SwitchingApiuComponentManager, self._hardware_component_manager
-        ).turn_off_antennas()
+        cast(SwitchingApiuComponentManager, self._hardware_component_manager).turn_off_antennas()
         return super().off()
 
-    def __getattr__(
-        self: ApiuComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: ApiuComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -343,10 +321,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     @check_communicating
     @check_on
-    def _get_from_hardware(
-        self: ApiuComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_hardware(self: ApiuComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 

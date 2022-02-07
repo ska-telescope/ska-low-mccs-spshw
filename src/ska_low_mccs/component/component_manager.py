@@ -12,12 +12,12 @@ import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
-from typing_extensions import Protocol
 
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode
 from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.base.task_queue_manager import QueueManager
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import PowerMode
+from typing_extensions import Protocol
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
@@ -188,9 +188,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         self: MccsComponentManager,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
-        communication_status_changed_callback: Optional[
-            Callable[[CommunicationStatus], None]
-        ],
+        communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
         component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,
@@ -218,15 +216,11 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         self.__communication_lock = threading.Lock()
         self._communication_status = CommunicationStatus.DISABLED
-        self._communication_status_changed_callback = (
-            communication_status_changed_callback
-        )
+        self._communication_status_changed_callback = communication_status_changed_callback
 
         self._power_mode_lock = threading.RLock()
         self._power_mode: Optional[PowerMode] = None
-        self._component_power_mode_changed_callback = (
-            component_power_mode_changed_callback
-        )
+        self._component_power_mode_changed_callback = component_power_mode_changed_callback
 
         self._faulty: Optional[bool] = None
         self._component_fault_callback = component_fault_callback
@@ -243,10 +237,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         :return: The queue manager.
         """
         return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
+            max_queue_size=1, num_workers=1, logger=self.logger, push_change_event=self._push_change_event,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:
@@ -270,8 +261,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
     @threadsafe
     def update_communication_status(
-        self: MccsComponentManager,
-        communication_status: CommunicationStatus,
+        self: MccsComponentManager, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in communication status.
@@ -313,9 +303,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         return self._communication_status
 
     @threadsafe
-    def update_component_power_mode(
-        self: MccsComponentManager, power_mode: Optional[PowerMode]
-    ) -> None:
+    def update_component_power_mode(self: MccsComponentManager, power_mode: Optional[PowerMode]) -> None:
         """
         Update the power mode, calling callbacks as required.
 
@@ -328,15 +316,10 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         if self._power_mode != power_mode:
             self._power_mode = power_mode
-            if (
-                self._component_power_mode_changed_callback is not None
-                and power_mode is not None
-            ):
+            if self._component_power_mode_changed_callback is not None and power_mode is not None:
                 self._component_power_mode_changed_callback(power_mode)
 
-    def component_power_mode_changed(
-        self: MccsComponentManager, power_mode: PowerMode
-    ) -> None:
+    def component_power_mode_changed(self: MccsComponentManager, power_mode: PowerMode) -> None:
         """
         Handle notification that the component's power mode has changed.
 
@@ -356,9 +339,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         return self._power_mode
 
-    def update_component_fault(
-        self: MccsComponentManager, faulty: Optional[bool]
-    ) -> None:
+    def update_component_fault(self: MccsComponentManager, faulty: Optional[bool]) -> None:
         """
         Update the component fault status, calling callbacks as required.
 

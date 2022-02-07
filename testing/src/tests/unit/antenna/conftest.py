@@ -9,30 +9,21 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import tango
-from tango.server import command
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
+from tango.server import command
 
 from ska_low_mccs import MccsAntenna, MccsDeviceProxy
 from ska_low_mccs.antenna import AntennaComponentManager
-from ska_low_mccs.antenna.antenna_component_manager import (
-    _ApiuProxy,
-    _TileProxy,
-)
+from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
 from ska_low_mccs.component import CommunicationStatus
-
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockDeviceBuilder,
-    MockChangeEventCallback,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockDeviceBuilder
 
 
 @pytest.fixture()
@@ -239,10 +230,7 @@ def initial_antenna_power_mode() -> int:
 
 
 @pytest.fixture()
-def initial_are_antennas_on(
-    apiu_antenna_id: int,
-    initial_antenna_power_mode: PowerMode,
-) -> list[bool]:
+def initial_are_antennas_on(apiu_antenna_id: int, initial_antenna_power_mode: PowerMode,) -> list[bool]:
     """
     Return whether each antenna is initially on in the APIU.
 
@@ -296,10 +284,7 @@ def mock_tile() -> unittest.mock.Mock:
 
 @pytest.fixture()
 def initial_mocks(
-    apiu_fqdn: str,
-    mock_apiu: unittest.mock.Mock,
-    tile_fqdn: str,
-    mock_tile: unittest.mock.Mock,
+    apiu_fqdn: str, mock_apiu: unittest.mock.Mock, tile_fqdn: str, mock_tile: unittest.mock.Mock,
 ) -> dict[str, unittest.mock.Mock]:
     """
     Return a dictionary of pre-registered device proxy mocks.
@@ -336,9 +321,7 @@ def mock_apiu_device_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDevice
 
 
 @pytest.fixture()
-def patched_antenna_device_class(
-    initial_are_antennas_on: list[bool],
-) -> type[MccsAntenna]:
+def patched_antenna_device_class(initial_are_antennas_on: list[bool],) -> type[MccsAntenna]:
     """
     Return an antenna device class, patched with extra methods for testing.
 
@@ -364,9 +347,7 @@ def patched_antenna_device_class(
             are_antennas_on = list(initial_are_antennas_on)
             are_antennas_on[self.LogicalApiuAntennaId - 1] = True
             self.component_manager._apiu_proxy._antenna_power_mode_changed(
-                "areAntennasOn",
-                are_antennas_on,
-                tango.AttrQuality.ATTR_VALID,
+                "areAntennasOn", are_antennas_on, tango.AttrQuality.ATTR_VALID,
             )
 
         @command()

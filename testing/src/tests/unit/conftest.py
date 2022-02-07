@@ -6,13 +6,13 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains pytest-specific test harness for MCCS unit tests."""
-from typing import Callable, Optional
 import unittest
+from typing import Callable, Optional
 
 import pytest
 
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, DevicesToLoadType
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, DeviceToLoadType
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
@@ -30,9 +30,7 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
 
 @pytest.fixture()
-def devices_to_load(
-    device_to_load: Optional[DeviceToLoadType],
-) -> Optional[DevicesToLoadType]:
+def devices_to_load(device_to_load: Optional[DeviceToLoadType],) -> Optional[DevicesToLoadType]:
     """
     Fixture that provides specifications of devices to load.
 
@@ -53,12 +51,7 @@ def devices_to_load(
     device_spec: DevicesToLoadType = {
         "path": device_to_load["path"],
         "package": device_to_load["package"],
-        "devices": [
-            {
-                "name": device_to_load["device"],
-                "proxy": device_to_load["proxy"],
-            }
-        ],
+        "devices": [{"name": device_to_load["device"], "proxy": device_to_load["proxy"],}],
     }
     if "patch" in device_to_load:
         assert device_spec["devices"] is not None  # for the type checker
@@ -87,8 +80,7 @@ def mock_callback_factory(
         called.
     """
     return lambda: MockCallable(
-        called_timeout=mock_callback_called_timeout,
-        not_called_timeout=mock_callback_not_called_timeout,
+        called_timeout=mock_callback_called_timeout, not_called_timeout=mock_callback_not_called_timeout,
     )
 
 
@@ -182,9 +174,7 @@ def component_power_mode_changed_callback(
 
 
 @pytest.fixture()
-def component_fault_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def component_fault_callback(mock_callback_factory: Callable[[], unittest.mock.Mock],) -> unittest.mock.Mock:
     """
     Return a mock callback for component fault.
 

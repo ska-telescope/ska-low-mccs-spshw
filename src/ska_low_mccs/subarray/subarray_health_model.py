@@ -14,17 +14,13 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["SubarrayHealthModel"]
 
 
 class SubarrayHealthModel(HealthModel):
     """A health model for subarrays."""
 
-    def __init__(
-        self: SubarrayHealthModel,
-        health_changed_callback: Callable[[HealthState], None],
-    ) -> None:
+    def __init__(self: SubarrayHealthModel, health_changed_callback: Callable[[HealthState], None],) -> None:
         """
         Initialise a new instance.
 
@@ -36,9 +32,7 @@ class SubarrayHealthModel(HealthModel):
         self._station_beam_healths: dict[str, HealthState | None] = {}
         super().__init__(health_changed_callback)
 
-    def evaluate_health(
-        self: SubarrayHealthModel,
-    ) -> HealthState:
+    def evaluate_health(self: SubarrayHealthModel,) -> HealthState:
         """
         Compute overall health of the subarray.
 
@@ -86,23 +80,18 @@ class SubarrayHealthModel(HealthModel):
             to this subarray
         """
         self._station_healths = {
-            fqdn: self._station_healths.get(fqdn, HealthState.UNKNOWN)
-            for fqdn in station_fqdns
+            fqdn: self._station_healths.get(fqdn, HealthState.UNKNOWN) for fqdn in station_fqdns
         }
         self._subarray_beam_fqdns = {
-            fqdn: self._subarray_beam_healths.get(fqdn, HealthState.UNKNOWN)
-            for fqdn in subarray_beam_fqdns
+            fqdn: self._subarray_beam_healths.get(fqdn, HealthState.UNKNOWN) for fqdn in subarray_beam_fqdns
         }
         self._station_beam_fqdns = {
-            fqdn: self._station_beam_healths.get(fqdn, HealthState.UNKNOWN)
-            for fqdn in station_beam_fqdns
+            fqdn: self._station_beam_healths.get(fqdn, HealthState.UNKNOWN) for fqdn in station_beam_fqdns
         }
         self.update_health()
 
     def station_health_changed(
-        self: SubarrayHealthModel,
-        fqdn: str,
-        health_state: HealthState | None,
+        self: SubarrayHealthModel, fqdn: str, health_state: HealthState | None,
     ) -> None:
         """
         Handle change in station health.
@@ -120,9 +109,7 @@ class SubarrayHealthModel(HealthModel):
         self.update_health()
 
     def subarray_beam_health_changed(
-        self: SubarrayHealthModel,
-        fqdn: str,
-        health_state: HealthState | None,
+        self: SubarrayHealthModel, fqdn: str, health_state: HealthState | None,
     ) -> None:
         """
         Handle change in subarray beam health.
@@ -140,9 +127,7 @@ class SubarrayHealthModel(HealthModel):
         self.update_health()
 
     def station_beam_health_changed(
-        self: SubarrayHealthModel,
-        fqdn: str,
-        health_state: HealthState | None,
+        self: SubarrayHealthModel, fqdn: str, health_state: HealthState | None,
     ) -> None:
         """
         Handle change in station beam health.

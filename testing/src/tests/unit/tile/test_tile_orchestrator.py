@@ -8,24 +8,23 @@
 """This module contains the tests of the tile orchestrator."""
 from __future__ import annotations
 
-from collections import defaultdict
 import contextlib
 import logging
-from typing import Any, ContextManager, Mapping, Optional, Union, Tuple, cast
 import unittest.mock
+from collections import defaultdict
+from typing import Any, ContextManager, Mapping, Optional, Tuple, Union, cast
 
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.tile.tile_orchestrator import (
-    TileOrchestrator,
     StateStimulusTupleType,
     StateTupleType,
     Stimulus,
+    TileOrchestrator,
 )
 
 
@@ -33,9 +32,7 @@ class TestTileOrchestrator:
     """Class for testing the tile orchestrator."""
 
     @pytest.fixture(scope="session")
-    def rules(
-        self: TestTileOrchestrator,
-    ) -> Mapping[StateStimulusTupleType, list[str]]:
+    def rules(self: TestTileOrchestrator,) -> Mapping[StateStimulusTupleType, list[str]]:
         """
         Return a static dictionary of orchestrator rules.
 
@@ -54,12 +51,7 @@ class TestTileOrchestrator:
         rules_table: dict[StateStimulusTupleType, list[str]] = {}
         for state, actions in TileOrchestrator._load_rules().items():
             if len(state) == 2:
-                rules_table[
-                    (
-                        Stimulus[state[0]],
-                        CommunicationStatus[state[1]],
-                    )
-                ] = actions
+                rules_table[(Stimulus[state[0]], CommunicationStatus[state[1]],)] = actions
             elif len(state) == 4:
                 rules_table[
                     (
@@ -85,9 +77,7 @@ class TestTileOrchestrator:
     @pytest.fixture(scope="session")
     def checks(
         self: TestTileOrchestrator,
-    ) -> Mapping[
-        str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]
-    ]:
+    ) -> Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]]:
         """
         Return a static dictionary of orchestrator action checks.
 
@@ -110,10 +100,7 @@ class TestTileOrchestrator:
             "raise_cannot_turn_off_on_when_offline": (
                 {},
                 {},
-                pytest.raises(
-                    ConnectionError,
-                    match="TPM cannot be turned off / on when not online.",
-                ),
+                pytest.raises(ConnectionError, match="TPM cannot be turned off / on when not online.",),
             ),
             "report_communication_disabled": (
                 {},
@@ -173,21 +160,13 @@ class TestTileOrchestrator:
                 {},
                 None,
             ),
-            "start_communicating_with_subrack": (
-                {},
-                {"start_communicating_with_subrack": []},
-                None,
-            ),
+            "start_communicating_with_subrack": ({}, {"start_communicating_with_subrack": []}, None,),
             "stop_communicating_with_subrack": (
                 {"subrack_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_subrack": []},
                 None,
             ),
-            "start_communicating_with_tpm": (
-                {},
-                {"start_communicating_with_tpm": []},
-                None,
-            ),
+            "start_communicating_with_tpm": ({}, {"start_communicating_with_tpm": []}, None,),
             "stop_communicating_with_tpm": (
                 {"tpm_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_tpm": []},
@@ -199,8 +178,7 @@ class TestTileOrchestrator:
 
     @pytest.fixture()
     def callbacks(
-        self: TestTileOrchestrator,
-        mocker: pytest_mock.MockerFixture,
+        self: TestTileOrchestrator, mocker: pytest_mock.MockerFixture,
     ) -> Mapping[str, unittest.mock.Mock]:
         """
         Return a dictionary of callbacks, keyed by an arbitrary name.
@@ -222,12 +200,7 @@ class TestTileOrchestrator:
             (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.OFF),
             (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerMode.OFF),
             (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.OFF),
-            (
-                CommunicationStatus.NOT_ESTABLISHED,
-                None,
-                ExtendedPowerMode.ON,
-                CommunicationStatus.DISABLED,
-            ),
+            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.ON, CommunicationStatus.DISABLED,),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
@@ -240,12 +213,7 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.ON,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (
-                CommunicationStatus.NOT_ESTABLISHED,
-                False,
-                ExtendedPowerMode.ON,
-                CommunicationStatus.DISABLED,
-            ),
+            (CommunicationStatus.NOT_ESTABLISHED, False, ExtendedPowerMode.ON, CommunicationStatus.DISABLED,),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
@@ -258,24 +226,14 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.ON,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (
-                CommunicationStatus.ESTABLISHED,
-                None,
-                ExtendedPowerMode.ON,
-                CommunicationStatus.DISABLED,
-            ),
+            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.ON, CommunicationStatus.DISABLED,),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
                 ExtendedPowerMode.ON,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
-            (
-                CommunicationStatus.ESTABLISHED,
-                None,
-                ExtendedPowerMode.ON,
-                CommunicationStatus.ESTABLISHED,
-            ),
+            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.ON, CommunicationStatus.ESTABLISHED,),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
@@ -330,12 +288,7 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (
-                CommunicationStatus.ESTABLISHED,
-                None,
-                ExtendedPowerMode.UNKNOWN,
-                CommunicationStatus.DISABLED,
-            ),
+            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.UNKNOWN, CommunicationStatus.DISABLED,),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
@@ -366,12 +319,7 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (
-                CommunicationStatus.ESTABLISHED,
-                True,
-                ExtendedPowerMode.UNKNOWN,
-                CommunicationStatus.DISABLED,
-            ),
+            (CommunicationStatus.ESTABLISHED, True, ExtendedPowerMode.UNKNOWN, CommunicationStatus.DISABLED,),
             (
                 CommunicationStatus.ESTABLISHED,
                 True,
@@ -427,12 +375,7 @@ class TestTileOrchestrator:
         self: TestTileOrchestrator, request: SubRequest
     ) -> Union[
         Tuple[CommunicationStatus],
-        Tuple[
-            CommunicationStatus,
-            ExtendedPowerMode,
-            CommunicationStatus,
-            Optional[bool],
-        ],
+        Tuple[CommunicationStatus, ExtendedPowerMode, CommunicationStatus, Optional[bool],],
     ]:
         """
         Return an orchestrator state.
@@ -506,15 +449,10 @@ class TestTileOrchestrator:
     def check(
         self: TestTileOrchestrator,
         rules: Mapping[StateStimulusTupleType, str],
-        checks: Mapping[
-            str,
-            Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],
-        ],
+        checks: Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],],
         state: StateTupleType,
         stimulus: Stimulus,
-    ) -> Optional[
-        Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]
-    ]:
+    ) -> Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]]:
         """
         Return checks to be performed as part of this test.
 
@@ -563,9 +501,7 @@ class TestTileOrchestrator:
         callbacks: Mapping[str, unittest.mock.Mock],
         state: StateTupleType,
         stimulus: Stimulus,
-        check: Tuple[
-            Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]
-        ],
+        check: Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],
     ) -> None:
         """
         Test orchestrator actions.
@@ -603,12 +539,8 @@ class TestTileOrchestrator:
                 Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY: lambda tc: tc.update_tpm_power_mode(
                     ExtendedPowerMode.NO_SUPPLY
                 ),
-                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(
-                    ExtendedPowerMode.OFF
-                ),
-                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(
-                    ExtendedPowerMode.ON
-                ),
+                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(ExtendedPowerMode.OFF),
+                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(ExtendedPowerMode.ON),
                 Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
@@ -632,9 +564,8 @@ class TestTileOrchestrator:
             :param expected_state_changes: keyword arguments that
                 specify state values that should have changed.
             """
-            assert (
-                tile_orchestrator._subrack_communication_status
-                == expected_state_changes.get("subrack_communication_status", state[0])
+            assert tile_orchestrator._subrack_communication_status == expected_state_changes.get(
+                "subrack_communication_status", state[0]
             )
             if len(state) > 1:
                 assert tile_orchestrator._operator_desire == expected_state_changes.get(
@@ -645,11 +576,8 @@ class TestTileOrchestrator:
                     "tpm_power_mode", state[2]  # type: ignore[misc]
                 )
             if len(state) > 3:
-                assert (
-                    tile_orchestrator._tpm_communication_status
-                    == expected_state_changes.get(
-                        "tpm_communication_status", state[3]  # type: ignore[misc]
-                    )
+                assert tile_orchestrator._tpm_communication_status == expected_state_changes.get(
+                    "tpm_communication_status", state[3]  # type: ignore[misc]
                 )
 
         def check_callbacks(**expected_args: list[Any]) -> None:

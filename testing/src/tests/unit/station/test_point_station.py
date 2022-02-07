@@ -8,16 +8,13 @@
 """This module contains the tests for the ska_low_mccs.point_station module."""
 from __future__ import annotations
 
-import pytest
 from typing import Any
 
 import numpy as np
+import pytest
 from astropy.time.core import Time
 
-from ska_low_mccs.station.point_station import (
-    Pointing,
-    StationInformation,
-)
+from ska_low_mccs.station.point_station import Pointing, StationInformation
 
 locationsfile = "testing/data/AAVS2_loc_italia_190429.txt"
 outputfile = "testing/results/pointingtest.txt"

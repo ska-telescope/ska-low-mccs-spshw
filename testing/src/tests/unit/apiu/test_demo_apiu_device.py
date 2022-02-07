@@ -11,12 +11,10 @@ from __future__ import annotations
 import time
 
 import pytest
-
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu.demo_apiu_device import DemoAPIU
-
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
@@ -40,10 +38,7 @@ class TestDemoAPIU:
     """This class contains the tests for the DemoAPIU device class."""
 
     @pytest.fixture()
-    def device_under_test(
-        self: TestDemoAPIU,
-        tango_harness: TangoHarness,
-    ) -> MccsDeviceProxy:
+    def device_under_test(self: TestDemoAPIU, tango_harness: TangoHarness,) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -53,10 +48,7 @@ class TestDemoAPIU:
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test_demo_apiu(
-        self: TestDemoAPIU,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_demo_apiu(self: TestDemoAPIU, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test APIU power up/down.
 

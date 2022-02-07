@@ -7,10 +7,10 @@
 # See LICENSE for more info.
 """This module contains the tests for MccsStationBeam."""
 from __future__ import annotations
+
 from typing import Any
 
 import pytest
-
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -37,9 +37,7 @@ class TestMccsStationBeam(object):
     """Test class for MccsStationBeam tests."""
 
     @pytest.fixture()
-    def device_under_test(
-        self: TestMccsStationBeam, tango_harness: TangoHarness
-    ) -> MccsDeviceProxy:
+    def device_under_test(self: TestMccsStationBeam, tango_harness: TangoHarness) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -64,12 +62,9 @@ class TestMccsStationBeam(object):
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState",
-            device_health_state_changed_callback,
+            "healthState", device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.UNKNOWN
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     @pytest.mark.parametrize(
@@ -109,11 +104,7 @@ class TestMccsStationBeam(object):
             device_under_test.write_attribute(attribute, write_value)
             assert getattr(device_under_test, attribute) == write_value
 
-    def test_beamId(
-        self: TestMccsStationBeam,
-        device_under_test: MccsDeviceProxy,
-        beam_id: int,
-    ) -> None:
+    def test_beamId(self: TestMccsStationBeam, device_under_test: MccsDeviceProxy, beam_id: int,) -> None:
         """
         Test the beam id attribute.
 
@@ -127,10 +118,7 @@ class TestMccsStationBeam(object):
         """
         assert device_under_test.beamId == beam_id
 
-    def test_stationId(
-        self: TestMccsStationBeam,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_stationId(self: TestMccsStationBeam, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test stationId attribute.
 
@@ -149,19 +137,10 @@ class TestMccsStationBeam(object):
         assert device_under_test.stationId == value_to_write
 
     @pytest.mark.parametrize(
-        "attribute",
-        [
-            "channels",
-            "antennaWeights",
-            "phaseCentre",
-            "pointingDelay",
-            "pointingDelayRate",
-        ],
+        "attribute", ["channels", "antennaWeights", "phaseCentre", "pointingDelay", "pointingDelayRate",],
     )
     def test_empty_list_attributes(
-        self: TestMccsStationBeam,
-        device_under_test: MccsDeviceProxy,
-        attribute: str,
+        self: TestMccsStationBeam, device_under_test: MccsDeviceProxy, attribute: str,
     ) -> None:
         """
         Test attribute values for attributes that return lists of floats.
@@ -181,10 +160,7 @@ class TestMccsStationBeam(object):
         value = getattr(device_under_test, attribute)
         assert value is None or list(value) == []
 
-    def test_desired_pointing(
-        self: TestMccsStationBeam,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_desired_pointing(self: TestMccsStationBeam, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test the desired pointing attribute.
 

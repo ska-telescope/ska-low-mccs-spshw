@@ -14,10 +14,9 @@ support testing and demonstrating the MCCS Tile device.
 
 from __future__ import annotations  # allow forward references in type hints
 
-from tango.server import command, Device
+from tango.server import Device, command
 
 from ska_low_mccs.tile import MccsTile
-
 
 __all__ = ["DemoTile"]
 

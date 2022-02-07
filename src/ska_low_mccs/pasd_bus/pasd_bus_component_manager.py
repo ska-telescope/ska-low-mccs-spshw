@@ -12,13 +12,14 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.control_model import SimulationMode
-from ska_low_mccs.pasd_bus.pasd_bus_simulator import PasdBusSimulator
+
 from ska_low_mccs.component import (
-    check_communicating,
     CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
+    check_communicating,
 )
+from ska_low_mccs.pasd_bus.pasd_bus_simulator import PasdBusSimulator
 
 
 class PasdBusSimulatorComponentManager(ObjectComponentManager):
@@ -48,9 +49,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
             rather than letting the component manager create one.
         """
         pasd_bus_simulator = _simulator or PasdBusSimulator(
-            "src/ska_low_mccs/pasd_bus/pasd_configuration.yaml",
-            1,
-            logger,
+            "src/ska_low_mccs/pasd_bus/pasd_configuration.yaml", 1, logger,
         )
         super().__init__(
             pasd_bus_simulator,
@@ -61,11 +60,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
             component_fault_callback,
         )
 
-    def __getattr__(
-        self: PasdBusSimulatorComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: PasdBusSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -140,10 +135,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: PasdBusSimulatorComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: PasdBusSimulatorComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -186,13 +178,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
             provide a pre-created component manager for the simulator,
             rather than letting this component manager create one.
         """
-        pasd_bus_simulator = (
-            _simulator_component_manager
-            or PasdBusSimulatorComponentManager(
-                logger,
-                push_change_event,
-                communication_status_changed_callback,
-                component_fault_callback,
-            )
+        pasd_bus_simulator = _simulator_component_manager or PasdBusSimulatorComponentManager(
+            logger, push_change_event, communication_status_changed_callback, component_fault_callback,
         )
         super().__init__(None, pasd_bus_simulator, initial_simulation_mode)

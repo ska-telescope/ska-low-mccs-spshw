@@ -8,22 +8,19 @@
 """This module contains the tests of the APIU component manager and simulator."""
 from __future__ import annotations
 
-
 import time
 from typing import Callable, Union, cast
 
 import pytest
 from _pytest.fixtures import SubRequest
-
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.apiu import (
+    ApiuComponentManager,
     ApiuSimulator,
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
-    ApiuComponentManager,
 )
-
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -69,10 +66,7 @@ class TestApiuCommon:
         apiu_component_manager: ApiuComponentManager,
         request: SubRequest,
     ) -> Union[
-        ApiuSimulator,
-        ApiuSimulatorComponentManager,
-        SwitchingApiuComponentManager,
-        ApiuComponentManager,
+        ApiuSimulator, ApiuSimulatorComponentManager, SwitchingApiuComponentManager, ApiuComponentManager,
     ]:
         """
         Return the APIU class under test.
@@ -202,24 +196,15 @@ class TestApiuCommon:
             for _id in range(1, apiu_antenna_count + 1):
                 assert apiu.is_antenna_on(_id) == (_id == antenna_id)
 
-            assert (
-                apiu.get_antenna_current(antenna_id)
-                == ApiuSimulator.DEFAULT_ANTENNA_CURRENT
-            )
+            assert apiu.get_antenna_current(antenna_id) == ApiuSimulator.DEFAULT_ANTENNA_CURRENT
             apiu.simulate_antenna_current(antenna_id, 3.2)
             assert apiu.get_antenna_current(antenna_id) == 3.2
 
-            assert (
-                apiu.get_antenna_voltage(antenna_id)
-                == ApiuSimulator.DEFAULT_ANTENNA_VOLTAGE
-            )
+            assert apiu.get_antenna_voltage(antenna_id) == ApiuSimulator.DEFAULT_ANTENNA_VOLTAGE
             apiu.simulate_antenna_voltage(antenna_id, 20.4)
             assert apiu.get_antenna_voltage(antenna_id) == 20.4
 
-            assert (
-                apiu.get_antenna_temperature(antenna_id)
-                == ApiuSimulator.DEFAULT_ANTENNA_TEMPERATURE
-            )
+            assert apiu.get_antenna_temperature(antenna_id) == ApiuSimulator.DEFAULT_ANTENNA_TEMPERATURE
             apiu.simulate_antenna_temperature(antenna_id, 23.7)
             assert apiu.get_antenna_temperature(antenna_id) == 23.7
 
@@ -329,16 +314,12 @@ class TestApiuComponentManager:
 
         expected_are_antennas_on = [False] * apiu_antenna_count
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        component_antenna_power_changed_callback.assert_next_call(
-            expected_are_antennas_on
-        )
+        component_antenna_power_changed_callback.assert_next_call(expected_are_antennas_on)
 
         apiu_component_manager.turn_on_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = True
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        component_antenna_power_changed_callback.assert_next_call(
-            expected_are_antennas_on
-        )
+        component_antenna_power_changed_callback.assert_next_call(expected_are_antennas_on)
 
         apiu_component_manager.turn_on_antenna(antenna_id)
         component_antenna_power_changed_callback.assert_not_called()
@@ -346,9 +327,7 @@ class TestApiuComponentManager:
         apiu_component_manager.turn_off_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = False
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        component_antenna_power_changed_callback.assert_next_call(
-            expected_are_antennas_on
-        )
+        component_antenna_power_changed_callback.assert_next_call(expected_are_antennas_on)
 
         apiu_component_manager.turn_off_antenna(antenna_id)
         component_antenna_power_changed_callback.assert_not_called()

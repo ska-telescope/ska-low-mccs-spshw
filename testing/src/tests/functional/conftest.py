@@ -8,12 +8,12 @@
 """This module contains pytest-specific test harness for MCCS functional (BDD) tests."""
 from __future__ import annotations
 
-import pytest
-from typing import Any, Callable, Generator
 import unittest
+from typing import Any, Callable, Generator
+
+import pytest
 
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
@@ -83,12 +83,7 @@ def tango_config() -> dict[str, Any]:
 @pytest.fixture(scope="module")
 def tango_harness(
     tango_harness_factory: Callable[
-        [
-            dict[str, Any],
-            DevicesToLoadType,
-            Callable[[], unittest.mock.Mock],
-            dict[str, unittest.mock.Mock],
-        ],
+        [dict[str, Any], DevicesToLoadType, Callable[[], unittest.mock.Mock], dict[str, unittest.mock.Mock],],
         TangoHarness,
     ],
     tango_config: dict[str, str],
@@ -114,9 +109,7 @@ def tango_harness(
 
     :yields: the test harness
     """
-    with tango_harness_factory(
-        tango_config, devices_to_load, mock_factory, initial_mocks
-    ) as harness:
+    with tango_harness_factory(tango_config, devices_to_load, mock_factory, initial_mocks) as harness:
         yield harness
 
 
@@ -216,9 +209,7 @@ def devices_to_load() -> DevicesToLoadType:
 
 
 @pytest.fixture()
-def controller(
-    tango_harness: TangoHarness,
-) -> MccsDeviceProxy:
+def controller(tango_harness: TangoHarness,) -> MccsDeviceProxy:
     """
     Return the controller device.
 
@@ -230,9 +221,7 @@ def controller(
 
 
 @pytest.fixture()
-def subrack(
-    tango_harness: TangoHarness,
-) -> MccsDeviceProxy:
+def subrack(tango_harness: TangoHarness,) -> MccsDeviceProxy:
     """
     Return the subrack device.
 

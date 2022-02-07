@@ -13,17 +13,12 @@ import unittest
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.antenna import AntennaComponentManager
-from ska_low_mccs.antenna.antenna_component_manager import (
-    _ApiuProxy,
-    _TileProxy,
-)
+from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
 from ska_low_mccs.component import CommunicationStatus
-
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -48,21 +43,15 @@ class TestAntennaApiuProxy:
 
         # communication status is NOT_ESTABLISHED because establishing
         # a connection to MccsAPIU has been enqueued but not yet run
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
 
         # communication status is ESTABLISHED because MccsAPIU's state
         # is OFF, from which we can infer that the antenna is powered
         # off.
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
 
         antenna_apiu_proxy.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
 
     def test_power_command(
         self: TestAntennaApiuProxy,
@@ -83,8 +72,7 @@ class TestAntennaApiuProxy:
             device.
         """
         with pytest.raises(
-            ConnectionError,
-            match="Communication with component is not established",
+            ConnectionError, match="Communication with component is not established",
         ):
             antenna_apiu_proxy.on()
 
@@ -103,9 +91,7 @@ class TestAntennaApiuProxy:
         mock_apiu_device_proxy.On.assert_next_call()
 
         # Fake an event that tells this proxy that the APIU has been turned on.
-        antenna_apiu_proxy._device_state_changed(
-            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
-        )
+        antenna_apiu_proxy._device_state_changed("state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID)
         assert antenna_apiu_proxy.power_mode == PowerMode.ON
 
         assert antenna_apiu_proxy.supplied_power_mode == PowerMode.OFF
@@ -153,8 +139,7 @@ class TestAntennaApiuProxy:
         :param antenna_apiu_proxy: a proxy to the antenna's APIU device.
         """
         with pytest.raises(
-            NotImplementedError,
-            match="Antenna cannot be reset.",
+            NotImplementedError, match="Antenna cannot be reset.",
         ):
             antenna_apiu_proxy.reset()
 
@@ -177,22 +162,14 @@ class TestAntennaTileProxy:
         """
         assert antenna_tile_proxy.communication_status == CommunicationStatus.DISABLED
         antenna_tile_proxy.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
 
         antenna_tile_proxy.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
 
     @pytest.mark.parametrize("command", ["on", "standby", "off"])
-    def test_power_command(
-        self: TestAntennaTileProxy, antenna_tile_proxy: _TileProxy, command: str
-    ) -> None:
+    def test_power_command(self: TestAntennaTileProxy, antenna_tile_proxy: _TileProxy, command: str) -> None:
         """
         Test that this proxy will refuse to try to run power commands on the antenna.
 
@@ -200,8 +177,7 @@ class TestAntennaTileProxy:
         :param command: name of the power command to run.
         """
         with pytest.raises(
-            NotImplementedError,
-            match="Antenna power mode is not controlled via Tile device.",
+            NotImplementedError, match="Antenna power mode is not controlled via Tile device.",
         ):
             getattr(antenna_tile_proxy, command)()
 
@@ -212,8 +188,7 @@ class TestAntennaTileProxy:
         :param antenna_tile_proxy: a proxy to the antenna's tile device.
         """
         with pytest.raises(
-            NotImplementedError,
-            match="Antenna hardware is not resettable.",
+            NotImplementedError, match="Antenna hardware is not resettable.",
         ):
             antenna_tile_proxy.reset()
 
@@ -235,32 +210,17 @@ class TestAntennaComponentManager:
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert (
-            antenna_component_manager.communication_status
-            == CommunicationStatus.DISABLED
-        )
+        assert antenna_component_manager.communication_status == CommunicationStatus.DISABLED
 
         antenna_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        assert (
-            antenna_component_manager.communication_status
-            == CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        assert antenna_component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         antenna_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
-        assert (
-            antenna_component_manager.communication_status
-            == CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
+        assert antenna_component_manager.communication_status == CommunicationStatus.DISABLED
 
     def test_power_commands(
         self: TestAntennaComponentManager,
@@ -331,8 +291,7 @@ class TestAntennaComponentManager:
         assert antenna_component_manager.power_mode == PowerMode.OFF
 
         with pytest.raises(
-            NotImplementedError,
-            match="Antenna has no standby mode.",
+            NotImplementedError, match="Antenna has no standby mode.",
         ):
             antenna_component_manager.standby()
 
@@ -362,12 +321,8 @@ class TestAntennaComponentManager:
         """
         antenna_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
 
         assert antenna_component_manager.on() == ResultCode.QUEUED
 
@@ -381,8 +336,7 @@ class TestAntennaComponentManager:
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
     def test_reset(
-        self: TestAntennaComponentManager,
-        antenna_component_manager: AntennaComponentManager,
+        self: TestAntennaComponentManager, antenna_component_manager: AntennaComponentManager,
     ) -> None:
         """
         Test that the antenna component manager refused to try to reset the antenna.
@@ -391,7 +345,6 @@ class TestAntennaComponentManager:
             under test
         """
         with pytest.raises(
-            NotImplementedError,
-            match="Antenna cannot be reset.",
+            NotImplementedError, match="Antenna cannot be reset.",
         ):
             antenna_component_manager.reset()

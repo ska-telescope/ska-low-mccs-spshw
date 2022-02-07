@@ -9,28 +9,23 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Optional
+from typing import Any, Callable, Optional, cast
 
+from ska_tango_base.base.task_queue_manager import QueueManager
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode, SimulationMode
-from ska_tango_base.base.task_queue_manager import QueueManager
 
-from ska_low_mccs.subrack import (
-    SubrackData,
-    SubrackDriver,
-    SubrackSimulator,
-)
 from ska_low_mccs.component import (
-    check_communicating,
-    check_on,
     CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
     ExtendedPowerMode,
-    SwitchingComponentManager,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
+    SwitchingComponentManager,
+    check_communicating,
+    check_on,
 )
-
+from ska_low_mccs.subrack import SubrackData, SubrackDriver, SubrackSimulator
 
 __all__ = [
     "BaseSubrackSimulatorComponentManager",
@@ -78,9 +73,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             component_fault_callback,
         )
         self._tpm_power_modes = [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-        self._component_tpm_power_changed_callback = (
-            component_tpm_power_changed_callback
-        )
+        self._component_tpm_power_changed_callback = component_tpm_power_changed_callback
         self._component_tpm_power_changed_callback(self._tpm_power_modes)
 
         self._component_progress_changed_callback = component_progress_changed_callback
@@ -91,9 +84,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             return
 
         super().start_communicating()
-        cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(
-            self._are_tpms_on_changed
-        )
+        cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(self._are_tpms_on_changed)
         cast(SubrackSimulator, self._component).set_progress_changed_callback(
             self._component_progress_changed_callback
         )
@@ -107,12 +98,9 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         cast(SubrackSimulator, self._component).set_progress_changed_callback(None)
         super().stop_communicating()
 
-    def _are_tpms_on_changed(
-        self: BaseSubrackSimulatorComponentManager, are_tpms_on: list[bool]
-    ) -> None:
+    def _are_tpms_on_changed(self: BaseSubrackSimulatorComponentManager, are_tpms_on: list[bool]) -> None:
         tpm_power_modes = [
-            ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF
-            for is_tpm_on in are_tpms_on
+            ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF for is_tpm_on in are_tpms_on
         ]
         # if self._tpm_power_modes == tpm_power_modes:
         #     return
@@ -121,9 +109,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self._component_tpm_power_changed_callback(tpm_power_modes)
 
     @property
-    def tpm_power_modes(
-        self: BaseSubrackSimulatorComponentManager,
-    ) -> list[ExtendedPowerMode]:
+    def tpm_power_modes(self: BaseSubrackSimulatorComponentManager,) -> list[ExtendedPowerMode]:
         """
         Return the power modes of the TPMs.
 
@@ -131,11 +117,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         """
         return list(self._tpm_power_modes)
 
-    def __getattr__(
-        self: BaseSubrackSimulatorComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: BaseSubrackSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -212,10 +194,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: BaseSubrackSimulatorComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: BaseSubrackSimulatorComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -322,10 +301,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             component_tpm_power_changed_callback,
         )
         super().__init__(
-            {
-                (SimulationMode.FALSE): subrack_driver,
-                (SimulationMode.TRUE): subrack_simulator,
-            },
+            {(SimulationMode.FALSE): subrack_driver, (SimulationMode.TRUE): subrack_simulator,},
             (initial_simulation_mode),
         )
 
@@ -343,8 +319,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
 
     @simulation_mode.setter
     def simulation_mode(
-        self: SwitchingSubrackComponentManager,
-        required_simulation_mode: SimulationMode,
+        self: SwitchingSubrackComponentManager, required_simulation_mode: SimulationMode,
     ) -> None:
         """
         Set the simulation mode.
@@ -465,9 +440,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         return list(self._tpm_power_modes)
 
-    def _tpm_power_changed(
-        self: SubrackComponentManager, tpm_power_modes: list[ExtendedPowerMode]
-    ) -> None:
+    def _tpm_power_changed(self: SubrackComponentManager, tpm_power_modes: list[ExtendedPowerMode]) -> None:
         """
         Handle change in TPM power.
 
@@ -500,8 +473,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._tpm_power_changed_callback(tpm_power_modes)
 
     def _power_supply_communication_status_changed(
-        self: SubrackComponentManager,
-        communication_status: CommunicationStatus,
+        self: SubrackComponentManager, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the hardware.
@@ -511,26 +483,18 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         super()._power_supply_communication_status_changed(communication_status)
         if communication_status == CommunicationStatus.DISABLED:
-            self._update_tpm_power_modes(
-                [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-            )
+            self._update_tpm_power_modes([ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT)
 
-    def component_power_mode_changed(
-        self: SubrackComponentManager, power_mode: PowerMode
-    ) -> None:
+    def component_power_mode_changed(self: SubrackComponentManager, power_mode: PowerMode) -> None:
         """
         Handle a change in power mode of the hardware.
 
         :param power_mode: the power mode of the hardware
         """
         if power_mode == PowerMode.UNKNOWN:
-            self._update_tpm_power_modes(
-                [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-            )
+            self._update_tpm_power_modes([ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT)
         elif power_mode == PowerMode.OFF:
-            self._update_tpm_power_modes(
-                [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
-            )
+            self._update_tpm_power_modes([ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT)
 
         super().component_power_mode_changed(power_mode)
 
@@ -541,9 +505,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the simulation mode of this component manager.
         """
-        return cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).simulation_mode
+        return cast(SwitchingSubrackComponentManager, self._hardware_component_manager).simulation_mode
 
     @simulation_mode.setter
     def simulation_mode(self: SubrackComponentManager, mode: SimulationMode) -> None:
@@ -552,9 +514,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param mode: the new simulation mode of this component manager
         """
-        cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).simulation_mode = mode
+        cast(SwitchingSubrackComponentManager, self._hardware_component_manager).simulation_mode = mode
 
     def off(self: SubrackComponentManager) -> ResultCode | None:
         """
@@ -567,9 +527,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).turn_off_tpms()
+        cast(SwitchingSubrackComponentManager, self._hardware_component_manager).turn_off_tpms()
         result_code = super().off()
         return result_code
 
@@ -600,17 +558,13 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if self.power_mode == PowerMode.OFF:
             return None
         elif self.power_mode == PowerMode.ON:
-            return cast(
-                SwitchingSubrackComponentManager, self._hardware_component_manager
-            ).turn_off_tpm(logical_tpm_id)
+            return cast(SwitchingSubrackComponentManager, self._hardware_component_manager).turn_off_tpm(
+                logical_tpm_id
+            )
         else:
             raise ConnectionError("Component is not turned on.")
 
-    def __getattr__(
-        self: SubrackComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: SubrackComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -687,10 +641,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     @check_communicating
     @check_on
-    def _get_from_hardware(
-        self: SubrackComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_hardware(self: SubrackComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 

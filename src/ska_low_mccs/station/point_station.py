@@ -14,20 +14,17 @@ This is originally from the AAVS code.
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
-import time
-from typing import Any, Callable, List, Optional
-
-import warnings
-from datetime import datetime
-
 import multiprocessing
 import queue
+import time
+import warnings
+from datetime import datetime
+from typing import Any, Callable, List, Optional
 
 import fire
-
 import numpy as np
 from astropy import constants
-from astropy.coordinates import Angle, AltAz, SkyCoord, EarthLocation, get_sun
+from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord, get_sun
 from astropy.time import TimeDelta
 from astropy.time.core import Time
 from astropy.utils.exceptions import AstropyWarning
@@ -97,10 +94,7 @@ class StationInformation(object):
         self.antennas.load_displacements(antennafile)
 
     def set_location(
-        self: StationInformation,
-        latitude: float,
-        longitude: float,
-        ellipsoidalheight: float,
+        self: StationInformation, latitude: float, longitude: float, ellipsoidalheight: float,
     ) -> None:
         """
         Set the location data for this station.
@@ -166,20 +160,14 @@ class Pointing(object):
         # Get sun position in RA, DEC and convert to Alz, Az in telescope reference frame
         sun_position = get_sun(pointing_time)
         alt, az = self._ra_dec_to_alt_az(
-            sun_position.ra,
-            sun_position.dec,
-            pointing_time,
-            self._reference_antenna_loc,
+            sun_position.ra, sun_position.dec, pointing_time, self._reference_antenna_loc,
         )
 
         # Compute delays
         self.point_array_static(alt, az)
 
     def point_array_static(
-        self: Pointing,
-        altitude: float,
-        azimuth: float,
-        pointing_time: Optional[float] = None,
+        self: Pointing, altitude: float, azimuth: float, pointing_time: Optional[float] = None,
     ) -> None:
         """
         Calculate the delay given the altitude and azimuth coordinates of a sky object.
@@ -204,9 +192,7 @@ class Pointing(object):
             self._below_horizon = False
 
         # Compute the delays
-        self._delays = self._delays_from_altitude_azimuth(
-            altitude_angle.rad, azimuth_angle.rad
-        )
+        self._delays = self._delays_from_altitude_azimuth(altitude_angle.rad, azimuth_angle.rad)
         self._delay_rates = self._delays * 0
 
     def point_array(
@@ -239,10 +225,7 @@ class Pointing(object):
 
         # Calculate required delay
         alt, az = self._ra_dec_to_alt_az(
-            right_ascension,
-            declination,
-            Time(pointing_time),
-            self._reference_antenna_loc,
+            right_ascension, declination, Time(pointing_time), self._reference_antenna_loc,
         )
 
         # If required source is not above horizon, generate zeros
@@ -261,15 +244,10 @@ class Pointing(object):
         else:
             pointing_time = pointing_time + TimeDelta(delta_time, format="sec")
             alt, az = self._ra_dec_to_alt_az(
-                right_ascension,
-                declination,
-                Time(pointing_time),
-                self._reference_antenna_loc,
+                right_ascension, declination, Time(pointing_time), self._reference_antenna_loc,
             )
             # TODO: This code needs investigation
-            self._delay_rates = (
-                self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
-            )
+            self._delay_rates = self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
 
         # Set above horizon flag
         self._below_horizon = False
@@ -296,10 +274,7 @@ class Pointing(object):
         # Compute frequency range
         channel_bandwidth = 400e6 / 512.0
         frequencies = np.array(
-            [
-                start_channel * channel_bandwidth + i * channel_bandwidth
-                for i in range(nof_channels)
-            ]
+            [start_channel * channel_bandwidth + i * channel_bandwidth for i in range(nof_channels)]
         )
 
         # Generate coefficients
@@ -311,9 +286,7 @@ class Pointing(object):
         # All done, return coefficients
         return coefficients
 
-    def _delays_from_altitude_azimuth(
-        self: Pointing, altitude: float, azimuth: float
-    ) -> List[float]:
+    def _delays_from_altitude_azimuth(self: Pointing, altitude: float, azimuth: float) -> List[float]:
         """
         Calculate the delay using a target altitude Azimuth.
 
@@ -324,11 +297,7 @@ class Pointing(object):
         """
         # Calculate transformation
         scale = np.array(
-            [
-                np.cos(altitude) * np.sin(azimuth),
-                np.cos(altitude) * np.cos(azimuth),
-                np.sin(altitude),
-            ]
+            [np.cos(altitude) * np.sin(azimuth), np.cos(altitude) * np.cos(azimuth), np.sin(altitude),]
         )
 
         # Apply to antenna displacements
@@ -387,10 +356,7 @@ class Pointing(object):
         :return: True if the target coordinates are above the horizon at the specified time, false otherwise.
         """
         alt, _ = self._ra_dec_to_alt_az(
-            Angle(right_ascension),
-            Angle(declination),
-            Time(pointing_time),
-            self._reference_antenna_loc,
+            Angle(right_ascension), Angle(declination), Time(pointing_time), self._reference_antenna_loc,
         )
 
         return alt > 0.0
@@ -419,9 +385,7 @@ class PointingDriver:  # pragma: no cover
         self.pointing = Pointing(station)
         self._results: list[dict[str, Any]] = []
 
-    def statpos(
-        self: PointingDriver, lat: float, lon: float, height: float
-    ) -> PointingDriver:
+    def statpos(self: PointingDriver, lat: float, lon: float, height: float) -> PointingDriver:
         """
         Command to set the station reference position.
 
@@ -546,9 +510,7 @@ class PointingDriver:  # pragma: no cover
         return self.sequence(1, 0)
 
     def pointing_job(
-        self: PointingDriver,
-        jobs: queue.Queue[Time],
-        results: queue.Queue[Optional[dict[str, Any]]],
+        self: PointingDriver, jobs: queue.Queue[Time], results: queue.Queue[Optional[dict[str, Any]]],
     ) -> None:
         """
         Worker method for pointing job processes.
@@ -582,9 +544,7 @@ class PointingDriver:  # pragma: no cover
         # An empty jobs queue means we can signal completion with None
         results.put(None)
 
-    def msequence(
-        self: PointingDriver, count: int, interval: float, nproc: int
-    ) -> Optional[PointingDriver]:
+    def msequence(self: PointingDriver, count: int, interval: float, nproc: int) -> Optional[PointingDriver]:
         """
         Multiprocessing version of the sequence CLI command.
 
@@ -608,9 +568,7 @@ class PointingDriver:  # pragma: no cover
         results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
 
         processes = [
-            multiprocessing.Process(
-                target=self.pointing_job, args=(job_queue, results_queue)
-            )
+            multiprocessing.Process(target=self.pointing_job, args=(job_queue, results_queue))
             for x in range(nproc)
         ]
 
@@ -678,9 +636,7 @@ class PointingDriver:  # pragma: no cover
                 outfile.write(",")
                 outfile.write(str(result["el"]))
                 outfile.write(",")
-                delays = result["delays"].reshape(
-                    (1, self.pointing.station.antennas.nof_elements)
-                )
+                delays = result["delays"].reshape((1, self.pointing.station.antennas.nof_elements))
                 np.savetxt(outfile, delays, delimiter=",")
 
     def done(self: PointingDriver) -> None:

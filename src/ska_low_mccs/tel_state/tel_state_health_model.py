@@ -8,7 +8,6 @@
 """An implementation of a health model for telescope state."""
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["TelStateHealthModel"]
 
 

@@ -9,17 +9,15 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Union
 import unittest
+from typing import Any, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
 from ska_tango_base.commands import ResultCode
-
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
-from ska_low_mccs.component import ExtendedPowerMode, CommunicationStatus
-
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
     SubrackData,
@@ -28,7 +26,6 @@ from ska_low_mccs.subrack import (
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
 )
-
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -50,10 +47,7 @@ class TestSubrackSimulatorCommon:
     """
 
     @pytest.fixture(
-        params=[
-            "switching_subrack_component_manager",
-            "subrack_component_manager",
-        ]
+        params=["switching_subrack_component_manager", "subrack_component_manager",]
     )
     def subrack(
         self: TestSubrackSimulatorCommon,
@@ -103,10 +97,7 @@ class TestSubrackSimulatorCommon:
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
-            (
-                "backplane_temperatures",
-                SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
-            ),
+            ("backplane_temperatures", SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,),
             ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURES),
             ("board_current", SubrackSimulator.DEFAULT_BOARD_CURRENT),
             ("subrack_fan_speeds", SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS),
@@ -119,43 +110,19 @@ class TestSubrackSimulatorCommon:
             ),
             ("subrack_fan_modes", SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES),
             ("tpm_count", SubrackData.TPM_BAY_COUNT),
-            (
-                "tpm_temperatures",
-                [SubrackSimulator.DEFAULT_TPM_TEMPERATURE] * SubrackData.TPM_BAY_COUNT,
-            ),
+            ("tpm_temperatures", [SubrackSimulator.DEFAULT_TPM_TEMPERATURE] * SubrackData.TPM_BAY_COUNT,),
             (
                 "tpm_powers",
-                [
-                    SubrackSimulator.DEFAULT_TPM_VOLTAGE
-                    * SubrackSimulator.DEFAULT_TPM_CURRENT
-                ]
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE * SubrackSimulator.DEFAULT_TPM_CURRENT]
                 * SubrackData.TPM_BAY_COUNT,
             ),
-            (
-                "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
-            ),
-            (
-                "power_supply_fan_speeds",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
-            ),
-            (
-                "power_supply_currents",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
-            ),
-            (
-                "power_supply_powers",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,
-            ),
-            (
-                "power_supply_voltages",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,
-            ),
+            ("tpm_voltages", [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,),
+            ("power_supply_fan_speeds", SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,),
+            ("power_supply_currents", SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,),
+            ("power_supply_powers", SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,),
+            ("power_supply_voltages", SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,),
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
-            (
-                "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
-            ),
+            ("tpm_currents", [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,),
         ),
     )
     def test_read_attribute(
@@ -186,11 +153,7 @@ class TestSubrackSimulatorCommon:
         assert getattr(subrack, attribute_name) == expected_value
 
     @pytest.mark.parametrize(
-        "command_name",
-        (
-            "turn_on_tpms",
-            "turn_off_tpms",
-        ),
+        "command_name", ("turn_on_tpms", "turn_off_tpms",),
     )
     def test_command(
         self: TestSubrackSimulatorCommon,
@@ -308,11 +271,7 @@ class TestSubrackDriverCommon:
     """
 
     @pytest.fixture(
-        params=[
-            "subrack_driver",
-            "switching_subrack_component_manager",
-            "subrack_component_manager",
-        ]
+        params=["subrack_driver", "switching_subrack_component_manager", "subrack_component_manager",]
     )
     def subrack(
         self: TestSubrackDriverCommon,
@@ -321,9 +280,7 @@ class TestSubrackDriverCommon:
         subrack_component_manager: SubrackComponentManager,
         request: SubRequest,
     ) -> Union[
-        SubrackDriver,
-        SwitchingSubrackComponentManager,
-        SubrackComponentManager,
+        SubrackDriver, SwitchingSubrackComponentManager, SubrackComponentManager,
     ]:
         """
         Return the subrack class under test.
@@ -392,9 +349,7 @@ class TestSubrackDriverCommon:
         web_hardware_client_mock.connect.return_value = True
         assert subrack_driver.communication_status == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
-        assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
-        )
+        assert subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
 
         # Wait for the message to execute
         time.sleep(0.1)
@@ -422,29 +377,20 @@ class TestSubrackDriverCommon:
         web_hardware_client_mock.connect.return_value = False
         assert subrack_driver.communication_status == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
-        assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
-        )
+        assert subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
 
         # Wait for the message to execute
         time.sleep(0.1)
         web_hardware_client_mock.connect.assert_called_once()
         assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
-        assert subrack_driver._queue_manager._task_result[1] == str(
-            ResultCode.FAILED.value
-        )
+        assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.FAILED.value)
         assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
-        assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
-        )
+        assert subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
-            (
-                "backplane_temperatures",
-                SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
-            ),
+            ("backplane_temperatures", SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,),
             ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURES),
             ("board_current", SubrackSimulator.DEFAULT_BOARD_CURRENT),
             ("subrack_fan_speeds", SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS),
@@ -460,46 +406,21 @@ class TestSubrackDriverCommon:
             ("tpm_temperatures", [0.0] * SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_powers",
-                [
-                    SubrackSimulator.DEFAULT_TPM_VOLTAGE
-                    * SubrackSimulator.DEFAULT_TPM_CURRENT
-                ]
+                [SubrackSimulator.DEFAULT_TPM_VOLTAGE * SubrackSimulator.DEFAULT_TPM_CURRENT]
                 * SubrackData.TPM_BAY_COUNT,
             ),
-            (
-                "tpm_voltages",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,
-            ),
-            (
-                "power_supply_fan_speeds",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
-            ),
-            (
-                "power_supply_currents",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
-            ),
-            (
-                "power_supply_powers",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,
-            ),
-            (
-                "power_supply_voltages",
-                SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,
-            ),
+            ("tpm_voltages", [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * SubrackData.TPM_BAY_COUNT,),
+            ("power_supply_fan_speeds", SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,),
+            ("power_supply_currents", SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,),
+            ("power_supply_powers", SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,),
+            ("power_supply_voltages", SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,),
             ("tpm_present", SubrackSimulator.DEFAULT_TPM_PRESENT),
-            (
-                "tpm_currents",
-                [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,
-            ),
+            ("tpm_currents", [SubrackSimulator.DEFAULT_TPM_CURRENT] * SubrackData.TPM_BAY_COUNT,),
         ),
     )
     def test_read_attribute(
         self: TestSubrackDriverCommon,
-        subrack: Union[
-            SubrackDriver,
-            SwitchingSubrackComponentManager,
-            SubrackComponentManager,
-        ],
+        subrack: Union[SubrackDriver, SwitchingSubrackComponentManager, SubrackComponentManager,],
         attribute_name: str,
         expected_value: Any,
     ) -> None:
@@ -520,19 +441,11 @@ class TestSubrackDriverCommon:
         assert getattr(subrack, attribute_name) == expected_value
 
     @pytest.mark.parametrize(
-        "command_name",
-        (
-            "turn_on_tpms",
-            "turn_off_tpms",
-        ),
+        "command_name", ("turn_on_tpms", "turn_off_tpms",),
     )
     def test_command(
         self: TestSubrackDriverCommon,
-        subrack: Union[
-            SubrackDriver,
-            SwitchingSubrackComponentManager,
-            SubrackComponentManager,
-        ],
+        subrack: Union[SubrackDriver, SwitchingSubrackComponentManager, SubrackComponentManager,],
         command_name: str,
     ) -> None:
         """
@@ -559,11 +472,7 @@ class TestSubrackDriverCommon:
     )
     def test_command_numeric(
         self: TestSubrackDriverCommon,
-        subrack: Union[
-            SubrackDriver,
-            SwitchingSubrackComponentManager,
-            SubrackComponentManager,
-        ],
+        subrack: Union[SubrackDriver, SwitchingSubrackComponentManager, SubrackComponentManager,],
         command_name: str,
         num_args: int,
     ) -> None:

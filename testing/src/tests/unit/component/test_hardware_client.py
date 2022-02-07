@@ -21,8 +21,7 @@ class TestWebHardwareClient:
 
     # TODO: pytest is partially typehinted but does not yet export monkeypatch
     def test_web_hardware_client_interface(
-        self: TestWebHardwareClient,
-        monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
+        self: TestWebHardwareClient, monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
     ) -> None:
         """
         Test the web hardware client.

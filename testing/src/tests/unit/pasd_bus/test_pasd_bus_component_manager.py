@@ -8,16 +8,13 @@
 """This module contains the tests of the PaSD bus component manager."""
 from __future__ import annotations
 
-from typing import Any, Optional, Union
 import unittest.mock
+from typing import Any, Optional, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_low_mccs.pasd_bus import (
-    PasdBusSimulatorComponentManager,
-    PasdBusComponentManager,
-)
+from ska_low_mccs.pasd_bus import PasdBusComponentManager, PasdBusSimulatorComponentManager
 
 
 class TestPasdBusComponentManager:
@@ -30,10 +27,7 @@ class TestPasdBusComponentManager:
     """
 
     @pytest.fixture(
-        params=[
-            "pasd_bus_simulator_component_manager",
-            "pasd_bus_component_manager",
-        ]
+        params=["pasd_bus_simulator_component_manager", "pasd_bus_component_manager",]
     )
     def pasd_bus_component_manager(
         self: TestPasdBusComponentManager,
@@ -110,9 +104,7 @@ class TestPasdBusComponentManager:
     def test_read_only_property(
         self: TestPasdBusComponentManager,
         mock_pasd_bus_simulator: unittest.mock.Mock,
-        pasd_bus_component_manager: Union[
-            PasdBusSimulatorComponentManager, PasdBusComponentManager
-        ],
+        pasd_bus_component_manager: Union[PasdBusSimulatorComponentManager, PasdBusComponentManager],
         property_name: str,
     ) -> None:
         """
@@ -161,9 +153,7 @@ class TestPasdBusComponentManager:
     def test_command(
         self: TestPasdBusComponentManager,
         mock_pasd_bus_simulator: unittest.mock.Mock,
-        pasd_bus_component_manager: Union[
-            PasdBusSimulatorComponentManager, PasdBusComponentManager
-        ],
+        pasd_bus_component_manager: Union[PasdBusSimulatorComponentManager, PasdBusComponentManager],
         command_name: str,
         args: Optional[list[Any]],
         kwargs: Optional[dict[str, Any]],
@@ -184,6 +174,4 @@ class TestPasdBusComponentManager:
         :param kwargs: keyword args to the command under test
         """
         _ = getattr(pasd_bus_component_manager, command_name)(*args, **kwargs)
-        getattr(mock_pasd_bus_simulator, command_name).assert_called_once_with(
-            *args, **kwargs
-        )
+        getattr(mock_pasd_bus_simulator, command_name).assert_called_once_with(*args, **kwargs)

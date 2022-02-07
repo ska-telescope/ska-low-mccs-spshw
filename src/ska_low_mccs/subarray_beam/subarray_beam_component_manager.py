@@ -9,15 +9,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Optional
+from typing import Any, Callable, Optional, cast
 
+from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager, check_communicating
 from ska_low_mccs.subarray_beam import SubarrayBeam
-from ska_low_mccs.component import (
-    check_communicating,
-    CommunicationStatus,
-    ObjectComponentManager,
-)
-
 
 __all__ = ["SubarrayBeamComponentManager"]
 
@@ -91,11 +86,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         cast(SubarrayBeam, self._component).set_is_beam_locked_changed_callback(None)
         cast(SubarrayBeam, self._component).set_is_configured_changed_callback(None)
 
-    def __getattr__(
-        self: SubarrayBeamComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: SubarrayBeamComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -117,10 +108,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: SubarrayBeamComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: SubarrayBeamComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -131,11 +119,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._component, name)
 
-    def __setattr__(
-        self: SubarrayBeamComponentManager,
-        name: str,
-        value: Any,
-    ) -> Any:
+    def __setattr__(self: SubarrayBeamComponentManager, name: str, value: Any,) -> Any:
         """
         Set an attribute on this tel state component manager.
 
@@ -152,9 +136,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             super().__setattr__(name, value)
 
     @check_communicating
-    def _set_in_component(
-        self: SubarrayBeamComponentManager, name: str, value: Any
-    ) -> None:
+    def _set_in_component(self: SubarrayBeamComponentManager, name: str, value: Any) -> None:
         """
         Set an attribute in the component (if we are communicating with it).
 

@@ -14,22 +14,15 @@ import unittest.mock
 import pytest
 import pytest_mock
 
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    ObjectComponentManager,
-)
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 class TestObjectComponentManager:
     """Tests of the ObjectComponentManager class."""
 
     @pytest.fixture()
-    def component(
-        self: TestObjectComponentManager,
-        mocker: pytest_mock.MockerFixture,
-    ) -> unittest.mock.Mock:
+    def component(self: TestObjectComponentManager, mocker: pytest_mock.MockerFixture,) -> unittest.mock.Mock:
         """
         Return a mock to use as a component object.
 
@@ -90,18 +83,12 @@ class TestObjectComponentManager:
             the component manager and its component changes
         """
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
         assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 
     def test_communication_failure(
@@ -122,46 +109,28 @@ class TestObjectComponentManager:
 
         with pytest.raises(ConnectionError, match="Failed to connect"):
             component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        assert (
-            component_manager.communication_status
-            == CommunicationStatus.NOT_ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        assert component_manager.communication_status == CommunicationStatus.NOT_ESTABLISHED
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 
         component_manager.simulate_communication_failure(False)
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
         assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         component_manager.simulate_communication_failure(True)
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        assert (
-            component_manager.communication_status
-            == CommunicationStatus.NOT_ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        assert component_manager.communication_status == CommunicationStatus.NOT_ESTABLISHED
 
         with pytest.raises(ConnectionError, match="Failed to connect"):
             component_manager.start_communicating()
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 
     @pytest.mark.parametrize("command", ["on", "standby", "off", "reset"])
@@ -180,9 +149,7 @@ class TestObjectComponentManager:
         """
         setattr(component, command, MockCallable())
 
-        with pytest.raises(
-            ConnectionError, match="Communication with component is not established"
-        ):
+        with pytest.raises(ConnectionError, match="Communication with component is not established"):
             getattr(component_manager, command)()
         getattr(component, command).assert_not_called()
 

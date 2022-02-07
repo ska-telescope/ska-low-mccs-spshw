@@ -14,17 +14,11 @@ import unittest.mock
 
 import pytest
 import tango
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    DeviceComponentManager,
-)
-
+from ska_low_mccs.component import CommunicationStatus, DeviceComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -91,18 +85,12 @@ class TestDeviceComponentManager:
         """
         assert component_manager.communication_status == CommunicationStatus.DISABLED
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
         assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.DISABLED
-        )
+        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 
     @pytest.mark.parametrize(
@@ -126,9 +114,7 @@ class TestDeviceComponentManager:
         :param device_command: the name of the command that is expected
             to be called on the device.
         """
-        with pytest.raises(
-            ConnectionError, match="Communication with component is not established"
-        ):
+        with pytest.raises(ConnectionError, match="Communication with component is not established"):
             getattr(component_manager, component_manager_command)()
         getattr(mock_proxy, device_command).assert_not_called()
 

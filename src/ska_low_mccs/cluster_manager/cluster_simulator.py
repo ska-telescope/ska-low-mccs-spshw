@@ -10,11 +10,11 @@ from __future__ import annotations  # allow forward references in type hints
 
 from enum import IntEnum
 from itertools import count
-from typing import Any, cast, Callable, Iterator, Optional, Tuple
+from typing import Any, Callable, Iterator, Optional, Tuple, cast
 
 from ska_tango_base.control_model import HealthState
-from ska_low_mccs.component import ObjectComponent
 
+from ska_low_mccs.component import ObjectComponent
 
 __all__ = ["ClusterSimulator", "JobConfig", "JobStatus"]
 
@@ -105,9 +105,7 @@ class JobConfig:
 class JobIdGenerator:
     """A generator of job ids."""
 
-    def __init__(
-        self: JobIdGenerator, id_format: str = "sim.{}", start: int = 1
-    ) -> None:
+    def __init__(self: JobIdGenerator, id_format: str = "sim.{}", start: int = 1) -> None:
         """
         Create a new instance.
 
@@ -192,16 +190,13 @@ class ClusterSimulator(ObjectComponent):
     }
 
     NODE_STATUSES = {
-        node_id: HealthState.OK
-        for node_id in range(1, cast(int, CONFIGURATION["nodes_total"]) + 1)
+        node_id: HealthState.OK for node_id in range(1, cast(int, CONFIGURATION["nodes_total"]) + 1)
     }
 
     JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE = "Job cannot be started: not staging."
     NONEXISTENT_JOB_MESSAGE = "No such job"
 
-    def __init__(
-        self: ClusterSimulator,
-    ) -> None:
+    def __init__(self: ClusterSimulator,) -> None:
         """Initialise a new ClusterSimulator instance."""
         self._faulty = False
 
@@ -218,9 +213,7 @@ class ClusterSimulator(ObjectComponent):
         ] = None
         super().__init__()
 
-    def set_fault_callback(
-        self: ClusterSimulator, fault_callback: Optional[Callable[[bool], None]]
-    ) -> None:
+    def set_fault_callback(self: ClusterSimulator, fault_callback: Optional[Callable[[bool], None]]) -> None:
         """
         Set the callback to be called when the component faults.
 
@@ -238,9 +231,7 @@ class ClusterSimulator(ObjectComponent):
 
     def set_shadow_master_pool_node_health_changed_callback(
         self: ClusterSimulator,
-        shadow_master_pool_node_health_changed_callback: Optional[
-            Callable[[list[HealthState]], None]
-        ],
+        shadow_master_pool_node_health_changed_callback: Optional[Callable[[list[HealthState]], None]],
     ) -> None:
         """
         Set the callback to be called when a shadow master pool node changes health.
@@ -258,16 +249,12 @@ class ClusterSimulator(ObjectComponent):
             shadow_master_pool_node_health_changed_callback
         )
         if shadow_master_pool_node_health_changed_callback is not None:
-            shadow_master_pool_node_health_changed_callback(
-                self.shadow_master_pool_status
-            )
+            shadow_master_pool_node_health_changed_callback(self.shadow_master_pool_status)
 
     def update_shadow_master_pool_node_health(self: ClusterSimulator) -> None:
         """Update the shadow master pool node health, calling callbacks as required."""
         if self._shadow_master_pool_node_health_changed_callback is not None:
-            self._shadow_master_pool_node_health_changed_callback(
-                self.shadow_master_pool_status
-            )
+            self._shadow_master_pool_node_health_changed_callback(self.shadow_master_pool_status)
 
     @property
     def faulty(self: ClusterSimulator) -> bool:
@@ -545,17 +532,13 @@ class ClusterSimulator(ObjectComponent):
         return cast(Tuple[int], self._configuration["shadow_master_pool_node_ids"])
 
     @property
-    def shadow_master_pool_status(
-        self: ClusterSimulator,
-    ) -> list[HealthState]:
+    def shadow_master_pool_status(self: ClusterSimulator,) -> list[HealthState]:
         """
         Return the statuses of nodes in the shadow master pool.
 
         :return: the statuses of nodes in the shadow master pool
         """
-        return [
-            self._node_statuses[node_id] for node_id in self.shadow_master_pool_node_ids
-        ]
+        return [self._node_statuses[node_id] for node_id in self.shadow_master_pool_node_ids]
 
     def ping_master_pool(self: ClusterSimulator) -> None:
         """
@@ -566,9 +549,7 @@ class ClusterSimulator(ObjectComponent):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        raise NotImplementedError(
-            "ClusterSimulator.ping_master_pool has not been implemented"
-        )
+        raise NotImplementedError("ClusterSimulator.ping_master_pool has not been implemented")
 
     def clear_job_stats(self: ClusterSimulator) -> None:
         """Clear stats for closed jobs."""
@@ -634,9 +615,7 @@ class ClusterSimulator(ObjectComponent):
         else:
             self._job_stats[JobStatus.KILLED] += 1
 
-    def simulate_node_failure(
-        self: ClusterSimulator, node_id: int, failed: bool
-    ) -> None:
+    def simulate_node_failure(self: ClusterSimulator, node_id: int, failed: bool) -> None:
         """
         Tells this simulator to simulate the failure of one of its nodes.
 
@@ -663,9 +642,7 @@ class ClusterSimulator(ObjectComponent):
                 self._faulty = True
                 self.component_fault(True)
             else:
-                self._configuration[
-                    "master_node_id"
-                ] = self.shadow_master_pool_node_ids[healthy_index]
+                self._configuration["master_node_id"] = self.shadow_master_pool_node_ids[healthy_index]
                 self._faulty = False
                 self.component_fault(False)
 

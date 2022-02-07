@@ -11,20 +11,12 @@ from __future__ import annotations
 import time
 
 import pytest
-from tango import DevState
-
-from ska_tango_base.control_model import (
-    AdminMode,
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
 from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import AdminMode, ControlMode, HealthState, SimulationMode, TestMode
+from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu import ApiuSimulator
-
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -48,9 +40,7 @@ class TestMccsAPIU:
     """Test class for MccsAPIU tests."""
 
     @pytest.fixture()
-    def device_under_test(
-        self: TestMccsAPIU, tango_harness: TangoHarness
-    ) -> MccsDeviceProxy:
+    def device_under_test(self: TestMccsAPIU, tango_harness: TangoHarness) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -90,12 +80,9 @@ class TestMccsAPIU:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState",
-            device_health_state_changed_callback,
+            "healthState", device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.UNKNOWN
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     def test_attributes(
@@ -113,8 +100,7 @@ class TestMccsAPIU:
             we can use to subscribe to admin mode changes on the device
         """
         device_under_test.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
@@ -157,8 +143,7 @@ class TestMccsAPIU:
             we can use to subscribe to admin mode changes on the device
         """
         device_under_test.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
@@ -193,8 +178,7 @@ class TestMccsAPIU:
             we can use to subscribe to admin mode changes on the device
         """
         device_under_test.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
@@ -231,8 +215,7 @@ class TestMccsAPIU:
             we can use to subscribe to admin mode changes on the device
         """
         device_under_test.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
@@ -281,8 +264,7 @@ class TestMccsAPIU:
             we can use to subscribe to admin mode changes on the device
         """
         device_under_test.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE

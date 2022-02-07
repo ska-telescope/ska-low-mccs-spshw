@@ -10,23 +10,16 @@ from __future__ import annotations  # allow forward references in type hints
 
 import json
 import logging
-import numpy as np
 import os.path
 from typing import List, Optional, Tuple
 
+import numpy as np
 import tango
-from tango.server import attribute, command, device_property
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import (
-    AdminMode,
-    HealthState,
-    PowerMode,
-    SimulationMode,
-    TestMode,
-)
+from ska_tango_base.control_model import AdminMode, HealthState, PowerMode, SimulationMode, TestMode
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tile import TileComponentManager, TileHealthModel
@@ -72,9 +65,7 @@ class MccsTile(SKABaseDevice):
         self._health_model = TileHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsTile,
-    ) -> TileComponentManager:
+    def create_component_manager(self: MccsTile,) -> TileComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -124,33 +115,21 @@ class MccsTile(SKABaseDevice):
             ("LoadPointingDelay", self.LoadPointingDelayCommand),
             ("StartBeamformer", self.StartBeamformerCommand),
             ("StopBeamformer", self.StopBeamformerCommand),
-            (
-                "ConfigureIntegratedChannelData",
-                self.ConfigureIntegratedChannelDataCommand,
-            ),
+            ("ConfigureIntegratedChannelData", self.ConfigureIntegratedChannelDataCommand,),
             ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
             ("StopIntegratedData", self.StopIntegratedDataCommand),
             ("SendRawData", self.SendRawDataCommand),
             ("SendChannelisedData", self.SendChannelisedDataCommand),
-            (
-                "SendChannelisedDataContinuous",
-                self.SendChannelisedDataContinuousCommand,
-            ),
+            ("SendChannelisedDataContinuous", self.SendChannelisedDataContinuousCommand,),
             ("SendBeamData", self.SendBeamDataCommand),
             ("StopDataTransmission", self.StopDataTransmissionCommand),
-            (
-                "ComputeCalibrationCoefficients",
-                self.ComputeCalibrationCoefficientsCommand,
-            ),
+            ("ComputeCalibrationCoefficients", self.ComputeCalibrationCoefficientsCommand,),
             ("StartAcquisition", self.StartAcquisitionCommand),
             ("SetTimeDelays", self.SetTimeDelaysCommand),
             ("SetCspRounding", self.SetCspRoundingCommand),
             ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
             ("SendRawDataSynchronised", self.SendRawDataSynchronisedCommand),
-            (
-                "SendChannelisedDataNarrowband",
-                self.SendChannelisedDataNarrowbandCommand,
-            ),
+            ("SendChannelisedDataNarrowband", self.SendChannelisedDataNarrowbandCommand,),
             ("TweakTransceivers", self.TweakTransceiversCommand),
             ("PostSynchronisation", self.PostSynchronisationCommand),
             ("SyncFpgas", self.SyncFpgasCommand),
@@ -158,10 +137,7 @@ class MccsTile(SKABaseDevice):
             ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(
-                    self.component_manager, self.op_state_model, self.logger
-                ),
+                command_name, command_object(self.component_manager, self.op_state_model, self.logger),
             )
 
         antenna_args = (
@@ -170,12 +146,8 @@ class MccsTile(SKABaseDevice):
             self.logger,
             self.AntennasPerTile,
         )
-        self.register_command_object(
-            "LoadAntennaTapering", self.LoadAntennaTaperingCommand(*antenna_args)
-        )
-        self.register_command_object(
-            "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
-        )
+        self.register_command_object("LoadAntennaTapering", self.LoadAntennaTaperingCommand(*antenna_args))
+        self.register_command_object("SetPointingDelay", self.SetPointingDelayCommand(*antenna_args))
 
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for the MCCS Tile device."""
@@ -257,8 +229,7 @@ class MccsTile(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsTile,
-        communication_status: CommunicationStatus,
+        self: MccsTile, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -281,17 +252,12 @@ class MccsTile(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
         # if communication has been established, update power mode
         # if communication_status == CommunicationStatus.ESTABLISHED:
         #     self._component_power_mode_changed(self.component_manager.power_mode)
 
-    def _component_power_mode_changed(
-        self: MccsTile,
-        power_mode: PowerMode,
-    ) -> None:
+    def _component_power_mode_changed(self: MccsTile, power_mode: PowerMode,) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -312,10 +278,7 @@ class MccsTile(SKABaseDevice):
         self.op_state_model.perform_action(action_map[power_mode])
         self._health_model.set_power_mode(power_mode)
 
-    def _component_fault(
-        self: MccsTile,
-        is_fault: bool,
-    ) -> None:
+    def _component_fault(self: MccsTile, is_fault: bool,) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -354,9 +317,7 @@ class MccsTile(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(
-        dtype=SimulationMode,
-        memorized=True,
-        hw_memorized=True,
+        dtype=SimulationMode, memorized=True, hw_memorized=True,
     )
     def simulationMode(self: MccsTile) -> int:
         """
@@ -376,9 +337,7 @@ class MccsTile(SKABaseDevice):
         self.component_manager.simulation_mode = SimulationMode(value)
 
     @attribute(
-        dtype=TestMode,
-        memorized=True,
-        hw_memorized=True,
+        dtype=TestMode, memorized=True, hw_memorized=True,
     )
     def testMode(self: MccsTile) -> int:
         """
@@ -547,12 +506,7 @@ class MccsTile(SKABaseDevice):
         self.component_manager.firmware_version = value
 
     @attribute(
-        dtype="DevDouble",
-        abs_change=0.05,
-        min_value=4.5,
-        max_value=5.5,
-        min_alarm=4.55,
-        max_alarm=5.45,
+        dtype="DevDouble", abs_change=0.05, min_value=4.5, max_value=5.5, min_alarm=4.55, max_alarm=5.45,
     )
     def voltage(self: MccsTile) -> float:
         """
@@ -590,12 +544,7 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.is_programmed
 
     @attribute(
-        dtype="DevDouble",
-        abs_change=0.1,
-        min_value=15.0,
-        max_value=50.0,
-        min_alarm=16.0,
-        max_alarm=47.0,
+        dtype="DevDouble", abs_change=0.1, min_value=15.0, max_value=50.0, min_alarm=16.0, max_alarm=47.0,
     )
     def boardTemperature(self: MccsTile) -> float:
         """
@@ -606,12 +555,7 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.board_temperature
 
     @attribute(
-        dtype="DevDouble",
-        abs_change=0.1,
-        min_value=15.0,
-        max_value=50.0,
-        min_alarm=16.0,
-        max_alarm=47.0,
+        dtype="DevDouble", abs_change=0.1, min_value=15.0, max_value=50.0, min_alarm=16.0, max_alarm=47.0,
     )
     def fpga1Temperature(self: MccsTile) -> float:
         """
@@ -622,12 +566,7 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.fpga1_temperature
 
     @attribute(
-        dtype="DevDouble",
-        abs_change=0.2,
-        min_value=15.0,
-        max_value=50.0,
-        min_alarm=16.0,
-        max_alarm=47.0,
+        dtype="DevDouble", abs_change=0.2, min_value=15.0, max_value=50.0, min_alarm=16.0, max_alarm=47.0,
     )
     def fpga2Temperature(self: MccsTile) -> float:
         """
@@ -671,9 +610,7 @@ class MccsTile(SKABaseDevice):
 
         :return: IP addresses
         """
-        return [
-            item["dst_ip"] for item in self.component_manager.get_40g_configuration()
-        ]
+        return [item["dst_ip"] for item in self.component_manager.get_40g_configuration()]
 
     @attribute(dtype=("DevLong",), max_dim_x=256)
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
@@ -682,9 +619,7 @@ class MccsTile(SKABaseDevice):
 
         :return: ports
         """
-        return [
-            item["dst_port"] for item in self.component_manager.get_40g_configuration()
-        ]
+        return [item["dst_port"] for item in self.component_manager.get_40g_configuration()]
 
     @attribute(dtype=("DevDouble",), max_dim_x=32)
     def adcPower(self: MccsTile) -> list[float]:
@@ -1183,9 +1118,7 @@ class MccsTile(SKABaseDevice):
             """
             component_manager = self.target
             if len(argin) < 2:
-                component_manager.logger.error(
-                    "A minimum of two parameters are required"
-                )
+                component_manager.logger.error("A minimum of two parameters are required")
                 raise ValueError("A minium of two parameters are required")
             component_manager.write_address(argin[0], argin[1:])
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1403,9 +1336,7 @@ class MccsTile(SKABaseDevice):
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
 
-            component_manager.set_lmc_download(
-                mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
-            )
+            component_manager.set_lmc_download(mode, payload_length, dst_ip, src_port, dst_port, lmc_mac)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -1506,9 +1437,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SetChanneliserTruncation(
-        self: MccsTile, argin: list[int]
-    ) -> DevVarLongStringArrayType:
+    def SetChanneliserTruncation(self: MccsTile, argin: list[int]) -> DevVarLongStringArrayType:
         """
         Set the coefficients to modify (flatten) the bandpass.
 
@@ -1572,21 +1501,15 @@ class MccsTile(SKABaseDevice):
                 region = argin[i : i + 5]  # noqa: E203
                 start_channel = region[0]
                 if start_channel % 2 != 0:
-                    component_manager.logger.error(
-                        "Start channel in region must be even"
-                    )
+                    component_manager.logger.error("Start channel in region must be even")
                     raise ValueError("Start channel in region must be even")
                 nchannels = region[1]
                 if nchannels % 8 != 0:
-                    component_manager.logger.error(
-                        "Nos. of channels in region must be multiple of 8"
-                    )
+                    component_manager.logger.error("Nos. of channels in region must be multiple of 8")
                     raise ValueError("Nos. of channels in region must be multiple of 8")
                 beam_index = region[2]
                 if beam_index < 0 or beam_index > 47:
-                    component_manager.logger.error(
-                        "Beam_index is out side of range 0-47"
-                    )
+                    component_manager.logger.error("Beam_index is out side of range 0-47")
                     raise ValueError("Beam_index is out side of range 0-47")
                 total_chan += nchannels
                 if total_chan > 384:
@@ -1598,9 +1521,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SetBeamFormerRegions(
-        self: MccsTile, argin: list[int]
-    ) -> DevVarLongStringArrayType:
+    def SetBeamFormerRegions(self: MccsTile, argin: list[int]) -> DevVarLongStringArrayType:
         """
         Set the frequency regions which are going to be beamformed into each beam.
 
@@ -1669,15 +1590,11 @@ class MccsTile(SKABaseDevice):
                 component_manager.logger.error("IsLast is a mandatory parameter")
                 raise ValueError("IsLast is a mandatory parameter")
 
-            component_manager.initialise_beamformer(
-                start_channel, ntiles, is_first, is_last
-            )
+            component_manager.initialise_beamformer(start_channel, ntiles, is_first, is_last)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureStationBeamformer(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    def ConfigureStationBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Initialise and start the station beamformer.
 
@@ -1729,9 +1646,7 @@ class MccsTile(SKABaseDevice):
                 component_manager.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[1:]) % 8 != 0:
-                component_manager.logger.error(
-                    "Incomplete specification of coefficient"
-                )
+                component_manager.logger.error("Incomplete specification of coefficient")
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
             calibration_coefficients = [
@@ -1744,15 +1659,11 @@ class MccsTile(SKABaseDevice):
                 for i in range(1, len(argin), 8)
             ]
 
-            component_manager.load_calibration_coefficients(
-                antenna, calibration_coefficients
-            )
+            component_manager.load_calibration_coefficients(antenna, calibration_coefficients)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadCalibrationCoefficients(
-        self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+    def LoadCalibrationCoefficients(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
         """
         Load the calibration coefficients, but does not apply them.
 
@@ -1824,9 +1735,7 @@ class MccsTile(SKABaseDevice):
                 component_manager.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[2:]) % 8 != 0:
-                component_manager.logger.error(
-                    "Incomplete specification of coefficient"
-                )
+                component_manager.logger.error("Incomplete specification of coefficient")
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
             beam = int(argin[1])
@@ -1840,15 +1749,11 @@ class MccsTile(SKABaseDevice):
                 for i in range(2, len(argin), 8)
             ]
 
-            component_manager.load_calibration_curve(
-                antenna, beam, calibration_coefficients
-            )
+            component_manager.load_calibration_curve(antenna, beam, calibration_coefficients)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadCalibrationCurve(
-        self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+    def LoadCalibrationCurve(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
         """
         Load calibration curve.
 
@@ -1996,9 +1901,7 @@ class MccsTile(SKABaseDevice):
                 component_manager.logger.error(
                     f"Insufficient coefficients should be {self._antennas_per_tile+1}"
                 )
-                raise ValueError(
-                    f"Insufficient coefficients should be {self._antennas_per_tile+1}"
-                )
+                raise ValueError(f"Insufficient coefficients should be {self._antennas_per_tile+1}")
 
             beam = int(argin[0])
             if beam < 0 or beam > 47:
@@ -2010,9 +1913,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadAntennaTapering(
-        self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+    def LoadAntennaTapering(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
         """
         Load antenna tapering coefficients.
 
@@ -2139,9 +2040,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def SetPointingDelay(
-        self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+    def SetPointingDelay(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -2315,16 +2214,12 @@ class MccsTile(SKABaseDevice):
 
             component_manager = self.target
             component_manager.configure_integrated_channel_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureIntegratedChannelData(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    def ConfigureIntegratedChannelData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2375,16 +2270,12 @@ class MccsTile(SKABaseDevice):
 
             component_manager = self.target
             component_manager.configure_integrated_beam_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureIntegratedBeamData(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    def ConfigureIntegratedBeamData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the transmission of integrated beam data.
 
@@ -2520,11 +2411,7 @@ class MccsTile(SKABaseDevice):
 
             component_manager = self.target
             component_manager.send_channelised_data(
-                number_of_samples,
-                first_channel,
-                last_channel,
-                timestamp,
-                seconds,
+                number_of_samples, first_channel, last_channel, timestamp, seconds,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2595,9 +2482,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedDataContinuous(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    def SendChannelisedDataContinuous(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Send data from channel channel continuously.
 
@@ -2928,20 +2813,12 @@ class MccsTile(SKABaseDevice):
             lmc_mac = params.get("LmcMac", None)
 
             component_manager.set_lmc_integrated_download(
-                mode,
-                channel_payload_length,
-                beam_payload_length,
-                dst_ip,
-                src_port,
-                dst_port,
-                lmc_mac,
+                mode, channel_payload_length, beam_payload_length, dst_ip, src_port, dst_port, lmc_mac,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetLmcIntegratedDownload(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    def SetLmcIntegratedDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Configure link and size of control data.
 
@@ -2993,15 +2870,11 @@ class MccsTile(SKABaseDevice):
             seconds = params.get("Seconds", 0.1)
 
             component_manager = self.target
-            component_manager.send_raw_data(
-                sync=True, timestamp=timestamp, seconds=seconds
-            )
+            component_manager.send_raw_data(sync=True, timestamp=timestamp, seconds=seconds)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendRawDataSynchronised(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    def SendRawDataSynchronised(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Send synchronised raw data.
 
@@ -3062,19 +2935,12 @@ class MccsTile(SKABaseDevice):
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
             component_manager.send_channelised_data_narrowband(
-                frequency,
-                round_bits,
-                number_of_samples,
-                wait_seconds,
-                timestamp,
-                seconds,
+                frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedDataNarrowband(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    def SendChannelisedDataNarrowband(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Continuously send channelised data from a single channel.
 

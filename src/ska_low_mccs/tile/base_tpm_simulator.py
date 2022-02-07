@@ -12,6 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 import copy
 import logging
 from typing import Any, Optional
+
 from typing_extensions import Final
 
 from ska_low_mccs.component import ObjectComponent
@@ -260,8 +261,7 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'board_temperature' must be "
-            "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'board_temperature' must be " "implemented in a subclass."
         )
 
     @property
@@ -273,8 +273,7 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'voltage' must be "
-            "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'voltage' must be " "implemented in a subclass."
         )
 
     @property
@@ -286,8 +285,7 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'current' must be "
-            "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'current' must be " "implemented in a subclass."
         )
 
     @property
@@ -299,8 +297,7 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'fpga1_temperature' must be "
-            "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'fpga1_temperature' must be " "implemented in a subclass."
         )
 
     @property
@@ -312,8 +309,7 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'fpga2_temperature' must be "
-            "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'fpga2_temperature' must be " "implemented in a subclass."
         )
 
     @property
@@ -358,11 +354,7 @@ class BaseTpmSimulator(ObjectComponent):
         return list(self._register_map[0].keys())
 
     def read_register(
-        self: BaseTpmSimulator,
-        register_name: str,
-        nb_read: int,
-        offset: int,
-        device: int,
+        self: BaseTpmSimulator, register_name: str, nb_read: int, offset: int, device: int,
     ) -> list[int]:
         """
         Read the values in a register.
@@ -383,11 +375,7 @@ class BaseTpmSimulator(ObjectComponent):
         return values
 
     def write_register(
-        self: BaseTpmSimulator,
-        register_name: str,
-        values: list[int],
-        offset: int,
-        device: int,
+        self: BaseTpmSimulator, register_name: str, values: list[int], offset: int, device: int,
     ) -> None:
         """
         Read the values in a register.
@@ -464,9 +452,7 @@ class BaseTpmSimulator(ObjectComponent):
         self._forty_gb_core_list.append(core_dict)
 
     def get_40g_configuration(
-        self: BaseTpmSimulator,
-        core_id: int = -1,
-        arp_table_entry: int = 0,
+        self: BaseTpmSimulator, core_id: int = -1, arp_table_entry: int = 0,
     ) -> dict | list[dict] | None:
         """
         Return a 40G configuration.
@@ -556,11 +542,7 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def initialise_beamformer(
-        self: BaseTpmSimulator,
-        start_channel: int,
-        nof_channels: int,
-        is_first: bool,
-        is_last: bool,
+        self: BaseTpmSimulator, start_channel: int, nof_channels: int, is_first: bool, is_last: bool,
     ) -> None:
         """
         Initialise the beamformer.
@@ -596,10 +578,7 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def load_calibration_curve(
-        self: BaseTpmSimulator,
-        antenna: int,
-        beam: int,
-        calibration_coefficients: list[int],
+        self: BaseTpmSimulator, antenna: int, beam: int, calibration_coefficients: list[int],
     ) -> None:
         """
         Load calibration curve.
@@ -621,9 +600,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_calibration_curve")
         raise NotImplementedError
 
-    def load_beam_angle(
-        self: BaseTpmSimulator, angle_coefficients: list[float]
-    ) -> None:
+    def load_beam_angle(self: BaseTpmSimulator, angle_coefficients: list[float]) -> None:
         """
         Load the beam angle.
 
@@ -636,9 +613,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_beam_angle")
         raise NotImplementedError
 
-    def load_antenna_tapering(
-        self: BaseTpmSimulator, beam: int, tapering_coefficients: list[float]
-    ) -> None:
+    def load_antenna_tapering(self: BaseTpmSimulator, beam: int, tapering_coefficients: list[float]) -> None:
         """
         Loat the antenna tapering coefficients.
 
@@ -682,9 +657,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: compute_calibration_coefficients")
         raise NotImplementedError
 
-    def set_pointing_delay(
-        self: BaseTpmSimulator, delay_array: list[float], beam_index: int
-    ) -> None:
+    def set_pointing_delay(self: BaseTpmSimulator, delay_array: list[float], beam_index: int) -> None:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -713,11 +686,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_pointing_delay")
         raise NotImplementedError
 
-    def start_beamformer(
-        self: BaseTpmSimulator,
-        start_time: int = 0,
-        duration: int = -1,
-    ) -> None:
+    def start_beamformer(self: BaseTpmSimulator, start_time: int = 0, duration: int = -1,) -> None:
         """
         Start the beamformer at the specified time.
 
@@ -783,10 +752,7 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def send_raw_data(
-        self: BaseTpmSimulator,
-        sync: bool = False,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
+        self: BaseTpmSimulator, sync: bool = False, timestamp: Optional[str] = None, seconds: float = 0.2,
     ) -> None:
         """
         Transmit a snapshot containing raw antenna data.
@@ -848,9 +814,7 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def send_beam_data(
-        self: BaseTpmSimulator,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
+        self: BaseTpmSimulator, timestamp: Optional[str] = None, seconds: float = 0.2,
     ) -> None:
         """
         Transmit a snapshot containing beamformed data.
@@ -874,11 +838,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: stop_data_transmission")
         raise NotImplementedError
 
-    def start_acquisition(
-        self: BaseTpmSimulator,
-        start_time: Optional[int] = None,
-        delay: int = 2,
-    ) -> None:
+    def start_acquisition(self: BaseTpmSimulator, start_time: Optional[int] = None, delay: int = 2,) -> None:
         """
         Start data acquisition.
 
@@ -948,9 +908,7 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def send_raw_data_synchronised(
-        self: BaseTpmSimulator,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
+        self: BaseTpmSimulator, timestamp: Optional[str] = None, seconds: float = 0.2,
     ) -> None:
         """
         Send synchronised raw data.
@@ -1128,10 +1086,7 @@ class BaseTpmSimulator(ObjectComponent):
         )
         amplitude_adu = round(amplitude_noise * 255) * 0.102
         self.logger.debug(
-            "TpmSimulator: set_test_generator noise: "
-            + str(amplitude_adu)
-            + " ADUs @"
-            + str(load_time)
+            "TpmSimulator: set_test_generator noise: " + str(amplitude_adu) + " ADUs @" + str(load_time)
         )
         freqs = [16, 12, 8, 6, 4, 3, 2, 1]
         frequency = 0.925925 * freqs[pulse_code]
@@ -1153,9 +1108,7 @@ class BaseTpmSimulator(ObjectComponent):
 
         :param bit_mask: Bit mask of inputs using test signal
         """
-        self.logger.debug(
-            "TpmSimulator: test_generator_input_select: " + str(hex(bit_mask))
-        )
+        self.logger.debug("TpmSimulator: test_generator_input_select: " + str(hex(bit_mask)))
         # raise NotImplementedError
 
     @property
@@ -1177,9 +1130,7 @@ class BaseTpmSimulator(ObjectComponent):
         self._test_generator_active = active
 
     @staticmethod
-    def calculate_delay(
-        current_delay: float, current_tc: int, ref_lo: float, ref_hi: float
-    ) -> None:
+    def calculate_delay(current_delay: float, current_tc: int, ref_lo: float, ref_hi: float) -> None:
         """
         Calculate the delay.
 

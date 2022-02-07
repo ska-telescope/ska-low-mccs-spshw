@@ -9,23 +9,19 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import pytest_mock
-
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockDeviceBuilder
 
 
 @pytest.fixture()
-def health_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def health_changed_callback(mock_callback_factory: Callable[[], unittest.mock.Mock],) -> unittest.mock.Mock:
     """
     Return a mock callback for a device component manager.
 
@@ -135,9 +131,7 @@ def pool_member_component_fault_callback(
 
 
 @pytest.fixture()
-def mock_component_manager_factory(
-    mocker: pytest_mock.MockerFixture,
-) -> Callable[[], unittest.mock.Mock]:
+def mock_component_manager_factory(mocker: pytest_mock.MockerFixture,) -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that can be called to provide a mock component manager.
 

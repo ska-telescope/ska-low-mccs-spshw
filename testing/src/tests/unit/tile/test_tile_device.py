@@ -8,20 +8,16 @@
 """This module contains the tests for MccsTile."""
 from __future__ import annotations
 
-import json
 import itertools
+import json
 import time
 from typing import Any, Optional
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
-    AdminMode,
-    HealthState,
-    TestMode,
-)
+from ska_tango_base.control_model import AdminMode, HealthState, TestMode
+
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
@@ -84,19 +80,15 @@ class TestMccsTile:
             can use to subscribe to health state changes on the device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
-            "healthState",
-            device_health_state_changed_callback,
+            "healthState", device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.UNKNOWN
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -118,11 +110,7 @@ class TestMccsTile:
             ("fpga1Temperature", StaticTpmSimulator.FPGA1_TEMPERATURE, None),
             ("fpga2Temperature", StaticTpmSimulator.FPGA2_TEMPERATURE, None),
             ("fpgasTime", pytest.approx(StaticTpmSimulator.FPGAS_TIME), None),
-            (
-                "currentTileBeamformerFrame",
-                StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
-                None,
-            ),
+            ("currentTileBeamformerFrame", StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME, None,),
             ("phaseTerminalCount", StaticTpmSimulator.PHASE_TERMINAL_COUNT, 45),
             ("adcPower", pytest.approx(tuple(float(i) for i in range(32))), None),
             ("ppsDelay", 12, None),
@@ -157,21 +145,17 @@ class TestMccsTile:
         """
         tile_device.testMode = TestMode.TEST
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
-            "state",
-            device_state_changed_callback,
+            "state", device_state_changed_callback,
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
+        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
             _ = getattr(tile_device, attribute)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -187,10 +171,7 @@ class TestMccsTile:
             tile_device.write_attribute(attribute, write_value)
             assert getattr(tile_device, attribute) == write_value
 
-    def test_cspDestinationIp(
-        self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-    ) -> None:
+    def test_cspDestinationIp(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
         """
         Test for the cspDestinationIp attribute.
 
@@ -202,10 +183,7 @@ class TestMccsTile:
         tile_device.cspDestinationIp = "10.0.23.56"
         assert tile_device.cspDestinationIp == "10.0.23.56"
 
-    def test_cspDestinationMac(
-        self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-    ) -> None:
+    def test_cspDestinationMac(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
         """
         Test for the cspDestinationMac attribute.
 
@@ -217,10 +195,7 @@ class TestMccsTile:
         tile_device.cspDestinationMac = "10:fe:fa:06:0b:99"
         assert tile_device.cspDestinationMac == "10:fe:fa:06:0b:99"
 
-    def test_cspDestinationPort(
-        self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-    ) -> None:
+    def test_cspDestinationPort(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
         """
         Test for the cspDestinationPort attribute.
 
@@ -232,10 +207,7 @@ class TestMccsTile:
         tile_device.cspDestinationPort = 4567
         assert tile_device.cspDestinationPort == 4567
 
-    def test_antennaIds(
-        self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-    ) -> None:
+    def test_antennaIds(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
         """
         Test for the antennaIds attribute.
 
@@ -255,37 +227,25 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize(
         ("device_command", "arg"),
         [
-            (
-                "SetLmcDownload",
-                json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),
-            ),
+            ("SetLmcDownload", json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),),
             ("SetBeamFormerRegions", (2, 8, 5, 0, 0)),
             (
                 "ConfigureStationBeamformer",
-                json.dumps(
-                    {"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}
-                ),
+                json.dumps({"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}),
             ),
             ("LoadBeamAngle", tuple(float(i) for i in range(16))),
             ("LoadAntennaTapering", tuple(float(i) for i in range(17))),
             ("SetPointingDelay", [3] * 5),  # 2 * antennas_per_tile + 1
             (
                 "ConfigureIntegratedChannelData",
-                json.dumps(
-                    {"Integration Time": 6.284, "First channel": 0, "Last Channel": 511}
-                ),
+                json.dumps({"Integration Time": 6.284, "First channel": 0, "Last Channel": 511}),
             ),
             (
                 "ConfigureIntegratedBeamData",
-                json.dumps(
-                    {"Integration Time": 3.142, "First channel": 0, "Last Channel": 191}
-                ),
+                json.dumps({"Integration Time": 3.142, "First channel": 0, "Last Channel": 191}),
             ),
             ("SendRawData", json.dumps({"Sync": True, "Seconds": 6.7})),
-            (
-                "SendChannelisedData",
-                json.dumps({"NSamples": 4, "FirstChannel": 7, "LastChannel": 234}),
-            ),
+            ("SendChannelisedData", json.dumps({"NSamples": 4, "FirstChannel": 7, "LastChannel": 234}),),
             (
                 "SendChannelisedDataContinuous",
                 json.dumps({"ChannelID": 2, "NSamples": 4, "WaitSeconds": 3.5}),
@@ -297,35 +257,19 @@ class TestMccsTileCommands:
             (
                 "SetLmcIntegratedDownload",
                 json.dumps(
-                    {
-                        "Mode": "1G",
-                        "ChannelPayloadLength": 4,
-                        "BeamPayloadLength": 6,
-                        "DstIP": "10.0.1.23",
-                    }
+                    {"Mode": "1G", "ChannelPayloadLength": 4, "BeamPayloadLength": 6, "DstIP": "10.0.1.23",}
                 ),
             ),
-            (
-                "SendRawDataSynchronised",
-                json.dumps({"Seconds": 0.5}),
-            ),
+            ("SendRawDataSynchronised", json.dumps({"Seconds": 0.5}),),
             (
                 "SendChannelisedDataNarrowband",
                 json.dumps(
-                    {
-                        "Frequency": 4000,
-                        "RoundBits": 256,
-                        "NSamples": 48,
-                        "WaitSeconds": 10,
-                        "Seconds": 0.5,
-                    }
+                    {"Frequency": 4000, "RoundBits": 256, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5,}
                 ),
             ),
             (
                 "CalculateDelay",
-                json.dumps(
-                    {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
-                ),
+                json.dumps({"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}),
             ),
             (
                 "ConfigureTestGenerator",
@@ -371,16 +315,13 @@ class TestMccsTileCommands:
         :param arg: argument to the command (optional)
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         args = [] if arg is None else [arg]
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
+        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
             _ = getattr(tile_device, device_command)(*args)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -417,16 +358,14 @@ class TestMccsTileCommands:
         :param subrack_tpm_id: the position of the TPM in its subrack
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         assert tile_device.state() == tango.DevState.DISABLE
         with pytest.raises(
-            tango.DevFailed,
-            match="Command On not allowed when the device is in DISABLE state",
+            tango.DevFailed, match="Command On not allowed when the device is in DISABLE state",
         ):
             _ = tile_device.On()
 
@@ -465,15 +404,12 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
+        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
             _ = tile_device.Initialise()
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -485,9 +421,7 @@ class TestMccsTileCommands:
         tile_device.MockTpmOff()
         time.sleep(0.1)
 
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
+        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
             _ = tile_device.Initialise()
 
         tile_device.MockTpmOn()
@@ -520,22 +454,18 @@ class TestMccsTileCommands:
             to subscribe to state changes on the tile device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
-            "state",
-            device_state_changed_callback,
+            "state", device_state_changed_callback,
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert tile_device.state() == tango.DevState.DISABLE
 
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
+        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -544,9 +474,7 @@ class TestMccsTileCommands:
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
         # At this point, the component should be unconnected, as not turned on
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
+        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.MockTpmOn()
@@ -582,8 +510,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -624,8 +551,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -664,8 +590,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -680,9 +605,7 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        assert tile_device.GetRegisterList() == list(
-            StaticTpmSimulator.REGISTER_MAP[0].keys()
-        )
+        assert tile_device.GetRegisterList() == list(StaticTpmSimulator.REGISTER_MAP[0].keys())
 
     def test_ReadRegister(
         self: TestMccsTileCommands,
@@ -700,8 +623,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -730,9 +652,7 @@ class TestMccsTileCommands:
         for exclude_key in arg.keys():
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
             bad_json_arg = json.dumps(bad_arg)
-            with pytest.raises(
-                tango.DevFailed, match=f"{exclude_key} is a mandatory parameter"
-            ):
+            with pytest.raises(tango.DevFailed, match=f"{exclude_key} is a mandatory parameter"):
                 _ = tile_device.ReadRegister(bad_json_arg)
 
     def test_WriteRegister(
@@ -751,8 +671,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -782,9 +701,7 @@ class TestMccsTileCommands:
         for exclude_key in arg.keys():
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
             bad_json_arg = json.dumps(bad_arg)
-            with pytest.raises(
-                tango.DevFailed, match=f"{exclude_key} is a mandatory parameter"
-            ):
+            with pytest.raises(tango.DevFailed, match=f"{exclude_key} is a mandatory parameter"):
                 _ = tile_device.WriteRegister(bad_json_arg)
 
     def test_ReadAddress(
@@ -803,8 +720,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -848,8 +764,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -891,8 +806,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -930,10 +844,7 @@ class TestMccsTileCommands:
         }
         tile_device.Configure40GCore(json.dumps(config_2))
 
-        assert tuple(tile_device.fortyGbDestinationIps) == (
-            "10.0.98.3",
-            "10.0.98.4",
-        )
+        assert tuple(tile_device.fortyGbDestinationIps) == ("10.0.98.3", "10.0.98.4",)
         assert tuple(tile_device.fortyGbDestinationPorts) == (5000, 5001)
 
         arg = {
@@ -950,9 +861,7 @@ class TestMccsTileCommands:
             "ArpTableEntry": 0,
         }
         json_arg = json.dumps(arg)
-        with pytest.raises(
-            tango.DevFailed, match="Invalid core id or arp table id specified"
-        ):
+        with pytest.raises(tango.DevFailed, match="Invalid core id or arp table id specified"):
             _ = tile_device.Get40GCoreConfiguration(json_arg)
 
     @pytest.mark.parametrize("channels", (2, 3))
@@ -977,8 +886,7 @@ class TestMccsTileCommands:
         :param frequencies: number of frequencies to set
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -993,9 +901,7 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        array: list[float] = (
-            [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
-        )
+        array: list[float] = ([float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies))
 
         with pytest.raises(tango.DevFailed, match="NotImplementedError"):
             _ = tile_device.SetChanneliserTruncation(array)
@@ -1020,8 +926,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -1069,8 +974,7 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -1131,8 +1035,7 @@ class TestMccsTileCommands:
         :param duration: duration of time that the beamformer should run
         """
         tile_device.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
+            "adminMode", device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE

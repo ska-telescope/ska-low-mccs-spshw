@@ -10,21 +10,19 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
+import time
 from typing import List, Optional, Tuple
 
 import tango
-import time
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import ResponseCommand, ResultCode
+from ska_tango_base.control_model import HealthState, PowerMode
 from tango.server import command, device_property
 
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.control_model import HealthState, PowerMode
-from ska_tango_base.commands import ResponseCommand, ResultCode
-
-from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 import ska_low_mccs.release as release
 from ska_low_mccs import MccsDeviceProxy
-
+from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 
 __all__ = ["MccsController", "main"]
 
@@ -69,9 +67,7 @@ class MccsController(SKABaseDevice):
         )
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsController,
-    ) -> ControllerComponentManager:
+    def create_component_manager(self: MccsController,) -> ControllerComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -101,30 +97,20 @@ class MccsController(SKABaseDevice):
         super().init_command_objects()
 
         self.register_command_object(
-            "On",
-            self.OnCommand(self, self.op_state_model, self.logger),
+            "On", self.OnCommand(self, self.op_state_model, self.logger),
         )
         self.register_command_object(
-            "Off",
-            self.OffCommand(self, self.op_state_model, self.logger),
+            "Off", self.OffCommand(self, self.op_state_model, self.logger),
         )
         self.register_command_object(
-            "Allocate",
-            self.AllocateCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
+            "Allocate", self.AllocateCommand(self.component_manager, self.op_state_model, self.logger),
         )
         self.register_command_object(
-            "Release",
-            self.ReleaseCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
+            "Release", self.ReleaseCommand(self.component_manager, self.op_state_model, self.logger),
         )
         self.register_command_object(
             "RestartSubarray",
-            self.RestartSubarrayCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
+            self.RestartSubarrayCommand(self.component_manager, self.op_state_model, self.logger),
         )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -195,9 +181,7 @@ class MccsController(SKABaseDevice):
                         return (ResultCode.OK, message)
                     time.sleep(period)
                     elapsed_time += period
-                message = (
-                    f"Controller On command didn't complete within {timeout} seconds"
-                )
+                message = f"Controller On command didn't complete within {timeout} seconds"
                 return (ResultCode.FAILED, message)
 
             # Wait for conditions on component manager to unblock
@@ -242,9 +226,7 @@ class MccsController(SKABaseDevice):
                         return (ResultCode.OK, message)
                     time.sleep(period)
                     elapsed_time += period
-                message = (
-                    f"Controller Off command didn't complete within {timeout} seconds"
-                )
+                message = f"Controller Off command didn't complete within {timeout} seconds"
                 return (ResultCode.FAILED, message)
 
             # Wait for conditions on component manager to unblock
@@ -256,8 +238,7 @@ class MccsController(SKABaseDevice):
     # Callbacks
     # ----------
     def _communication_status_changed(
-        self: MccsController,
-        communication_status: CommunicationStatus,
+        self: MccsController, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -301,14 +282,9 @@ class MccsController(SKABaseDevice):
         else:  # self._component_power_mode is None
             pass  # wait for a power mode update
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _component_power_mode_changed(
-        self: MccsController,
-        power_mode: PowerMode,
-    ) -> None:
+    def _component_power_mode_changed(self: MccsController, power_mode: PowerMode,) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -484,19 +460,13 @@ class MccsController(SKABaseDevice):
 
             subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
             subarray_beam_fqdns = [
-                f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
-                for subarray_beam_id in subarray_beam_ids
+                f"low-mccs/subarraybeam/{subarray_beam_id:02d}" for subarray_beam_id in subarray_beam_ids
             ]
             station_ids = kwargs.get("station_ids", list())
 
             station_fqdns = []
             for station_id_list in station_ids:
-                station_fqdns.append(
-                    [
-                        f"low-mccs/station/{station_id:03d}"
-                        for station_id in station_id_list
-                    ]
-                )
+                station_fqdns.append([f"low-mccs/station/{station_id:03d}" for station_id in station_id_list])
 
             channel_blocks = kwargs.get("channel_blocks", list())
             result_code = component_manager.allocate(
@@ -545,9 +515,7 @@ class MccsController(SKABaseDevice):
                 information purpose only.
             """
             component_manager = self.target
-            result_code = component_manager.restart_subarray(
-                f"low-mcss/subarray/{subarray_id:02d}"
-            )
+            result_code = component_manager.restart_subarray(f"low-mcss/subarray/{subarray_id:02d}")
 
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)

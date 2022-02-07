@@ -9,17 +9,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 
-from ska_low_mccs.subarray_beam import (
-    SubarrayBeam,
-    SubarrayBeamComponentManager,
-)
-
 from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
@@ -58,9 +54,7 @@ def is_configured_changed_callback(
 
 
 @pytest.fixture()
-def subarray_beam_component(
-    logger: logging.Logger,
-) -> SubarrayBeam:
+def subarray_beam_component(logger: logging.Logger,) -> SubarrayBeam:
     """
     Fixture that returns a subarray beam component.
 

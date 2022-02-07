@@ -12,12 +12,10 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from tango.server import attribute, command
-
-from ska_tango_base.obs import SKAObsDevice
-
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState
+from ska_tango_base.obs import SKAObsDevice
+from tango.server import attribute, command
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
@@ -50,16 +48,12 @@ class MccsSubarrayBeam(SKAObsDevice):
 
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
-        self._obs_state_model = SubarrayBeamObsStateModel(
-            self.logger, self._update_obs_state
-        )
+        self._obs_state_model = SubarrayBeamObsStateModel(self.logger, self._update_obs_state)
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubarrayBeamHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsSubarrayBeam,
-    ) -> SubarrayBeamComponentManager:
+    def create_component_manager(self: MccsSubarrayBeam,) -> SubarrayBeamComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -122,8 +116,7 @@ class MccsSubarrayBeam(SKAObsDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsSubarrayBeam,
-        communication_status: CommunicationStatus,
+        self: MccsSubarrayBeam, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -145,9 +138,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
     def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
         """
@@ -243,9 +234,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         self.component_manager.logical_beam_id = logical_beam_id
 
-    @attribute(
-        dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0
-    )
+    @attribute(dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0)
     def updateRate(self: MccsSubarrayBeam) -> float:
         """
         Return the update rate (in hertz) for this subarray beam.
@@ -411,10 +400,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             """
             component_manager = self.target
             kwargs = json.loads(argin)
-            result_code = component_manager.scan(
-                kwargs.get("scan_id"),
-                kwargs.get("scan_time"),
-            )
+            result_code = component_manager.scan(kwargs.get("scan_id"), kwargs.get("scan_time"),)
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:

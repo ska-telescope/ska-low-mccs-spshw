@@ -9,26 +9,22 @@
 from __future__ import annotations
 
 import logging
-
-from typing import Any, Callable, Optional
 import unittest.mock
+from typing import Any, Callable, Optional
 
 import pytest
 import requests
-
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.subrack import (
+    SubrackComponentManager,
     SubrackData,
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
-    SubrackComponentManager,
 )
-
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -80,9 +76,7 @@ def initial_power_mode() -> PowerMode:
 
 
 @pytest.fixture()
-def subrack_simulator(
-    component_progress_changed_callback: Callable[[int], None],
-) -> SubrackSimulator:
+def subrack_simulator(component_progress_changed_callback: Callable[[int], None],) -> SubrackSimulator:
     """
     Fixture that returns a subrack simulator.
 
@@ -234,11 +228,7 @@ def subrack_driver(
             "subrack_fan_modes": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES,
             "tpm_count": SubrackData.TPM_BAY_COUNT,
             #  "tpm_temperatures" is not implemented in driver
-            "tpm_powers": [
-                SubrackSimulator.DEFAULT_TPM_VOLTAGE
-                * SubrackSimulator.DEFAULT_TPM_CURRENT
-            ]
-            * 8,
+            "tpm_powers": [SubrackSimulator.DEFAULT_TPM_VOLTAGE * SubrackSimulator.DEFAULT_TPM_CURRENT] * 8,
             "tpm_voltages": [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8,
             "power_supply_fan_speeds": SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
             "power_supply_currents": SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
@@ -248,9 +238,7 @@ def subrack_driver(
             "tpm_currents": [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8,
         }
 
-        def __init__(
-            self: MockResponse, params: Optional[dict[str, str]] = None
-        ) -> None:
+        def __init__(self: MockResponse, params: Optional[dict[str, str]] = None) -> None:
             """
             Initialise a new instance.
 

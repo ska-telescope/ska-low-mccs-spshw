@@ -9,18 +9,14 @@
 from __future__ import annotations
 
 import tango
-from tango.server import attribute
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
+from tango.server import attribute
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.transient_buffer import (
-    TransientBufferComponentManager,
-    TransientBufferHealthModel,
-)
+from ska_low_mccs.transient_buffer import TransientBufferComponentManager, TransientBufferHealthModel
 
 __all__ = ["MccsTransientBuffer", "main"]
 
@@ -47,18 +43,14 @@ class MccsTransientBuffer(SKABaseDevice):
         self._health_model = TransientBufferHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsTransientBuffer,
-    ) -> TransientBufferComponentManager:
+    def create_component_manager(self: MccsTransientBuffer,) -> TransientBufferComponentManager:
         """
         Create and return a component manager for this device.
 
         :return: a component manager for this device.
         """
         return TransientBufferComponentManager(
-            self.logger,
-            self.push_change_event,
-            self._component_communication_status_changed,
+            self.logger, self.push_change_event, self._component_communication_status_changed,
         )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -96,8 +88,7 @@ class MccsTransientBuffer(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsTransientBuffer,
-        communication_status: CommunicationStatus,
+        self: MccsTransientBuffer, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -119,9 +110,7 @@ class MccsTransientBuffer(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
     def health_changed(self: MccsTransientBuffer, health: HealthState) -> None:
         """
@@ -179,9 +168,7 @@ class MccsTransientBuffer(SKABaseDevice):
         return self.component_manager.n_stations
 
     @attribute(
-        dtype=("DevDouble",),
-        max_dim_x=100,
-        label="transientFrequencyWindow",
+        dtype=("DevDouble",), max_dim_x=100, label="transientFrequencyWindow",
     )
     def transientFrequencyWindow(self: MccsTransientBuffer) -> list[float]:
         """

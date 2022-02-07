@@ -11,13 +11,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
+from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager, check_communicating
 from ska_low_mccs.transient_buffer import TransientBuffer
-from ska_low_mccs.component import (
-    check_communicating,
-    CommunicationStatus,
-    ObjectComponentManager,
-)
-
 
 __all__ = ["TransientBufferComponentManager"]
 
@@ -50,11 +45,7 @@ class TransientBufferComponentManager(ObjectComponentManager):
             None,
         )
 
-    def __getattr__(
-        self: TransientBufferComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: TransientBufferComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -83,10 +74,7 @@ class TransientBufferComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: TransientBufferComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: TransientBufferComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 

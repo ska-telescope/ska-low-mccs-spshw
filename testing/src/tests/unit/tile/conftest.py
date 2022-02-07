@@ -13,14 +13,14 @@ import unittest.mock
 from typing import Type
 
 import pytest
-from tango.server import command
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import SimulationMode, TestMode
+from tango.server import command
 
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.component import ExtendedPowerMode
-
+from ska_low_mccs.testing import TangoHarness
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
@@ -28,13 +28,6 @@ from ska_low_mccs.tile import (
     StaticTpmSimulatorComponentManager,
     SwitchingTpmComponentManager,
     TileComponentManager,
-)
-
-from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
 )
 
 
@@ -91,9 +84,7 @@ def initial_tpm_power_mode() -> ExtendedPowerMode:
 
 
 @pytest.fixture()
-def mock_subrack(
-    subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerMode
-) -> unittest.mock.Mock:
+def mock_subrack(subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerMode) -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsSubrack device.
 
@@ -111,10 +102,7 @@ def mock_subrack(
 
 
 @pytest.fixture()
-def initial_mocks(
-    subrack_fqdn: str,
-    mock_subrack: unittest.mock.Mock,
-) -> dict[str, unittest.mock.Mock]:
+def initial_mocks(subrack_fqdn: str, mock_subrack: unittest.mock.Mock,) -> dict[str, unittest.mock.Mock]:
     """
     Return a dictionary of pre-registered device proxy mocks.
 
@@ -133,9 +121,7 @@ def initial_mocks(
 
 
 @pytest.fixture()
-def mock_subrack_device_proxy(
-    subrack_fqdn: str, logger: logging.Logger
-) -> MccsDeviceProxy:
+def mock_subrack_device_proxy(subrack_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
     """
     Return a mock device proxy to an subrack device.
 
@@ -245,10 +231,7 @@ def static_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return StaticTpmSimulatorComponentManager(
-        logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
+        logger, lrc_result_changed_callback, communication_status_changed_callback, component_fault_callback,
     )
 
 
@@ -276,10 +259,7 @@ def dynamic_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return DynamicTpmSimulatorComponentManager(
-        logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
+        logger, lrc_result_changed_callback, communication_status_changed_callback, component_fault_callback,
     )
 
 

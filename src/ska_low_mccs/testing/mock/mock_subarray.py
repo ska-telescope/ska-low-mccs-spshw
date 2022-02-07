@@ -13,9 +13,7 @@ import unittest.mock
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsSubarray
-
 from ska_low_mccs.testing.mock import MockDeviceBuilder
-
 
 __all__ = ["MockSubarrayBuilder"]
 
@@ -24,8 +22,7 @@ class MockSubarrayBuilder(MockDeviceBuilder):
     """This module implements a mock builder for MCCS subarray devices."""
 
     def __init__(
-        self: MockSubarrayBuilder,
-        from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
+        self: MockSubarrayBuilder, from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
     ) -> None:
         """
         Create a new instance.
@@ -43,10 +40,7 @@ class MockSubarrayBuilder(MockDeviceBuilder):
             ("ReleaseAllResources", "ReleaseAllResources command completed OK"),
             ("Configure", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
             ("Restart", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
-            (
-                "SendTransientBuffer",
-                MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],
-            ),
+            ("SendTransientBuffer", MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],),
         ]:
             self._configuration[f"{command_name}.return_value"] = [
                 [ResultCode.OK],

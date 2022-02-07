@@ -46,18 +46,16 @@ return a list of the available command/attribute names.
 from __future__ import annotations
 
 import json
-import requests
 from typing import Any, Optional
+
+import requests
 from typing_extensions import TypedDict
 
-
 CommandResponseType = TypedDict(
-    "CommandResponseType",
-    {"status": str, "info": str, "command": str, "retvalue": str},
+    "CommandResponseType", {"status": str, "info": str, "command": str, "retvalue": str},
 )
 AttributeResponseType = TypedDict(
-    "AttributeResponseType",
-    {"status": str, "info": str, "attribute": str, "value": Optional[str]},
+    "AttributeResponseType", {"status": str, "info": str, "attribute": str, "value": Optional[str]},
 )
 
 
@@ -89,9 +87,7 @@ class HardwareClient:
         """
         pass
 
-    def execute_command(
-        self: HardwareClient, command: str, parameters: str = ""
-    ) -> CommandResponseType:
+    def execute_command(self: HardwareClient, command: str, parameters: str = "") -> CommandResponseType:
         """
         Execute the command.
 
@@ -122,11 +118,7 @@ class HardwareClient:
             "value": "",
         }
 
-    def set_attribute(
-        self: HardwareClient,
-        attribute: str,
-        value: Any,
-    ) -> AttributeResponseType:
+    def set_attribute(self: HardwareClient, attribute: str, value: Any,) -> AttributeResponseType:
         """
         Set the attribute value.
 
@@ -157,11 +149,7 @@ class WebHardwareClient(HardwareClient):
         """
         super().__init__(ip_address, port)
         try:
-            self._conn = requests.request(
-                "GET",
-                url=f"http://{self._ip}:{self._port}",
-                timeout=2,
-            )
+            self._conn = requests.request("GET", url=f"http://{self._ip}:{self._port}", timeout=2,)
         except requests.exceptions.RequestException:
             self._conn = None
 
@@ -175,11 +163,7 @@ class WebHardwareClient(HardwareClient):
         """
         if self._conn is None:
             try:
-                self._conn = requests.request(
-                    "GET",
-                    url=f"http://{self._ip}:{self._port}",
-                    timeout=10,
-                )
+                self._conn = requests.request("GET", url=f"http://{self._ip}:{self._port}", timeout=10,)
             except requests.exceptions.RequestException:
                 self._conn = None
         return not (self._conn is None)
@@ -188,9 +172,7 @@ class WebHardwareClient(HardwareClient):
         """Disconnect from the client."""
         self._conn = None
 
-    def execute_command(
-        self: WebHardwareClient, command: str, parameters: str = ""
-    ) -> CommandResponseType:
+    def execute_command(self: WebHardwareClient, command: str, parameters: str = "") -> CommandResponseType:
         """
         Execute a named command, with or without parameters.
 
@@ -269,9 +251,7 @@ class WebHardwareClient(HardwareClient):
             }
         return result
 
-    def set_attribute(
-        self: WebHardwareClient, attribute: str, value: Any
-    ) -> AttributeResponseType:
+    def set_attribute(self: WebHardwareClient, attribute: str, value: Any) -> AttributeResponseType:
         """
         Set the value associated to a named attribute.
 

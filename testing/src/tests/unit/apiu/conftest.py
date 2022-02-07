@@ -8,25 +8,21 @@
 """This module defined a pytest test harness for testing the MCCS APIU module."""
 from __future__ import annotations
 
-import random
-
 import logging
+import random
+import unittest.mock
 from typing import Callable
 
-import unittest.mock
-
 import pytest
-
 from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.apiu import (
+    ApiuComponentManager,
     ApiuSimulator,
     ApiuSimulatorComponentManager,
-    ApiuComponentManager,
     SwitchingApiuComponentManager,
 )
 from ska_low_mccs.component import CommunicationStatus
-
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 

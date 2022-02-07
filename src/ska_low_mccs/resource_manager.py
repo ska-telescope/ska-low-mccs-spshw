@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from typing import Any, Hashable, Iterable, Mapping, Optional
 
-
 __all__ = ["ResourceManager", "HealthfulReadyResourceManager", "ResourcePool"]
 
 
@@ -23,9 +22,7 @@ class ResourceManager:
     """
 
     def __init__(
-        self: ResourceManager,
-        allocatees: Iterable[Hashable],
-        **resources: Iterable[Hashable],
+        self: ResourceManager, allocatees: Iterable[Hashable], **resources: Iterable[Hashable],
     ) -> None:
         """
         Initialise a new instance.
@@ -64,10 +61,7 @@ class ResourceManager:
             for resource_type in resources
         }
 
-    def _validate_resources(
-        self: ResourceManager,
-        **resources: Iterable[Hashable],
-    ) -> None:
+    def _validate_resources(self: ResourceManager, **resources: Iterable[Hashable],) -> None:
         """
         Check that the resources provided are managed by this resource manager.
 
@@ -77,9 +71,7 @@ class ResourceManager:
             resource manager
         """
         unsupported_types = {
-            resource_type
-            for resource_type in resources
-            if resource_type not in self._allocations
+            resource_type for resource_type in resources if resource_type not in self._allocations
         }
         if unsupported_types:
             raise ValueError(f"Unsupported resource types: {unsupported_types}.")
@@ -102,10 +94,7 @@ class ResourceManager:
         if unsupported:
             raise ValueError(f"Unsupported resources: {unsupported}.")
 
-    def _validate_allocatee(
-        self: ResourceManager,
-        allocatee: Hashable,
-    ) -> None:
+    def _validate_allocatee(self: ResourceManager, allocatee: Hashable,) -> None:
         """
         Check that the allocatee provided is known to this resource manager.
 
@@ -118,9 +107,7 @@ class ResourceManager:
             raise ValueError(f"Unsupported allocatee: {allocatee}")
 
     def _validate_allocation(
-        self: ResourceManager,
-        allocatee: Hashable,
-        **resources: Iterable[Hashable],
+        self: ResourceManager, allocatee: Hashable, **resources: Iterable[Hashable],
     ) -> None:
         """
         Check that the specified resources can be allocated to the specified allocatee.
@@ -150,15 +137,9 @@ class ResourceManager:
             if unallocatable[resource_type]
         }
         if unallocatable:
-            raise ValueError(
-                f"Cannot allocate resources: {unallocatable} to allocatee {allocatee}."
-            )
+            raise ValueError(f"Cannot allocate resources: {unallocatable} to allocatee {allocatee}.")
 
-    def allocate(
-        self: ResourceManager,
-        allocatee: Hashable,
-        **resources: Iterable[Hashable],
-    ) -> None:
+    def allocate(self: ResourceManager, allocatee: Hashable, **resources: Iterable[Hashable],) -> None:
         """
         Allocate resources to an allocatee.
 
@@ -184,10 +165,7 @@ class ResourceManager:
             for resource in resources[resource_type]:
                 self._allocations[resource_type][resource] = allocatee
 
-    def deallocate(
-        self: ResourceManager,
-        **resources: Iterable[Hashable],
-    ) -> None:
+    def deallocate(self: ResourceManager, **resources: Iterable[Hashable],) -> None:
         """
         Deallocate resources.
 
@@ -208,10 +186,7 @@ class ResourceManager:
             for resource in resources[resource_type]:
                 self._allocations[resource_type][resource] = None
 
-    def deallocate_from(
-        self: ResourceManager,
-        allocatee: Hashable,
-    ) -> None:
+    def deallocate_from(self: ResourceManager, allocatee: Hashable,) -> None:
         """
         Deallocate all resources from an allocatee.
 
@@ -225,10 +200,7 @@ class ResourceManager:
                 if self._allocations[resource_type][resource] == allocatee:
                     self._allocations[resource_type][resource] = None
 
-    def get_allocated(
-        self: ResourceManager,
-        allocatee: Hashable,
-    ) -> Mapping[str, Iterable[Hashable]]:
+    def get_allocated(self: ResourceManager, allocatee: Hashable,) -> Mapping[str, Iterable[Hashable]]:
         """
         Get all allocated resources in resource manager.
 
@@ -247,16 +219,12 @@ class ResourceManager:
 
         # discard empty entries
         allocated = {
-            resource_type: allocated[resource_type]
-            for resource_type in allocated
-            if allocated[resource_type]
+            resource_type: allocated[resource_type] for resource_type in allocated if allocated[resource_type]
         }
 
         return allocated
 
-    def get_unallocated(
-        self: ResourceManager,
-    ) -> Mapping[str, Iterable[Hashable]]:
+    def get_unallocated(self: ResourceManager,) -> Mapping[str, Iterable[Hashable]]:
         """
         Get all unallocated resources in resource manager.
 
@@ -327,9 +295,7 @@ class _HealthfulResourceManager(ResourceManager):
         super().__init__(allocatees, *args, **resources)
 
     def _validate_allocation(
-        self: _HealthfulResourceManager,
-        allocatee: Hashable,
-        **resources: Iterable[Hashable],
+        self: _HealthfulResourceManager, allocatee: Hashable, **resources: Iterable[Hashable],
     ) -> None:
         """
         Check that the specified resources can be allocated to the specified allocatee.
@@ -357,18 +323,13 @@ class _HealthfulResourceManager(ResourceManager):
         }
         # discard empty entries
         unhealthy = {
-            resource_type: unhealthy[resource_type]
-            for resource_type in unhealthy
-            if unhealthy[resource_type]
+            resource_type: unhealthy[resource_type] for resource_type in unhealthy if unhealthy[resource_type]
         }
         if unhealthy:
             raise ValueError(f"Cannot allocate unhealthy resources: {unhealthy}.")
 
     def set_health(
-        self: _HealthfulResourceManager,
-        resource_type: str,
-        resource: Hashable,
-        is_healthy: bool,
+        self: _HealthfulResourceManager, resource_type: str, resource: Hashable, is_healthy: bool,
     ) -> None:
         """
         Set the health of a resource.
@@ -384,9 +345,7 @@ class _HealthfulResourceManager(ResourceManager):
         self._validate_resources(**{resource_type: {resource}})
 
         if resource_type not in self._healthy:
-            raise ValueError(
-                f"Resource type {resource_type} is not managed for health."
-            )
+            raise ValueError(f"Resource type {resource_type} is not managed for health.")
         self._healthy[resource_type][resource] = is_healthy
 
 
@@ -434,9 +393,7 @@ class _ReadyResourceManager(ResourceManager):
         super().__init__(allocatees, *args, **resources)
 
     def _validate_allocation(
-        self: _ReadyResourceManager,
-        allocatee: Hashable,
-        **resources: Iterable[Hashable],
+        self: _ReadyResourceManager, allocatee: Hashable, **resources: Iterable[Hashable],
     ) -> None:
         """
         Check that the specified resources can be allocated to the specified allocatee.
@@ -455,11 +412,7 @@ class _ReadyResourceManager(ResourceManager):
         if not self._ready[allocatee]:
             raise ValueError(f"Allocatee is unready: {allocatee}.")
 
-    def set_ready(
-        self: _ReadyResourceManager,
-        allocatee: Hashable,
-        is_ready: bool,
-    ) -> None:
+    def set_ready(self: _ReadyResourceManager, allocatee: Hashable, is_ready: bool,) -> None:
         """
         Set an allocatee's readiness to be allocated resources.
 
@@ -471,8 +424,7 @@ class _ReadyResourceManager(ResourceManager):
 
 
 class HealthfulReadyResourceManager(
-    _HealthfulResourceManager,
-    _ReadyResourceManager,
+    _HealthfulResourceManager, _ReadyResourceManager,
 ):
     """A resource manager that manages both allocatee readiness and resource health."""
 
@@ -488,10 +440,7 @@ class ResourcePool:
     again until it is freed.
     """
 
-    def __init__(
-        self: ResourcePool,
-        **resources: Iterable[Hashable],
-    ) -> None:
+    def __init__(self: ResourcePool, **resources: Iterable[Hashable],) -> None:
         """
         Initialise a pool of resources.
 
@@ -504,10 +453,7 @@ class ResourcePool:
             for resource_type in resources
         }
 
-    def get_free_resource(
-        self: ResourcePool,
-        resource_type: Hashable,
-    ) -> Hashable:
+    def get_free_resource(self: ResourcePool, resource_type: Hashable,) -> Hashable:
         """
         Get a free (unallocated) resource from the pool.
 
@@ -524,10 +470,7 @@ class ResourcePool:
 
         raise ValueError(f"No free resources of type: {resource_type}.")
 
-    def free_resources(
-        self: ResourcePool,
-        resources: Mapping[str, Iterable[Hashable]],
-    ) -> None:
+    def free_resources(self: ResourcePool, resources: Mapping[str, Iterable[Hashable]],) -> None:
         """
         Mark a resource as unallocated.
 
@@ -544,10 +487,7 @@ class ResourcePool:
             for resource in resources[resource_type]:
                 self._resources[resource_type][resource] = True
 
-    def free_all_resources(
-        self: ResourcePool,
-        resource_type: Optional[str] = None,
-    ) -> None:
+    def free_all_resources(self: ResourcePool, resource_type: Optional[str] = None,) -> None:
         """
         Free all resources in this Resource Pool.
 

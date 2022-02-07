@@ -14,7 +14,6 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["StationHealthModel"]
 
 
@@ -47,10 +46,7 @@ class StationHealthModel(HealthModel):
         }
         super().__init__(health_changed_callback)
 
-    def apiu_health_changed(
-        self: StationHealthModel,
-        apiu_health: Optional[HealthState],
-    ) -> None:
+    def apiu_health_changed(self: StationHealthModel, apiu_health: Optional[HealthState],) -> None:
         """
         Handle a change in APIU health.
 
@@ -63,9 +59,7 @@ class StationHealthModel(HealthModel):
             self.update_health()
 
     def antenna_health_changed(
-        self: StationHealthModel,
-        antenna_fqdn: str,
-        antenna_health: Optional[HealthState],
+        self: StationHealthModel, antenna_fqdn: str, antenna_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in antenna health.
@@ -81,9 +75,7 @@ class StationHealthModel(HealthModel):
             self.update_health()
 
     def tile_health_changed(
-        self: StationHealthModel,
-        tile_fqdn: str,
-        tile_health: Optional[HealthState],
+        self: StationHealthModel, tile_fqdn: str, tile_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in tile health.
@@ -97,9 +89,7 @@ class StationHealthModel(HealthModel):
             self._tile_health[tile_fqdn] = tile_health
             self.update_health()
 
-    def evaluate_health(
-        self: StationHealthModel,
-    ) -> HealthState:
+    def evaluate_health(self: StationHealthModel,) -> HealthState:
         """
         Compute overall health of the station.
 

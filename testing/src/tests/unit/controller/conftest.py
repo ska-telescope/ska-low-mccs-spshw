@@ -9,29 +9,23 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable, Optional
 import unittest
+from typing import Callable, Iterable, Optional
 
 import pytest
 import pytest_mock
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.controller import (
-    ControllerComponentManager,
-    ControllerResourceManager,
-    MccsController,
-)
-
+from ska_low_mccs.controller import ControllerComponentManager, ControllerResourceManager, MccsController
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
     MockCallable,
+    MockChangeEventCallback,
     MockDeviceBuilder,
     MockSubarrayBuilder,
-    MockChangeEventCallback,
 )
 
 
@@ -140,11 +134,7 @@ def controller_resource_manager(
     :return: a controller resource manager for testing
     """
     return ControllerResourceManager(
-        subarray_fqdns,
-        subrack_fqdns,
-        subarray_beam_fqdns,
-        station_beam_fqdns,
-        channel_blocks,
+        subarray_fqdns, subrack_fqdns, subarray_beam_fqdns, station_beam_fqdns, channel_blocks,
     )
 
 
@@ -353,22 +343,14 @@ def initial_mocks(
     :return: specification of the mock devices to be set up in the Tango
         test harness.
     """
-    initial_mocks = {
-        subarray_fqdn: mock_subarray_factory() for subarray_fqdn in subarray_fqdns
-    }
-    initial_mocks.update(
-        {station_fqdn: mock_station_factory() for station_fqdn in station_fqdns}
-    )
-    initial_mocks.update(
-        {subrack_fqdn: mock_subrack_factory() for subrack_fqdn in subrack_fqdns}
-    )
+    initial_mocks = {subarray_fqdn: mock_subarray_factory() for subarray_fqdn in subarray_fqdns}
+    initial_mocks.update({station_fqdn: mock_station_factory() for station_fqdn in station_fqdns})
+    initial_mocks.update({subrack_fqdn: mock_subrack_factory() for subrack_fqdn in subrack_fqdns})
     return initial_mocks
 
 
 @pytest.fixture()
-def subarray_proxies(
-    subarray_fqdns: Iterable[str], logger: logging.Logger
-) -> dict[str, MccsDeviceProxy]:
+def subarray_proxies(subarray_fqdns: Iterable[str], logger: logging.Logger) -> dict[str, MccsDeviceProxy]:
     """
     Return a dictioanry of proxies to subarray devices.
 
@@ -381,9 +363,7 @@ def subarray_proxies(
 
 
 @pytest.fixture()
-def station_proxies(
-    station_fqdns: Iterable[str], logger: logging.Logger
-) -> list[MccsDeviceProxy]:
+def station_proxies(station_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to station devices.
 
@@ -396,9 +376,7 @@ def station_proxies(
 
 
 @pytest.fixture()
-def subrack_proxies(
-    subrack_fqdns: Iterable[str], logger: logging.Logger
-) -> list[MccsDeviceProxy]:
+def subrack_proxies(subrack_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to subrack devices.
 
@@ -421,10 +399,7 @@ def unique_id() -> str:
 
 
 @pytest.fixture()
-def mock_component_manager(
-    mocker: pytest_mock.mocker,
-    unique_id: str,
-) -> unittest.mock.Mock:
+def mock_component_manager(mocker: pytest_mock.mocker, unique_id: str,) -> unittest.mock.Mock:
     """
     Return a mock component manager.
 
@@ -455,9 +430,7 @@ def mock_component_manager(
 
 
 @pytest.fixture()
-def patched_controller_device_class(
-    mock_component_manager: unittest.mock.Mock,
-) -> type[MccsController]:
+def patched_controller_device_class(mock_component_manager: unittest.mock.Mock,) -> type[MccsController]:
     """
     Return a controller device that is patched with a mock component manager.
 
@@ -471,9 +444,7 @@ def patched_controller_device_class(
     class PatchedMccsController(MccsController):
         """A controller device patched with a mock component manager."""
 
-        def create_component_manager(
-            self: PatchedMccsController,
-        ) -> unittest.mock.Mock:
+        def create_component_manager(self: PatchedMccsController,) -> unittest.mock.Mock:
             """
             Return a mock component manager instead of the usual one.
 
@@ -482,12 +453,8 @@ def patched_controller_device_class(
             self._communication_status: Optional[CommunicationStatus] = None
             self._component_power_mode: Optional[PowerMode] = None
 
-            mock_component_manager._communication_status_changed_callback = (
-                self._communication_status_changed
-            )
-            mock_component_manager._component_power_mode_changed_callback = (
-                self._component_power_mode_changed
-            )
+            mock_component_manager._communication_status_changed_callback = self._communication_status_changed
+            mock_component_manager._component_power_mode_changed_callback = self._component_power_mode_changed
             mock_component_manager._subrack_health_changed_callback = (
                 self._health_model.subrack_health_changed
             )

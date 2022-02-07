@@ -12,19 +12,14 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from tango.server import attribute, command, device_property
-
-from ska_tango_base.obs import SKAObsDevice
-
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState
+from ska_tango_base.obs import SKAObsDevice
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.station_beam import (
-    StationBeamComponentManager,
-    StationBeamHealthModel,
-)
+from ska_low_mccs.station_beam import StationBeamComponentManager, StationBeamHealthModel
 
 __all__ = ["MccsStationBeam", "main"]
 
@@ -58,9 +53,7 @@ class MccsStationBeam(SKAObsDevice):
         self._health_model = StationBeamHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(
-        self: MccsStationBeam,
-    ) -> StationBeamComponentManager:
+    def create_component_manager(self: MccsStationBeam,) -> StationBeamComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -119,8 +112,7 @@ class MccsStationBeam(SKAObsDevice):
     # Callbacks
     # ----------
     def _communication_status_changed(
-        self: MccsStationBeam,
-        communication_status: CommunicationStatus,
+        self: MccsStationBeam, communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -139,9 +131,7 @@ class MccsStationBeam(SKAObsDevice):
         }
 
         self.op_state_model.perform_action(action_map[communication_status])
-        self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
-        )
+        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
     def health_changed(self: MccsStationBeam, health: HealthState) -> None:
         """
@@ -246,9 +236,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         self.component_manager.logical_beam_id = logical_beam_id
 
-    @attribute(
-        dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0
-    )
+    @attribute(dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0)
     def updateRate(self: MccsStationBeam) -> float:
         """
         Return the update rate (in hertz) for this station beam.

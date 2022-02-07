@@ -11,13 +11,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
+from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager, check_communicating
 from ska_low_mccs.tel_state import TelState
-from ska_low_mccs.component import (
-    check_communicating,
-    CommunicationStatus,
-    ObjectComponentManager,
-)
-
 
 __all__ = ["TelStateComponentManager"]
 
@@ -42,12 +37,7 @@ class TelStateComponentManager(ObjectComponentManager):
             the component manager and its component changes
         """
         super().__init__(
-            TelState(logger),
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            None,
+            TelState(logger), logger, push_change_event, communication_status_changed_callback, None, None,
         )
 
     __PASSTHROUGH = [
@@ -57,11 +47,7 @@ class TelStateComponentManager(ObjectComponentManager):
         "algorithms_version",
     ]
 
-    def __getattr__(
-        self: TelStateComponentManager,
-        name: str,
-        default_value: Any = None,
-    ) -> Any:
+    def __getattr__(self: TelStateComponentManager, name: str, default_value: Any = None,) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -83,10 +69,7 @@ class TelStateComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: TelStateComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: TelStateComponentManager, name: str,) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -97,11 +80,7 @@ class TelStateComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._component, name)
 
-    def __setattr__(
-        self: TelStateComponentManager,
-        name: str,
-        value: Any,
-    ) -> Any:
+    def __setattr__(self: TelStateComponentManager, name: str, value: Any,) -> Any:
         """
         Set an attribute on this tel state component manager.
 
@@ -118,9 +97,7 @@ class TelStateComponentManager(ObjectComponentManager):
             super().__setattr__(name, value)
 
     @check_communicating
-    def _set_in_component(
-        self: TelStateComponentManager, name: str, value: Any
-    ) -> None:
+    def _set_in_component(self: TelStateComponentManager, name: str, value: Any) -> None:
         """
         Set an attribute in the component (if we are communicating with it).
 

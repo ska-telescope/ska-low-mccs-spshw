@@ -14,7 +14,6 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["ControllerHealthModel"]
 
 
@@ -49,19 +48,15 @@ class ControllerHealthModel(HealthModel):
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
         self._subarray_beam_health: dict[str, Optional[HealthState]] = {
-            subarray_beam_fqdn: HealthState.UNKNOWN
-            for subarray_beam_fqdn in subarray_beam_fqdns
+            subarray_beam_fqdn: HealthState.UNKNOWN for subarray_beam_fqdn in subarray_beam_fqdns
         }
         self._station_beam_health: dict[str, Optional[HealthState]] = {
-            station_beam_fqdn: HealthState.UNKNOWN
-            for station_beam_fqdn in station_beam_fqdns
+            station_beam_fqdn: HealthState.UNKNOWN for station_beam_fqdn in station_beam_fqdns
         }
         super().__init__(health_changed_callback)
 
     def station_health_changed(
-        self: ControllerHealthModel,
-        station_fqdn: str,
-        station_health: Optional[HealthState],
+        self: ControllerHealthModel, station_fqdn: str, station_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in station health.
@@ -77,9 +72,7 @@ class ControllerHealthModel(HealthModel):
             self.update_health()
 
     def subrack_health_changed(
-        self: ControllerHealthModel,
-        subrack_fqdn: str,
-        subrack_health: Optional[HealthState],
+        self: ControllerHealthModel, subrack_fqdn: str, subrack_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in subrack health.
@@ -94,9 +87,7 @@ class ControllerHealthModel(HealthModel):
             self.update_health()
 
     def subarray_beam_health_changed(
-        self: ControllerHealthModel,
-        subarray_beam_fqdn: str,
-        subarray_beam_health: Optional[HealthState],
+        self: ControllerHealthModel, subarray_beam_fqdn: str, subarray_beam_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in subarray beam health.
@@ -112,9 +103,7 @@ class ControllerHealthModel(HealthModel):
             self.update_health()
 
     def station_beam_health_changed(
-        self: ControllerHealthModel,
-        station_beam_fqdn: str,
-        station_beam_health: Optional[HealthState],
+        self: ControllerHealthModel, station_beam_fqdn: str, station_beam_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in station beam health.
@@ -129,9 +118,7 @@ class ControllerHealthModel(HealthModel):
             self._station_beam_health[station_beam_fqdn] = station_beam_health
             self.update_health()
 
-    def evaluate_health(
-        self: ControllerHealthModel,
-    ) -> HealthState:
+    def evaluate_health(self: ControllerHealthModel,) -> HealthState:
         """
         Compute overall health of the controller.
 

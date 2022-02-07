@@ -12,24 +12,16 @@ import unittest
 
 import pytest
 import tango
-
-from ska_tango_base.control_model import (
-    AdminMode,
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
 from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import AdminMode, ControlMode, HealthState, SimulationMode, TestMode
+
 from ska_low_mccs import MccsController, MccsDeviceProxy, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load(
-    patched_controller_device_class: type[MccsController],
-) -> DeviceToLoadType:
+def device_to_load(patched_controller_device_class: type[MccsController],) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
@@ -62,10 +54,7 @@ def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
 class TestMccsController:
     """Tests of the MccsController device."""
 
-    def test_State(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_State(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for State.
 
@@ -75,10 +64,7 @@ class TestMccsController:
         """
         assert device_under_test.State() == tango.DevState.DISABLE
 
-    def test_Status(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_Status(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for Status.
 
@@ -151,10 +137,7 @@ class TestMccsController:
         assert len(method.call_args[0]) == 1
 
     @pytest.mark.skip(reason="too weak a test to count")
-    def test_Reset(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_Reset(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for Reset.
 
@@ -163,15 +146,11 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         """
         with pytest.raises(
-            tango.DevFailed,
-            match="Command Reset not allowed when the device is in DISABLE state",
+            tango.DevFailed, match="Command Reset not allowed when the device is in DISABLE state",
         ):
             device_under_test.Reset()
 
-    def test_buildState(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_buildState(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for buildState.
 
@@ -182,10 +161,7 @@ class TestMccsController:
         binfo = ", ".join((release.name, release.version, release.description))
         assert device_under_test.buildState == binfo
 
-    def test_versionId(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_versionId(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for versionId.
 
@@ -217,36 +193,24 @@ class TestMccsController:
         # unit testing these devices are mocked out), so its healthState
         # is UNKNOWN
         device_under_test.add_change_event_callback(
-            "healthState",
-            device_health_state_changed_callback,
+            "healthState", device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.UNKNOWN
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
         mock_component_manager._subrack_health_changed_callback(
-            "low-mccs/subrack/01",
-            HealthState.FAILED,
+            "low-mccs/subrack/01", HealthState.FAILED,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.FAILED
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.FAILED)
         assert device_under_test.healthState == HealthState.FAILED
 
         mock_component_manager._subrack_health_changed_callback(
-            "low-mccs/subrack/01",
-            HealthState.OK,
+            "low-mccs/subrack/01", HealthState.OK,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.UNKNOWN
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-    def test_controlMode(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_controlMode(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for controlMode.
 
@@ -256,10 +220,7 @@ class TestMccsController:
         """
         assert device_under_test.controlMode == ControlMode.REMOTE
 
-    def test_simulationMode(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_simulationMode(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for simulationMode.
 
@@ -269,10 +230,7 @@ class TestMccsController:
         """
         assert device_under_test.simulationMode == SimulationMode.FALSE
 
-    def test_testMode(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_testMode(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for testMode.
 
@@ -282,10 +240,7 @@ class TestMccsController:
         """
         assert device_under_test.testMode == TestMode.TEST
 
-    def test_maxCapabilities(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_maxCapabilities(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for maxCapabilities.
 
@@ -295,10 +250,7 @@ class TestMccsController:
         """
         assert device_under_test.maxCapabilities is None
 
-    def test_availableCapabilities(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
+    def test_availableCapabilities(self: TestMccsController, device_under_test: MccsDeviceProxy,) -> None:
         """
         Test for availableCapabilities.
 

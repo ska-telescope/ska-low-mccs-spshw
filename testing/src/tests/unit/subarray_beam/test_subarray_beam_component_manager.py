@@ -14,11 +14,7 @@ from typing import Any, Callable, Union
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_low_mccs.subarray_beam import (
-    SubarrayBeam,
-    SubarrayBeamComponentManager,
-)
-
+from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -32,10 +28,7 @@ class TestSubarrayBeam:
     """
 
     @pytest.fixture(
-        params=[
-            "subarray_beam",
-            "subarray_beam_component_manager",
-        ]
+        params=["subarray_beam", "subarray_beam_component_manager",]
     )
     def subarray_beam(
         self: TestSubarrayBeam,
@@ -68,18 +61,14 @@ class TestSubarrayBeam:
         :return: the tile class object under test
         """
         if request.param == "subarray_beam":
-            subarray_beam_component.set_is_configured_changed_callback(
-                is_configured_changed_callback
-            )
+            subarray_beam_component.set_is_configured_changed_callback(is_configured_changed_callback)
             return subarray_beam_component
 
         elif request.param == "subarray_beam_component_manager":
             subarray_beam_component_manager.start_communicating()
             time.sleep(0.1)
             return subarray_beam_component_manager
-        raise AssertionError(
-            "subarray beam fixture parametrized with unrecognised option"
-        )
+        raise AssertionError("subarray beam fixture parametrized with unrecognised option")
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value", "write_value"),
@@ -126,8 +115,7 @@ class TestSubarrayBeam:
             assert getattr(subarray_beam, attribute_name) == write_value
 
     def test_desired_pointing(
-        self: TestSubarrayBeam,
-        subarray_beam: Union[SubarrayBeam, SubarrayBeamComponentManager],
+        self: TestSubarrayBeam, subarray_beam: Union[SubarrayBeam, SubarrayBeamComponentManager],
     ) -> None:
         """
         Test the desired pointing attribute.

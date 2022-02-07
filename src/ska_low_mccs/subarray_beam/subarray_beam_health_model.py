@@ -14,7 +14,6 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["SubarrayBeamHealthModel"]
 
 
@@ -22,8 +21,7 @@ class SubarrayBeamHealthModel(HealthModel):
     """A health model for subarray beams."""
 
     def __init__(
-        self: SubarrayBeamHealthModel,
-        health_changed_callback: Callable[[HealthState], None],
+        self: SubarrayBeamHealthModel, health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -35,9 +33,7 @@ class SubarrayBeamHealthModel(HealthModel):
         self._is_beam_locked = False
         super().__init__(health_changed_callback)
 
-    def evaluate_health(
-        self: SubarrayBeamHealthModel,
-    ) -> HealthState:
+    def evaluate_health(self: SubarrayBeamHealthModel,) -> HealthState:
         """
         Compute overall health of the subarray beam.
 
@@ -51,9 +47,7 @@ class SubarrayBeamHealthModel(HealthModel):
             health = HealthState.DEGRADED
         return health
 
-    def is_beam_locked_changed(
-        self: SubarrayBeamHealthModel, is_beam_locked: bool
-    ) -> None:
+    def is_beam_locked_changed(self: SubarrayBeamHealthModel, is_beam_locked: bool) -> None:
         """
         Handle a change in whether the subarray beam is locked.
 

@@ -13,13 +13,9 @@ from typing import Callable
 
 import pytest
 
-from ska_low_mccs.transient_buffer import (
-    TransientBuffer,
-    TransientBufferComponentManager,
-)
-
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.transient_buffer import TransientBuffer, TransientBufferComponentManager
 
 
 @pytest.fixture()
@@ -53,7 +49,5 @@ def transient_buffer_component_manager(
     :return: a transient buffer component manager
     """
     return TransientBufferComponentManager(
-        logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
+        logger, lrc_result_changed_callback, communication_status_changed_callback,
     )

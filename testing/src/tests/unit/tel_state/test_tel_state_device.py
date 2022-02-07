@@ -7,11 +7,11 @@
 # See LICENSE for more info.
 """This module contains the tests for MccsTelState."""
 from __future__ import annotations
+
 from typing import Any
 
 import pytest
 import tango
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -38,9 +38,7 @@ class TestMccsTelState:
     """Test class for MccsTelState tests."""
 
     @pytest.fixture()
-    def device_under_test(
-        self: TestMccsTelState, tango_harness: TangoHarness
-    ) -> MccsDeviceProxy:
+    def device_under_test(self: TestMccsTelState, tango_harness: TangoHarness) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -65,12 +63,9 @@ class TestMccsTelState:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState",
-            device_health_state_changed_callback,
+            "healthState", device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.UNKNOWN
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     @pytest.mark.parametrize(
@@ -104,9 +99,7 @@ class TestMccsTelState:
             attribute.
         :param write_value: a value to write to check that it sticks
         """
-        with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
-        ):
+        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
             _ = getattr(device_under_test, attribute)
 
         device_under_test.adminMode = AdminMode.ONLINE

@@ -9,20 +9,15 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import tango
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
-
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockDeviceBuilder,
-    MockChangeEventCallback,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockDeviceBuilder
 
 
 @pytest.fixture()

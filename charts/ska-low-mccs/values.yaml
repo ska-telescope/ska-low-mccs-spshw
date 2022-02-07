@@ -32,7 +32,7 @@ resources:
 dsconfig:
   # the configuration.json contains the deviceserver (instances)
   # if addition instances are required the need to be defined there
-  configuration_file: data/deployment_configuration.json
+  configuration_file: data/configuration.json
   image:
       registry: artefact.skao.int
       image: ska-tango-images-tango-dsconfig

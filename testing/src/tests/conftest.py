@@ -238,7 +238,6 @@ def tango_harness_factory(
             device_info = None
         else:
             device_info = MccsDeviceInfo(**devices_to_load)
-            print("device_info.fqdns = ", device_info.fqdns)
 
         tango_harness: TangoHarness  # type hint only
         print("testbed = ", testbed)

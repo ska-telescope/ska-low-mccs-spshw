@@ -173,7 +173,6 @@ class MccsDeviceInfo:
         for server in self._source_data["servers"]:
             if name in self._source_data["servers"][server]:
                 device_spec = self._source_data["servers"][server][name]
-                print('device_spec = ', device_spec)
                 class_name = next(iter(device_spec))
                 fqdn = next(iter(device_spec[class_name]))
                 properties = device_spec[class_name][fqdn]["properties"]
@@ -186,7 +185,6 @@ class MccsDeviceInfo:
                     for name, value in attribute_properties.items()
                     if "__value" in value
                 }
-                self.memorized = memorized # this will be changed
 
                 if patch is None:
                     package = __import__(self._package, fromlist=[class_name])
@@ -235,10 +233,8 @@ class MccsDeviceInfo:
 
     def get_memorized_attributes(self: MccsDeviceInfo, name: str):
         """
-        Return a map of attributes associated with a device from the device's fqdn
+        Return a map of attributes associated with a device from the device's name
         """
-        print(self.memorized)
-        #return self.memorized[fqdn]
         return self._devices[name]['memorized']
 
 
@@ -431,7 +427,6 @@ class ClientProxyTangoHarness(BaseTangoHarness):
         :param kwargs: additional keyword arguments
         """
         print('ClientProxyTangoHarness initialiser')
-        print('device_info = ', device_info.fqdn_map)
         if device_info is None:
             self._proxy_map = {}
         else:
@@ -482,7 +477,6 @@ class TestContextTangoHarness(BaseTangoHarness):
         """
         self._host = get_host_ip()
         print('TestContextTangoHarness initialiser')
-        print('device_info = ', device_info.fqdn_map)
         def _get_open_port() -> int:
             """
             Return an available port on the local machine.

@@ -283,7 +283,6 @@ class TpmDriver(MccsComponentManager):
         Return the TPM status.
 
         :return: the TPM status
-        :raises ConnectionError: Cannot get hardware lock
         """
         if self._tpm_status in [TpmStatus.UNKNOWN, TpmStatus.UNCONNECTED]:
             # The status in unknown, either because it has not been tested or

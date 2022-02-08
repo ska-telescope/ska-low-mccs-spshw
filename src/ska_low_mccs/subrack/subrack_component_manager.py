@@ -572,9 +572,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 SwitchingSubrackComponentManager, self._hardware_component_manager
             ).turn_off_tpms()
         except ConnectionError:
-            self.logger.error(
-                    "Cannot turn off the TPMs, the subrack is disconnected"
-            )
+            self.logger.error("Cannot turn off the TPMs, the subrack is disconnected")
         result_code = super().off()
         return result_code
 

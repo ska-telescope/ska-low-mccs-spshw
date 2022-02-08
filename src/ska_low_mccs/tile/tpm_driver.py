@@ -240,7 +240,9 @@ class TpmDriver(MccsComponentManager):
                     target.logger.debug("Lock released")
                 else:
                     target.logger.debug("Failed to acquire lock")
-                if target.tile.tpm is not None:
+                if target.tile.tpm is None:
+                    target._tpm_status = TpmStatus.UNCONNECTED
+                else:
                     target._tpm_status = TpmStatus.UNPROGRAMMED
                     if target._check_programmed():
                         target._tpm_status = TpmStatus.PROGRAMMED
@@ -309,7 +311,8 @@ class TpmDriver(MccsComponentManager):
                         self._tpm_status = TpmStatus.UNCONNECTED
                     self._hardware_lock.release()
                 else:
-                    raise ConnectionError("Cannot get hardware lock")
+                    self.logger.debug("tpm_driver: tpm_status uses current value")
+                    # raise ConnectionError("Cannot get hardware lock")
         return self._tpm_status
 
     def get_tile_id(self: TpmDriver) -> int:

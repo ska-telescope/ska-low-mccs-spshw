@@ -333,7 +333,10 @@ class TestStaticSimulatorCommon:
             ("fpga2_temperature", StaticTpmSimulator.FPGA2_TEMPERATURE),
             ("adc_rms", StaticTpmSimulator.ADC_RMS),
             ("fpgas_time", StaticTpmSimulator.FPGAS_TIME),
-            ("current_tile_beamformer_frame", StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,),
+            (
+                "current_tile_beamformer_frame",
+                StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+            ),
             ("pps_delay", StaticTpmSimulator.PPS_DELAY),
             ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
             ("arp_table", StaticTpmSimulator.ARP_TABLE),
@@ -559,7 +562,10 @@ class TestStaticSimulatorCommon:
         assert tile.read_register(register, read_length, read_offset, device) == expected_read
 
     @pytest.mark.parametrize(
-        "write_address", [9,],
+        "write_address",
+        [
+            9,
+        ],
     )
     @pytest.mark.parametrize("write_values", [[], [1], [2, 2]], ids=(0, 1, 2))
     @pytest.mark.parametrize("read_address", [10])
@@ -660,7 +666,13 @@ class TestStaticSimulatorCommon:
         assert tile.get_40g_configuration(9) is None
 
         tile.configure_40g_core(
-            2, 1, "mock_src_mac", "mock_src_ip", 8888, "mock_dst_ip", 3333,
+            2,
+            1,
+            "mock_src_mac",
+            "mock_src_ip",
+            8888,
+            "mock_dst_ip",
+            3333,
         )
 
         expected = {
@@ -731,9 +743,7 @@ class TestDynamicSimulatorCommon:
         switching_tpm_component_manager: SwitchingTpmComponentManager,
         tile_component_manager: TileComponentManager,
         request: SubRequest,
-    ) -> Union[
-        DynamicTpmSimulatorComponentManager, SwitchingTpmComponentManager, TileComponentManager,
-    ]:
+    ) -> Union[DynamicTpmSimulatorComponentManager, SwitchingTpmComponentManager, TileComponentManager,]:
         """
         Return the tile component under test.
 
@@ -777,11 +787,21 @@ class TestDynamicSimulatorCommon:
 
     @pytest.mark.parametrize(
         "attribute_name",
-        ("current", "voltage", "board_temperature", "fpga1_temperature", "fpga2_temperature",),
+        (
+            "current",
+            "voltage",
+            "board_temperature",
+            "fpga1_temperature",
+            "fpga2_temperature",
+        ),
     )
     def test_dynamic_attribute(
         self: TestDynamicSimulatorCommon,
-        tile: Union[DynamicTpmSimulatorComponentManager, SwitchingTpmComponentManager, TileComponentManager,],
+        tile: Union[
+            DynamicTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
         attribute_name: str,
     ) -> None:
         """
@@ -805,7 +825,10 @@ class TestDynamicSimulatorCommon:
         (
             ("adc_rms", DynamicTpmSimulator.ADC_RMS),
             ("fpgas_time", DynamicTpmSimulator.FPGAS_TIME),
-            ("current_tile_beamformer_frame", DynamicTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,),
+            (
+                "current_tile_beamformer_frame",
+                DynamicTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+            ),
             ("pps_delay", DynamicTpmSimulator.PPS_DELAY),
             ("firmware_available", DynamicTpmSimulator.FIRMWARE_AVAILABLE),
             ("arp_table", DynamicTpmSimulator.ARP_TABLE),
@@ -814,7 +837,11 @@ class TestDynamicSimulatorCommon:
     )
     def test_read_static_attribute(
         self: TestDynamicSimulatorCommon,
-        tile: Union[DynamicTpmSimulatorComponentManager, SwitchingTpmComponentManager, TileComponentManager,],
+        tile: Union[
+            DynamicTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
         attribute_name: str,
         expected_value: Any,
     ) -> None:
@@ -952,7 +979,9 @@ class TestDriverCommon:
         )
 
     def test_communication_fails(
-        self: TestDriverCommon, patched_tpm_driver: PatchedTpmDriver, hardware_tile_mock: unittest.mock.Mock,
+        self: TestDriverCommon,
+        patched_tpm_driver: PatchedTpmDriver,
+        hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
         Test we can create the driver but not start communication with the component.
@@ -978,7 +1007,9 @@ class TestDriverCommon:
         assert patched_tpm_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
 
     def test_communication(
-        self: TestDriverCommon, patched_tpm_driver: PatchedTpmDriver, hardware_tile_mock: unittest.mock.Mock,
+        self: TestDriverCommon,
+        patched_tpm_driver: PatchedTpmDriver,
+        hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
         Test we can create the driver and start communication with the component.

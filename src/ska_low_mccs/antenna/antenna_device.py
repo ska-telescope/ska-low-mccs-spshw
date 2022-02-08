@@ -54,7 +54,9 @@ class MccsAntenna(SKABaseDevice):
         self._health_model = AntennaHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsAntenna,) -> AntennaComponentManager:
+    def create_component_manager(
+        self: MccsAntenna,
+    ) -> AntennaComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -131,7 +133,8 @@ class MccsAntenna(SKABaseDevice):
             return (ResultCode.OK, "Init command completed OK")
 
     @command(
-        dtype_out="DevVarLongStringArray", doc_out="(ReturnType, 'informational message')",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
     )
     def Reset(self: MccsAntenna) -> DevVarLongStringArrayType:
         """
@@ -153,7 +156,8 @@ class MccsAntenna(SKABaseDevice):
     # Callback hooks
     # --------------
     def _component_communication_status_changed(
-        self: MccsAntenna, communication_status: CommunicationStatus,
+        self: MccsAntenna,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -177,7 +181,10 @@ class MccsAntenna(SKABaseDevice):
 
         self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _component_power_mode_changed(self: MccsAntenna, power_mode: PowerMode,) -> None:
+    def _component_power_mode_changed(
+        self: MccsAntenna,
+        power_mode: PowerMode,
+    ) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -196,7 +203,10 @@ class MccsAntenna(SKABaseDevice):
 
         self.op_state_model.perform_action(action_map[power_mode])
 
-    def _component_fault(self: MccsAntenna, is_fault: bool,) -> None:
+    def _component_fault(
+        self: MccsAntenna,
+        is_fault: bool,
+    ) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -233,7 +243,9 @@ class MccsAntenna(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(
-        dtype=SimulationMode, memorized=True, hw_memorized=True,
+        dtype=SimulationMode,
+        memorized=True,
+        hw_memorized=True,
     )
     def simulationMode(self):
         """

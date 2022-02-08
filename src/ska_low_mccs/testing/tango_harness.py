@@ -53,7 +53,11 @@ PropertiesType = Dict[str, Any]
 # class inheritance to achieve this.
 DeviceSpecType = TypedDict(
     "DeviceSpecType",
-    {"name": str, "proxy": Type[MccsDeviceProxy], "patch": Type[SKABaseDevice],},
+    {
+        "name": str,
+        "proxy": Type[MccsDeviceProxy],
+        "patch": Type[SKABaseDevice],
+    },
     total=False,
 )
 
@@ -71,17 +75,27 @@ DeviceConfigType = TypedDict(
 
 
 MdtcDeviceInfoType = TypedDict(
-    "MdtcDeviceInfoType", {"name": str, "properties": PropertiesType, "memorized": MemorizedType,},
+    "MdtcDeviceInfoType",
+    {
+        "name": str,
+        "properties": PropertiesType,
+        "memorized": MemorizedType,
+    },
 )
 
 
 MdtcInfoType = TypedDict(
-    "MdtcInfoType", {"class": Type[SKABaseDevice], "devices": List[MdtcDeviceInfoType],},
+    "MdtcInfoType",
+    {
+        "class": Type[SKABaseDevice],
+        "devices": List[MdtcDeviceInfoType],
+    },
 )
 
 
 DevicesToLoadType = TypedDict(
-    "DevicesToLoadType", {"path": str, "package": str, "devices": Optional[List[DeviceSpecType]]},
+    "DevicesToLoadType",
+    {"path": str, "package": str, "devices": Optional[List[DeviceSpecType]]},
 )
 
 
@@ -110,7 +124,10 @@ class MccsDeviceInfo:
     """
 
     def __init__(
-        self: MccsDeviceInfo, path: str, package: str, devices: Optional[list[DeviceSpecType]] = None,
+        self: MccsDeviceInfo,
+        path: str,
+        package: str,
+        devices: Optional[list[DeviceSpecType]] = None,
     ) -> None:
         """
         Create a new instance.
@@ -272,7 +289,10 @@ class TangoHarness:
         """
         raise NotImplementedError("TangoHarness is abstract.")
 
-    def get_device(self: TangoHarness, fqdn: str,) -> MccsDeviceProxy:
+    def get_device(
+        self: TangoHarness,
+        fqdn: str,
+    ) -> MccsDeviceProxy:
         """
         Create and return a proxy to the device at the given FQDN.
 
@@ -338,7 +358,9 @@ class BaseTangoHarness(TangoHarness):
         super().__init__(*args, **kwargs)
 
     @property
-    def connection_factory(self: BaseTangoHarness,) -> Callable[[str], tango.DeviceProxy]:
+    def connection_factory(
+        self: BaseTangoHarness,
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         Establish connections to devices with this factory.
 
@@ -358,7 +380,10 @@ class BaseTangoHarness(TangoHarness):
         """
         return list(self._fqdns)
 
-    def get_device(self: BaseTangoHarness, fqdn: str,) -> MccsDeviceProxy:
+    def get_device(
+        self: BaseTangoHarness,
+        fqdn: str,
+    ) -> MccsDeviceProxy:
         """
         Create and return a proxy to the device at the given FQDN.
 
@@ -393,7 +418,10 @@ class ClientProxyTangoHarness(BaseTangoHarness):
             self._proxy_map = dict(device_info.proxy_map)
         super().__init__(device_info, logger, *args, **kwargs)
 
-    def get_device(self: ClientProxyTangoHarness, fqdn: str,) -> MccsDeviceProxy:
+    def get_device(
+        self: ClientProxyTangoHarness,
+        fqdn: str,
+    ) -> MccsDeviceProxy:
         """
         Create and return a proxy to the device at the given FQDN.
 
@@ -468,7 +496,9 @@ class TestContextTangoHarness(BaseTangoHarness):
         super().__init__(device_info, logger, *args, **kwargs)
 
     @property
-    def connection_factory(self: TestContextTangoHarness,) -> Callable[[str], tango.DeviceProxy]:
+    def connection_factory(
+        self: TestContextTangoHarness,
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         Establish connections to devices with this factory.
 
@@ -526,7 +556,12 @@ class TestContextTangoHarness(BaseTangoHarness):
 class WrapperTangoHarness(TangoHarness):
     """A base class for a Tango test harness that wraps another harness."""
 
-    def __init__(self: WrapperTangoHarness, harness: TangoHarness, *args: Any, **kwargs: Any,) -> None:
+    def __init__(
+        self: WrapperTangoHarness,
+        harness: TangoHarness,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         Initialise a new instance.
 
@@ -569,7 +604,9 @@ class WrapperTangoHarness(TangoHarness):
         return self._harness.__exit__(exc_type, exception, trace)
 
     @property
-    def connection_factory(self: WrapperTangoHarness,) -> Callable[[str], tango.DeviceProxy]:
+    def connection_factory(
+        self: WrapperTangoHarness,
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         Establish connections to devices with this factory.
 
@@ -708,7 +745,9 @@ class MockingTangoHarness(WrapperTangoHarness):
         super().__init__(harness, *args, **kwargs)
 
     @property
-    def connection_factory(self: MockingTangoHarness,) -> Callable[[str], tango.DeviceProxy]:
+    def connection_factory(
+        self: MockingTangoHarness,
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         Establish connections to devices with this factory.
 

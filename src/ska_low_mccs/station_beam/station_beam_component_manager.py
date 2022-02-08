@@ -95,7 +95,11 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_fault_changed_callback = station_fault_changed_callback
 
         super().__init__(
-            logger, push_change_event, communication_status_changed_callback, None, None,
+            logger,
+            push_change_event,
+            communication_status_changed_callback,
+            None,
+            None,
         )
 
     def start_communicating(self: StationBeamComponentManager) -> None:
@@ -115,7 +119,8 @@ class StationBeamComponentManager(MccsComponentManager):
             self._station_proxy.stop_communicating()
 
     def _device_communication_status_changed(
-        self: StationBeamComponentManager, communication_status: CommunicationStatus,
+        self: StationBeamComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         if communication_status == CommunicationStatus.ESTABLISHED:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)

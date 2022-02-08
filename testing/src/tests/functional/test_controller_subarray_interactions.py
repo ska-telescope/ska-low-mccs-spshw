@@ -151,7 +151,9 @@ def we_have_mvplow_running_an_instance_of(
 
 @given(parsers.parse("{subsystem_name} is ready to {direction} on command"))
 def subsystem_is_ready_to_receive_on_command(
-    subsystem_name: str, direction: str, controller: MccsDeviceProxy,
+    subsystem_name: str,
+    direction: str,
+    controller: MccsDeviceProxy,
 ) -> None:
     """
     Assert that a subsystem is ready to receive an on command.
@@ -263,7 +265,10 @@ def check_mccs_controller_state(
 
 
 @then(parsers.parse("all mccs station states are {state}"))
-def all_mccs_station_states_are_onoff(state_name: str, stations: dict[int, MccsDeviceProxy],) -> None:
+def all_mccs_station_states_are_onoff(
+    state_name: str,
+    stations: dict[int, MccsDeviceProxy],
+) -> None:
     """
     Assert that online or maintenance mccs station devices are on/off.
 

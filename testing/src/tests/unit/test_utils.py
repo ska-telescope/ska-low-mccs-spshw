@@ -71,7 +71,9 @@ class TestUtils:
         arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
         returned = call_with_json(
-            self.json_input_posargs_tester, stations=arg_dict["stations"], tiles=arg_dict["tiles"],
+            self.json_input_posargs_tester,
+            stations=arg_dict["stations"],
+            tiles=arg_dict["tiles"],
         )
         assert returned == arg_dict
 
@@ -84,7 +86,8 @@ class TestUtils:
 
     # tests of general methods
     @pytest.mark.parametrize(
-        "json_arg_string", ['{"stations":["station1", "station2"],"tiles":["tile1", "tile2"]}'],
+        "json_arg_string",
+        ['{"stations":["station1", "station2"],"tiles":["tile1", "tile2"]}'],
     )
     def test_json_input_posargs(self: TestUtils, json_arg_string: str) -> None:
         """

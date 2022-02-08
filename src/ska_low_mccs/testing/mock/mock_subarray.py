@@ -22,7 +22,8 @@ class MockSubarrayBuilder(MockDeviceBuilder):
     """This module implements a mock builder for MCCS subarray devices."""
 
     def __init__(
-        self: MockSubarrayBuilder, from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
+        self: MockSubarrayBuilder,
+        from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
     ) -> None:
         """
         Create a new instance.
@@ -40,7 +41,10 @@ class MockSubarrayBuilder(MockDeviceBuilder):
             ("ReleaseAllResources", "ReleaseAllResources command completed OK"),
             ("Configure", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
             ("Restart", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
-            ("SendTransientBuffer", MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],),
+            (
+                "SendTransientBuffer",
+                MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],
+            ),
         ]:
             self._configuration[f"{command_name}.return_value"] = [
                 [ResultCode.OK],

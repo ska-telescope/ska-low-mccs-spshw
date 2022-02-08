@@ -21,7 +21,10 @@ __all__ = ["SubarrayBeam"]
 class SubarrayBeam(ObjectComponent):
     """A placeholder for a subarray beam component."""
 
-    def __init__(self: SubarrayBeam, logger: logging.Logger,) -> None:
+    def __init__(
+        self: SubarrayBeam,
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new instance.
 
@@ -47,7 +50,8 @@ class SubarrayBeam(ObjectComponent):
         self._phase_centre: list[float] = []
 
     def set_is_beam_locked_changed_callback(
-        self: SubarrayBeam, is_beam_locked_changed_callback: Optional[Callable[[bool], None]],
+        self: SubarrayBeam,
+        is_beam_locked_changed_callback: Optional[Callable[[bool], None]],
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is locked changes.
@@ -59,7 +63,8 @@ class SubarrayBeam(ObjectComponent):
         self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
 
     def set_is_configured_changed_callback(
-        self: SubarrayBeam, is_configured_changed_callback: Optional[Callable[[bool], None]],
+        self: SubarrayBeam,
+        is_configured_changed_callback: Optional[Callable[[bool], None]],
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is configured changes.
@@ -238,13 +243,20 @@ class SubarrayBeam(ObjectComponent):
         self._update_is_configured(True)
         return ResultCode.OK
 
-    def _update_is_configured(self: SubarrayBeam, is_configured: bool,) -> None:
+    def _update_is_configured(
+        self: SubarrayBeam,
+        is_configured: bool,
+    ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured
             if self._is_configured_changed_callback is not None:
                 self._is_configured_changed_callback(is_configured)
 
-    def scan(self: SubarrayBeam, scan_id: int, scan_time: float,) -> ResultCode:
+    def scan(
+        self: SubarrayBeam,
+        scan_id: int,
+        scan_time: float,
+    ) -> ResultCode:
         """
         Start scanning.
 

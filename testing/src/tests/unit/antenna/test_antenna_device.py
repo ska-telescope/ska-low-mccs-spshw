@@ -43,7 +43,10 @@ class TestMccsAntenna:
     """Test class for MccsAntenna tests."""
 
     @pytest.fixture()
-    def device_under_test(self: TestMccsAntenna, tango_harness: TangoHarness,) -> MccsDeviceProxy:
+    def device_under_test(
+        self: TestMccsAntenna,
+        tango_harness: TangoHarness,
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -53,7 +56,10 @@ class TestMccsAntenna:
         """
         return tango_harness.get_device("low-mccs/antenna/000001")
 
-    def test_Reset(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_Reset(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Reset.
 
@@ -66,7 +72,10 @@ class TestMccsAntenna:
         with pytest.raises(tango.DevFailed):
             device_under_test.Reset()
 
-    def test_antennaId(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_antennaId(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for antennaId.
 
@@ -76,7 +85,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.antennaId == 0
 
-    def test_gain(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_gain(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for gain.
 
@@ -86,7 +98,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.gain == 0.0
 
-    def test_rms(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_rms(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for rms.
 
@@ -122,13 +137,15 @@ class TestMccsAntenna:
         mock_apiu.get_antenna_voltage.return_value = voltage
 
         device_under_test.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.add_change_event_callback(
-            "state", device_state_changed_callback,
+            "state",
+            device_state_changed_callback,
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
@@ -176,13 +193,15 @@ class TestMccsAntenna:
         mock_apiu.get_antenna_current.return_value = current
 
         device_under_test.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.add_change_event_callback(
-            "state", device_state_changed_callback,
+            "state",
+            device_state_changed_callback,
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
@@ -230,13 +249,15 @@ class TestMccsAntenna:
         mock_apiu.get_antenna_temperature.return_value = temperature
 
         device_under_test.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.add_change_event_callback(
-            "state", device_state_changed_callback,
+            "state",
+            device_state_changed_callback,
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
@@ -258,7 +279,10 @@ class TestMccsAntenna:
         assert device_under_test.temperature == temperature
         assert mock_apiu.get_antenna_temperature.called_once_with(1)
 
-    def test_xPolarisationFaulty(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_xPolarisationFaulty(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for xPolarisationFaulty.
 
@@ -268,7 +292,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.xPolarisationFaulty is False
 
-    def test_yPolarisationFaulty(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_yPolarisationFaulty(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for yPolarisationFaulty.
 
@@ -278,7 +305,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.yPolarisationFaulty is False
 
-    def test_xDisplacement(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_xDisplacement(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for xDisplacement.
 
@@ -288,7 +318,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.xDisplacement == 0.0
 
-    def test_yDisplacement(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_yDisplacement(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for yDisplacement.
 
@@ -298,7 +331,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.yDisplacement == 0.0
 
-    def test_zDisplacement(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_zDisplacement(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for zDisplacement.
 
@@ -308,7 +344,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.zDisplacement == 0.0
 
-    def test_timestampOfLastSpectrum(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_timestampOfLastSpectrum(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for timestampOfLastSpectrum.
 
@@ -318,7 +357,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.timestampOfLastSpectrum == ""
 
-    def test_loggingLevel(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_loggingLevel(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for loggingLevel.
 
@@ -343,12 +385,16 @@ class TestMccsAntenna:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-    def test_controlMode(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_controlMode(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for controlMode.
 
@@ -358,7 +404,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.controlMode == ControlMode.REMOTE
 
-    def test_simulationMode(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_simulationMode(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for simulationMode.
 
@@ -368,11 +417,15 @@ class TestMccsAntenna:
         """
         assert device_under_test.simulationMode == SimulationMode.FALSE
         with pytest.raises(
-            tango.DevFailed, match="MccsAntenna cannot be put into simulation mode.",
+            tango.DevFailed,
+            match="MccsAntenna cannot be put into simulation mode.",
         ):
             device_under_test.simulationMode = SimulationMode.TRUE
 
-    def test_logicalAntennaId(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_logicalAntennaId(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for logicalAntennaId.
 
@@ -382,7 +435,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.logicalAntennaId == 0
 
-    def test_xPolarisationScalingFactor(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_xPolarisationScalingFactor(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for xPolarisationScalingFactor.
 
@@ -392,7 +448,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.xPolarisationScalingFactor) == [0]
 
-    def test_yPolarisationScalingFactor(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_yPolarisationScalingFactor(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for yPolarisationScalingFactor.
 
@@ -402,7 +461,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.yPolarisationScalingFactor) == [0]
 
-    def test_calibrationCoefficient(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_calibrationCoefficient(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for calibrationCoefficient.
 
@@ -412,7 +474,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.calibrationCoefficient) == [0.0]
 
-    def test_pointingCoefficient(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_pointingCoefficient(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for pointingCoefficient.
 
@@ -422,7 +487,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.pointingCoefficient) == [0.0]
 
-    def test_spectrumX(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_spectrumX(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for spectrumX.
 
@@ -432,7 +500,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.spectrumX) == [0.0]
 
-    def test_spectrumY(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_spectrumY(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for spectrumY.
 
@@ -442,7 +513,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.spectrumY) == [0.0]
 
-    def test_position(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_position(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for position.
 
@@ -452,7 +526,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.position) == [0.0]
 
-    def test_loggingTargets(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_loggingTargets(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for loggingTargets.
 
@@ -462,7 +539,10 @@ class TestMccsAntenna:
         """
         assert device_under_test.loggingTargets == ("tango::logger",)
 
-    def test_delays(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_delays(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for delays.
 
@@ -472,7 +552,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.delays) == [0.0]
 
-    def test_delayRates(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_delayRates(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for delayRates.
 
@@ -482,7 +565,10 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.delayRates) == [0.0]
 
-    def test_bandpassCoefficient(self: TestMccsAntenna, device_under_test: MccsDeviceProxy,) -> None:
+    def test_bandpassCoefficient(
+        self: TestMccsAntenna,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for bandpassCoefficient.
 
@@ -513,14 +599,16 @@ class TestMccsAntenna:
         :param apiu_antenna_id: the position of the antenna in its APIU
         """
         device_under_test.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         assert device_under_test.state() == tango.DevState.DISABLE
         with pytest.raises(
-            tango.DevFailed, match="Command On not allowed when the device is in DISABLE state",
+            tango.DevFailed,
+            match="Command On not allowed when the device is in DISABLE state",
         ):
             _ = device_under_test.On()
 

@@ -87,7 +87,11 @@ class ApiuSimulator(ObjectComponent):
     DEFAULT_ANTENNA_CURRENT: Final[float] = 20.5
     DEFAULT_ANTENNA_TEMPERATURE: Final[float] = 23.8
 
-    def __init__(self: ApiuSimulator, antenna_count: int, initial_fault: bool = False,) -> None:
+    def __init__(
+        self: ApiuSimulator,
+        antenna_count: int,
+        initial_fault: bool = False,
+    ) -> None:
         """
         Initialise a new instance.
 
@@ -229,7 +233,8 @@ class ApiuSimulator(ObjectComponent):
         self._humidity = humidity
 
     def set_antenna_power_changed_callback(
-        self: ApiuSimulator, antenna_power_changed_callback: Optional[Callable[[list[bool]], None]],
+        self: ApiuSimulator,
+        antenna_power_changed_callback: Optional[Callable[[list[bool]], None]],
     ) -> None:
         """
         Set the power changed callback.

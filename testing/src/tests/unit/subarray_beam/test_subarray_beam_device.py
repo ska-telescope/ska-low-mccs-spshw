@@ -38,7 +38,10 @@ class TestMccsSubarrayBeam(object):
     """Test class for MccsSubarrayBeam tests."""
 
     @pytest.fixture()
-    def device_under_test(self: TestMccsSubarrayBeam, tango_harness: TangoHarness,) -> MccsDeviceProxy:
+    def device_under_test(
+        self: TestMccsSubarrayBeam,
+        tango_harness: TangoHarness,
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -63,7 +66,8 @@ class TestMccsSubarrayBeam(object):
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
@@ -111,7 +115,10 @@ class TestMccsSubarrayBeam(object):
             device_under_test.write_attribute(attribute, write_value)
             assert getattr(device_under_test, attribute) == write_value
 
-    def test_stationIds(self: TestMccsSubarrayBeam, device_under_test: MccsDeviceProxy,) -> None:
+    def test_stationIds(
+        self: TestMccsSubarrayBeam,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test stationIds attribute.
 
@@ -136,7 +143,9 @@ class TestMccsSubarrayBeam(object):
 
     @pytest.mark.parametrize("attribute", ["channels", "antennaWeights", "phaseCentre"])
     def test_empty_list_attributes(
-        self: TestMccsSubarrayBeam, device_under_test: MccsDeviceProxy, attribute: str,
+        self: TestMccsSubarrayBeam,
+        device_under_test: MccsDeviceProxy,
+        attribute: str,
     ) -> None:
         """
         Test attribute values for attributes that return lists of floats.
@@ -158,7 +167,10 @@ class TestMccsSubarrayBeam(object):
         device_under_test.adminMode = AdminMode.ONLINE
         assert getattr(device_under_test, attribute) is None
 
-    def test_desired_pointing(self: TestMccsSubarrayBeam, device_under_test: MccsDeviceProxy,) -> None:
+    def test_desired_pointing(
+        self: TestMccsSubarrayBeam,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test the desired pointing attribute.
 

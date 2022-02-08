@@ -79,22 +79,26 @@ class TestSubrackTileIntegration:
         subrack_device = tango_harness.get_device("low-mccs/subrack/01")
 
         tile_device.add_change_event_callback(
-            "adminMode", tile_device_admin_mode_changed_callback,
+            "adminMode",
+            tile_device_admin_mode_changed_callback,
         )
         tile_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
 
         tile_device.add_change_event_callback(
-            "state", tile_device_state_changed_callback,
+            "state",
+            tile_device_state_changed_callback,
         )
         tile_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
         subrack_device.add_change_event_callback(
-            "adminMode", subrack_device_admin_mode_changed_callback,
+            "adminMode",
+            subrack_device_admin_mode_changed_callback,
         )
         subrack_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
 
         subrack_device.add_change_event_callback(
-            "state", subrack_device_state_changed_callback,
+            "state",
+            subrack_device_state_changed_callback,
         )
         subrack_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
@@ -102,7 +106,8 @@ class TestSubrackTileIntegration:
 
         # Subscribe to subrack's LRC result attribute
         subrack_device.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in subrack_device._change_event_subscription_ids
         initial_lrc_result = ("", "", "")

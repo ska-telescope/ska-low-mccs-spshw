@@ -128,7 +128,11 @@ class MccsDeviceProxy:
             self._logger.warning(f"Gave up trying to connect to device {fqdn} after " f"{elapsed} seconds.")
 
         @backoff.on_exception(
-            backoff.expo, DevFailed, on_giveup=_on_giveup_connect, factor=1, max_time=max_time,
+            backoff.expo,
+            DevFailed,
+            on_giveup=_on_giveup_connect,
+            factor=1,
+            max_time=max_time,
         )
         def _backoff_connect(
             connection_factory: Callable[[str], tango.DeviceProxy], fqdn: str
@@ -192,7 +196,10 @@ class MccsDeviceProxy:
             )
 
         @backoff.on_predicate(
-            backoff.expo, on_giveup=_on_giveup_check_initialised, factor=1, max_time=max_time,
+            backoff.expo,
+            on_giveup=_on_giveup_check_initialised,
+            factor=1,
+            max_time=max_time,
         )
         def _backoff_check_initialised(device: tango.DeviceProxy) -> bool:
             """
@@ -293,7 +300,10 @@ class MccsDeviceProxy:
         :return: the subscription id
         """
         return self._device.subscribe_event(
-            attribute_name, tango.EventType.CHANGE_EVENT, self._change_event_received, stateless=stateless,
+            attribute_name,
+            tango.EventType.CHANGE_EVENT,
+            self._change_event_received,
+            stateless=stateless,
         )
 
     def _change_event_received(self: MccsDeviceProxy, event: tango.EventData) -> None:

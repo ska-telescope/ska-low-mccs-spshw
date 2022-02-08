@@ -66,7 +66,10 @@ class TestApiuCommon:
         apiu_component_manager: ApiuComponentManager,
         request: SubRequest,
     ) -> Union[
-        ApiuSimulator, ApiuSimulatorComponentManager, SwitchingApiuComponentManager, ApiuComponentManager,
+        ApiuSimulator,
+        ApiuSimulatorComponentManager,
+        SwitchingApiuComponentManager,
+        ApiuComponentManager,
     ]:
         """
         Return the APIU class under test.

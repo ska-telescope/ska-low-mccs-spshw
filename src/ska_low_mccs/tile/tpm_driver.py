@@ -128,11 +128,16 @@ class TpmDriver(MccsComponentManager):
             self._tpm_version = tpm_version
 
         self.tile = cast(
-            Tile12, HwTile(ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version),
+            Tile12,
+            HwTile(ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version),
         )
 
         super().__init__(
-            logger, push_change_event, communication_status_changed_callback, None, component_fault_callback,
+            logger,
+            push_change_event,
+            communication_status_changed_callback,
+            None,
+            component_fault_callback,
         )
 
     def start_communicating(self: TpmDriver) -> None:
@@ -772,7 +777,11 @@ class TpmDriver(MccsComponentManager):
             self.tile.set_beamformer_regions(regions)
 
     def initialise_beamformer(
-        self: TpmDriver, start_channel: int, nof_channels: int, is_first: bool, is_last: bool,
+        self: TpmDriver,
+        start_channel: int,
+        nof_channels: int,
+        is_first: bool,
+        is_last: bool,
     ) -> None:
         """
         Initialise the beamformer.
@@ -922,7 +931,10 @@ class TpmDriver(MccsComponentManager):
         self._is_beamformer_running = False
 
     def configure_integrated_channel_data(
-        self: TpmDriver, integration_time: float = 0.5, first_channel: int = 0, last_channel: int = 511,
+        self: TpmDriver,
+        integration_time: float = 0.5,
+        first_channel: int = 0,
+        last_channel: int = 511,
     ) -> None:
         """
         Configure and start the transmission of integrated channel data.
@@ -938,11 +950,16 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
         with self._hardware_lock:
             self.tile.configure_integrated_channel_data(
-                integration_time, first_channel, last_channel,
+                integration_time,
+                first_channel,
+                last_channel,
             )
 
     def configure_integrated_beam_data(
-        self: TpmDriver, integration_time: float = 0.5, first_channel: int = 0, last_channel: int = 191,
+        self: TpmDriver,
+        integration_time: float = 0.5,
+        first_channel: int = 0,
+        last_channel: int = 191,
     ) -> None:
         """
         Configure and start the transmission of integrated channel data.
@@ -958,7 +975,9 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
         with self._hardware_lock:
             self.tile.configure_integrated_beam_data(
-                integration_time, first_channel, last_channel,
+                integration_time,
+                first_channel,
+                last_channel,
             )
 
     def stop_integrated_data(self: TpmDriver) -> None:
@@ -968,7 +987,10 @@ class TpmDriver(MccsComponentManager):
             self.tile.stop_integrated_data()
 
     def send_raw_data(
-        self: TpmDriver, sync: bool = False, timestamp: Optional[str] = None, seconds: float = 0.2,
+        self: TpmDriver,
+        sync: bool = False,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
     ) -> None:
         """
         Transmit a snapshot containing raw antenna data.
@@ -1116,7 +1138,13 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
         with self._hardware_lock:
             self.tile.set_lmc_integrated_download(
-                mode, channel_payload_length, beam_payload_length, dst_ip, src_port, dst_port, lmc_mac,
+                mode,
+                channel_payload_length,
+                beam_payload_length,
+                dst_ip,
+                src_port,
+                dst_port,
+                lmc_mac,
             )
 
     def send_raw_data_synchronised(
@@ -1203,7 +1231,12 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
         with self._hardware_lock:
             self.tile.send_channelised_data_narrowband(
-                frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds,
+                frequency,
+                round_bits,
+                number_of_samples,
+                wait_seconds,
+                timestamp,
+                seconds,
             )
 
     #

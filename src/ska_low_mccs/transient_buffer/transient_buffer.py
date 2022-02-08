@@ -18,7 +18,10 @@ __all__ = ["TransientBuffer"]
 class TransientBuffer(ObjectComponent):
     """A placeholder for a transient buffer."""
 
-    def __init__(self: TransientBuffer, logger: logging.Logger,) -> None:
+    def __init__(
+        self: TransientBuffer,
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new instance.
 

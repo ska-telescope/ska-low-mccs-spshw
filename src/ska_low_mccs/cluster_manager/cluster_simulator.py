@@ -196,7 +196,9 @@ class ClusterSimulator(ObjectComponent):
     JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE = "Job cannot be started: not staging."
     NONEXISTENT_JOB_MESSAGE = "No such job"
 
-    def __init__(self: ClusterSimulator,) -> None:
+    def __init__(
+        self: ClusterSimulator,
+    ) -> None:
         """Initialise a new ClusterSimulator instance."""
         self._faulty = False
 
@@ -532,7 +534,9 @@ class ClusterSimulator(ObjectComponent):
         return cast(Tuple[int], self._configuration["shadow_master_pool_node_ids"])
 
     @property
-    def shadow_master_pool_status(self: ClusterSimulator,) -> list[HealthState]:
+    def shadow_master_pool_status(
+        self: ClusterSimulator,
+    ) -> list[HealthState]:
         """
         Return the statuses of nodes in the shadow master pool.
 

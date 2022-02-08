@@ -22,7 +22,10 @@ class TestObjectComponentManager:
     """Tests of the ObjectComponentManager class."""
 
     @pytest.fixture()
-    def component(self: TestObjectComponentManager, mocker: pytest_mock.MockerFixture,) -> unittest.mock.Mock:
+    def component(
+        self: TestObjectComponentManager,
+        mocker: pytest_mock.MockerFixture,
+    ) -> unittest.mock.Mock:
         """
         Return a mock to use as a component object.
 

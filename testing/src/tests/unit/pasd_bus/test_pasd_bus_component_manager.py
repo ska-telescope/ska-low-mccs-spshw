@@ -27,7 +27,10 @@ class TestPasdBusComponentManager:
     """
 
     @pytest.fixture(
-        params=["pasd_bus_simulator_component_manager", "pasd_bus_component_manager",]
+        params=[
+            "pasd_bus_simulator_component_manager",
+            "pasd_bus_component_manager",
+        ]
     )
     def pasd_bus_component_manager(
         self: TestPasdBusComponentManager,

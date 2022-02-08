@@ -57,7 +57,9 @@ class MccsSubarray(SKASubarray):
         self._health_model = SubarrayHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsSubarray,) -> SubarrayComponentManager:
+    def create_component_manager(
+        self: MccsSubarray,
+    ) -> SubarrayComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -89,7 +91,10 @@ class MccsSubarray(SKASubarray):
         self.register_command_object(
             "SendTransientBuffer",
             self.SendTransientBufferCommand(
-                self.component_manager, self.op_state_model, self.obs_state_model, self.logger,
+                self.component_manager,
+                self.op_state_model,
+                self.obs_state_model,
+                self.logger,
             ),
         )
 
@@ -126,7 +131,8 @@ class MccsSubarray(SKASubarray):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsSubarray, communication_status: CommunicationStatus,
+        self: MccsSubarray,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -150,7 +156,9 @@ class MccsSubarray(SKASubarray):
 
         self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _assign_completed(self: MccsSubarray,) -> None:
+    def _assign_completed(
+        self: MccsSubarray,
+    ) -> None:
         """
         Handle completion of the assign command.
 
@@ -159,7 +167,9 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("assign_completed")
 
-    def _release_completed(self: MccsSubarray,) -> None:
+    def _release_completed(
+        self: MccsSubarray,
+    ) -> None:
         """
         Handle completion of the release or release_all command.
 
@@ -168,7 +178,9 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("release_completed")
 
-    def _configure_completed(self: MccsSubarray,) -> None:
+    def _configure_completed(
+        self: MccsSubarray,
+    ) -> None:
         """
         Handle completion of the configure command.
 
@@ -177,7 +189,9 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("configure_completed")
 
-    def _abort_completed(self: MccsSubarray,) -> None:
+    def _abort_completed(
+        self: MccsSubarray,
+    ) -> None:
         """
         Handle completion of the abort command.
 
@@ -186,7 +200,9 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("abort_completed")
 
-    def _obsreset_completed(self: MccsSubarray,) -> None:
+    def _obsreset_completed(
+        self: MccsSubarray,
+    ) -> None:
         """
         Handle completion of the obs_reset command.
 
@@ -195,7 +211,9 @@ class MccsSubarray(SKASubarray):
         """
         self.obs_state_model.perform_action("obsreset_completed")
 
-    def _restart_completed(self: MccsSubarray,) -> None:
+    def _restart_completed(
+        self: MccsSubarray,
+    ) -> None:
         """
         Handle completion of the restart command.
 
@@ -229,7 +247,10 @@ class MccsSubarray(SKASubarray):
             self.obs_state_model.perform_action("component_unresourced")
         self._health_model.resources_changed(station_fqdns, subarray_beam_fqdns, station_beam_fqdns)
 
-    def _configured_changed(self: MccsSubarray, is_configured: bool,) -> None:
+    def _configured_changed(
+        self: MccsSubarray,
+        is_configured: bool,
+    ) -> None:
         """
         Handle change in whether the subarray is configured.
 
@@ -243,7 +264,10 @@ class MccsSubarray(SKASubarray):
         else:
             self.obs_state_model.perform_action("component_unconfigured")
 
-    def _scanning_changed(self: MccsSubarray, is_scanning: bool,) -> None:
+    def _scanning_changed(
+        self: MccsSubarray,
+        is_scanning: bool,
+    ) -> None:
         """
         Handle change in whether the subarray is scanning.
 
@@ -257,7 +281,9 @@ class MccsSubarray(SKASubarray):
         else:
             self.obs_state_model.perform_action("component_not_scanning")
 
-    def _obs_fault_occurred(self: MccsSubarray,) -> None:
+    def _obs_fault_occurred(
+        self: MccsSubarray,
+    ) -> None:
         """
         Handle occurrence of an observation fault.
 
@@ -549,7 +575,8 @@ class MccsSubarray(SKASubarray):
             super().__init__(target, obs_state_model, "configure", op_state_model, logger=logger)
 
         def do(  # type: ignore[override]
-            self: MccsSubarray.ConfigureCommand, argin: dict,
+            self: MccsSubarray.ConfigureCommand,
+            argin: dict,
         ) -> tuple[ResultCode, str]:
             """
             Implement the functionality of the configure command.

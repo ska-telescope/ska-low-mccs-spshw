@@ -242,7 +242,9 @@ class MockChangeEventCallback(MockCallable):
         super().__init__(None, called_timeout, not_called_timeout)
 
     def assert_next_change_event(
-        self: MockChangeEventCallback, value: Any, quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
+        self: MockChangeEventCallback,
+        value: Any,
+        quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
     ) -> None:
         """
         Assert the arguments of the next call to this mock callback.

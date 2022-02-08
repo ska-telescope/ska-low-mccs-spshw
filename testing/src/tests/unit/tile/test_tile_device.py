@@ -80,13 +80,15 @@ class TestMccsTile:
             can use to subscribe to health state changes on the device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert tile_device.healthState == HealthState.UNKNOWN
@@ -110,7 +112,11 @@ class TestMccsTile:
             ("fpga1Temperature", StaticTpmSimulator.FPGA1_TEMPERATURE, None),
             ("fpga2Temperature", StaticTpmSimulator.FPGA2_TEMPERATURE, None),
             ("fpgasTime", pytest.approx(StaticTpmSimulator.FPGAS_TIME), None),
-            ("currentTileBeamformerFrame", StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME, None,),
+            (
+                "currentTileBeamformerFrame",
+                StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+                None,
+            ),
             ("phaseTerminalCount", StaticTpmSimulator.PHASE_TERMINAL_COUNT, 45),
             ("adcPower", pytest.approx(tuple(float(i) for i in range(32))), None),
             ("ppsDelay", 12, None),
@@ -145,13 +151,15 @@ class TestMccsTile:
         """
         tile_device.testMode = TestMode.TEST
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
-            "state", device_state_changed_callback,
+            "state",
+            device_state_changed_callback,
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
@@ -171,7 +179,10 @@ class TestMccsTile:
             tile_device.write_attribute(attribute, write_value)
             assert getattr(tile_device, attribute) == write_value
 
-    def test_cspDestinationIp(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
+    def test_cspDestinationIp(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the cspDestinationIp attribute.
 
@@ -183,7 +194,10 @@ class TestMccsTile:
         tile_device.cspDestinationIp = "10.0.23.56"
         assert tile_device.cspDestinationIp == "10.0.23.56"
 
-    def test_cspDestinationMac(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
+    def test_cspDestinationMac(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the cspDestinationMac attribute.
 
@@ -195,7 +209,10 @@ class TestMccsTile:
         tile_device.cspDestinationMac = "10:fe:fa:06:0b:99"
         assert tile_device.cspDestinationMac == "10:fe:fa:06:0b:99"
 
-    def test_cspDestinationPort(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
+    def test_cspDestinationPort(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the cspDestinationPort attribute.
 
@@ -207,7 +224,10 @@ class TestMccsTile:
         tile_device.cspDestinationPort = 4567
         assert tile_device.cspDestinationPort == 4567
 
-    def test_antennaIds(self: TestMccsTile, tile_device: MccsDeviceProxy,) -> None:
+    def test_antennaIds(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+    ) -> None:
         """
         Test for the antennaIds attribute.
 
@@ -227,7 +247,10 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize(
         ("device_command", "arg"),
         [
-            ("SetLmcDownload", json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),),
+            (
+                "SetLmcDownload",
+                json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),
+            ),
             ("SetBeamFormerRegions", (2, 8, 5, 0, 0)),
             (
                 "ConfigureStationBeamformer",
@@ -245,7 +268,10 @@ class TestMccsTileCommands:
                 json.dumps({"Integration Time": 3.142, "First channel": 0, "Last Channel": 191}),
             ),
             ("SendRawData", json.dumps({"Sync": True, "Seconds": 6.7})),
-            ("SendChannelisedData", json.dumps({"NSamples": 4, "FirstChannel": 7, "LastChannel": 234}),),
+            (
+                "SendChannelisedData",
+                json.dumps({"NSamples": 4, "FirstChannel": 7, "LastChannel": 234}),
+            ),
             (
                 "SendChannelisedDataContinuous",
                 json.dumps({"ChannelID": 2, "NSamples": 4, "WaitSeconds": 3.5}),
@@ -257,14 +283,28 @@ class TestMccsTileCommands:
             (
                 "SetLmcIntegratedDownload",
                 json.dumps(
-                    {"Mode": "1G", "ChannelPayloadLength": 4, "BeamPayloadLength": 6, "DstIP": "10.0.1.23",}
+                    {
+                        "Mode": "1G",
+                        "ChannelPayloadLength": 4,
+                        "BeamPayloadLength": 6,
+                        "DstIP": "10.0.1.23",
+                    }
                 ),
             ),
-            ("SendRawDataSynchronised", json.dumps({"Seconds": 0.5}),),
+            (
+                "SendRawDataSynchronised",
+                json.dumps({"Seconds": 0.5}),
+            ),
             (
                 "SendChannelisedDataNarrowband",
                 json.dumps(
-                    {"Frequency": 4000, "RoundBits": 256, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5,}
+                    {
+                        "Frequency": 4000,
+                        "RoundBits": 256,
+                        "NSamples": 48,
+                        "WaitSeconds": 10,
+                        "Seconds": 0.5,
+                    }
                 ),
             ),
             (
@@ -315,7 +355,8 @@ class TestMccsTileCommands:
         :param arg: argument to the command (optional)
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -358,14 +399,16 @@ class TestMccsTileCommands:
         :param subrack_tpm_id: the position of the TPM in its subrack
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         assert tile_device.state() == tango.DevState.DISABLE
         with pytest.raises(
-            tango.DevFailed, match="Command On not allowed when the device is in DISABLE state",
+            tango.DevFailed,
+            match="Command On not allowed when the device is in DISABLE state",
         ):
             _ = tile_device.On()
 
@@ -404,7 +447,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -454,13 +498,15 @@ class TestMccsTileCommands:
             to subscribe to state changes on the tile device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.add_change_event_callback(
-            "state", device_state_changed_callback,
+            "state",
+            device_state_changed_callback,
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert tile_device.state() == tango.DevState.DISABLE
@@ -510,7 +556,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -551,7 +598,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -590,7 +638,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -623,7 +672,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -671,7 +721,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -720,7 +771,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -764,7 +816,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -806,7 +859,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -844,7 +898,10 @@ class TestMccsTileCommands:
         }
         tile_device.Configure40GCore(json.dumps(config_2))
 
-        assert tuple(tile_device.fortyGbDestinationIps) == ("10.0.98.3", "10.0.98.4",)
+        assert tuple(tile_device.fortyGbDestinationIps) == (
+            "10.0.98.3",
+            "10.0.98.4",
+        )
         assert tuple(tile_device.fortyGbDestinationPorts) == (5000, 5001)
 
         arg = {
@@ -886,7 +943,8 @@ class TestMccsTileCommands:
         :param frequencies: number of frequencies to set
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -901,7 +959,7 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        array: list[float] = ([float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies))
+        array: list[float] = [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
 
         with pytest.raises(tango.DevFailed, match="NotImplementedError"):
             _ = tile_device.SetChanneliserTruncation(array)
@@ -926,7 +984,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -974,7 +1033,8 @@ class TestMccsTileCommands:
             device
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -1035,7 +1095,8 @@ class TestMccsTileCommands:
         :param duration: duration of time that the beamformer should run
         """
         tile_device.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE

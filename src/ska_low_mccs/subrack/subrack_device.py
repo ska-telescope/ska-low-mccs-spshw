@@ -86,7 +86,9 @@ class MccsSubrack(SKABaseDevice):
         self._health_model = SubrackHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsSubrack,) -> SubrackComponentManager:
+    def create_component_manager(
+        self: MccsSubrack,
+    ) -> SubrackComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -123,7 +125,8 @@ class MccsSubrack(SKABaseDevice):
             ("SetPowerSupplyFanSpeed", self.SetPowerSupplyFanSpeedCommand),
         ]:
             self.register_command_object(
-                command_name, command_object(self.component_manager, self.op_state_model, self.logger),
+                command_name,
+                command_object(self.component_manager, self.op_state_model, self.logger),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -157,7 +160,8 @@ class MccsSubrack(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsSubrack, communication_status: CommunicationStatus,
+        self: MccsSubrack,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -188,7 +192,11 @@ class MccsSubrack(SKABaseDevice):
         else:
             power_supply_status = self.component_manager._power_supply_component_manager.supplied_power_mode
             if (
-                self.admin_mode_model.admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE,]
+                self.admin_mode_model.admin_mode
+                in [
+                    AdminMode.ONLINE,
+                    AdminMode.MAINTENANCE,
+                ]
                 and power_supply_status is not None
             ):
                 action = power_map[power_supply_status]
@@ -207,7 +215,10 @@ class MccsSubrack(SKABaseDevice):
             self.logger.debug("Checking tpm power modes")
             self.component_manager.check_tpm_power_modes()
 
-    def _component_power_mode_changed(self: MccsSubrack, power_mode: PowerMode,) -> None:
+    def _component_power_mode_changed(
+        self: MccsSubrack,
+        power_mode: PowerMode,
+    ) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -230,7 +241,10 @@ class MccsSubrack(SKABaseDevice):
             self.logger.debug("Checking tpm power modes")
             self.component_manager.check_tpm_power_modes()
 
-    def _component_fault(self: MccsSubrack, is_fault: bool,) -> None:
+    def _component_fault(
+        self: MccsSubrack,
+        is_fault: bool,
+    ) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -303,7 +317,9 @@ class MccsSubrack(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(
-        dtype=SimulationMode, memorized=True, hw_memorized=True,
+        dtype=SimulationMode,
+        memorized=True,
+        hw_memorized=True,
     )
     def simulationMode(self: MccsSubrack) -> SimulationMode:
         """
@@ -323,7 +339,9 @@ class MccsSubrack(SKABaseDevice):
         self.component_manager.simulation_mode = value
 
     @attribute(
-        dtype=TestMode, memorized=True, hw_memorized=True,
+        dtype=TestMode,
+        memorized=True,
+        hw_memorized=True,
     )
     def testMode(self: MccsSubrack) -> TestMode:
         """
@@ -355,7 +373,10 @@ class MccsSubrack(SKABaseDevice):
         return self.component_manager.backplane_temperatures
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=2, label="Subrack board temperatures", unit="Celsius",
+        dtype=("DevFloat",),
+        max_dim_x=2,
+        label="Subrack board temperatures",
+        unit="Celsius",
     )
     def boardTemperatures(self: MccsSubrack) -> tuple[float]:
         """
@@ -494,7 +515,8 @@ class MccsSubrack(SKABaseDevice):
         return self.component_manager.tpm_count
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 1 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 1 power mode",
     )
     def tpm1PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -505,7 +527,8 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[0]
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 2 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 2 power mode",
     )
     def tpm2PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -516,7 +539,8 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[1]
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 3 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 3 power mode",
     )
     def tpm3PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -527,7 +551,8 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[2]
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 4 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 4 power mode",
     )
     def tpm4PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -538,7 +563,8 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[3]
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 5 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 5 power mode",
     )
     def tpm5PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -549,7 +575,8 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[4]
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 6 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 6 power mode",
     )
     def tpm6PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -560,7 +587,8 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[5]
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 7 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 7 power mode",
     )
     def tpm7PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -571,7 +599,8 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[6]
 
     @attribute(
-        dtype=ExtendedPowerMode, label="TPM bay 8 power mode",
+        dtype=ExtendedPowerMode,
+        label="TPM bay 8 power mode",
     )
     def tpm8PowerMode(self: MccsSubrack) -> ExtendedPowerMode:
         """
@@ -665,7 +694,8 @@ class MccsSubrack(SKABaseDevice):
         return handler.is_allowed()
 
     @command(
-        dtype_in="DevULong", dtype_out="DevVarLongStringArray",
+        dtype_in="DevULong",
+        dtype_out="DevVarLongStringArray",
     )
     def PowerOnTpm(self: MccsSubrack, argin: int) -> DevVarLongStringArrayType:
         """
@@ -724,7 +754,8 @@ class MccsSubrack(SKABaseDevice):
         return handler.is_allowed()
 
     @command(
-        dtype_in="DevULong", dtype_out="DevVarLongStringArray",
+        dtype_in="DevULong",
+        dtype_out="DevVarLongStringArray",
     )
     def PowerOffTpm(self: MccsSubrack, argin: int) -> DevVarLongStringArrayType:
         """
@@ -779,7 +810,9 @@ class MccsSubrack(SKABaseDevice):
         handler = self.get_command_object("PowerUpTpms")
         return handler.is_allowed()
 
-    @command(dtype_out="DevVarLongStringArray",)
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
     def PowerUpTpms(self: MccsSubrack) -> DevVarLongStringArrayType:
         """
         Power up the TPMs.

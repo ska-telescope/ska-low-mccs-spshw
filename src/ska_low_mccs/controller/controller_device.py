@@ -67,7 +67,9 @@ class MccsController(SKABaseDevice):
         )
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsController,) -> ControllerComponentManager:
+    def create_component_manager(
+        self: MccsController,
+    ) -> ControllerComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -97,16 +99,20 @@ class MccsController(SKABaseDevice):
         super().init_command_objects()
 
         self.register_command_object(
-            "On", self.OnCommand(self, self.op_state_model, self.logger),
+            "On",
+            self.OnCommand(self, self.op_state_model, self.logger),
         )
         self.register_command_object(
-            "Off", self.OffCommand(self, self.op_state_model, self.logger),
+            "Off",
+            self.OffCommand(self, self.op_state_model, self.logger),
         )
         self.register_command_object(
-            "Allocate", self.AllocateCommand(self.component_manager, self.op_state_model, self.logger),
+            "Allocate",
+            self.AllocateCommand(self.component_manager, self.op_state_model, self.logger),
         )
         self.register_command_object(
-            "Release", self.ReleaseCommand(self.component_manager, self.op_state_model, self.logger),
+            "Release",
+            self.ReleaseCommand(self.component_manager, self.op_state_model, self.logger),
         )
         self.register_command_object(
             "RestartSubarray",
@@ -238,7 +244,8 @@ class MccsController(SKABaseDevice):
     # Callbacks
     # ----------
     def _communication_status_changed(
-        self: MccsController, communication_status: CommunicationStatus,
+        self: MccsController,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -284,7 +291,10 @@ class MccsController(SKABaseDevice):
 
         self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _component_power_mode_changed(self: MccsController, power_mode: PowerMode,) -> None:
+    def _component_power_mode_changed(
+        self: MccsController,
+        power_mode: PowerMode,
+    ) -> None:
         """
         Handle change in the power mode of the component.
 

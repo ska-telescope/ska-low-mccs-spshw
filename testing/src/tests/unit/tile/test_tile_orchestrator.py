@@ -32,7 +32,9 @@ class TestTileOrchestrator:
     """Class for testing the tile orchestrator."""
 
     @pytest.fixture(scope="session")
-    def rules(self: TestTileOrchestrator,) -> Mapping[StateStimulusTupleType, list[str]]:
+    def rules(
+        self: TestTileOrchestrator,
+    ) -> Mapping[StateStimulusTupleType, list[str]]:
         """
         Return a static dictionary of orchestrator rules.
 
@@ -51,7 +53,12 @@ class TestTileOrchestrator:
         rules_table: dict[StateStimulusTupleType, list[str]] = {}
         for state, actions in TileOrchestrator._load_rules().items():
             if len(state) == 2:
-                rules_table[(Stimulus[state[0]], CommunicationStatus[state[1]],)] = actions
+                rules_table[
+                    (
+                        Stimulus[state[0]],
+                        CommunicationStatus[state[1]],
+                    )
+                ] = actions
             elif len(state) == 4:
                 rules_table[
                     (
@@ -100,7 +107,10 @@ class TestTileOrchestrator:
             "raise_cannot_turn_off_on_when_offline": (
                 {},
                 {},
-                pytest.raises(ConnectionError, match="TPM cannot be turned off / on when not online.",),
+                pytest.raises(
+                    ConnectionError,
+                    match="TPM cannot be turned off / on when not online.",
+                ),
             ),
             "report_communication_disabled": (
                 {},
@@ -160,13 +170,21 @@ class TestTileOrchestrator:
                 {},
                 None,
             ),
-            "start_communicating_with_subrack": ({}, {"start_communicating_with_subrack": []}, None,),
+            "start_communicating_with_subrack": (
+                {},
+                {"start_communicating_with_subrack": []},
+                None,
+            ),
             "stop_communicating_with_subrack": (
                 {"subrack_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_subrack": []},
                 None,
             ),
-            "start_communicating_with_tpm": ({}, {"start_communicating_with_tpm": []}, None,),
+            "start_communicating_with_tpm": (
+                {},
+                {"start_communicating_with_tpm": []},
+                None,
+            ),
             "stop_communicating_with_tpm": (
                 {"tpm_communication_status": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_tpm": []},
@@ -178,7 +196,8 @@ class TestTileOrchestrator:
 
     @pytest.fixture()
     def callbacks(
-        self: TestTileOrchestrator, mocker: pytest_mock.MockerFixture,
+        self: TestTileOrchestrator,
+        mocker: pytest_mock.MockerFixture,
     ) -> Mapping[str, unittest.mock.Mock]:
         """
         Return a dictionary of callbacks, keyed by an arbitrary name.
@@ -200,7 +219,12 @@ class TestTileOrchestrator:
             (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.OFF),
             (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerMode.OFF),
             (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.OFF),
-            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.ON, CommunicationStatus.DISABLED,),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.DISABLED,
+            ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
@@ -213,7 +237,12 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.ON,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (CommunicationStatus.NOT_ESTABLISHED, False, ExtendedPowerMode.ON, CommunicationStatus.DISABLED,),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                False,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.DISABLED,
+            ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
@@ -226,14 +255,24 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.ON,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.ON, CommunicationStatus.DISABLED,),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.DISABLED,
+            ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
                 ExtendedPowerMode.ON,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
-            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.ON, CommunicationStatus.ESTABLISHED,),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.ON,
+                CommunicationStatus.ESTABLISHED,
+            ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
@@ -288,7 +327,12 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.UNKNOWN, CommunicationStatus.DISABLED,),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
@@ -319,7 +363,12 @@ class TestTileOrchestrator:
                 ExtendedPowerMode.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
-            (CommunicationStatus.ESTABLISHED, True, ExtendedPowerMode.UNKNOWN, CommunicationStatus.DISABLED,),
+            (
+                CommunicationStatus.ESTABLISHED,
+                True,
+                ExtendedPowerMode.UNKNOWN,
+                CommunicationStatus.DISABLED,
+            ),
             (
                 CommunicationStatus.ESTABLISHED,
                 True,
@@ -375,7 +424,12 @@ class TestTileOrchestrator:
         self: TestTileOrchestrator, request: SubRequest
     ) -> Union[
         Tuple[CommunicationStatus],
-        Tuple[CommunicationStatus, ExtendedPowerMode, CommunicationStatus, Optional[bool],],
+        Tuple[
+            CommunicationStatus,
+            ExtendedPowerMode,
+            CommunicationStatus,
+            Optional[bool],
+        ],
     ]:
         """
         Return an orchestrator state.
@@ -449,7 +503,10 @@ class TestTileOrchestrator:
     def check(
         self: TestTileOrchestrator,
         rules: Mapping[StateStimulusTupleType, str],
-        checks: Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],],
+        checks: Mapping[
+            str,
+            Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],
+        ],
         state: StateTupleType,
         stimulus: Stimulus,
     ) -> Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]]:

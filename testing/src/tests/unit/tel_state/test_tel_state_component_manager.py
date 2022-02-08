@@ -26,7 +26,10 @@ class TestTelState:
     """
 
     @pytest.fixture(
-        params=["tel_state", "tel_state_component_manager",]
+        params=[
+            "tel_state",
+            "tel_state_component_manager",
+        ]
     )
     def tel_state(
         self: TestTelState,

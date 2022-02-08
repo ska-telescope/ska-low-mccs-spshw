@@ -134,7 +134,11 @@ def controller_resource_manager(
     :return: a controller resource manager for testing
     """
     return ControllerResourceManager(
-        subarray_fqdns, subrack_fqdns, subarray_beam_fqdns, station_beam_fqdns, channel_blocks,
+        subarray_fqdns,
+        subrack_fqdns,
+        subarray_beam_fqdns,
+        station_beam_fqdns,
+        channel_blocks,
     )
 
 
@@ -399,7 +403,10 @@ def unique_id() -> str:
 
 
 @pytest.fixture()
-def mock_component_manager(mocker: pytest_mock.mocker, unique_id: str,) -> unittest.mock.Mock:
+def mock_component_manager(
+    mocker: pytest_mock.mocker,
+    unique_id: str,
+) -> unittest.mock.Mock:
     """
     Return a mock component manager.
 
@@ -430,7 +437,9 @@ def mock_component_manager(mocker: pytest_mock.mocker, unique_id: str,) -> unitt
 
 
 @pytest.fixture()
-def patched_controller_device_class(mock_component_manager: unittest.mock.Mock,) -> type[MccsController]:
+def patched_controller_device_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsController]:
     """
     Return a controller device that is patched with a mock component manager.
 
@@ -444,7 +453,9 @@ def patched_controller_device_class(mock_component_manager: unittest.mock.Mock,)
     class PatchedMccsController(MccsController):
         """A controller device patched with a mock component manager."""
 
-        def create_component_manager(self: PatchedMccsController,) -> unittest.mock.Mock:
+        def create_component_manager(
+            self: PatchedMccsController,
+        ) -> unittest.mock.Mock:
             """
             Return a mock component manager instead of the usual one.
 

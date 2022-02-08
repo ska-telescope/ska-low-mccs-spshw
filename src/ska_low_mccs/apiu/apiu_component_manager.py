@@ -78,7 +78,11 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         super().stop_communicating()
         cast(ApiuSimulator, self._component).set_antenna_power_changed_callback(None)
 
-    def __getattr__(self: ApiuSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: ApiuSimulatorComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -122,7 +126,10 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(self: ApiuSimulatorComponentManager, name: str,) -> Any:
+    def _get_from_component(
+        self: ApiuSimulatorComponentManager,
+        name: str,
+    ) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -276,7 +283,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         cast(SwitchingApiuComponentManager, self._hardware_component_manager).turn_off_antennas()
         return super().off()
 
-    def __getattr__(self: ApiuComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: ApiuComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -321,7 +332,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     @check_communicating
     @check_on
-    def _get_from_hardware(self: ApiuComponentManager, name: str,) -> Any:
+    def _get_from_hardware(
+        self: ApiuComponentManager,
+        name: str,
+    ) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 

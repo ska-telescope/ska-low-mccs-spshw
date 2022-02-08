@@ -125,7 +125,11 @@ class SubrackDriver(MccsComponentManager):
         self._component_tpm_power_changed_callback = component_tpm_power_changed_callback
         self._component_progress_changed_callback = component_progress_changed_callback
         super().__init__(
-            logger, push_change_event, communication_status_changed_callback, None, component_fault_callback,
+            logger,
+            push_change_event,
+            communication_status_changed_callback,
+            None,
+            component_fault_callback,
         )
 
     def start_communicating(self: SubrackDriver) -> None:

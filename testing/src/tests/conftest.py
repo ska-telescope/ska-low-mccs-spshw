@@ -146,7 +146,12 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 def tango_harness_factory(
     request: pytest.FixtureRequest, logger: logging.Logger
 ) -> Callable[
-    [dict[str, Any], DevicesToLoadType, Callable[[], unittest.mock.Mock], dict[str, unittest.mock.Mock],],
+    [
+        dict[str, Any],
+        DevicesToLoadType,
+        Callable[[], unittest.mock.Mock],
+        dict[str, unittest.mock.Mock],
+    ],
     TangoHarness,
 ]:
     """
@@ -244,7 +249,12 @@ def tango_config() -> dict[str, Any]:
 @pytest.fixture()
 def tango_harness(
     tango_harness_factory: Callable[
-        [dict[str, Any], DevicesToLoadType, Callable[[], unittest.mock.Mock], dict[str, unittest.mock.Mock],],
+        [
+            dict[str, Any],
+            DevicesToLoadType,
+            Callable[[], unittest.mock.Mock],
+            dict[str, unittest.mock.Mock],
+        ],
         TangoHarness,
     ],
     tango_config: dict[str, str],
@@ -315,7 +325,8 @@ def mock_callback_not_called_timeout() -> float:
 
 @pytest.fixture()
 def mock_change_event_callback_factory(
-    mock_callback_called_timeout: float, mock_callback_not_called_timeout: float,
+    mock_callback_called_timeout: float,
+    mock_callback_not_called_timeout: float,
 ) -> Callable[[str], MockChangeEventCallback]:
     """
     Return a factory that returns a new mock change event callback each call.

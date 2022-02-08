@@ -354,7 +354,11 @@ class BaseTpmSimulator(ObjectComponent):
         return list(self._register_map[0].keys())
 
     def read_register(
-        self: BaseTpmSimulator, register_name: str, nb_read: int, offset: int, device: int,
+        self: BaseTpmSimulator,
+        register_name: str,
+        nb_read: int,
+        offset: int,
+        device: int,
     ) -> list[int]:
         """
         Read the values in a register.
@@ -375,7 +379,11 @@ class BaseTpmSimulator(ObjectComponent):
         return values
 
     def write_register(
-        self: BaseTpmSimulator, register_name: str, values: list[int], offset: int, device: int,
+        self: BaseTpmSimulator,
+        register_name: str,
+        values: list[int],
+        offset: int,
+        device: int,
     ) -> None:
         """
         Read the values in a register.
@@ -452,7 +460,9 @@ class BaseTpmSimulator(ObjectComponent):
         self._forty_gb_core_list.append(core_dict)
 
     def get_40g_configuration(
-        self: BaseTpmSimulator, core_id: int = -1, arp_table_entry: int = 0,
+        self: BaseTpmSimulator,
+        core_id: int = -1,
+        arp_table_entry: int = 0,
     ) -> dict | list[dict] | None:
         """
         Return a 40G configuration.
@@ -542,7 +552,11 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def initialise_beamformer(
-        self: BaseTpmSimulator, start_channel: int, nof_channels: int, is_first: bool, is_last: bool,
+        self: BaseTpmSimulator,
+        start_channel: int,
+        nof_channels: int,
+        is_first: bool,
+        is_last: bool,
     ) -> None:
         """
         Initialise the beamformer.
@@ -578,7 +592,10 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def load_calibration_curve(
-        self: BaseTpmSimulator, antenna: int, beam: int, calibration_coefficients: list[int],
+        self: BaseTpmSimulator,
+        antenna: int,
+        beam: int,
+        calibration_coefficients: list[int],
     ) -> None:
         """
         Load calibration curve.
@@ -686,7 +703,11 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_pointing_delay")
         raise NotImplementedError
 
-    def start_beamformer(self: BaseTpmSimulator, start_time: int = 0, duration: int = -1,) -> None:
+    def start_beamformer(
+        self: BaseTpmSimulator,
+        start_time: int = 0,
+        duration: int = -1,
+    ) -> None:
         """
         Start the beamformer at the specified time.
 
@@ -752,7 +773,10 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def send_raw_data(
-        self: BaseTpmSimulator, sync: bool = False, timestamp: Optional[str] = None, seconds: float = 0.2,
+        self: BaseTpmSimulator,
+        sync: bool = False,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
     ) -> None:
         """
         Transmit a snapshot containing raw antenna data.
@@ -814,7 +838,9 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def send_beam_data(
-        self: BaseTpmSimulator, timestamp: Optional[str] = None, seconds: float = 0.2,
+        self: BaseTpmSimulator,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
     ) -> None:
         """
         Transmit a snapshot containing beamformed data.
@@ -838,7 +864,11 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: stop_data_transmission")
         raise NotImplementedError
 
-    def start_acquisition(self: BaseTpmSimulator, start_time: Optional[int] = None, delay: int = 2,) -> None:
+    def start_acquisition(
+        self: BaseTpmSimulator,
+        start_time: Optional[int] = None,
+        delay: int = 2,
+    ) -> None:
         """
         Start data acquisition.
 
@@ -908,7 +938,9 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def send_raw_data_synchronised(
-        self: BaseTpmSimulator, timestamp: Optional[str] = None, seconds: float = 0.2,
+        self: BaseTpmSimulator,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
     ) -> None:
         """
         Send synchronised raw data.

@@ -95,7 +95,9 @@ class TestClusterCommon:
         ),
     )
     def test_configuration(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager], resource: str,
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
+        resource: str,
     ) -> None:
         """
         Test of resources that are stored.
@@ -108,7 +110,9 @@ class TestClusterCommon:
 
     @pytest.mark.parametrize("status", ["errored", "failed", "finished", "killed", "lost"])
     def test_closed_jobs_stats(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager], status: str,
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
+        status: str,
     ) -> None:
         """
         Test the stats on closed jobs.
@@ -127,7 +131,9 @@ class TestClusterCommon:
 
     @pytest.mark.parametrize("status", ("staging", "starting", "running", "killing", "unreachable"))
     def test_open_jobs_stats(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager], status: str,
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
+        status: str,
     ) -> None:
         """
         Test of the open job stats, including.
@@ -160,10 +166,18 @@ class TestClusterCommon:
 
     @pytest.mark.parametrize(
         "resource",
-        ("memory_used", "nodes_in_use", "master_cpus_used", "master_disk_used", "master_mem_used",),
+        (
+            "memory_used",
+            "nodes_in_use",
+            "master_cpus_used",
+            "master_disk_used",
+            "master_mem_used",
+        ),
     )
     def test_resource_stats(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager], resource: str,
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
+        resource: str,
     ) -> None:
         """
         Test of resources that are stored.
@@ -224,7 +238,8 @@ class TestClusterCommon:
         assert getattr(cluster, resource) == expected_value
 
     def test_resources_relate(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager],
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that resources relate to each other as they should.
@@ -249,7 +264,8 @@ class TestClusterCommon:
         )
 
     def test_ping_master_pool(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager],
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test the ping master node command.
@@ -260,12 +276,14 @@ class TestClusterCommon:
         :param cluster: the simulated cluster
         """
         with pytest.raises(
-            NotImplementedError, match="ClusterSimulator.ping_master_pool has not been implemented",
+            NotImplementedError,
+            match="ClusterSimulator.ping_master_pool has not been implemented",
         ):
             assert cluster.ping_master_pool() is None
 
     def test_shadow_master_pool_status(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager],
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that the shadow master pool status.
@@ -281,7 +299,8 @@ class TestClusterCommon:
         ]
 
     def test_submit_job(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager],
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that when we submit a job, we get a job id for it.
@@ -295,7 +314,8 @@ class TestClusterCommon:
         assert cluster.get_job_status(job_id) == JobStatus.STAGING
 
     def test_start_job(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager],
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that when we start a job, that job starts running.
@@ -314,7 +334,8 @@ class TestClusterCommon:
                     cluster.start_job(job_id)
 
     def test_stop_job(
-        self: TestClusterCommon, cluster: Union[ClusterSimulator, ClusterComponentManager],
+        self: TestClusterCommon,
+        cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
         Test that we can stop a job.
@@ -379,14 +400,22 @@ class TestClusterComponentManager:
             be used to subscribe to device LRC result changes
         """
         with pytest.raises(
-            NotImplementedError, match=("Unimplemented switcher mode 'SimulationMode.FALSE'."),
+            NotImplementedError,
+            match=("Unimplemented switcher mode 'SimulationMode.FALSE'."),
         ):
             _ = ClusterComponentManager(
-                logger, lrc_result_changed_callback, SimulationMode.FALSE, None, None, None, None,
+                logger,
+                lrc_result_changed_callback,
+                SimulationMode.FALSE,
+                None,
+                None,
+                None,
+                None,
             )
 
     def test_simulation_mode(
-        self: TestClusterComponentManager, cluster_component_manager: ClusterComponentManager,
+        self: TestClusterComponentManager,
+        cluster_component_manager: ClusterComponentManager,
     ) -> None:
         """
         Test that we can't take the cluster manager out of simulation mode.
@@ -394,7 +423,8 @@ class TestClusterComponentManager:
         :param cluster_component_manager: a manager for an external cluster
         """
         with pytest.raises(
-            NotImplementedError, match=("Unimplemented switcher mode 'SimulationMode.FALSE'."),
+            NotImplementedError,
+            match=("Unimplemented switcher mode 'SimulationMode.FALSE'."),
         ):
             cluster_component_manager.simulation_mode = SimulationMode.FALSE
 

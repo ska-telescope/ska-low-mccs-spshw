@@ -157,7 +157,9 @@ class MccsTileCli(metaclass=CliMeta):
 
     @command_result_as_string
     def SendBeamData(
-        self: MccsTileCli, timestamp: Optional[str] = None, seconds: float = 0.2,
+        self: MccsTileCli,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
     ) -> Tuple[ResultCode, str]:
         """
         Transmit a snapshot containing beamformed data.
@@ -247,7 +249,10 @@ class MccsTileCli(metaclass=CliMeta):
 
     @command_result_as_string
     def SendRawData(
-        self: MccsTileCli, sync: bool = False, timestamp: Optional[str] = None, seconds: float = 0.2,
+        self: MccsTileCli,
+        sync: bool = False,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
     ) -> Tuple[ResultCode, str]:
         """
         Transmit a snapshot containing raw antenna data.

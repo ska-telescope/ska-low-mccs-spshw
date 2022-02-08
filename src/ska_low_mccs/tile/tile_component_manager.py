@@ -147,7 +147,11 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "write_register",
     ]
 
-    def __getattr__(self: _TpmSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: _TpmSimulatorComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -169,7 +173,10 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(self: _TpmSimulatorComponentManager, name: str,) -> Any:
+    def _get_from_component(
+        self: _TpmSimulatorComponentManager,
+        name: str,
+    ) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -180,7 +187,11 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._component, name)
 
-    def __setattr__(self: _TpmSimulatorComponentManager, name: str, value: Any,) -> Any:
+    def __setattr__(
+        self: _TpmSimulatorComponentManager,
+        name: str,
+        value: Any,
+    ) -> Any:
         """
         Set an attribute on this TPM simulator component manager.
 
@@ -231,7 +242,9 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component faults (or stops faulting)
         """
         super().__init__(
-            StaticTpmSimulator(logger,),
+            StaticTpmSimulator(
+                logger,
+            ),
             logger,
             push_change_event,
             communication_status_changed_callback,
@@ -262,7 +275,9 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component faults (or stops faulting)
         """
         super().__init__(
-            DynamicTpmSimulator(logger,),
+            DynamicTpmSimulator(
+                logger,
+            ),
             logger,
             push_change_event,
             communication_status_changed_callback,
@@ -325,19 +340,31 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         )
 
         dynamic_tpm_simulator_component_manager = DynamicTpmSimulatorComponentManager(
-            logger, push_change_event, communication_status_changed_callback, component_fault_callback,
+            logger,
+            push_change_event,
+            communication_status_changed_callback,
+            component_fault_callback,
         )
 
         static_tpm_simulator_component_manager = StaticTpmSimulatorComponentManager(
-            logger, push_change_event, communication_status_changed_callback, component_fault_callback,
+            logger,
+            push_change_event,
+            communication_status_changed_callback,
+            component_fault_callback,
         )
 
         super().__init__(
             {
                 (SimulationMode.FALSE, TestMode.NONE): tpm_driver,
                 (SimulationMode.FALSE, TestMode.TEST): tpm_driver,
-                (SimulationMode.TRUE, TestMode.NONE,): dynamic_tpm_simulator_component_manager,
-                (SimulationMode.TRUE, TestMode.TEST,): static_tpm_simulator_component_manager,
+                (
+                    SimulationMode.TRUE,
+                    TestMode.NONE,
+                ): dynamic_tpm_simulator_component_manager,
+                (
+                    SimulationMode.TRUE,
+                    TestMode.TEST,
+                ): static_tpm_simulator_component_manager,
             },
             (initial_simulation_mode, initial_test_mode),
         )
@@ -355,7 +382,10 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         return simulation_mode
 
     @simulation_mode.setter
-    def simulation_mode(self: SwitchingTpmComponentManager, value: SimulationMode,) -> None:
+    def simulation_mode(
+        self: SwitchingTpmComponentManager,
+        value: SimulationMode,
+    ) -> None:
         """
         Set the simulation mode.
 
@@ -385,7 +415,10 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         return cast(TestMode, test_mode)
 
     @test_mode.setter
-    def test_mode(self: SwitchingTpmComponentManager, value: TestMode,) -> None:
+    def test_mode(
+        self: SwitchingTpmComponentManager,
+        value: TestMode,
+    ) -> None:
         """
         Set the test mode.
 
@@ -538,7 +571,8 @@ class TileComponentManager(MccsComponentManager):
             self._component_progress_changed_callback(progress)
 
     def _subrack_communication_status_changed(
-        self: TileComponentManager, communication_status: CommunicationStatus,
+        self: TileComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
@@ -587,7 +621,8 @@ class TileComponentManager(MccsComponentManager):
             raise ConnectionError(f"Could not connect to '{self._subrack_fqdn}'") from dev_failed
 
         self._subrack_proxy.add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerMode", self._tpm_power_mode_change_event_received,
+            f"tpm{self._subrack_tpm_id}PowerMode",
+            self._tpm_power_mode_change_event_received,
         )
 
         self._tile_orchestrator.update_subrack_communication_status(CommunicationStatus.ESTABLISHED)
@@ -638,11 +673,15 @@ class TileComponentManager(MccsComponentManager):
             self.logger.error(f"Turn on tpm {self._subrack_tpm_id} returns {result_code}")
         return result_code
 
-    def _tpm_power_mode_changed(self: TileComponentManager, power_mode: ExtendedPowerMode,) -> None:
+    def _tpm_power_mode_changed(
+        self: TileComponentManager,
+        power_mode: ExtendedPowerMode,
+    ) -> None:
         self._tile_orchestrator.update_tpm_power_mode(power_mode)
 
     def _tpm_communication_status_changed(
-        self: TileComponentManager, communication_status: CommunicationStatus,
+        self: TileComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the tpm.
@@ -701,7 +740,10 @@ class TileComponentManager(MccsComponentManager):
         return cast(SwitchingTpmComponentManager, self._tpm_component_manager).test_mode
 
     @test_mode.setter
-    def test_mode(self: TileComponentManager, value: TestMode,) -> None:
+    def test_mode(
+        self: TileComponentManager,
+        value: TestMode,
+    ) -> None:
         """
         Set the test mode.
 
@@ -796,7 +838,11 @@ class TileComponentManager(MccsComponentManager):
         "write_register",
     ]
 
-    def __getattr__(self: TileComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: TileComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -830,7 +876,11 @@ class TileComponentManager(MccsComponentManager):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._tpm_component_manager, name)
 
-    def __setattr__(self: TileComponentManager, name: str, value: Any,) -> None:
+    def __setattr__(
+        self: TileComponentManager,
+        name: str,
+        value: Any,
+    ) -> None:
         """
         Set an attribute on this tile component manager.
 

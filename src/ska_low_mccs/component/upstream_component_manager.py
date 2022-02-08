@@ -44,7 +44,9 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         self._supplied_power_mode = None
 
     @property
-    def supplied_power_mode(self: PowerSupplyProxyComponentManager,) -> Optional[PowerMode]:
+    def supplied_power_mode(
+        self: PowerSupplyProxyComponentManager,
+    ) -> Optional[PowerMode]:
         """
         Return the power mode of the APIU.
 
@@ -59,7 +61,8 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         raise NotImplementedError("PowerSupplyComponentManager is abstract")
 
     def update_supplied_power_mode(
-        self: PowerSupplyProxyComponentManager, supplied_power_mode: Optional[PowerMode],
+        self: PowerSupplyProxyComponentManager,
+        supplied_power_mode: Optional[PowerMode],
     ) -> None:
         if self._supplied_power_mode != supplied_power_mode:
             self._supplied_power_mode = supplied_power_mode
@@ -89,7 +92,8 @@ class PowerSupplyProxySimulator(PowerSupplyProxyComponentManager, ObjectComponen
         """A fake component for the component manager to manage."""
 
         def __init__(
-            self: PowerSupplyProxySimulator._Component, initial_supplied_power_mode: PowerMode,
+            self: PowerSupplyProxySimulator._Component,
+            initial_supplied_power_mode: PowerMode,
         ) -> None:
             """
             Initialise a new instance.
@@ -114,7 +118,9 @@ class PowerSupplyProxySimulator(PowerSupplyProxyComponentManager, ObjectComponen
             if supplied_power_mode_changed_callback is not None:
                 supplied_power_mode_changed_callback(self._supplied_power_mode)
 
-        def power_off(self: PowerSupplyProxySimulator._Component,) -> ResultCode | None:
+        def power_off(
+            self: PowerSupplyProxySimulator._Component,
+        ) -> ResultCode | None:
             """
             Deny power to the downstream device.
 
@@ -218,7 +224,8 @@ class PowerSupplyProxySimulator(PowerSupplyProxyComponentManager, ObjectComponen
         return cast(PowerSupplyProxySimulator._Component, self._component).power_on()
 
     def _supplied_power_mode_changed(
-        self: PowerSupplyProxySimulator, supplied_power_mode: PowerMode,
+        self: PowerSupplyProxySimulator,
+        supplied_power_mode: PowerMode,
     ) -> None:
         self.update_supplied_power_mode(supplied_power_mode)
 
@@ -301,7 +308,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._power_supply_component_manager.stop_communicating()
 
     def _power_supply_communication_status_changed(
-        self: ComponentManagerWithUpstreamPowerSupply, communication_status: CommunicationStatus,
+        self: ComponentManagerWithUpstreamPowerSupply,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
@@ -313,7 +321,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._evaluate_communication_status()
 
     def _hardware_communication_status_changed(
-        self: ComponentManagerWithUpstreamPowerSupply, communication_status: CommunicationStatus,
+        self: ComponentManagerWithUpstreamPowerSupply,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the hardware.
@@ -324,7 +333,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._hardware_communication_status = communication_status
         self._evaluate_communication_status()
 
-    def _evaluate_communication_status(self: ComponentManagerWithUpstreamPowerSupply,) -> None:
+    def _evaluate_communication_status(
+        self: ComponentManagerWithUpstreamPowerSupply,
+    ) -> None:
         if self._power_supply_communication_status == CommunicationStatus.ESTABLISHED:
             if self._hardware_communication_status == CommunicationStatus.DISABLED:
                 self.update_communication_status(CommunicationStatus.ESTABLISHED)
@@ -345,7 +356,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             self._component_progress_changed_callback(progress)
 
     def component_power_mode_changed(
-        self: ComponentManagerWithUpstreamPowerSupply, power_mode: PowerMode,
+        self: ComponentManagerWithUpstreamPowerSupply,
+        power_mode: PowerMode,
     ) -> None:
         """
         Handle a change in power mode of the hardware.
@@ -392,7 +404,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         return rc
 
     @threadsafe
-    def _review_power(self: ComponentManagerWithUpstreamPowerSupply,) -> ResultCode | None:
+    def _review_power(
+        self: ComponentManagerWithUpstreamPowerSupply,
+    ) -> ResultCode | None:
         with self._power_mode_lock:
             if self._target_power_mode is None:
                 return None

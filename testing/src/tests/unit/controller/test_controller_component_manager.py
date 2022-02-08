@@ -184,21 +184,28 @@ class TestControllerComponentManager:
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
         controller_component_manager._station_beam_health_changed(
-            "low-mccs/beam/01", HealthState.OK,
+            "low-mccs/beam/01",
+            HealthState.OK,
         )
         controller_component_manager._station_beam_health_changed(
-            "low-mccs/beam/02", HealthState.OK,
+            "low-mccs/beam/02",
+            HealthState.OK,
         )
         controller_component_manager._station_beam_health_changed(
-            "low-mccs/beam/03", HealthState.OK,
+            "low-mccs/beam/03",
+            HealthState.OK,
         )
         controller_component_manager._station_beam_health_changed(
-            "low-mccs/beam/04", HealthState.OK,
+            "low-mccs/beam/04",
+            HealthState.OK,
         )
 
         with pytest.raises(ConnectionError, match="Component is not turned on"):
             controller_component_manager.allocate(
-                99, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [3, 4],  # unknown subarray id
+                99,
+                [["low-mccs/station/001"]],
+                ["low-mccs/subarraybeam/02"],
+                [3, 4],  # unknown subarray id
             )
 
         # Fake events to tell this controller component manager that its devices are all
@@ -210,41 +217,60 @@ class TestControllerComponentManager:
 
         with pytest.raises(ValueError, match="Unsupported resources"):
             controller_component_manager.allocate(
-                1, [["low-mccs/station/unknown"]], ["low-mccs/subarraybeam/02"], [3, 4],
+                1,
+                [["low-mccs/station/unknown"]],
+                ["low-mccs/subarraybeam/02"],
+                [3, 4],
             )
 
         with pytest.raises(ValueError, match="Allocatee is unready"):
             controller_component_manager.allocate(
-                1, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [3, 4],
+                1,
+                [["low-mccs/station/001"]],
+                ["low-mccs/subarraybeam/02"],
+                [3, 4],
             )
 
         controller_component_manager._subarray_health_changed(
-            "low-mccs/subarray/01", HealthState.OK,
+            "low-mccs/subarray/01",
+            HealthState.OK,
         )
         controller_component_manager._subarray_health_changed(
-            "low-mccs/subarray/02", HealthState.OK,
+            "low-mccs/subarray/02",
+            HealthState.OK,
         )
 
         with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
             controller_component_manager.allocate(
-                1, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [3, 4],
+                1,
+                [["low-mccs/station/001"]],
+                ["low-mccs/subarraybeam/02"],
+                [3, 4],
             )
 
         controller_component_manager._station_health_changed(
-            "low-mccs/station/001", HealthState.OK,
+            "low-mccs/station/001",
+            HealthState.OK,
         )
 
         with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
             controller_component_manager.allocate(
-                1, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [3, 4],
+                1,
+                [["low-mccs/station/001"]],
+                ["low-mccs/subarraybeam/02"],
+                [3, 4],
             )
 
         controller_component_manager._subarray_beam_health_changed(
-            "low-mccs/subarraybeam/02", HealthState.OK,
+            "low-mccs/subarraybeam/02",
+            HealthState.OK,
         )
 
         controller_component_manager.allocate(
-            1, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [3, 4],
+            1,
+            [["low-mccs/station/001"]],
+            ["low-mccs/subarraybeam/02"],
+            [3, 4],
         )
 
         time.sleep(0.1)
@@ -264,7 +290,10 @@ class TestControllerComponentManager:
         subarray_proxies["low-mccs/subarray/01"].ReleaseAllResources.assert_called_once_with()
 
         controller_component_manager.allocate(
-            2, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [3, 4],
+            2,
+            [["low-mccs/station/001"]],
+            ["low-mccs/subarraybeam/02"],
+            [3, 4],
         )
 
         time.sleep(0.1)
@@ -283,7 +312,10 @@ class TestControllerComponentManager:
         controller_component_manager.deallocate_all(2)
         time.sleep(0.1)
         controller_component_manager.allocate(
-            1, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [48],
+            1,
+            [["low-mccs/station/001"]],
+            ["low-mccs/subarraybeam/02"],
+            [48],
         )
 
         # Now all 48 channel blocks of station 1 are assigned to subarray 1,
@@ -291,7 +323,10 @@ class TestControllerComponentManager:
         time.sleep(0.1)
         with pytest.raises(ValueError, match="No free resources of type: channel_blocks."):
             controller_component_manager.allocate(
-                2, [["low-mccs/station/001"]], ["low-mccs/subarraybeam/02"], [1],
+                2,
+                [["low-mccs/station/001"]],
+                ["low-mccs/subarraybeam/02"],
+                [1],
             )
 
         controller_component_manager.restart_subarray("low-mccs/subarray/02")

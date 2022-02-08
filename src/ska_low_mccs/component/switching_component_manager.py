@@ -71,7 +71,9 @@ class Switcher:
     """
 
     def __init__(
-        self, switcher_options: dict[Hashable, Any], initial_switcher_mode: Hashable,
+        self,
+        switcher_options: dict[Hashable, Any],
+        initial_switcher_mode: Hashable,
     ):
         """
         Initialise a new Switcher instance.
@@ -160,7 +162,9 @@ class SwitchingComponentManager(Switcher):
     """
 
     def __init__(
-        self, component_managers: dict[Hashable, MccsComponentManagerProtocol | None], initial_mode: Hashable,
+        self,
+        component_managers: dict[Hashable, MccsComponentManagerProtocol | None],
+        initial_mode: Hashable,
     ):
         """
         Initialise a new ComponentManager instance.
@@ -205,7 +209,9 @@ class DriverSimulatorSwitchingComponentManager(SwitchingComponentManager):
         )
 
     @property
-    def simulation_mode(self: DriverSimulatorSwitchingComponentManager,) -> SimulationMode:
+    def simulation_mode(
+        self: DriverSimulatorSwitchingComponentManager,
+    ) -> SimulationMode:
         """
         Return the simulation mode.
 
@@ -214,7 +220,10 @@ class DriverSimulatorSwitchingComponentManager(SwitchingComponentManager):
         return cast(SimulationMode, self.switcher_mode)
 
     @simulation_mode.setter
-    def simulation_mode(self: DriverSimulatorSwitchingComponentManager, value: SimulationMode,) -> None:
+    def simulation_mode(
+        self: DriverSimulatorSwitchingComponentManager,
+        value: SimulationMode,
+    ) -> None:
         """
         Set the simulation mode.
 

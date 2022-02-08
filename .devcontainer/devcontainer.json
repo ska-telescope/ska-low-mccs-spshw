@@ -29,7 +29,7 @@
     "extensions": [
         "ms-python.python",
         "lextudio.restructuredtext",
-        "trond-snekvik.simple-rst",
+        trond-snekvik.simple-rst,
         "davidanson.vscode-markdownlint",
         "alexkrechik.cucumberautocomplete",
         "ryanluker.vscode-coverage-gutters"

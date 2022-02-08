@@ -56,7 +56,9 @@ class ControllerHealthModel(HealthModel):
         super().__init__(health_changed_callback)
 
     def station_health_changed(
-        self: ControllerHealthModel, station_fqdn: str, station_health: Optional[HealthState],
+        self: ControllerHealthModel,
+        station_fqdn: str,
+        station_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in station health.
@@ -72,7 +74,9 @@ class ControllerHealthModel(HealthModel):
             self.update_health()
 
     def subrack_health_changed(
-        self: ControllerHealthModel, subrack_fqdn: str, subrack_health: Optional[HealthState],
+        self: ControllerHealthModel,
+        subrack_fqdn: str,
+        subrack_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in subrack health.
@@ -87,7 +91,9 @@ class ControllerHealthModel(HealthModel):
             self.update_health()
 
     def subarray_beam_health_changed(
-        self: ControllerHealthModel, subarray_beam_fqdn: str, subarray_beam_health: Optional[HealthState],
+        self: ControllerHealthModel,
+        subarray_beam_fqdn: str,
+        subarray_beam_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in subarray beam health.
@@ -103,7 +109,9 @@ class ControllerHealthModel(HealthModel):
             self.update_health()
 
     def station_beam_health_changed(
-        self: ControllerHealthModel, station_beam_fqdn: str, station_beam_health: Optional[HealthState],
+        self: ControllerHealthModel,
+        station_beam_fqdn: str,
+        station_beam_health: Optional[HealthState],
     ) -> None:
         """
         Handle a change in station beam health.
@@ -118,7 +126,9 @@ class ControllerHealthModel(HealthModel):
             self._station_beam_health[station_beam_fqdn] = station_beam_health
             self.update_health()
 
-    def evaluate_health(self: ControllerHealthModel,) -> HealthState:
+    def evaluate_health(
+        self: ControllerHealthModel,
+    ) -> HealthState:
         """
         Compute overall health of the controller.
 

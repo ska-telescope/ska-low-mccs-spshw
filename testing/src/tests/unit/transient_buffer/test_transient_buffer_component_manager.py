@@ -26,7 +26,10 @@ class TestTransientBuffer:
     """
 
     @pytest.fixture(
-        params=["transient_buffer", "transient_buffer_component_manager",]
+        params=[
+            "transient_buffer",
+            "transient_buffer_component_manager",
+        ]
     )
     def transient_buffer(
         self: TestTransientBuffer,
@@ -70,7 +73,12 @@ class TestTransientBuffer:
             ("resampling_bits", 0),
             ("n_stations", 0),
             ("transient_frequency_window", (0.0,)),
-            ("station_ids", ["",],),
+            (
+                "station_ids",
+                [
+                    "",
+                ],
+            ),
         ),
     )
     def test_read_attribute(

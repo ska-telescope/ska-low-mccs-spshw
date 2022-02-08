@@ -59,7 +59,9 @@ def patched_subarray_device_class() -> Type[MccsSubarray]:
 
 
 @pytest.fixture()
-def device_to_load(patched_subarray_device_class: type[MccsSubarray],) -> DeviceToLoadType:
+def device_to_load(
+    patched_subarray_device_class: type[MccsSubarray],
+) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
@@ -108,7 +110,10 @@ class TestMccsSubarray:
         """
         return tango_harness.get_device("low-mccs/subarray/01")
 
-    def test_InitDevice(self: TestMccsSubarray, device_under_test: MccsDeviceProxy,) -> None:
+    def test_InitDevice(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Initial state.
 
@@ -144,7 +149,8 @@ class TestMccsSubarray:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
@@ -165,7 +171,8 @@ class TestMccsSubarray:
         """
         # Subscribe to controller's LRC result attribute
         device_under_test.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
         initial_lrc_result = ("", "", "")
@@ -184,7 +191,10 @@ class TestMccsSubarray:
         )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
-    def test_buildState(self: TestMccsSubarray, device_under_test: MccsDeviceProxy,) -> None:
+    def test_buildState(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for buildState.
 
@@ -195,7 +205,10 @@ class TestMccsSubarray:
         build_info = release.get_release_info()
         assert device_under_test.buildState == build_info
 
-    def test_versionId(self: TestMccsSubarray, device_under_test: MccsDeviceProxy,) -> None:
+    def test_versionId(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for versionId.
 
@@ -205,7 +218,10 @@ class TestMccsSubarray:
         """
         assert device_under_test.versionId == release.version
 
-    def test_scanId(self: TestMccsSubarray, device_under_test: MccsDeviceProxy,) -> None:
+    def test_scanId(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for scanID attribute.
 
@@ -215,7 +231,10 @@ class TestMccsSubarray:
         """
         assert device_under_test.scanId == -1
 
-    def test_stationFQDNs(self: TestMccsSubarray, device_under_test: MccsDeviceProxy,) -> None:
+    def test_stationFQDNs(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for stationFQDNs attribute.
 
@@ -254,7 +273,8 @@ class TestMccsSubarray:
         :param channel_blocks: a list of channel blocks.
         """
         device_under_test.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
@@ -294,7 +314,8 @@ class TestMccsSubarray:
 
         # Subscribe to controller's LRC result attribute
         device_under_test.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
         time.sleep(0.1)  # allow event system time to run
@@ -352,7 +373,8 @@ class TestMccsSubarray:
         :param channel_blocks: a list of channel blocks.
         """
         device_under_test.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
@@ -411,7 +433,8 @@ class TestMccsSubarray:
             we can use to subscribe to admin mode changes on the device
         """
         device_under_test.add_change_event_callback(
-            "adminMode", device_admin_mode_changed_callback,
+            "adminMode",
+            device_admin_mode_changed_callback,
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE

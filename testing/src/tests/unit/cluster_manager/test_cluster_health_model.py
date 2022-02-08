@@ -23,7 +23,8 @@ class TestClusterHealthModel:
 
     @pytest.fixture()
     def health_changed_callback(
-        self: TestClusterHealthModel, mock_callback_factory: Callable[[], unittest.mock.Mock],
+        self: TestClusterHealthModel,
+        mock_callback_factory: Callable[[], unittest.mock.Mock],
     ) -> Callable[[HealthState], None]:
         """
         Return a mock callback to be called when the health model's health changes.
@@ -39,7 +40,8 @@ class TestClusterHealthModel:
 
     @pytest.fixture()
     def cluster_health_model(
-        self: TestClusterHealthModel, health_changed_callback: MockCallable,
+        self: TestClusterHealthModel,
+        health_changed_callback: MockCallable,
     ) -> ClusterHealthModel:
         """
         Return a cluster health model for testing.

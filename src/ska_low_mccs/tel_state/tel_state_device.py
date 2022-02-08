@@ -43,14 +43,18 @@ class MccsTelState(SKATelState):
         self._health_model = TelStateHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsTelState,) -> TelStateComponentManager:
+    def create_component_manager(
+        self: MccsTelState,
+    ) -> TelStateComponentManager:
         """
         Create and return a component manager for this device.
 
         :return: a component manager for this device.
         """
         return TelStateComponentManager(
-            self.logger, self.push_change_event, self._component_communication_status_changed,
+            self.logger,
+            self.push_change_event,
+            self._component_communication_status_changed,
         )
 
     class InitCommand(SKATelState.InitCommand):
@@ -85,7 +89,8 @@ class MccsTelState(SKATelState):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsTelState, communication_status: CommunicationStatus,
+        self: MccsTelState,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.

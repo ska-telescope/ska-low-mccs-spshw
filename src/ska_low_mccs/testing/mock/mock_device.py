@@ -25,7 +25,8 @@ class MockDeviceBuilder:
     """This module implements a mock builder for tango devices."""
 
     def __init__(
-        self: MockDeviceBuilder, from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
+        self: MockDeviceBuilder,
+        from_factory: type[unittest.mock.Mock] = unittest.mock.Mock,
     ) -> None:
         """
         Create a new instance.

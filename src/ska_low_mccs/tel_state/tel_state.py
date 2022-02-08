@@ -18,7 +18,10 @@ __all__ = ["TelState"]
 class TelState(ObjectComponent):
     """A placeholder for a telescope state component."""
 
-    def __init__(self: TelState, logger: logging.Logger,) -> None:
+    def __init__(
+        self: TelState,
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new instance.
 

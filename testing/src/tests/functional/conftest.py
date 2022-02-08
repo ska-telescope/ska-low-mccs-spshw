@@ -83,7 +83,12 @@ def tango_config() -> dict[str, Any]:
 @pytest.fixture(scope="module")
 def tango_harness(
     tango_harness_factory: Callable[
-        [dict[str, Any], DevicesToLoadType, Callable[[], unittest.mock.Mock], dict[str, unittest.mock.Mock],],
+        [
+            dict[str, Any],
+            DevicesToLoadType,
+            Callable[[], unittest.mock.Mock],
+            dict[str, unittest.mock.Mock],
+        ],
         TangoHarness,
     ],
     tango_config: dict[str, str],
@@ -209,7 +214,9 @@ def devices_to_load() -> DevicesToLoadType:
 
 
 @pytest.fixture()
-def controller(tango_harness: TangoHarness,) -> MccsDeviceProxy:
+def controller(
+    tango_harness: TangoHarness,
+) -> MccsDeviceProxy:
     """
     Return the controller device.
 
@@ -221,7 +228,9 @@ def controller(tango_harness: TangoHarness,) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def subrack(tango_harness: TangoHarness,) -> MccsDeviceProxy:
+def subrack(
+    tango_harness: TangoHarness,
+) -> MccsDeviceProxy:
     """
     Return the subrack device.
 

@@ -54,7 +54,9 @@ def is_configured_changed_callback(
 
 
 @pytest.fixture()
-def subarray_beam_component(logger: logging.Logger,) -> SubarrayBeam:
+def subarray_beam_component(
+    logger: logging.Logger,
+) -> SubarrayBeam:
     """
     Fixture that returns a subarray beam component.
 

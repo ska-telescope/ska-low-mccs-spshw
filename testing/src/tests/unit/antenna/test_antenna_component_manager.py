@@ -72,7 +72,8 @@ class TestAntennaApiuProxy:
             device.
         """
         with pytest.raises(
-            ConnectionError, match="Communication with component is not established",
+            ConnectionError,
+            match="Communication with component is not established",
         ):
             antenna_apiu_proxy.on()
 
@@ -139,7 +140,8 @@ class TestAntennaApiuProxy:
         :param antenna_apiu_proxy: a proxy to the antenna's APIU device.
         """
         with pytest.raises(
-            NotImplementedError, match="Antenna cannot be reset.",
+            NotImplementedError,
+            match="Antenna cannot be reset.",
         ):
             antenna_apiu_proxy.reset()
 
@@ -177,7 +179,8 @@ class TestAntennaTileProxy:
         :param command: name of the power command to run.
         """
         with pytest.raises(
-            NotImplementedError, match="Antenna power mode is not controlled via Tile device.",
+            NotImplementedError,
+            match="Antenna power mode is not controlled via Tile device.",
         ):
             getattr(antenna_tile_proxy, command)()
 
@@ -188,7 +191,8 @@ class TestAntennaTileProxy:
         :param antenna_tile_proxy: a proxy to the antenna's tile device.
         """
         with pytest.raises(
-            NotImplementedError, match="Antenna hardware is not resettable.",
+            NotImplementedError,
+            match="Antenna hardware is not resettable.",
         ):
             antenna_tile_proxy.reset()
 
@@ -291,7 +295,8 @@ class TestAntennaComponentManager:
         assert antenna_component_manager.power_mode == PowerMode.OFF
 
         with pytest.raises(
-            NotImplementedError, match="Antenna has no standby mode.",
+            NotImplementedError,
+            match="Antenna has no standby mode.",
         ):
             antenna_component_manager.standby()
 
@@ -336,7 +341,8 @@ class TestAntennaComponentManager:
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
     def test_reset(
-        self: TestAntennaComponentManager, antenna_component_manager: AntennaComponentManager,
+        self: TestAntennaComponentManager,
+        antenna_component_manager: AntennaComponentManager,
     ) -> None:
         """
         Test that the antenna component manager refused to try to reset the antenna.
@@ -345,6 +351,7 @@ class TestAntennaComponentManager:
             under test
         """
         with pytest.raises(
-            NotImplementedError, match="Antenna cannot be reset.",
+            NotImplementedError,
+            match="Antenna cannot be reset.",
         ):
             antenna_component_manager.reset()

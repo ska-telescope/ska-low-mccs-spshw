@@ -26,7 +26,9 @@ def channel_blocks() -> list[int]:
 
 
 @pytest.fixture()
-def resource_pool(channel_blocks: Iterable[int],) -> ResourcePool:
+def resource_pool(
+    channel_blocks: Iterable[int],
+) -> ResourcePool:
     """
     Return a resource pool for testing.
 
@@ -34,7 +36,9 @@ def resource_pool(channel_blocks: Iterable[int],) -> ResourcePool:
 
     :return: a resource pool for testing
     """
-    return ResourcePool(channel_blocks=channel_blocks,)
+    return ResourcePool(
+        channel_blocks=channel_blocks,
+    )
 
 
 class TestResourcePool:

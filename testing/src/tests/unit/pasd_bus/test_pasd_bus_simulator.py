@@ -78,7 +78,9 @@ class TestFndhSimulator:
     """Tests of the FndhSimulator."""
 
     def test_forcing_unconnected_fndh_port(
-        self: TestFndhSimulator, fndh_simulator: FndhSimulator, unconnected_fndh_port: int,
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+        unconnected_fndh_port: int,
     ) -> None:
         """
         Test that we can force an unconnected port on.
@@ -96,7 +98,9 @@ class TestFndhSimulator:
         assert not fndh_simulator.is_port_power_sensed(unconnected_fndh_port)
 
     def test_forcing_connected_fndh_port(
-        self: TestFndhSimulator, fndh_simulator: FndhSimulator, connected_fndh_port: int,
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+        connected_fndh_port: int,
     ) -> None:
         """
         Test that we can force a connected port on.
@@ -118,7 +122,9 @@ class TestFndhSimulator:
         assert fndh_simulator.is_port_power_sensed(connected_fndh_port)
 
     def test_connected_fndh_port_power_on_off(
-        self: TestFndhSimulator, fndh_simulator: FndhSimulator, connected_fndh_port: int,
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+        connected_fndh_port: int,
     ) -> None:
         """
         Test that we can power on and off an FNDH port that has a smartbox connected.
@@ -139,7 +145,9 @@ class TestFndhSimulator:
         assert not fndh_simulator.is_port_power_sensed(connected_fndh_port)
 
     def test_unconnected_fndh_port_power_on_off(
-        self: TestFndhSimulator, fndh_simulator: FndhSimulator, unconnected_fndh_port: int,
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+        unconnected_fndh_port: int,
     ) -> None:
         """
         Test that we can't power on an FNDH port that has a smartbox connected.
@@ -153,7 +161,10 @@ class TestFndhSimulator:
         assert not fndh_simulator.turn_port_on(unconnected_fndh_port)
         assert not fndh_simulator.is_port_power_sensed(unconnected_fndh_port)
 
-    def test_psu48v_voltages(self: TestFndhSimulator, fndh_simulator: FndhSimulator,) -> None:
+    def test_psu48v_voltages(
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+    ) -> None:
         """
         Test the FNDH 48V power supply voltages.
 
@@ -161,7 +172,10 @@ class TestFndhSimulator:
         """
         assert fndh_simulator.psu48v_voltages == FndhSimulator.DEFAULT_PSU48V_VOLTAGES
 
-    def test_psu5v_voltage(self: TestFndhSimulator, fndh_simulator: FndhSimulator,) -> None:
+    def test_psu5v_voltage(
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+    ) -> None:
         """
         Test the FNDH 5V power supply voltage.
 
@@ -169,7 +183,10 @@ class TestFndhSimulator:
         """
         assert fndh_simulator.psu5v_voltage == FndhSimulator.DEFAULT_PSU5V_VOLTAGE
 
-    def test_psu48v_current(self: TestFndhSimulator, fndh_simulator: FndhSimulator,) -> None:
+    def test_psu48v_current(
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+    ) -> None:
         """
         Test the FNDH 48V power supply current.
 
@@ -187,7 +204,10 @@ class TestFndhSimulator:
         ],
     )
     def test_temperatures(
-        self: TestFndhSimulator, fndh_simulator: FndhSimulator, location: str, temperature: float,
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+        location: str,
+        temperature: float,
     ) -> None:
         """
         Test a FNDH temperature property.
@@ -198,7 +218,10 @@ class TestFndhSimulator:
         """
         assert getattr(fndh_simulator, f"{location}_temperature") == temperature
 
-    def test_status(self: TestFndhSimulator, fndh_simulator: FndhSimulator,) -> None:
+    def test_status(
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+    ) -> None:
         """
         Test the FNDH status.
 
@@ -206,7 +229,10 @@ class TestFndhSimulator:
         """
         assert fndh_simulator.status == FndhSimulator.DEFAULT_STATUS
 
-    def test_service_led_on(self: TestFndhSimulator, fndh_simulator: FndhSimulator,) -> None:
+    def test_service_led_on(
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+    ) -> None:
         """
         Test turning the FNDH service led on and off.
 
@@ -216,7 +242,10 @@ class TestFndhSimulator:
         fndh_simulator.service_led_on = True
         assert fndh_simulator.service_led_on
 
-    def test_get_info(self: TestFndhSimulator, fndh_simulator: FndhSimulator,) -> None:
+    def test_get_info(
+        self: TestFndhSimulator,
+        fndh_simulator: FndhSimulator,
+    ) -> None:
         """
         Test the ``get_info`` method.
 
@@ -252,7 +281,9 @@ class TestSmartboxSimulator:
 
     @pytest.fixture()
     def smartbox_config(
-        self: TestSmartboxSimulator, pasd_config: dict[str, Any], smartbox_under_test: int,
+        self: TestSmartboxSimulator,
+        pasd_config: dict[str, Any],
+        smartbox_under_test: int,
     ) -> list[bool]:
         """
         Return smartbox configuration data, specifying which ports are connected.
@@ -310,7 +341,9 @@ class TestSmartboxSimulator:
         return smartbox_simulator.are_ports_connected.index(False) + 1
 
     def test_forcing_unconnected_smartbox_port(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator, unconnected_smartbox_port: int,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+        unconnected_smartbox_port: int,
     ) -> None:
         """
         Test that we can force an unconnected port on and off.
@@ -328,7 +361,9 @@ class TestSmartboxSimulator:
         assert not smartbox_simulator.is_port_power_sensed(unconnected_smartbox_port)
 
     def test_forcing_connected_smartbox_port(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator, connected_smartbox_port: int,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+        connected_smartbox_port: int,
     ) -> None:
         """
         Test that we can force a connected port on and off.
@@ -350,7 +385,9 @@ class TestSmartboxSimulator:
         assert smartbox_simulator.is_port_power_sensed(connected_smartbox_port)
 
     def test_connected_smartbox_port_power_on_off(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator, connected_smartbox_port: int,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+        connected_smartbox_port: int,
     ) -> None:
         """
         Test turning on a conncted smartbox port.
@@ -371,7 +408,9 @@ class TestSmartboxSimulator:
         assert not smartbox_simulator.is_port_power_sensed(connected_smartbox_port)
 
     def test_unconnected_smartbox_port_power_on_off(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator, unconnected_smartbox_port: int,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+        unconnected_smartbox_port: int,
     ) -> None:
         """
         Test trying to turn on an unconnected port.
@@ -386,7 +425,9 @@ class TestSmartboxSimulator:
         assert not smartbox_simulator.is_port_power_sensed(unconnected_smartbox_port)
 
     def test_port_breaker_trip(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator, connected_smartbox_port: int,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+        connected_smartbox_port: int,
     ) -> None:
         """
         Test smartbox port breaker tripping.
@@ -412,7 +453,9 @@ class TestSmartboxSimulator:
         assert smartbox_simulator.is_port_power_sensed(connected_smartbox_port)
 
     def test_port_current_draw(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator, connected_smartbox_port: int,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+        connected_smartbox_port: int,
     ) -> None:
         """
         Test smartbox port current draw.
@@ -426,7 +469,10 @@ class TestSmartboxSimulator:
             == SmartboxSimulator.DEFAULT_PORT_CURRENT_DRAW
         )
 
-    def test_input_voltage(self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator,) -> None:
+    def test_input_voltage(
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+    ) -> None:
         """
         Test the input voltage.
 
@@ -435,7 +481,8 @@ class TestSmartboxSimulator:
         assert smartbox_simulator.input_voltage == SmartboxSimulator.DEFAULT_INPUT_VOLTAGE
 
     def test_power_supply_output_voltage(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
     ) -> None:
         """
         Test the smartbox power supply output voltage.
@@ -447,7 +494,10 @@ class TestSmartboxSimulator:
             == SmartboxSimulator.DEFAULT_POWER_SUPPLY_OUTPUT_VOLTAGE
         )
 
-    def test_status(self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator,) -> None:
+    def test_status(
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+    ) -> None:
         """
         Test the smartbox status.
 
@@ -464,7 +514,10 @@ class TestSmartboxSimulator:
         ],
     )
     def test_temperature(
-        self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator, location: str, temperature: float,
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+        location: str,
+        temperature: float,
     ) -> None:
         """
         Test the smartbox power supply temperatures.
@@ -477,7 +530,10 @@ class TestSmartboxSimulator:
         """
         assert getattr(smartbox_simulator, f"{location}_temperature") == temperature
 
-    def test_service_led_on(self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator,) -> None:
+    def test_service_led_on(
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+    ) -> None:
         """
         Test the FNDH service led.
 
@@ -487,7 +543,10 @@ class TestSmartboxSimulator:
         smartbox_simulator.service_led_on = True
         assert smartbox_simulator.service_led_on
 
-    def test_get_info(self: TestSmartboxSimulator, smartbox_simulator: SmartboxSimulator,) -> None:
+    def test_get_info(
+        self: TestSmartboxSimulator,
+        smartbox_simulator: SmartboxSimulator,
+    ) -> None:
         """
         Test the ``get_info`` method.
 
@@ -518,7 +577,10 @@ class TestPasdBusSimulator:
     common commands.
     """
 
-    def test_fndh_psu48v_voltages(self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator,) -> None:
+    def test_fndh_psu48v_voltages(
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+    ) -> None:
         """
         Test the FNDH 48V power supply voltages.
 
@@ -526,7 +588,10 @@ class TestPasdBusSimulator:
         """
         assert pasd_bus_simulator.fndh_psu48v_voltages == FndhSimulator.DEFAULT_PSU48V_VOLTAGES
 
-    def test_fndh_psu5v_voltage(self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator,) -> None:
+    def test_fndh_psu5v_voltage(
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+    ) -> None:
         """
         Test the FNDH 5V power supply voltage.
 
@@ -534,7 +599,10 @@ class TestPasdBusSimulator:
         """
         assert pasd_bus_simulator.fndh_psu5v_voltage == FndhSimulator.DEFAULT_PSU5V_VOLTAGE
 
-    def test_fndh_psu48v_current(self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator,) -> None:
+    def test_fndh_psu48v_current(
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+    ) -> None:
         """
         Test the FNDH 48V power supply current.
 
@@ -552,7 +620,10 @@ class TestPasdBusSimulator:
         ],
     )
     def test_fndh_temperatures(
-        self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator, location: str, temperature: float,
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+        location: str,
+        temperature: float,
     ) -> None:
         """
         Test a FNDH temperature property.
@@ -563,7 +634,10 @@ class TestPasdBusSimulator:
         """
         assert getattr(pasd_bus_simulator, f"fndh_{location}_temperature") == temperature
 
-    def test_fndh_status(self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator,) -> None:
+    def test_fndh_status(
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+    ) -> None:
         """
         Test the FNDH status.
 
@@ -571,7 +645,10 @@ class TestPasdBusSimulator:
         """
         assert pasd_bus_simulator.fndh_status == FndhSimulator.DEFAULT_STATUS
 
-    def test_fndh_service_led_on(self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator,) -> None:
+    def test_fndh_service_led_on(
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+    ) -> None:
         """
         Test the FNDH service led.
 
@@ -583,7 +660,9 @@ class TestPasdBusSimulator:
         assert pasd_bus_simulator.fndh_service_led_on
 
     def test_fndh_ports_connected(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test which FNDH ports are connected.
@@ -598,7 +677,9 @@ class TestPasdBusSimulator:
         assert pasd_bus_simulator.fndh_ports_connected == expected_smartbox_connected
 
     def test_fndh_port_forcing(
-        self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator, connected_fndh_port: int,
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+        connected_fndh_port: int,
     ) -> None:
         """
         Test the FNDH locally forced power.
@@ -620,7 +701,10 @@ class TestPasdBusSimulator:
             assert pasd_bus_simulator.fndh_port_forcings == expected_forcings
             assert pasd_bus_simulator.get_fndh_port_forcing(connected_fndh_port) == forcing
 
-    def test_get_fndh_info(self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator,) -> None:
+    def test_get_fndh_info(
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+    ) -> None:
         """
         Test the ``get_fndh_info`` method.
 
@@ -642,7 +726,9 @@ class TestPasdBusSimulator:
         _ = datetime.fromisoformat(fndh_info["read_time"])
 
     def test_smartbox_input_voltages(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the smartbox input voltages.
@@ -655,7 +741,9 @@ class TestPasdBusSimulator:
         )
 
     def test_smartbox_power_supply_output_voltages(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the smartbox power supply output voltages.
@@ -668,7 +756,9 @@ class TestPasdBusSimulator:
         ] * len(pasd_config["smartboxes"])
 
     def test_smartbox_statuses(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the smartbox statuses.
@@ -681,7 +771,9 @@ class TestPasdBusSimulator:
         )
 
     def test_smartbox_power_supply_temperatures(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the smartbox power supply temperatures.
@@ -694,7 +786,9 @@ class TestPasdBusSimulator:
         ] * len(pasd_config["smartboxes"])
 
     def test_smartbox_outside_temperatures(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the smartbox outside temperatures.
@@ -707,7 +801,9 @@ class TestPasdBusSimulator:
         ] * len(pasd_config["smartboxes"])
 
     def test_smartbox_pcb_temperatures(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the smartbox PCB temperatures.
@@ -720,7 +816,9 @@ class TestPasdBusSimulator:
         ] * len(pasd_config["smartboxes"])
 
     def test_smartbox_fndh_ports(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the smartbox FNDH ports.
@@ -734,7 +832,10 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("smartbox_id", [1])
     def test_smartbox_on_off(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator, smartbox_id: int,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
+        smartbox_id: int,
     ) -> None:
         """
         Test turning an antenna on and off.
@@ -764,7 +865,10 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("smartbox_id", [1])
     def test_smartbox_service_leds_on(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator, smartbox_id: int,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
+        smartbox_id: int,
     ) -> None:
         """
         Test the smartbox service LEDs.
@@ -787,7 +891,9 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("smartbox_id", [1])
     def test_get_smartbox_info(
-        self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator, smartbox_id: int,
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+        smartbox_id: int,
     ) -> None:
         """
         Test the ``get_smartbox_info`` method.
@@ -812,7 +918,10 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("smartbox_id", [1])
     def test_antennas_online(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator, smartbox_id: int,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
+        smartbox_id: int,
     ) -> None:
         """
         Test the antennas online attribute.
@@ -834,7 +943,10 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("antenna_id", [1])
     def test_antenna_forcings(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator, antenna_id: int,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
+        antenna_id: int,
     ) -> None:
         """
         Test the antennas_forced attribute.
@@ -855,7 +967,9 @@ class TestPasdBusSimulator:
             assert pasd_bus_simulator.get_antenna_forcing(antenna_id) == forcing
 
     def test_antenna_currents(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
     ) -> None:
         """
         Test the antenna currents.
@@ -869,7 +983,10 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("antenna_id", [1])
     def test_antenna_on_off(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator, antenna_id: int,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
+        antenna_id: int,
     ) -> None:
         """
         Test turning an antenna on and off.
@@ -936,7 +1053,10 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("antenna_id", [1])
     def test_antenna_breaker_trip(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator, antenna_id: int,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
+        antenna_id: int,
     ) -> None:
         """
         Test tripped antenna reporting functionality.
@@ -984,7 +1104,10 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("antenna_id", [1])
     def test_get_antenna_info(
-        self: TestPasdBusSimulator, pasd_config: dict, pasd_bus_simulator: PasdBusSimulator, antenna_id: int,
+        self: TestPasdBusSimulator,
+        pasd_config: dict,
+        pasd_bus_simulator: PasdBusSimulator,
+        antenna_id: int,
     ) -> None:
         """
         Test the ``get_antenna_info`` method.
@@ -1004,7 +1127,9 @@ class TestPasdBusSimulator:
 
     @pytest.mark.parametrize("smartbox_id", [1])
     def test_update_status(
-        self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator, smartbox_id: int,
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+        smartbox_id: int,
     ) -> None:
         """
         Test the ``update_status`` method.
@@ -1037,7 +1162,10 @@ class TestPasdBusSimulator:
         assert new_smartbox_read_time > initial_smartbox_read_time
         assert new_fndh_read_time > initial_fndh_read_time
 
-    def test_reload_database(self: TestPasdBusSimulator, pasd_bus_simulator: PasdBusSimulator,) -> None:
+    def test_reload_database(
+        self: TestPasdBusSimulator,
+        pasd_bus_simulator: PasdBusSimulator,
+    ) -> None:
         """
         Test the ``update_status`` method.
 

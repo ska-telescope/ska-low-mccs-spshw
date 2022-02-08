@@ -49,5 +49,7 @@ def tel_state_component_manager(
     :return: a tel state component manager
     """
     return TelStateComponentManager(
-        logger, lrc_result_changed_callback, communication_status_changed_callback,
+        logger,
+        lrc_result_changed_callback,
+        communication_status_changed_callback,
     )

@@ -237,7 +237,10 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         :return: The queue manager.
         """
         return QueueManager(
-            max_queue_size=1, num_workers=1, logger=self.logger, push_change_event=self._push_change_event,
+            max_queue_size=1,
+            num_workers=1,
+            logger=self.logger,
+            push_change_event=self._push_change_event,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:
@@ -261,7 +264,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
     @threadsafe
     def update_communication_status(
-        self: MccsComponentManager, communication_status: CommunicationStatus,
+        self: MccsComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in communication status.

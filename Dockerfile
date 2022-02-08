@@ -1,17 +1,18 @@
-FROM artefact.skao.int/ska-tango-images-pytango-builder:9.3.10 AS buildenv
+FROM artefact.skao.int/ska-tango-images-pytango-builder:9.3.16 AS buildenv
 
 RUN python3 -m pip install poetry
-RUN python3 -m poetry config virtualenvs.in-project true
+#RUN python3 -m poetry config virtualenvs.in-project true
 
 COPY ./poetry.lock ./pyproject.toml ./pyfabil-1.0-py3-none-any.whl ./
 # TODO: This poetry install (and the one below) should be --no-dev too, but at the
 # moment we are using this image to run our functional test.
-RUN python3 -m poetry install --no-root
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-root --no-dev -vvv
 
 COPY . .
-RUN python3 -m poetry install
+RUN python3 -m poetry install --no-dev 
 
-FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.3.10 AS runtime
+FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.3.14 AS runtime
 
 # create ipython profile to so that itango doesn't fail if ipython hasn't run yet
 RUN ipython profile create

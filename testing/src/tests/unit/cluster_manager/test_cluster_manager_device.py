@@ -66,7 +66,8 @@ class TestMccsClusterManagerDevice:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
@@ -78,12 +79,27 @@ class TestMccsClusterManagerDevice:
             ("jobsFailed", ClusterSimulator.JOB_STATS[JobStatus.FAILED]),
             ("jobsFinished", ClusterSimulator.JOB_STATS[JobStatus.FINISHED]),
             ("jobsKilled", ClusterSimulator.JOB_STATS[JobStatus.KILLED]),
-            ("jobsKilling", list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.KILLING),),
+            (
+                "jobsKilling",
+                list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.KILLING),
+            ),
             ("jobsLost", ClusterSimulator.JOB_STATS[JobStatus.LOST]),
-            ("jobsRunning", list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.RUNNING),),
-            ("jobsStaging", list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.STAGING),),
-            ("jobsStarting", list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.STARTING),),
-            ("jobsUnreachable", list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.UNREACHABLE),),
+            (
+                "jobsRunning",
+                list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.RUNNING),
+            ),
+            (
+                "jobsStaging",
+                list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.STAGING),
+            ),
+            (
+                "jobsStarting",
+                list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.STARTING),
+            ),
+            (
+                "jobsUnreachable",
+                list(ClusterSimulator.OPEN_JOBS.values()).count(JobStatus.UNREACHABLE),
+            ),
             ("memoryTotal", ClusterSimulator.CONFIGURATION["memory_total"]),
             ("memoryUsed", ClusterSimulator.RESOURCE_STATS["memory_used"]),
             ("nodesInUse", ClusterSimulator.RESOURCE_STATS["nodes_in_use"]),
@@ -123,7 +139,10 @@ class TestMccsClusterManagerDevice:
 
         assert getattr(device_under_test, attribute_name) == attribute_value
 
-    def test_memoryAvail(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_memoryAvail(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for memoryAvail.
 
@@ -138,7 +157,10 @@ class TestMccsClusterManagerDevice:
             device_under_test.memoryTotal - device_under_test.memoryUsed
         )
 
-    def test_nodesAvail(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_nodesAvail(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for nodesAvail.
 
@@ -154,7 +176,8 @@ class TestMccsClusterManagerDevice:
         )
 
     def test_masterCpusAllocatedPercent(
-        self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
     ) -> None:
         """
         Test for masterCpusAllocatedPercent.
@@ -171,7 +194,8 @@ class TestMccsClusterManagerDevice:
         )
 
     def test_masterDiskPercent(
-        self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
     ) -> None:
         """
         Test for masterDiskPercent.
@@ -188,7 +212,8 @@ class TestMccsClusterManagerDevice:
         )
 
     def test_masterMemPercent(
-        self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
     ) -> None:
         """
         Test for masterMemPercent.
@@ -205,7 +230,8 @@ class TestMccsClusterManagerDevice:
         )
 
     def test_shadowMasterPoolNodeIds(
-        self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
     ) -> None:
         """
         Test for shadowMasterPoolNodeIds.
@@ -223,7 +249,8 @@ class TestMccsClusterManagerDevice:
         )
 
     def test_shadowMasterPoolStatus(
-        self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
     ) -> None:
         """
         Test for shadowMasterPoolStatus.
@@ -239,7 +266,10 @@ class TestMccsClusterManagerDevice:
             device_under_test.shadowMasterPoolNodeIds
         )
 
-    def test_StartJob(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_StartJob(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for StartJob.
 
@@ -264,7 +294,10 @@ class TestMccsClusterManagerDevice:
                 assert result_code == ResultCode.FAILED
                 assert message == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
 
-    def test_StopJob(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_StopJob(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for StopJob.
 
@@ -287,7 +320,10 @@ class TestMccsClusterManagerDevice:
             assert result_code == ResultCode.FAILED
             assert message == ClusterSimulator.NONEXISTENT_JOB_MESSAGE
 
-    def test_SubmitJob(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_SubmitJob(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for SubmitJob.
 
@@ -304,7 +340,10 @@ class TestMccsClusterManagerDevice:
         job_id = device_under_test.SubmitJob(job_config)
         assert device_under_test.GetJobStatus(job_id) == JobStatus.STAGING
 
-    def test_GetJobStatus(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_GetJobStatus(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for GetJobStatus.
 
@@ -319,7 +358,10 @@ class TestMccsClusterManagerDevice:
         for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
             assert status == device_under_test.GetJobStatus(job_id)
 
-    def test_ClearJobStats(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_ClearJobStats(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for ClearJobStats.
 
@@ -337,7 +379,10 @@ class TestMccsClusterManagerDevice:
         assert result_code == ResultCode.OK
         assert message == MccsClusterManagerDevice.ClearJobStatsCommand.SUCCEEDED_MESSAGE
 
-    def test_PingMasterPool(self: TestMccsClusterManagerDevice, device_under_test: MccsDeviceProxy,) -> None:
+    def test_PingMasterPool(
+        self: TestMccsClusterManagerDevice,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for PingMasterPool.
 
@@ -352,6 +397,7 @@ class TestMccsClusterManagerDevice:
         device_under_test.adminMode = AdminMode.ONLINE
 
         with pytest.raises(
-            DevFailed, match="ClusterSimulator.ping_master_pool has not been implemented",
+            DevFailed,
+            match="ClusterSimulator.ping_master_pool has not been implemented",
         ):
             _ = device_under_test.PingMasterPool()

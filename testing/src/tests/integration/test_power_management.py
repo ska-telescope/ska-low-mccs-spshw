@@ -129,7 +129,9 @@ class TestPowerManagement:
     """
 
     def _check_states(
-        self: TestPowerManagement, devices: list[MccsDeviceProxy], expected_state: tango.DevState,
+        self: TestPowerManagement,
+        devices: list[MccsDeviceProxy],
+        expected_state: tango.DevState,
     ) -> None:
         """
         Check each of the devices has the expected state.
@@ -277,7 +279,8 @@ class TestPowerManagement:
         antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
 
         controller.add_change_event_callback(
-            "state", controller_device_state_changed_callback,
+            "state",
+            controller_device_state_changed_callback,
         )
         assert "state" in controller._change_event_subscription_ids
         controller_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
@@ -314,7 +317,8 @@ class TestPowerManagement:
 
         # Subscribe to controller's LRC result attribute
         controller.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in controller._change_event_subscription_ids
         time.sleep(0.1)  # allow event system time to run
@@ -344,7 +348,10 @@ class TestPowerManagement:
         # for device in devices:
         #     assert device.state() == tango.DevState.ON
 
-    def _show_state_of_devices(self: TestPowerManagement, devices: list[MccsDeviceProxy],) -> None:
+    def _show_state_of_devices(
+        self: TestPowerManagement,
+        devices: list[MccsDeviceProxy],
+    ) -> None:
         """
         Show the state of the requested devices.
 

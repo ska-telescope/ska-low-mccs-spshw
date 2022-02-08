@@ -30,7 +30,9 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
 
 @pytest.fixture()
-def devices_to_load(device_to_load: Optional[DeviceToLoadType],) -> Optional[DevicesToLoadType]:
+def devices_to_load(
+    device_to_load: Optional[DeviceToLoadType],
+) -> Optional[DevicesToLoadType]:
     """
     Fixture that provides specifications of devices to load.
 
@@ -51,7 +53,12 @@ def devices_to_load(device_to_load: Optional[DeviceToLoadType],) -> Optional[Dev
     device_spec: DevicesToLoadType = {
         "path": device_to_load["path"],
         "package": device_to_load["package"],
-        "devices": [{"name": device_to_load["device"], "proxy": device_to_load["proxy"],}],
+        "devices": [
+            {
+                "name": device_to_load["device"],
+                "proxy": device_to_load["proxy"],
+            }
+        ],
     }
     if "patch" in device_to_load:
         assert device_spec["devices"] is not None  # for the type checker
@@ -80,7 +87,8 @@ def mock_callback_factory(
         called.
     """
     return lambda: MockCallable(
-        called_timeout=mock_callback_called_timeout, not_called_timeout=mock_callback_not_called_timeout,
+        called_timeout=mock_callback_called_timeout,
+        not_called_timeout=mock_callback_not_called_timeout,
     )
 
 
@@ -174,7 +182,9 @@ def component_power_mode_changed_callback(
 
 
 @pytest.fixture()
-def component_fault_callback(mock_callback_factory: Callable[[], unittest.mock.Mock],) -> unittest.mock.Mock:
+def component_fault_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
     """
     Return a mock callback for component fault.
 

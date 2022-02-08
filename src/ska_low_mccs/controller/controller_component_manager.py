@@ -67,7 +67,10 @@ class _StationProxy(DeviceComponentManager):
             should not be included in upstream health rollup.
         """
         self._channel_block_pool = ResourcePool(channel_blocks=range(1, 49))
-        self._resource_manager = ResourceManager(subarray_fqdns, channel_blocks=range(1, 49),)
+        self._resource_manager = ResourceManager(
+            subarray_fqdns,
+            channel_blocks=range(1, 49),
+        )
 
         super().__init__(
             fqdn,
@@ -153,7 +156,9 @@ class _SubarrayProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    def release_all_resources(self: _SubarrayProxy,) -> ResultCode:
+    def release_all_resources(
+        self: _SubarrayProxy,
+    ) -> ResultCode:
         """
         Tell the subarray that it no longer has any resources.
 
@@ -165,7 +170,9 @@ class _SubarrayProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    def restart(self: _SubarrayProxy,) -> ResultCode:
+    def restart(
+        self: _SubarrayProxy,
+    ) -> ResultCode:
         """
         Tell the subarray that it no longer has any resources.
 
@@ -181,7 +188,10 @@ class _SubarrayBeamProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    def write_station_ids(self: _SubarrayBeamProxy, new_station_ids: list[int],) -> ResultCode:
+    def write_station_ids(
+        self: _SubarrayBeamProxy,
+        new_station_ids: list[int],
+    ) -> ResultCode:
         """
         Set the station beam's stationIds attribute.
 
@@ -191,7 +201,10 @@ class _SubarrayBeamProxy(DeviceComponentManager):
         """
         return self._write_station_ids(new_station_ids)
 
-    def _write_station_ids(self: _SubarrayBeamProxy, new_station_ids: list[int],) -> ResultCode:
+    def _write_station_ids(
+        self: _SubarrayBeamProxy,
+        new_station_ids: list[int],
+    ) -> ResultCode:
         assert self._proxy is not None
         self._proxy.stationIds = new_station_ids
         return ResultCode.OK
@@ -202,7 +215,10 @@ class _StationBeamProxy(DeviceComponentManager):
 
     @check_communicating
     @check_on
-    def write_station_id(self: _StationBeamProxy, new_station_id: int,) -> ResultCode:
+    def write_station_id(
+        self: _StationBeamProxy,
+        new_station_id: int,
+    ) -> ResultCode:
         """
         Set the station beam's stationId attribute.
 
@@ -212,14 +228,20 @@ class _StationBeamProxy(DeviceComponentManager):
         """
         return self._write_station_id(new_station_id)
 
-    def _write_station_id(self: _StationBeamProxy, new_station_id: int,) -> ResultCode:
+    def _write_station_id(
+        self: _StationBeamProxy,
+        new_station_id: int,
+    ) -> ResultCode:
         assert self._proxy is not None
         self._proxy.stationId = new_station_id
         return ResultCode.OK
 
     @check_communicating
     @check_on
-    def write_subarray_id(self: _StationBeamProxy, new_subarray_id: int,) -> ResultCode:
+    def write_subarray_id(
+        self: _StationBeamProxy,
+        new_subarray_id: int,
+    ) -> ResultCode:
         """
         Set the station beam's stationId attribute.
 
@@ -229,14 +251,20 @@ class _StationBeamProxy(DeviceComponentManager):
         """
         return self._write_subarray_id(new_subarray_id)
 
-    def _write_subarray_id(self: _StationBeamProxy, new_subarray_id: int,) -> ResultCode:
+    def _write_subarray_id(
+        self: _StationBeamProxy,
+        new_subarray_id: int,
+    ) -> ResultCode:
         assert self._proxy is not None
         self._proxy.subarrayId = new_subarray_id
         return ResultCode.OK
 
     @check_communicating
     @check_on
-    def write_station_fqdn(self: _StationBeamProxy, new_station_fqdn: str,) -> ResultCode:
+    def write_station_fqdn(
+        self: _StationBeamProxy,
+        new_station_fqdn: str,
+    ) -> ResultCode:
         """
         Set the station beam's stationId attribute.
 
@@ -246,7 +274,10 @@ class _StationBeamProxy(DeviceComponentManager):
         """
         return self._write_station_fqdn(new_station_fqdn)
 
-    def _write_station_fqdn(self: _StationBeamProxy, new_station_fqdn: str,) -> ResultCode:
+    def _write_station_fqdn(
+        self: _StationBeamProxy,
+        new_station_fqdn: str,
+    ) -> ResultCode:
         assert self._proxy is not None
         self._proxy.stationFqdn = new_station_fqdn
         return ResultCode.OK
@@ -334,7 +365,11 @@ class ControllerComponentManager(MccsComponentManager):
             self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
 
         self._resource_manager = ControllerResourceManager(
-            subarray_fqdns, subrack_fqdns, subarray_beam_fqdns, station_beam_fqdns, range(1, 49),
+            subarray_fqdns,
+            subrack_fqdns,
+            subarray_beam_fqdns,
+            station_beam_fqdns,
+            range(1, 49),
         )
 
         self._subarrays: dict[str, _SubarrayProxy] = {
@@ -438,7 +473,9 @@ class ControllerComponentManager(MccsComponentManager):
             station_beam_proxy.stop_communicating()
 
     def _device_communication_status_changed(
-        self: ControllerComponentManager, fqdn: str, communication_status: CommunicationStatus,
+        self: ControllerComponentManager,
+        fqdn: str,
+        communication_status: CommunicationStatus,
     ) -> None:
         if fqdn not in self._device_communication_statuses:
             self.logger.warning(
@@ -469,14 +506,18 @@ class ControllerComponentManager(MccsComponentManager):
                 self.update_component_fault(False)
 
     def _subrack_power_mode_changed(
-        self: ControllerComponentManager, fqdn: str, power_mode: PowerMode,
+        self: ControllerComponentManager,
+        fqdn: str,
+        power_mode: PowerMode,
     ) -> None:
         with self._power_mode_lock:
             self._subrack_power_modes[fqdn] = power_mode
         self._evaluate_power_mode()
 
     def _station_power_mode_changed(
-        self: ControllerComponentManager, fqdn: str, power_mode: PowerMode,
+        self: ControllerComponentManager,
+        fqdn: str,
+        power_mode: PowerMode,
     ) -> None:
         with self._power_mode_lock:
             self._station_power_modes[fqdn] = power_mode
@@ -508,7 +549,9 @@ class ControllerComponentManager(MccsComponentManager):
             self.update_component_power_mode(power_mode)
 
     def _subarray_health_changed(
-        self: ControllerComponentManager, fqdn: str, health: HealthState | None,
+        self: ControllerComponentManager,
+        fqdn: str,
+        health: HealthState | None,
     ) -> None:
         """
         Handle a change in the health of a subarray.
@@ -525,7 +568,9 @@ class ControllerComponentManager(MccsComponentManager):
         self._resource_manager.set_ready(fqdn, health is not None)
 
     def _station_health_changed(
-        self: ControllerComponentManager, fqdn: str, health: HealthState | None,
+        self: ControllerComponentManager,
+        fqdn: str,
+        health: HealthState | None,
     ) -> None:
         """
         Handle a change in the health of a station.
@@ -538,7 +583,9 @@ class ControllerComponentManager(MccsComponentManager):
             self._station_health_changed_callback(fqdn, health)
 
     def _subarray_beam_health_changed(
-        self: ControllerComponentManager, fqdn: str, health: HealthState | None,
+        self: ControllerComponentManager,
+        fqdn: str,
+        health: HealthState | None,
     ) -> None:
         """
         Handle a change in the health of a subarray_beam.
@@ -556,7 +603,9 @@ class ControllerComponentManager(MccsComponentManager):
             self._subarray_beam_health_changed_callback(fqdn, health)
 
     def _station_beam_health_changed(
-        self: ControllerComponentManager, fqdn: str, health: HealthState | None,
+        self: ControllerComponentManager,
+        fqdn: str,
+        health: HealthState | None,
     ) -> None:
         """
         Handle a change in the health of a station_beam.
@@ -574,7 +623,9 @@ class ControllerComponentManager(MccsComponentManager):
             self._station_beam_health_changed_callback(fqdn, health)
 
     @check_communicating
-    def off(self: ControllerComponentManager,) -> ResultCode:
+    def off(
+        self: ControllerComponentManager,
+    ) -> ResultCode:
         """
         Turn off the MCCS subsystem.
 
@@ -589,7 +640,9 @@ class ControllerComponentManager(MccsComponentManager):
             return ResultCode.QUEUED
 
     @check_communicating
-    def standby(self: ControllerComponentManager,) -> ResultCode:
+    def standby(
+        self: ControllerComponentManager,
+    ) -> ResultCode:
         """
         Put the MCCS subsystem into low power standby mode.
 
@@ -605,7 +658,9 @@ class ControllerComponentManager(MccsComponentManager):
             return ResultCode.QUEUED
 
     @check_communicating
-    def on(self: ControllerComponentManager,) -> ResultCode:
+    def on(
+        self: ControllerComponentManager,
+    ) -> ResultCode:
         """
         Turn on the MCCS subsystem.
 
@@ -686,7 +741,10 @@ class ControllerComponentManager(MccsComponentManager):
         )
 
         result_code = self._subarrays[subarray_fqdn].assign_resources(
-            station_fqdns, subarray_beam_fqdns, station_beam_fqdns, channel_blocks,
+            station_fqdns,
+            subarray_beam_fqdns,
+            station_beam_fqdns,
+            channel_blocks,
         )
 
         # don't forget to release resources if allocate was unsuccessful:
@@ -708,7 +766,10 @@ class ControllerComponentManager(MccsComponentManager):
 
     @check_communicating
     @check_on
-    def deallocate_all(self: ControllerComponentManager, subarray_id: int,) -> ResultCode | None:
+    def deallocate_all(
+        self: ControllerComponentManager,
+        subarray_id: int,
+    ) -> ResultCode | None:
         """
         Deallocate all resources from a subarray.
 
@@ -739,7 +800,10 @@ class ControllerComponentManager(MccsComponentManager):
 
     @check_communicating
     @check_on
-    def restart_subarray(self: ControllerComponentManager, subarray_fqdn: str,) -> ResultCode:
+    def restart_subarray(
+        self: ControllerComponentManager,
+        subarray_fqdn: str,
+    ) -> ResultCode:
         """
         Deallocate all resources from a subarray.
 

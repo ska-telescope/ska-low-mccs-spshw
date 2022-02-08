@@ -65,7 +65,8 @@ class TestMccsControllerLrc:
         """
         # Subscribe to controller's LRC result attribute
         device_under_test.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
         initial_lrc_result = ("", "", "")

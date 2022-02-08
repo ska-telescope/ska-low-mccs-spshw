@@ -22,7 +22,10 @@ class TestSwitcher:
     """Tests of the switcher class."""
 
     @pytest.fixture()
-    def option_a(self: TestSwitcher, mocker: pytest_mock.MockerFixture,) -> unittest.mock.Mock:
+    def option_a(
+        self: TestSwitcher,
+        mocker: pytest_mock.MockerFixture,
+    ) -> unittest.mock.Mock:
         """
         Return a mock option to switch between.
 
@@ -33,7 +36,10 @@ class TestSwitcher:
         return mocker.Mock()
 
     @pytest.fixture()
-    def option_b(self: TestSwitcher, mocker: pytest_mock.MockerFixture,) -> unittest.mock.Mock:
+    def option_b(
+        self: TestSwitcher,
+        mocker: pytest_mock.MockerFixture,
+    ) -> unittest.mock.Mock:
         """
         Return another mock option to switch between.
 
@@ -44,7 +50,11 @@ class TestSwitcher:
         return mocker.Mock()
 
     @pytest.fixture()
-    def switcher(self: TestSwitcher, option_a: unittest.mock.Mock, option_b: unittest.mock.Mock,) -> Switcher:
+    def switcher(
+        self: TestSwitcher,
+        option_a: unittest.mock.Mock,
+        option_b: unittest.mock.Mock,
+    ) -> Switcher:
         """
         Return a Switcher with two options to switch between.
 
@@ -56,7 +66,10 @@ class TestSwitcher:
         return Switcher({"a": option_a, "b": option_b, "c": None}, "a")
 
     def test_switching(
-        self: TestSwitcher, option_a: unittest.mock.Mock, option_b: unittest.mock.Mock, switcher: Switcher,
+        self: TestSwitcher,
+        option_a: unittest.mock.Mock,
+        option_b: unittest.mock.Mock,
+        switcher: Switcher,
     ) -> None:
         """
         Test switching between options.
@@ -90,7 +103,8 @@ class TestDriverSimulatorSwitchingComponentManager:
 
     @pytest.fixture()
     def driver_component_manager(
-        self: TestDriverSimulatorSwitchingComponentManager, mocker: pytest_mock.MockerFixture,
+        self: TestDriverSimulatorSwitchingComponentManager,
+        mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
         Return a mock component manager that purports to drive a real component.
@@ -104,7 +118,8 @@ class TestDriverSimulatorSwitchingComponentManager:
 
     @pytest.fixture()
     def simulator_component_manager(
-        self: TestDriverSimulatorSwitchingComponentManager, mocker: pytest_mock.MockerFixture,
+        self: TestDriverSimulatorSwitchingComponentManager,
+        mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
         Return a mock component manager that purports to drive a simulator component.
@@ -137,7 +152,9 @@ class TestDriverSimulatorSwitchingComponentManager:
                 and simulator mode.
             """
             return DriverSimulatorSwitchingComponentManager(
-                driver_component_manager, simulator_component_manager, SimulationMode.FALSE,
+                driver_component_manager,
+                simulator_component_manager,
+                SimulationMode.FALSE,
             )
 
         def test_switching(
@@ -195,7 +212,9 @@ class TestDriverSimulatorSwitchingComponentManager:
                 component manager.
             """
             return DriverSimulatorSwitchingComponentManager(
-                None, simulator_component_manager, SimulationMode.TRUE,
+                None,
+                simulator_component_manager,
+                SimulationMode.TRUE,
             )
 
         def test_switching_with_unimplemented_driver(
@@ -218,7 +237,8 @@ class TestDriverSimulatorSwitchingComponentManager:
             simulator_component_manager.foo.assert_called_once_with()
 
             with pytest.raises(
-                NotImplementedError, match="Unimplemented switcher mode 'SimulationMode.FALSE'.",
+                NotImplementedError,
+                match="Unimplemented switcher mode 'SimulationMode.FALSE'.",
             ):
                 switching_component_manager.simulation_mode = SimulationMode.FALSE
 

@@ -73,8 +73,16 @@ def devices_to_load(patched_station_device_class: MccsStation) -> DevicesToLoadT
             {"name": "controller", "proxy": MccsDeviceProxy},
             {"name": "subarray_01", "proxy": MccsDeviceProxy},
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
-            {"name": "station_001", "proxy": MccsDeviceProxy, "patch": patched_station_device_class,},
-            {"name": "station_002", "proxy": MccsDeviceProxy, "patch": patched_station_device_class,},
+            {
+                "name": "station_001",
+                "proxy": MccsDeviceProxy,
+                "patch": patched_station_device_class,
+            },
+            {
+                "name": "station_002",
+                "proxy": MccsDeviceProxy,
+                "patch": patched_station_device_class,
+            },
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
@@ -409,7 +417,8 @@ class TestMccsIntegrationTmc:
 
         # Subscribe to controller's LRC result attribute
         controller.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in controller._change_event_subscription_ids
 
@@ -526,7 +535,11 @@ class TestMccsIntegrationTmc:
         # )
 
         # TODO: Currently short running, but calls a LRC in Subarray!
-        ([result_code], [message]) = call_with_json(controller.Release, subarray_id=1, release_all=True,)
+        ([result_code], [message]) = call_with_json(
+            controller.Release,
+            subarray_id=1,
+            release_all=True,
+        )
         assert result_code == ResultCode.QUEUED
         assert "Release command queued" in message
 
@@ -560,7 +573,10 @@ class TestMccsIntegrationTmc:
 
         controller_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
 
-    def _show_state_of_devices(self: TestMccsIntegrationTmc, devices: list[MccsDeviceProxy],) -> None:
+    def _show_state_of_devices(
+        self: TestMccsIntegrationTmc,
+        devices: list[MccsDeviceProxy],
+    ) -> None:
         """
         Show the state of the requested devices.
 

@@ -212,7 +212,8 @@ class TestSubarrayComponentManager:
         assert subarray_component_manager.power_mode == PowerMode.ON
         release_json = json.dumps({"station_beams": [station_off_fqdn]})
         with pytest.raises(
-            NotImplementedError, match="MCCS Subarray cannot partially release resources.",
+            NotImplementedError,
+            match="MCCS Subarray cannot partially release resources.",
         ):
             subarray_component_manager.release(release_json)
 

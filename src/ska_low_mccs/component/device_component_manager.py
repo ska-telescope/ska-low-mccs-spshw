@@ -314,7 +314,9 @@ class DeviceComponentManager(MccsComponentManager):
         self._device_admin_mode = event_value
         self._update_health()
 
-    def _update_health(self: DeviceComponentManager,) -> None:
+    def _update_health(
+        self: DeviceComponentManager,
+    ) -> None:
         health = (
             self._device_health_state
             if self._device_admin_mode in [AdminMode.MAINTENANCE, AdminMode.ONLINE]

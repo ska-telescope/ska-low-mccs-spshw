@@ -53,7 +53,9 @@ class MccsSubarrayBeam(SKAObsDevice):
         self._health_model = SubarrayBeamHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsSubarrayBeam,) -> SubarrayBeamComponentManager:
+    def create_component_manager(
+        self: MccsSubarrayBeam,
+    ) -> SubarrayBeamComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -116,7 +118,8 @@ class MccsSubarrayBeam(SKAObsDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsSubarrayBeam, communication_status: CommunicationStatus,
+        self: MccsSubarrayBeam,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -400,7 +403,10 @@ class MccsSubarrayBeam(SKAObsDevice):
             """
             component_manager = self.target
             kwargs = json.loads(argin)
-            result_code = component_manager.scan(kwargs.get("scan_id"), kwargs.get("scan_time"),)
+            result_code = component_manager.scan(
+                kwargs.get("scan_id"),
+                kwargs.get("scan_time"),
+            )
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:

@@ -48,10 +48,15 @@ class ControllerResourceManager:
             channel_blocks=channel_blocks,
             station_beams=station_beams,
         )
-        self.resource_pool = ResourcePool(station_beams=station_beams,)
+        self.resource_pool = ResourcePool(
+            station_beams=station_beams,
+        )
 
     def set_health(
-        self: ControllerResourceManager, resource_type: str, resource: Hashable, is_healthy: bool,
+        self: ControllerResourceManager,
+        resource_type: str,
+        resource: Hashable,
+        is_healthy: bool,
     ) -> None:
         """
         Set the health of a resource.
@@ -63,7 +68,11 @@ class ControllerResourceManager:
         """
         self._resource_manager.set_health(resource_type, resource, is_healthy)
 
-    def set_ready(self: ControllerResourceManager, subarray: str, is_ready: bool,) -> None:
+    def set_ready(
+        self: ControllerResourceManager,
+        subarray: str,
+        is_ready: bool,
+    ) -> None:
         """
         Set the health of a resource.
 
@@ -72,7 +81,11 @@ class ControllerResourceManager:
         """
         self._resource_manager.set_ready(subarray, is_ready)
 
-    def allocate(self: ControllerResourceManager, subarray: str, **resources: Iterable[Hashable],) -> None:
+    def allocate(
+        self: ControllerResourceManager,
+        subarray: str,
+        **resources: Iterable[Hashable],
+    ) -> None:
         """
         Allocate resources to a subarray.
 
@@ -100,7 +113,10 @@ class ControllerResourceManager:
 
         self._resource_manager.allocate(subarray, **resources)
 
-    def deallocate(self: ControllerResourceManager, **resources: Iterable[Hashable],) -> None:
+    def deallocate(
+        self: ControllerResourceManager,
+        **resources: Iterable[Hashable],
+    ) -> None:
         """
         Deallocate resources (regardless of what subarray they are allocated to.
 
@@ -119,7 +135,10 @@ class ControllerResourceManager:
         """
         self._resource_manager.deallocate(**resources)
 
-    def deallocate_from(self: ControllerResourceManager, subarray: str,) -> None:
+    def deallocate_from(
+        self: ControllerResourceManager,
+        subarray: str,
+    ) -> None:
         """
         Deallocate all resources from a subarray.
 
@@ -128,7 +147,10 @@ class ControllerResourceManager:
         """
         self._resource_manager.deallocate_from(subarray)
 
-    def get_allocated(self: ControllerResourceManager, subarray: str,) -> Mapping[str, Iterable[str]]:
+    def get_allocated(
+        self: ControllerResourceManager,
+        subarray: str,
+    ) -> Mapping[str, Iterable[str]]:
         """
         Return the resources allocated to a given subarray.
 

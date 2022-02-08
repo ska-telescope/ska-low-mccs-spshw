@@ -105,7 +105,8 @@ class _StationBeamProxy(ObsDeviceComponentManager):
 
 
 class SubarrayComponentManager(
-    MccsComponentManager, ska_tango_base.subarray.SubarrayComponentManager,
+    MccsComponentManager,
+    ska_tango_base.subarray.SubarrayComponentManager,
 ):
     """A component manager for a subarray."""
 
@@ -194,7 +195,12 @@ class SubarrayComponentManager(
         self._scan_id: Optional[int] = None
 
         super().__init__(
-            logger, push_change_event, communication_status_changed_callback, None, None, None,
+            logger,
+            push_change_event,
+            communication_status_changed_callback,
+            None,
+            None,
+            None,
         )
 
     def start_communicating(self: SubarrayComponentManager) -> None:
@@ -246,7 +252,8 @@ class SubarrayComponentManager(
 
     @check_communicating
     def assign(  # type: ignore[override]
-        self: SubarrayComponentManager, resource_spec: dict,
+        self: SubarrayComponentManager,
+        resource_spec: dict,
     ) -> ResultCode:
         """
         Assign resources to this subarray.
@@ -320,7 +327,9 @@ class SubarrayComponentManager(
                     functools.partial(self._device_obs_state_changed, fqdn),
                 )
             self._resources_changed_callback(
-                set(self._stations.keys()), set(self._subarray_beams.keys()), set(self._station_beams.keys()),
+                set(self._stations.keys()),
+                set(self._subarray_beams.keys()),
+                set(self._station_beams.keys()),
             )
 
             self._is_assigning = True
@@ -333,7 +342,10 @@ class SubarrayComponentManager(
 
         return ResultCode.OK
 
-    def _flatten_new_station_groups(self: SubarrayComponentManager, station_fqdns: list[list[str]],) -> set:
+    def _flatten_new_station_groups(
+        self: SubarrayComponentManager,
+        station_fqdns: list[list[str]],
+    ) -> set:
         """
         Add station groups to this subarray component manager's _station_groups.
 
@@ -354,7 +366,9 @@ class SubarrayComponentManager(
 
     @property  # type: ignore[misc]
     @check_communicating
-    def assigned_resources(self: SubarrayComponentManager,) -> set:
+    def assigned_resources(
+        self: SubarrayComponentManager,
+    ) -> set:
         """
         Return this subarray's resources.
 
@@ -364,7 +378,9 @@ class SubarrayComponentManager(
 
     @property  # type: ignore[misc]
     @check_communicating
-    def assigned_resources_dict(self: SubarrayComponentManager,) -> dict[str, Sequence[Any]]:
+    def assigned_resources_dict(
+        self: SubarrayComponentManager,
+    ) -> dict[str, Sequence[Any]]:
         """
         Return a dictionary of resource types and fqdns.
 
@@ -379,7 +395,8 @@ class SubarrayComponentManager(
 
     @check_communicating
     def release(  # type: ignore[override]
-        self: SubarrayComponentManager, argin: str,
+        self: SubarrayComponentManager,
+        argin: str,
     ) -> None:
         """
         Release resources from this subarray.
@@ -410,7 +427,9 @@ class SubarrayComponentManager(
             self._device_obs_states.clear()
 
             self._resources_changed_callback(
-                set(self._stations.keys()), set(self._subarray_beams.keys()), set(self._station_beams.keys()),
+                set(self._stations.keys()),
+                set(self._subarray_beams.keys()),
+                set(self._station_beams.keys()),
             )
             self._evaluate_communication_status()
         self._release_completed_callback()
@@ -418,7 +437,8 @@ class SubarrayComponentManager(
 
     @check_communicating
     def configure(  # type: ignore[override]
-        self: SubarrayComponentManager, configuration: dict[str, Any],
+        self: SubarrayComponentManager,
+        configuration: dict[str, Any],
     ) -> ResultCode:
         """
         Configure the resources for a scan.
@@ -445,7 +465,8 @@ class SubarrayComponentManager(
         return result_code
 
     def _configure_stations(
-        self: SubarrayComponentManager, station_configuration: dict[str, Any],
+        self: SubarrayComponentManager,
+        station_configuration: dict[str, Any],
     ) -> ResultCode:
         """
         Configure the station resources for a scan.
@@ -469,7 +490,8 @@ class SubarrayComponentManager(
         return result_code
 
     def _configure_subarray_beams(
-        self: SubarrayComponentManager, subarray_beam_configuration: dict[str, Any],
+        self: SubarrayComponentManager,
+        subarray_beam_configuration: dict[str, Any],
     ) -> ResultCode:
         """
         Configure the subarray beam resources for a scan.
@@ -493,7 +515,9 @@ class SubarrayComponentManager(
 
     @check_communicating
     def scan(  # type: ignore[override]
-        self: SubarrayComponentManager, scan_id: int, start_time: float,
+        self: SubarrayComponentManager,
+        scan_id: int,
+        start_time: float,
     ) -> ResultCode:
         """
         Start scanning.
@@ -594,7 +618,9 @@ class SubarrayComponentManager(
         return result_code
 
     @check_communicating
-    def send_transient_buffer(self: SubarrayComponentManager,) -> ResultCode:
+    def send_transient_buffer(
+        self: SubarrayComponentManager,
+    ) -> ResultCode:
         """
         Send the transient buffer.
 
@@ -604,7 +630,9 @@ class SubarrayComponentManager(
         return ResultCode.OK
 
     def _device_communication_status_changed(
-        self: SubarrayComponentManager, fqdn: str, communication_status: CommunicationStatus,
+        self: SubarrayComponentManager,
+        fqdn: str,
+        communication_status: CommunicationStatus,
     ) -> None:
         if fqdn not in self._device_communication_statuses:
             self.logger.warning(
@@ -629,7 +657,9 @@ class SubarrayComponentManager(
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
     def _station_power_mode_changed(
-        self: SubarrayComponentManager, fqdn: str, power_mode: PowerMode,
+        self: SubarrayComponentManager,
+        fqdn: str,
+        power_mode: PowerMode,
     ) -> None:
         self._station_power_modes[fqdn] = power_mode
 
@@ -639,7 +669,11 @@ class SubarrayComponentManager(
             self._is_assigning = False
             self._assign_completed_callback()
 
-    def _device_obs_state_changed(self: SubarrayComponentManager, fqdn: str, obs_state: ObsState,) -> None:
+    def _device_obs_state_changed(
+        self: SubarrayComponentManager,
+        fqdn: str,
+        obs_state: ObsState,
+    ) -> None:
         self._device_obs_states[fqdn] = obs_state
         if obs_state == ObsState.READY and fqdn in self._configuring_resources:
             self._configuring_resources.remove(fqdn)

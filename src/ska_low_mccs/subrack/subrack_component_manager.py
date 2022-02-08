@@ -109,7 +109,9 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self._component_tpm_power_changed_callback(tpm_power_modes)
 
     @property
-    def tpm_power_modes(self: BaseSubrackSimulatorComponentManager,) -> list[ExtendedPowerMode]:
+    def tpm_power_modes(
+        self: BaseSubrackSimulatorComponentManager,
+    ) -> list[ExtendedPowerMode]:
         """
         Return the power modes of the TPMs.
 
@@ -117,7 +119,11 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         """
         return list(self._tpm_power_modes)
 
-    def __getattr__(self: BaseSubrackSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: BaseSubrackSimulatorComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -194,7 +200,10 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(self: BaseSubrackSimulatorComponentManager, name: str,) -> Any:
+    def _get_from_component(
+        self: BaseSubrackSimulatorComponentManager,
+        name: str,
+    ) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -301,7 +310,10 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             component_tpm_power_changed_callback,
         )
         super().__init__(
-            {(SimulationMode.FALSE): subrack_driver, (SimulationMode.TRUE): subrack_simulator,},
+            {
+                (SimulationMode.FALSE): subrack_driver,
+                (SimulationMode.TRUE): subrack_simulator,
+            },
             (initial_simulation_mode),
         )
 
@@ -319,7 +331,8 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
 
     @simulation_mode.setter
     def simulation_mode(
-        self: SwitchingSubrackComponentManager, required_simulation_mode: SimulationMode,
+        self: SwitchingSubrackComponentManager,
+        required_simulation_mode: SimulationMode,
     ) -> None:
         """
         Set the simulation mode.
@@ -473,7 +486,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._tpm_power_changed_callback(tpm_power_modes)
 
     def _power_supply_communication_status_changed(
-        self: SubrackComponentManager, communication_status: CommunicationStatus,
+        self: SubrackComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the hardware.
@@ -564,7 +578,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         else:
             raise ConnectionError("Component is not turned on.")
 
-    def __getattr__(self: SubrackComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: SubrackComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -641,7 +659,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     @check_communicating
     @check_on
-    def _get_from_hardware(self: SubrackComponentManager, name: str,) -> Any:
+    def _get_from_hardware(
+        self: SubrackComponentManager,
+        name: str,
+    ) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 

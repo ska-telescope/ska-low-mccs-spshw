@@ -79,15 +79,35 @@ class Stimulus(enum.IntEnum):
 
 StateTupleType = Union[
     Tuple[CommunicationStatus],
-    Tuple[CommunicationStatus, Optional[bool], ExtendedPowerMode,],
-    Tuple[CommunicationStatus, Optional[bool], ExtendedPowerMode, CommunicationStatus,],
+    Tuple[
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+    ],
+    Tuple[
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+        CommunicationStatus,
+    ],
 ]
 
 
 StateStimulusTupleType = Union[
     Tuple[Stimulus, CommunicationStatus],
-    Tuple[Stimulus, CommunicationStatus, Optional[bool], ExtendedPowerMode,],
-    Tuple[Stimulus, CommunicationStatus, Optional[bool], ExtendedPowerMode, CommunicationStatus,],
+    Tuple[
+        Stimulus,
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+    ],
+    Tuple[
+        Stimulus,
+        CommunicationStatus,
+        Optional[bool],
+        ExtendedPowerMode,
+        CommunicationStatus,
+    ],
 ]
 
 
@@ -216,7 +236,10 @@ class TileOrchestrator:
         for state, actions in self._load_rules().items():
             action_calls = [getattr(self, f"_{action}") for action in actions]
             if len(state) == 2:
-                self._decision_table[Stimulus[state[0]], CommunicationStatus[state[1]],] = action_calls
+                self._decision_table[
+                    Stimulus[state[0]],
+                    CommunicationStatus[state[1]],
+                ] = action_calls
             elif len(state) == 4:
                 self._decision_table[
                     (
@@ -283,7 +306,8 @@ class TileOrchestrator:
             return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
 
     def update_subrack_communication_status(
-        self: TileOrchestrator, communication_status: CommunicationStatus,
+        self: TileOrchestrator,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Update status of communications between the component manager and the subrack.
@@ -310,7 +334,8 @@ class TileOrchestrator:
                 raise NotImplementedError()
 
     def update_tpm_communication_status(
-        self: TileOrchestrator, communication_status: CommunicationStatus,
+        self: TileOrchestrator,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Update status of communications between the component manager and the TPM.
@@ -335,7 +360,10 @@ class TileOrchestrator:
             else:
                 raise NotImplementedError()
 
-    def update_tpm_power_mode(self: TileOrchestrator, power_mode: ExtendedPowerMode,) -> None:
+    def update_tpm_power_mode(
+        self: TileOrchestrator,
+        power_mode: ExtendedPowerMode,
+    ) -> None:
         """
         Update the current power mode of the TPM.
 
@@ -397,7 +425,9 @@ class TileOrchestrator:
     def _report_communication_established(self: TileOrchestrator) -> None:
         self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
 
-    def _report_tpm_no_power_supply(self: TileOrchestrator,) -> None:
+    def _report_tpm_no_power_supply(
+        self: TileOrchestrator,
+    ) -> None:
         self._tpm_power_mode = ExtendedPowerMode.NO_SUPPLY
         self._power_mode_changed_callback(PowerMode.OFF)
 
@@ -424,14 +454,20 @@ class TileOrchestrator:
     def _set_no_desire(self: TileOrchestrator) -> None:
         self._operator_desire = None
 
-    def _stop_communicating_with_subrack(self: TileOrchestrator,) -> None:
+    def _stop_communicating_with_subrack(
+        self: TileOrchestrator,
+    ) -> None:
         self._subrack_communication_status = CommunicationStatus.DISABLED
         self._stop_communicating_with_subrack_callback()
 
-    def _set_subrack_communication_established(self: TileOrchestrator,) -> None:
+    def _set_subrack_communication_established(
+        self: TileOrchestrator,
+    ) -> None:
         self._subrack_communication_status = CommunicationStatus.ESTABLISHED
 
-    def _set_subrack_communication_not_established(self: TileOrchestrator,) -> None:
+    def _set_subrack_communication_not_established(
+        self: TileOrchestrator,
+    ) -> None:
         self._subrack_communication_status = CommunicationStatus.NOT_ESTABLISHED
 
     def _stop_communicating_with_tpm(self: TileOrchestrator) -> None:

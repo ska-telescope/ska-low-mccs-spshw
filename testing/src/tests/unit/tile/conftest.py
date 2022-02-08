@@ -102,7 +102,10 @@ def mock_subrack(subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerMode)
 
 
 @pytest.fixture()
-def initial_mocks(subrack_fqdn: str, mock_subrack: unittest.mock.Mock,) -> dict[str, unittest.mock.Mock]:
+def initial_mocks(
+    subrack_fqdn: str,
+    mock_subrack: unittest.mock.Mock,
+) -> dict[str, unittest.mock.Mock]:
     """
     Return a dictionary of pre-registered device proxy mocks.
 
@@ -231,7 +234,10 @@ def static_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return StaticTpmSimulatorComponentManager(
-        logger, lrc_result_changed_callback, communication_status_changed_callback, component_fault_callback,
+        logger,
+        lrc_result_changed_callback,
+        communication_status_changed_callback,
+        component_fault_callback,
     )
 
 
@@ -259,7 +265,10 @@ def dynamic_tpm_simulator_component_manager(
     :return: a static TPM simulator component manager.
     """
     return DynamicTpmSimulatorComponentManager(
-        logger, lrc_result_changed_callback, communication_status_changed_callback, component_fault_callback,
+        logger,
+        lrc_result_changed_callback,
+        communication_status_changed_callback,
+        component_fault_callback,
     )
 
 

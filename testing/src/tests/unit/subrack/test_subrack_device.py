@@ -48,7 +48,10 @@ class TestMccsSubrack:
         """
         return tango_harness.get_device("low-mccs/subrack/01")
 
-    def test_InitDevice(self: TestMccsSubrack, device_under_test: MccsDeviceProxy,) -> None:
+    def test_InitDevice(
+        self: TestMccsSubrack,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Initial state.
 
@@ -78,7 +81,8 @@ class TestMccsSubrack:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
@@ -99,7 +103,8 @@ class TestMccsSubrack:
         """
         # Subscribe to subrack's LRC result attribute
         device_under_test.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
         initial_lrc_result = ("", "", "")
@@ -163,7 +168,8 @@ class TestMccsSubrack:
         """
         # Subscribe to subrack's LRC result attribute
         device_under_test.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
         initial_lrc_result = ("", "", "")
@@ -216,7 +222,8 @@ class TestMccsSubrack:
         """
         # Subscribe to subrack's LRC result attribute
         device_under_test.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
         initial_lrc_result = ("", "", "")

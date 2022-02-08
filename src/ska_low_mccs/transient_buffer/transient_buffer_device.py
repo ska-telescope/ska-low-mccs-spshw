@@ -43,14 +43,18 @@ class MccsTransientBuffer(SKABaseDevice):
         self._health_model = TransientBufferHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsTransientBuffer,) -> TransientBufferComponentManager:
+    def create_component_manager(
+        self: MccsTransientBuffer,
+    ) -> TransientBufferComponentManager:
         """
         Create and return a component manager for this device.
 
         :return: a component manager for this device.
         """
         return TransientBufferComponentManager(
-            self.logger, self.push_change_event, self._component_communication_status_changed,
+            self.logger,
+            self.push_change_event,
+            self._component_communication_status_changed,
         )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -88,7 +92,8 @@ class MccsTransientBuffer(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsTransientBuffer, communication_status: CommunicationStatus,
+        self: MccsTransientBuffer,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -168,7 +173,9 @@ class MccsTransientBuffer(SKABaseDevice):
         return self.component_manager.n_stations
 
     @attribute(
-        dtype=("DevDouble",), max_dim_x=100, label="transientFrequencyWindow",
+        dtype=("DevDouble",),
+        max_dim_x=100,
+        label="transientFrequencyWindow",
     )
     def transientFrequencyWindow(self: MccsTransientBuffer) -> list[float]:
         """

@@ -21,7 +21,8 @@ class SubarrayBeamHealthModel(HealthModel):
     """A health model for subarray beams."""
 
     def __init__(
-        self: SubarrayBeamHealthModel, health_changed_callback: Callable[[HealthState], None],
+        self: SubarrayBeamHealthModel,
+        health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -33,7 +34,9 @@ class SubarrayBeamHealthModel(HealthModel):
         self._is_beam_locked = False
         super().__init__(health_changed_callback)
 
-    def evaluate_health(self: SubarrayBeamHealthModel,) -> HealthState:
+    def evaluate_health(
+        self: SubarrayBeamHealthModel,
+    ) -> HealthState:
         """
         Compute overall health of the subarray beam.
 

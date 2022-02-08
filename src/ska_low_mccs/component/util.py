@@ -42,7 +42,11 @@ def check_communicating(func: Wrapped) -> Wrapped:
     """
 
     @functools.wraps(func)
-    def _wrapper(component_manager: MccsComponentManager, *args: Any, **kwargs: Any,) -> Any:
+    def _wrapper(
+        component_manager: MccsComponentManager,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """
         Check for component communication before calling the function.
 
@@ -88,7 +92,11 @@ def check_on(func: Wrapped) -> Wrapped:
     """
 
     @functools.wraps(func)
-    def _wrapper(component_manager: MccsComponentManager, *args: Any, **kwargs: Any,) -> Any:
+    def _wrapper(
+        component_manager: MccsComponentManager,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """
         Check that the component is on before before calling the function.
 

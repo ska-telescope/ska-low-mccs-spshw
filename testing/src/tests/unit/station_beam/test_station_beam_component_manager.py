@@ -125,7 +125,8 @@ class TestStationBeamComponentManager:
         assert station_beam_component_manager.beam_id == beam_id
 
     def test_desired_pointing(
-        self: TestStationBeamComponentManager, station_beam_component_manager: StationBeamComponentManager,
+        self: TestStationBeamComponentManager,
+        station_beam_component_manager: StationBeamComponentManager,
     ) -> None:
         """
         Test the desired pointing attribute.
@@ -144,7 +145,8 @@ class TestStationBeamComponentManager:
         assert station_beam_component_manager.desired_pointing == pytest.approx(value_to_write)
 
     def test_configure(
-        self: TestStationBeamComponentManager, station_beam_component_manager: StationBeamComponentManager,
+        self: TestStationBeamComponentManager,
+        station_beam_component_manager: StationBeamComponentManager,
     ) -> None:
         """
         Test the configure method.
@@ -161,7 +163,13 @@ class TestStationBeamComponentManager:
         phase_centre = [0.0, 0.0]
 
         station_beam_component_manager.configure(
-            beam_id, station_id, update_rate, channels, desired_pointing, antenna_weights, phase_centre,
+            beam_id,
+            station_id,
+            update_rate,
+            channels,
+            desired_pointing,
+            antenna_weights,
+            phase_centre,
         )
 
         assert station_beam_component_manager.beam_id == beam_id

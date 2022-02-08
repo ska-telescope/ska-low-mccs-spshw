@@ -82,7 +82,11 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         super().stop_communicating()
         cast(ClusterSimulator, self._component).set_shadow_master_pool_node_health_changed_callback(None)
 
-    def __getattr__(self: ClusterSimulatorComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: ClusterSimulatorComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -139,7 +143,10 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(self: ClusterSimulatorComponentManager, name: str,) -> Any:
+    def _get_from_component(
+        self: ClusterSimulatorComponentManager,
+        name: str,
+    ) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 

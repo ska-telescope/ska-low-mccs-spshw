@@ -53,7 +53,9 @@ class MccsStationBeam(SKAObsDevice):
         self._health_model = StationBeamHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsStationBeam,) -> StationBeamComponentManager:
+    def create_component_manager(
+        self: MccsStationBeam,
+    ) -> StationBeamComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -112,7 +114,8 @@ class MccsStationBeam(SKAObsDevice):
     # Callbacks
     # ----------
     def _communication_status_changed(
-        self: MccsStationBeam, communication_status: CommunicationStatus,
+        self: MccsStationBeam,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.

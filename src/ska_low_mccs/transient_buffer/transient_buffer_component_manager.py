@@ -45,7 +45,11 @@ class TransientBufferComponentManager(ObjectComponentManager):
             None,
         )
 
-    def __getattr__(self: TransientBufferComponentManager, name: str, default_value: Any = None,) -> Any:
+    def __getattr__(
+        self: TransientBufferComponentManager,
+        name: str,
+        default_value: Any = None,
+    ) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -74,7 +78,10 @@ class TransientBufferComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(self: TransientBufferComponentManager, name: str,) -> Any:
+    def _get_from_component(
+        self: TransientBufferComponentManager,
+        name: str,
+    ) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 

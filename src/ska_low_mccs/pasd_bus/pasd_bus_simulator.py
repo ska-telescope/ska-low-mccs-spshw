@@ -47,15 +47,33 @@ from ska_low_mccs.component import ObjectComponent
 
 _AntennaConfigType = TypedDict(
     "_AntennaConfigType",
-    {"antenna_id": int, "smartbox_id": int, "smartbox_port": int, "tpm_id": int, "tpm_input": int,},
+    {
+        "antenna_id": int,
+        "smartbox_id": int,
+        "smartbox_port": int,
+        "tpm_id": int,
+        "tpm_input": int,
+    },
 )
 
 
-_SmartboxConfigType = TypedDict("_SmartboxConfigType", {"smartbox_id": int, "fndh_port": int,},)
+_SmartboxConfigType = TypedDict(
+    "_SmartboxConfigType",
+    {
+        "smartbox_id": int,
+        "fndh_port": int,
+    },
+)
 
 
 AntennaInfoType = TypedDict(
-    "AntennaInfoType", {"smartbox_id": int, "port_number": int, "tpm_number": int, "tpm_input_number": int,},
+    "AntennaInfoType",
+    {
+        "smartbox_id": int,
+        "port_number": int,
+        "tpm_number": int,
+        "tpm_input_number": int,
+    },
 )
 
 
@@ -280,7 +298,10 @@ class PasdHardwareSimulator:
     locally forced, experience a breaker trip, etc.
     """
 
-    def __init__(self: PasdHardwareSimulator, number_of_ports: int,) -> None:
+    def __init__(
+        self: PasdHardwareSimulator,
+        number_of_ports: int,
+    ) -> None:
         """
         Initialise a new instance.
 
@@ -290,7 +311,10 @@ class PasdHardwareSimulator:
 
         self._ports = [_PasdPortSimulator() for _ in range(number_of_ports)]
 
-    def configure(self: PasdHardwareSimulator, ports_connected: list[bool],) -> None:
+    def configure(
+        self: PasdHardwareSimulator,
+        ports_connected: list[bool],
+    ) -> None:
         """
         Configure the hardware.
 
@@ -363,7 +387,10 @@ class PasdHardwareSimulator:
         """
         return self._ports[port_number - 1].forcing
 
-    def is_port_breaker_tripped(self: PasdHardwareSimulator, port_number: int,) -> bool:
+    def is_port_breaker_tripped(
+        self: PasdHardwareSimulator,
+        port_number: int,
+    ) -> bool:
         """
         Return whether a specified port has had its breaker tripped.
 
@@ -373,7 +400,10 @@ class PasdHardwareSimulator:
         """
         return self._ports[port_number - 1].breaker_tripped
 
-    def simulate_port_breaker_trip(self: PasdHardwareSimulator, port_number: int,) -> Optional[bool]:
+    def simulate_port_breaker_trip(
+        self: PasdHardwareSimulator,
+        port_number: int,
+    ) -> Optional[bool]:
         """
         Simulate a port breaker trip.
 
@@ -384,7 +414,10 @@ class PasdHardwareSimulator:
         """
         return self._ports[port_number - 1].simulate_breaker_trip()
 
-    def reset_port_breaker(self: PasdHardwareSimulator, port_number: int,) -> Optional[bool]:
+    def reset_port_breaker(
+        self: PasdHardwareSimulator,
+        port_number: int,
+    ) -> Optional[bool]:
         """
         Reset a tripped port breaker.
 
@@ -396,7 +429,9 @@ class PasdHardwareSimulator:
         return self._ports[port_number - 1].reset_breaker()
 
     def turn_port_on(
-        self: PasdHardwareSimulator, port_number: int, stay_on_when_offline: bool = True,
+        self: PasdHardwareSimulator,
+        port_number: int,
+        stay_on_when_offline: bool = True,
     ) -> Optional[bool]:
         """
         Turn on a specified port.
@@ -409,7 +444,10 @@ class PasdHardwareSimulator:
         """
         return self._ports[port_number - 1].turn_on(stay_on_when_offline=stay_on_when_offline)
 
-    def turn_port_off(self: PasdHardwareSimulator, port_number: int,) -> Optional[bool]:
+    def turn_port_off(
+        self: PasdHardwareSimulator,
+        port_number: int,
+    ) -> Optional[bool]:
         """
         Turn off a specified port.
 
@@ -419,7 +457,10 @@ class PasdHardwareSimulator:
         """
         return self._ports[port_number - 1].turn_off()
 
-    def get_port_desired_power_online(self: PasdHardwareSimulator, port_number: int,) -> bool:
+    def get_port_desired_power_online(
+        self: PasdHardwareSimulator,
+        port_number: int,
+    ) -> bool:
         """
         Return the desired power of a specified port when the device is online.
 
@@ -446,7 +487,10 @@ class PasdHardwareSimulator:
         """
         return [port.desired_power_when_online for port in self._ports]
 
-    def get_port_desired_power_offline(self: PasdHardwareSimulator, port_number: int,) -> bool:
+    def get_port_desired_power_offline(
+        self: PasdHardwareSimulator,
+        port_number: int,
+    ) -> bool:
         """
         Return the desired power of a specified port when the device is offline.
 
@@ -517,7 +561,10 @@ class PasdHardwareSimulator:
         return self._service_led_on
 
     @service_led_on.setter
-    def service_led_on(self: PasdHardwareSimulator, led_on: bool,) -> None:
+    def service_led_on(
+        self: PasdHardwareSimulator,
+        led_on: bool,
+    ) -> None:
         """
         Turn on/off the blue service indicator LED.
 
@@ -699,7 +746,10 @@ class SmartboxSimulator(PasdHardwareSimulator):
         self._port_breaker_tripped = [False] * self.NUMBER_OF_PORTS
         self._update_time = datetime.now().isoformat()
 
-    def get_port_current_draw(self: SmartboxSimulator, port_number: int,) -> float:
+    def get_port_current_draw(
+        self: SmartboxSimulator,
+        port_number: int,
+    ) -> float:
         """
         Return the current being drawn from a given smartbox port.
 
@@ -823,7 +873,12 @@ class PasdBusSimulator(ObjectComponent):
     NUMBER_OF_SMARTBOXES = 24
     NUMBER_OF_ANTENNAS = 256
 
-    def __init__(self: PasdBusSimulator, config_path: str, station_id: int, logger: logging.Logger,) -> None:
+    def __init__(
+        self: PasdBusSimulator,
+        config_path: str,
+        station_id: int,
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new instance.
 
@@ -989,7 +1044,10 @@ class PasdBusSimulator(ObjectComponent):
         """
         return self._fndh_simulator.service_led_on
 
-    def set_fndh_service_led_on(self: PasdBusSimulator, led_on: bool,) -> None:
+    def set_fndh_service_led_on(
+        self: PasdBusSimulator,
+        led_on: bool,
+    ) -> None:
         """
         Turn on/off the FNDH's blue service indicator LED.
 
@@ -1006,7 +1064,10 @@ class PasdBusSimulator(ObjectComponent):
         """
         return list(self._fndh_simulator.ports_power_sensed)
 
-    def is_fndh_port_power_sensed(self: PasdBusSimulator, port_number: int,) -> bool:
+    def is_fndh_port_power_sensed(
+        self: PasdBusSimulator,
+        port_number: int,
+    ) -> bool:
         """
         Return whether power is sensed on a specified FNDH port.
 
@@ -1097,7 +1158,9 @@ class PasdBusSimulator(ObjectComponent):
         return self._smartbox_simulators[smartbox_id - 1].get_info()
 
     def turn_smartbox_on(
-        self: PasdBusSimulator, smartbox_id: int, desired_on_if_offline: bool = True,
+        self: PasdBusSimulator,
+        smartbox_id: int,
+        desired_on_if_offline: bool = True,
     ) -> Optional[bool]:
         """
         Turn on a smartbox.
@@ -1125,7 +1188,9 @@ class PasdBusSimulator(ObjectComponent):
         return self._fndh_simulator.turn_port_off(fndh_port)
 
     def is_smartbox_port_power_sensed(
-        self: PasdBusSimulator, smartbox_id: int, smartbox_port_number: int,
+        self: PasdBusSimulator,
+        smartbox_id: int,
+        smartbox_port_number: int,
     ) -> bool:
         """
         Return whether power is sensed at a given smartbox port.
@@ -1205,7 +1270,9 @@ class PasdBusSimulator(ObjectComponent):
         return [smartbox.service_led_on for smartbox in self._smartbox_simulators]
 
     def set_smartbox_service_led_on(
-        self: PasdBusSimulator, smartbox_id: int, led_on: bool,
+        self: PasdBusSimulator,
+        smartbox_id: int,
+        led_on: bool,
     ) -> Optional[bool]:
         """
         Turn on the blue service indicator LED for a smartbox.
@@ -1382,7 +1449,9 @@ class PasdBusSimulator(ObjectComponent):
         ]
 
     def turn_antenna_on(
-        self: PasdBusSimulator, antenna_id: int, desired_on_if_offline: bool = True,
+        self: PasdBusSimulator,
+        antenna_id: int,
+        desired_on_if_offline: bool = True,
     ) -> Optional[bool]:
         """
         Turn on an antenna.
@@ -1468,7 +1537,9 @@ class PasdBusSimulator(ObjectComponent):
             for (smartbox_id, smartbox_port) in self._antenna_smartbox_ports
         ]
 
-    def update_status(self: PasdBusSimulator,) -> None:
+    def update_status(
+        self: PasdBusSimulator,
+    ) -> None:
         """
         Update the status of devices accessible through this bus.
 

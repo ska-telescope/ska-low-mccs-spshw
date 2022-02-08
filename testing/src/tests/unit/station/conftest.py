@@ -335,7 +335,9 @@ def mock_component_manager(mocker: pytest_mock.MockerFixture) -> unittest.mock.M
 
 
 @pytest.fixture()
-def patched_station_class(mock_component_manager: unittest.mock.Mock,) -> type[MccsStation]:
+def patched_station_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsStation]:
     """
     Return a station device class that has been patched for testing.
 
@@ -348,7 +350,9 @@ def patched_station_class(mock_component_manager: unittest.mock.Mock,) -> type[M
     class PatchedStation(MccsStation):
         """A station class that has had its component manager mocked out for testing."""
 
-        def create_component_manager(self: PatchedStation,) -> unittest.mock.Mock:
+        def create_component_manager(
+            self: PatchedStation,
+        ) -> unittest.mock.Mock:
             """
             Return a mock component manager instead of the usual one.
 

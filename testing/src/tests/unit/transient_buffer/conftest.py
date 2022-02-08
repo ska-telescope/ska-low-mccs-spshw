@@ -49,5 +49,7 @@ def transient_buffer_component_manager(
     :return: a transient buffer component manager
     """
     return TransientBufferComponentManager(
-        logger, lrc_result_changed_callback, communication_status_changed_callback,
+        logger,
+        lrc_result_changed_callback,
+        communication_status_changed_callback,
     )

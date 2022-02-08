@@ -76,7 +76,9 @@ def initial_power_mode() -> PowerMode:
 
 
 @pytest.fixture()
-def subrack_simulator(component_progress_changed_callback: Callable[[int], None],) -> SubrackSimulator:
+def subrack_simulator(
+    component_progress_changed_callback: Callable[[int], None],
+) -> SubrackSimulator:
     """
     Fixture that returns a subrack simulator.
 

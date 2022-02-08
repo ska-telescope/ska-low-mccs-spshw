@@ -56,11 +56,16 @@ class MccsStation(SKAObsDevice):
         self._obs_state_model = StationObsStateModel(self.logger, self._update_obs_state)
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = StationHealthModel(
-            self.APIUFQDN, self.AntennaFQDNs, self.TileFQDNs, self.health_changed,
+            self.APIUFQDN,
+            self.AntennaFQDNs,
+            self.TileFQDNs,
+            self.health_changed,
         )
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsStation,) -> StationComponentManager:
+    def create_component_manager(
+        self: MccsStation,
+    ) -> StationComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -86,7 +91,8 @@ class MccsStation(SKAObsDevice):
         super().init_command_objects()
 
         self.register_command_object(
-            "Configure", self.ConfigureCommand(self.component_manager, self.op_state_model, self.logger),
+            "Configure",
+            self.ConfigureCommand(self.component_manager, self.op_state_model, self.logger),
         )
         self.register_command_object(
             "ApplyPointing",
@@ -187,7 +193,10 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Callbacks
     # ----------
-    def _communication_status_changed(self: MccsStation, communication_status: CommunicationStatus,) -> None:
+    def _communication_status_changed(
+        self: MccsStation,
+        communication_status: CommunicationStatus,
+    ) -> None:
         """
         Handle change in communications status between component manager and component.
 
@@ -210,7 +219,10 @@ class MccsStation(SKAObsDevice):
 
         self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _component_power_mode_changed(self: MccsStation, power_mode: PowerMode,) -> None:
+    def _component_power_mode_changed(
+        self: MccsStation,
+        power_mode: PowerMode,
+    ) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -286,7 +298,8 @@ class MccsStation(SKAObsDevice):
     # ----------
 
     @attribute(
-        dtype="float", label="refLongitude",
+        dtype="float",
+        label="refLongitude",
     )
     def refLongitude(self: MccsStation) -> float:
         """
@@ -297,7 +310,8 @@ class MccsStation(SKAObsDevice):
         return self._refLongitude
 
     @attribute(
-        dtype="float", label="refLatitude",
+        dtype="float",
+        label="refLatitude",
     )
     def refLatitude(self: MccsStation) -> float:
         """
@@ -308,7 +322,9 @@ class MccsStation(SKAObsDevice):
         return self._refLatitude
 
     @attribute(
-        dtype="float", label="refHeight", unit="meters",
+        dtype="float",
+        label="refHeight",
+        unit="meters",
     )
     def refHeight(self: MccsStation) -> float:
         """
@@ -319,7 +335,8 @@ class MccsStation(SKAObsDevice):
         return self._refHeight
 
     @attribute(
-        dtype="DevString", format="%s",
+        dtype="DevString",
+        format="%s",
     )
     def transientBufferFQDN(self: MccsStation) -> str:
         """
@@ -351,7 +368,8 @@ class MccsStation(SKAObsDevice):
         return self.component_manager._is_configured
 
     @attribute(
-        dtype="DevLong", format="%i",
+        dtype="DevLong",
+        format="%i",
     )
     def calibrationJobId(self: MccsStation) -> int:
         """
@@ -362,7 +380,8 @@ class MccsStation(SKAObsDevice):
         return self._calibration_job_id
 
     @attribute(
-        dtype="DevLong", format="%i",
+        dtype="DevLong",
+        format="%i",
     )
     def daqJobId(self: MccsStation) -> int:
         """
@@ -373,7 +392,8 @@ class MccsStation(SKAObsDevice):
         return self._daq_job_id
 
     @attribute(
-        dtype="DevString", format="%s",
+        dtype="DevString",
+        format="%s",
     )
     def dataDirectory(self: MccsStation) -> str:
         """
@@ -386,7 +406,9 @@ class MccsStation(SKAObsDevice):
         return self._data_directory
 
     @attribute(
-        dtype=("DevString",), max_dim_x=8, format="%s",
+        dtype=("DevString",),
+        max_dim_x=8,
+        format="%s",
     )
     def beamFQDNs(self: MccsStation) -> list[str]:
         """
@@ -397,7 +419,8 @@ class MccsStation(SKAObsDevice):
         return self._beam_fqdns
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=2,
+        dtype=("DevFloat",),
+        max_dim_x=2,
     )
     def delayCentre(self: MccsStation) -> list[float]:
         """
@@ -422,7 +445,8 @@ class MccsStation(SKAObsDevice):
         self._delay_centre = value
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=512,
+        dtype=("DevFloat",),
+        max_dim_x=512,
     )
     def calibrationCoefficients(self: MccsStation) -> list[float]:
         """
@@ -472,7 +496,8 @@ class MccsStation(SKAObsDevice):
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(
-        dtype_in="DevString", dtype_out="DevVarLongStringArray",
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
     )
     def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
         """
@@ -519,7 +544,8 @@ class MccsStation(SKAObsDevice):
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(
-        dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray",
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
     )
     def ApplyPointing(self: MccsStation, argin: list[float]) -> DevVarLongStringArrayType:
         """

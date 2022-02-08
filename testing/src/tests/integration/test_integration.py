@@ -272,7 +272,11 @@ class TestMccsIntegration:
 
         # allocate station_1 to subarray_1
         ([result_code], _) = call_with_json(
-            controller.Allocate, subarray_id=1, station_ids=[[1]], subarray_beam_ids=[1], channel_blocks=[2],
+            controller.Allocate,
+            subarray_id=1,
+            station_ids=[[1]],
+            subarray_beam_ids=[1],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.OK
 
@@ -393,14 +397,22 @@ class TestMccsIntegration:
 
         # allocate station_1 to subarray_1
         ([result_code], [_]) = call_with_json(
-            controller.Allocate, subarray_id=1, station_ids=[[1]], subarray_beam_ids=[1], channel_blocks=[1],
+            controller.Allocate,
+            subarray_id=1,
+            station_ids=[[1]],
+            subarray_beam_ids=[1],
+            channel_blocks=[1],
         )
         assert result_code == ResultCode.OK
         assert subarray_1.obsState == ObsState.IDLE
 
         # allocate station 2 to subarray 2
         ([result_code], [_]) = call_with_json(
-            controller.Allocate, subarray_id=2, station_ids=[[2]], subarray_beam_ids=[2], channel_blocks=[2],
+            controller.Allocate,
+            subarray_id=2,
+            station_ids=[[2]],
+            subarray_beam_ids=[2],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.QUEUED
 

@@ -28,7 +28,10 @@ class TestSubarrayBeam:
     """
 
     @pytest.fixture(
-        params=["subarray_beam", "subarray_beam_component_manager",]
+        params=[
+            "subarray_beam",
+            "subarray_beam_component_manager",
+        ]
     )
     def subarray_beam(
         self: TestSubarrayBeam,
@@ -115,7 +118,8 @@ class TestSubarrayBeam:
             assert getattr(subarray_beam, attribute_name) == write_value
 
     def test_desired_pointing(
-        self: TestSubarrayBeam, subarray_beam: Union[SubarrayBeam, SubarrayBeamComponentManager],
+        self: TestSubarrayBeam,
+        subarray_beam: Union[SubarrayBeam, SubarrayBeamComponentManager],
     ) -> None:
         """
         Test the desired pointing attribute.

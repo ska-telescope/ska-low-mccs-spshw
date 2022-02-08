@@ -49,7 +49,10 @@ class TestMccsStation:
             "proxy": MccsDeviceProxy,
         }
 
-    def test_InitDevice(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_InitDevice(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for Initial state.
 
@@ -92,13 +95,17 @@ class TestMccsStation:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     # overridden base class attributes
-    def test_buildState(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_buildState(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for buildState.
 
@@ -126,7 +133,8 @@ class TestMccsStation:
         """
         # Subscribe to controller's LRC result attribute
         device_under_test.add_change_event_callback(
-            "longRunningCommandResult", lrc_result_changed_callback,
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
         )
         assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
         initial_lrc_result = ("", "", "")
@@ -145,7 +153,10 @@ class TestMccsStation:
         )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
-    def test_versionId(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_versionId(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for versionId.
 
@@ -156,7 +167,10 @@ class TestMccsStation:
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
-    def test_refLongitude(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_refLongitude(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for refLongitude.
 
@@ -166,7 +180,10 @@ class TestMccsStation:
         """
         assert device_under_test.refLongitude == 0.0
 
-    def test_refLatitude(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_refLatitude(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for refLatitude.
 
@@ -176,7 +193,10 @@ class TestMccsStation:
         """
         assert device_under_test.refLatitude == 0.0
 
-    def test_refHeight(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_refHeight(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for refHeight.
 
@@ -186,7 +206,10 @@ class TestMccsStation:
         """
         assert device_under_test.refHeight == 0.0
 
-    def test_beamFQDNs(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_beamFQDNs(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for beamFQDNs attribute.
 
@@ -196,7 +219,10 @@ class TestMccsStation:
         """
         assert device_under_test.beamFQDNs is None
 
-    def test_transientBufferFQDN(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_transientBufferFQDN(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for transientBufferFQDN attribute.
 
@@ -206,7 +232,10 @@ class TestMccsStation:
         """
         assert device_under_test.transientBufferFQDN == ""
 
-    def test_delayCentre(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_delayCentre(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for delayCentre attribute.
 
@@ -233,7 +262,10 @@ class TestMccsStation:
         delay_centre_str = [float_format.format(x) for x in delay_centre]
         assert delay_centre_str == dummy_location_str
 
-    def test_calibrationCoefficients(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_calibrationCoefficients(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for calibrationCoefficients attribute.
 
@@ -243,7 +275,10 @@ class TestMccsStation:
         """
         assert device_under_test.calibrationCoefficients is None
 
-    def test_isCalibrated(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_isCalibrated(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for isCalibrated attribute.
 
@@ -253,7 +288,10 @@ class TestMccsStation:
         """
         assert not device_under_test.isCalibrated
 
-    def test_isConfigured(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_isConfigured(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for isConfigured attribute.
 
@@ -263,7 +301,10 @@ class TestMccsStation:
         """
         assert not device_under_test.isConfigured
 
-    def test_calibrationJobId(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_calibrationJobId(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for calibrationJobId attribute.
 
@@ -273,7 +314,10 @@ class TestMccsStation:
         """
         assert device_under_test.calibrationJobId == 0
 
-    def test_daqJobId(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_daqJobId(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for daqJobId attributes.
 
@@ -283,7 +327,10 @@ class TestMccsStation:
         """
         assert device_under_test.daqJobId == 0
 
-    def test_dataDirectory(self: TestMccsStation, device_under_test: MccsDeviceProxy,) -> None:
+    def test_dataDirectory(
+        self: TestMccsStation,
+        device_under_test: MccsDeviceProxy,
+    ) -> None:
         """
         Test for dataDirectory attribute.
 

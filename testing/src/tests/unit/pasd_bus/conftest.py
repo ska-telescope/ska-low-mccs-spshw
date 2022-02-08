@@ -69,7 +69,11 @@ def pasd_config(pasd_config_path: str, station_id: int) -> dict:
 
 
 @pytest.fixture()
-def pasd_bus_simulator(pasd_config_path: str, station_id: int, logger: logging.Logger,) -> PasdBusSimulator:
+def pasd_bus_simulator(
+    pasd_config_path: str,
+    station_id: int,
+    logger: logging.Logger,
+) -> PasdBusSimulator:
     """
     Fixture that returns a PaSD bus simulator.
 
@@ -86,7 +90,8 @@ def pasd_bus_simulator(pasd_config_path: str, station_id: int, logger: logging.L
 
 @pytest.fixture()
 def mock_pasd_bus_simulator(
-    mocker: pytest_mock.MockerFixture, pasd_bus_simulator: PasdBusSimulator,
+    mocker: pytest_mock.MockerFixture,
+    pasd_bus_simulator: PasdBusSimulator,
 ) -> unittest.mock.Mock:
     """
     Return a mock PaSD bus simulator.

@@ -20,7 +20,10 @@ __all__ = ["ClusterHealthModel"]
 class ClusterHealthModel(HealthModel):
     """A health model for a cluster manager."""
 
-    def __init__(self: ClusterHealthModel, health_changed_callback: Callable[[HealthState], None],) -> None:
+    def __init__(
+        self: ClusterHealthModel,
+        health_changed_callback: Callable[[HealthState], None],
+    ) -> None:
         """
         Initialise a new instance.
 
@@ -30,7 +33,9 @@ class ClusterHealthModel(HealthModel):
         self._node_health = HealthState.UNKNOWN
         super().__init__(health_changed_callback)
 
-    def evaluate_health(self: ClusterHealthModel,) -> HealthState:
+    def evaluate_health(
+        self: ClusterHealthModel,
+    ) -> HealthState:
         """
         Compute overall health of the cluster.
 

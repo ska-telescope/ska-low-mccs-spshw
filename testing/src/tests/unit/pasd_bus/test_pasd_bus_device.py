@@ -67,7 +67,9 @@ class TestMccsPasdBus:
         class PatchedMccsPasdBus(MccsPasdBus):
             """A PaSD bus device patched with a mock component manager."""
 
-            def create_component_manager(self: PatchedMccsPasdBus,) -> unittest.mock.Mock:
+            def create_component_manager(
+                self: PatchedMccsPasdBus,
+            ) -> unittest.mock.Mock:
                 """
                 Return a mock component manager instead of the usual one.
 
@@ -110,7 +112,8 @@ class TestMccsPasdBus:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK
@@ -122,19 +125,47 @@ class TestMccsPasdBus:
             ("antennasForced", "antenna_forcings", [False, False]),
             ("antennasTripped", "antennas_tripped", [False, True]),
             ("antennasPowerSensed", "antennas_power_sensed", [True, True]),
-            ("antennasDesiredPowerOnline", "antennas_desired_on_online", [True, True],),
-            ("antennasDesiredPowerOffline", "antennas_desired_on_offline", [True, True],),
+            (
+                "antennasDesiredPowerOnline",
+                "antennas_desired_on_online",
+                [True, True],
+            ),
+            (
+                "antennasDesiredPowerOffline",
+                "antennas_desired_on_offline",
+                [True, True],
+            ),
             ("antennaCurrents", "antenna_currents", [0.0, 0.0]),
             ("smartboxInputVoltages", "smartbox_input_voltages", [0.0, 0.0]),
-            ("smartboxPowerSupplyOutputVoltages", "smartbox_power_supply_output_voltages", [0.0, 0.0],),
+            (
+                "smartboxPowerSupplyOutputVoltages",
+                "smartbox_power_supply_output_voltages",
+                [0.0, 0.0],
+            ),
             ("smartboxStatuses", "smartbox_statuses", ["OK", "OK"]),
-            ("smartboxPowerSupplyTemperatures", "smartbox_power_supply_temperatures", [40.0, 40.1],),
-            ("smartboxOutsideTemperatures", "smartbox_outside_temperatures", [40.0, 40.1],),
+            (
+                "smartboxPowerSupplyTemperatures",
+                "smartbox_power_supply_temperatures",
+                [40.0, 40.1],
+            ),
+            (
+                "smartboxOutsideTemperatures",
+                "smartbox_outside_temperatures",
+                [40.0, 40.1],
+            ),
             ("smartboxPcbTemperatures", "smartbox_pcb_temperatures", [40.0, 40.1]),
             ("smartboxServiceLedsOn", "smartbox_service_leds_on", [False, True]),
             ("smartboxFndhPorts", "smartbox_fndh_ports", [12, 4, 1]),
-            ("smartboxDesiredPowerOnline", "smartbox_desired_power_online", [True, True],),
-            ("smartboxDesiredPowerOffline", "smartbox_desired_power_offline", [True, True],),
+            (
+                "smartboxDesiredPowerOnline",
+                "smartbox_desired_power_online",
+                [True, True],
+            ),
+            (
+                "smartboxDesiredPowerOffline",
+                "smartbox_desired_power_offline",
+                [True, True],
+            ),
             ("fndhPsu48vVoltages", "fndh_psu48v_voltages", [48.0, 48.0]),
             ("fndhPsu5vVoltage", "fndh_psu5v_voltage", 5.0),
             ("fndhPsu48vCurrent", "fndh_psu48v_current", 20.0),
@@ -143,10 +174,26 @@ class TestMccsPasdBus:
             ("fndhPcbTemperature", "fndh_pcb_temperature", 37.0),
             ("fndhOutsideTemperature", "fndh_pcb_temperature", 36.0),
             ("fndhStatus", "fndh_status", "OK"),
-            ("fndhPortsConnected", "fndh_ports_connected", [False, True],),
-            ("fndhPortsForced", "fndh_port_forcings", [False, True],),
-            ("fndhPortsDesiredPowerOnline", "fndh_ports_desired_power_online", [False, True],),
-            ("fndhPortsDesiredPowerOffline", "fndh_ports_desired_power_offline", [False, True],),
+            (
+                "fndhPortsConnected",
+                "fndh_ports_connected",
+                [False, True],
+            ),
+            (
+                "fndhPortsForced",
+                "fndh_port_forcings",
+                [False, True],
+            ),
+            (
+                "fndhPortsDesiredPowerOnline",
+                "fndh_ports_desired_power_online",
+                [False, True],
+            ),
+            (
+                "fndhPortsDesiredPowerOffline",
+                "fndh_ports_desired_power_offline",
+                [False, True],
+            ),
         ],
     )
     def test_readonly_attribute(
@@ -200,7 +247,14 @@ class TestMccsPasdBus:
                 True,
                 [[ResultCode.OK], ["PaSD bus 'database reload' successful"]],
             ),
-            ("GetFndhInfo", "get_fndh_info", None, None, {"foo": "bah"}, '{"foo": "bah"}',),
+            (
+                "GetFndhInfo",
+                "get_fndh_info",
+                None,
+                None,
+                {"foo": "bah"},
+                '{"foo": "bah"}',
+            ),
             (
                 "TurnFndhServiceLedOn",
                 "set_fndh_service_led_on",
@@ -217,7 +271,14 @@ class TestMccsPasdBus:
                 True,
                 [[ResultCode.OK], ["PaSD bus 'FNDH service LED off' successful"]],
             ),
-            ("GetSmartboxInfo", "get_smartbox_info", 1, 1, {"foo": "bah"}, '{"foo": "bah"}',),
+            (
+                "GetSmartboxInfo",
+                "get_smartbox_info",
+                1,
+                1,
+                {"foo": "bah"},
+                '{"foo": "bah"}',
+            ),
             (
                 "TurnSmartboxOn",
                 "turn_smartbox_on",
@@ -256,7 +317,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 None,
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 service LED on' is redundant"],],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'smartbox 1 service LED on' is redundant"],
+                ],
             ),
             (
                 "TurnSmartboxServiceLedOff",
@@ -266,7 +330,14 @@ class TestMccsPasdBus:
                 True,
                 [[ResultCode.OK], ["PaSD bus 'smartbox 1 service LED off' successful"]],
             ),
-            ("GetAntennaInfo", "get_antenna_info", 1, 1, {"foo": "bah"}, '{"foo": "bah"}',),
+            (
+                "GetAntennaInfo",
+                "get_antenna_info",
+                1,
+                1,
+                {"foo": "bah"},
+                '{"foo": "bah"}',
+            ),
             (
                 "ResetAntennaBreaker",
                 "reset_antenna_breaker",

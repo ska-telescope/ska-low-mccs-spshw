@@ -77,7 +77,9 @@ class MccsAPIU(SKABaseDevice):
         self._health_model = ApiuHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsAPIU,) -> ApiuComponentManager:
+    def create_component_manager(
+        self: MccsAPIU,
+    ) -> ApiuComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -106,7 +108,8 @@ class MccsAPIU(SKABaseDevice):
             ("PowerDown", self.PowerDownCommand),
         ]:
             self.register_command_object(
-                command_name, command_object(self.component_manager, self.op_state_model, self.logger),
+                command_name,
+                command_object(self.component_manager, self.op_state_model, self.logger),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -143,7 +146,8 @@ class MccsAPIU(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_status_changed(
-        self: MccsAPIU, communication_status: CommunicationStatus,
+        self: MccsAPIU,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -167,7 +171,10 @@ class MccsAPIU(SKABaseDevice):
 
         self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _component_power_mode_changed(self: MccsAPIU, power_mode: PowerMode,) -> None:
+    def _component_power_mode_changed(
+        self: MccsAPIU,
+        power_mode: PowerMode,
+    ) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -186,7 +193,10 @@ class MccsAPIU(SKABaseDevice):
 
         self.op_state_model.perform_action(action_map[power_mode])
 
-    def _component_fault(self: MccsAPIU, is_fault: bool,) -> None:
+    def _component_fault(
+        self: MccsAPIU,
+        is_fault: bool,
+    ) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -238,7 +248,9 @@ class MccsAPIU(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(
-        dtype=SimulationMode, memorized=True, hw_memorized=True,
+        dtype=SimulationMode,
+        memorized=True,
+        hw_memorized=True,
     )
     def simulationMode(self: MccsAPIU):
         """
@@ -303,7 +315,9 @@ class MccsAPIU(SKABaseDevice):
         return self.component_manager.temperature
 
     @attribute(
-        dtype="DevDouble", label="Humidity", unit="percent",
+        dtype="DevDouble",
+        label="Humidity",
+        unit="percent",
     )
     def humidity(self: MccsAPIU) -> float:
         """
@@ -428,7 +442,8 @@ class MccsAPIU(SKABaseDevice):
             return create_return(success, f"antenna {argin} power-up")
 
     @command(
-        dtype_in="DevULong", dtype_out="DevVarLongStringArray",
+        dtype_in="DevULong",
+        dtype_out="DevVarLongStringArray",
     )
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
     def PowerUpAntenna(self: MccsAPIU, argin: int) -> DevVarLongStringArrayType:
@@ -467,7 +482,8 @@ class MccsAPIU(SKABaseDevice):
             return create_return(success, f"antenna {argin} power-down")
 
     @command(
-        dtype_in="DevULong", dtype_out="DevVarLongStringArray",
+        dtype_in="DevULong",
+        dtype_out="DevVarLongStringArray",
     )
     def PowerDownAntenna(self: MccsAPIU, argin: int) -> DevVarLongStringArrayType:
         """
@@ -504,7 +520,9 @@ class MccsAPIU(SKABaseDevice):
             success = component_manager.turn_on_antennas()
             return create_return(success, "power-up")
 
-    @command(dtype_out="DevVarLongStringArray",)
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
     def PowerUp(self: MccsAPIU) -> DevVarLongStringArrayType:
         """
         Power up.
@@ -537,7 +555,9 @@ class MccsAPIU(SKABaseDevice):
             success = component_manager.turn_off_antennas()
             return create_return(success, "power-down")
 
-    @command(dtype_out="DevVarLongStringArray",)
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
     def PowerDown(self: MccsAPIU) -> DevVarLongStringArrayType:
         """
         Power down.

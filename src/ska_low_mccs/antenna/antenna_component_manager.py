@@ -163,7 +163,10 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         return self._proxy.get_antenna_temperature(self._logical_antenna_id)
 
     def _device_state_changed(
-        self: _ApiuProxy, event_name: str, event_value: tango.DevState, event_quality: tango.AttrQuality,
+        self: _ApiuProxy,
+        event_name: str,
+        event_value: tango.DevState,
+        event_quality: tango.AttrQuality,
     ) -> None:
         assert event_name.lower() == "state", "state changed callback called but event_name is {event_name}."
 
@@ -176,12 +179,17 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
     def _register_are_antennas_on_callback(self: _ApiuProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(
-            "areAntennasOn", self._antenna_power_mode_changed, stateless=True,
+            "areAntennasOn",
+            self._antenna_power_mode_changed,
+            stateless=True,
         )
         self._antenna_change_registered = True
 
     def _antenna_power_mode_changed(
-        self: _ApiuProxy, event_name: str, event_value: list[bool], event_quality: tango.AttrQuality,
+        self: _ApiuProxy,
+        event_name: str,
+        event_value: list[bool],
+        event_quality: tango.AttrQuality,
     ) -> None:
         """
         Handle change in antenna power mode.
@@ -356,8 +364,8 @@ class AntennaComponentManager(MccsComponentManager):
         self._apiu_power_mode = PowerMode.UNKNOWN
         self._target_power_mode: Optional[PowerMode] = None
 
-        self._apiu_communication_status: CommunicationStatus = (CommunicationStatus.DISABLED)
-        self._tile_communication_status: CommunicationStatus = (CommunicationStatus.DISABLED)
+        self._apiu_communication_status: CommunicationStatus = CommunicationStatus.DISABLED
+        self._tile_communication_status: CommunicationStatus = CommunicationStatus.DISABLED
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
@@ -443,7 +451,10 @@ class AntennaComponentManager(MccsComponentManager):
                 return
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
-    def _apiu_power_mode_changed(self: AntennaComponentManager, apiu_power_mode: PowerMode,) -> None:
+    def _apiu_power_mode_changed(
+        self: AntennaComponentManager,
+        apiu_power_mode: PowerMode,
+    ) -> None:
         with self._power_mode_lock:
             self._apiu_power_mode = apiu_power_mode
 
@@ -456,12 +467,18 @@ class AntennaComponentManager(MccsComponentManager):
                 pass
         self._review_power()
 
-    def _antenna_power_mode_changed(self: AntennaComponentManager, antenna_power_mode: PowerMode,) -> None:
+    def _antenna_power_mode_changed(
+        self: AntennaComponentManager,
+        antenna_power_mode: PowerMode,
+    ) -> None:
         with self._power_mode_lock:
             self.update_component_power_mode(antenna_power_mode)
         self._review_power()
 
-    def _apiu_component_fault_changed(self: AntennaComponentManager, faulty: bool,) -> None:
+    def _apiu_component_fault_changed(
+        self: AntennaComponentManager,
+        faulty: bool,
+    ) -> None:
         """
         Handle a change in antenna fault status as reported via the APIU.
 
@@ -470,7 +487,10 @@ class AntennaComponentManager(MccsComponentManager):
         self._antenna_faulty_via_apiu = faulty
         self.update_component_fault(self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile)
 
-    def _tile_component_fault_changed(self: AntennaComponentManager, faulty: bool,) -> None:
+    def _tile_component_fault_changed(
+        self: AntennaComponentManager,
+        faulty: bool,
+    ) -> None:
         """
         Handle a change in antenna fault status as reported via the tile.
 

@@ -161,7 +161,8 @@ class SubrackSimulator(ObjectComponent):
         self._are_tpms_on_changed_callback: Optional[Callable[[list[bool]], None]] = None
 
     def set_are_tpms_on_changed_callback(
-        self: SubrackSimulator, are_tpms_on_changed_callback: Optional[Callable[[list[bool]], None]] = None,
+        self: SubrackSimulator,
+        are_tpms_on_changed_callback: Optional[Callable[[list[bool]], None]] = None,
     ) -> None:
         """
         Set the callback to be called when the power mode of a TPM changes.
@@ -178,7 +179,8 @@ class SubrackSimulator(ObjectComponent):
         self._are_tpms_on_changed()
 
     def set_progress_changed_callback(
-        self: SubrackSimulator, component_progress_changed_callback: Optional[Callable[[int], None]],
+        self: SubrackSimulator,
+        component_progress_changed_callback: Optional[Callable[[int], None]],
     ) -> None:
         """
         Set the callback to be called when the progress value changes.

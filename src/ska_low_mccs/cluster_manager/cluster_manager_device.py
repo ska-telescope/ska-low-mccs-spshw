@@ -57,7 +57,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
         self._health_model = ClusterHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
-    def create_component_manager(self: MccsClusterManagerDevice,) -> ClusterComponentManager:
+    def create_component_manager(
+        self: MccsClusterManagerDevice,
+    ) -> ClusterComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -91,7 +93,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
             ("PingMasterPool", self.PingMasterPoolCommand),
         ]:
             self.register_command_object(
-                command_name, command_object(self.component_manager, self.logger),
+                command_name,
+                command_object(self.component_manager, self.logger),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -126,7 +129,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # Callback hooks
     # --------------
     def _component_communication_status_changed(
-        self: MccsClusterManagerDevice, communication_status: CommunicationStatus,
+        self: MccsClusterManagerDevice,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -150,7 +154,10 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
 
-    def _component_power_mode_changed(self: MccsClusterManagerDevice, power_mode: PowerMode,) -> None:
+    def _component_power_mode_changed(
+        self: MccsClusterManagerDevice,
+        power_mode: PowerMode,
+    ) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -169,7 +176,10 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         self.op_state_model.perform_action(action_map[power_mode])
 
-    def _component_fault(self: MccsClusterManagerDevice, is_fault: bool,) -> None:
+    def _component_fault(
+        self: MccsClusterManagerDevice,
+        is_fault: bool,
+    ) -> None:
         """
         Handle change in the fault status of the component.
 
@@ -208,7 +218,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # Attributes
     # ----------
     @attribute(
-        dtype=SimulationMode, memorized=True, hw_memorized=True,
+        dtype=SimulationMode,
+        memorized=True,
+        hw_memorized=True,
     )
     def simulationMode(self: MccsClusterManagerDevice) -> SimulationMode:
         """

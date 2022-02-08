@@ -55,7 +55,10 @@ class ObjectComponent:
         """
         return False
 
-    def set_fault_callback(self: ObjectComponent, fault_callback: Optional[Callable[[bool], None]],) -> None:
+    def set_fault_callback(
+        self: ObjectComponent,
+        fault_callback: Optional[Callable[[bool], None]],
+    ) -> None:
         """
         Set the fault callback.
 
@@ -86,7 +89,8 @@ class ObjectComponent:
         return PowerMode.ON
 
     def set_power_mode_changed_callback(
-        self: ObjectComponent, power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        self: ObjectComponent,
+        power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
     ) -> None:
         """
         Set the callback to be called when the power mode of the component changes.

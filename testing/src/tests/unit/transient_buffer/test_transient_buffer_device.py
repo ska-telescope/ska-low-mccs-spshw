@@ -37,7 +37,8 @@ class TestMccsTransientBuffer:
 
     @pytest.fixture()
     def mock_component_manager(
-        self: TestMccsTransientBuffer, mocker: pytest_mock.MockerFixture,
+        self: TestMccsTransientBuffer,
+        mocker: pytest_mock.MockerFixture,
     ) -> unittest.mock.Mock:
         """
         Return a mock to be used as a component manager for the transient buffer device.
@@ -67,7 +68,9 @@ class TestMccsTransientBuffer:
         class PatchedMccsTransientBuffer(MccsTransientBuffer):
             """A transient buffer device patched with a mock component manager."""
 
-            def create_component_manager(self: PatchedMccsTransientBuffer,) -> unittest.mock.Mock:
+            def create_component_manager(
+                self: PatchedMccsTransientBuffer,
+            ) -> unittest.mock.Mock:
                 """
                 Return a mock component manager instead of the usual one.
 
@@ -112,7 +115,8 @@ class TestMccsTransientBuffer:
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
-            "healthState", device_health_state_changed_callback,
+            "healthState",
+            device_health_state_changed_callback,
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK

@@ -12,7 +12,7 @@
 PROJECT = ska-low-mccs
 
 # E203 and W503 conflict with black
-PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203,FS003,W503,N802 --max-line-length=110
+PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203,FS003,W503,N802,E231 --max-line-length=110
 PYTHON_SWITCHES_FOR_BLACK = --line-length=110
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=110
 PYTHON_TEST_FILE = testing/src/

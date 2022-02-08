@@ -6,11 +6,13 @@ RUN python3 -m pip install poetry
 COPY ./poetry.lock ./pyproject.toml ./pyfabil-1.0-py3-none-any.whl ./
 # TODO: This poetry install (and the one below) should be --no-dev too, but at the
 # moment we are using this image to run our functional test.
-RUN poetry config virtualenvs.create false \
+RUN poetry config virtualenvs.create true \
     && poetry install --no-root --no-dev -vvv
 
 COPY . .
-RUN python3 -m poetry install --no-dev 
+RUN poetry config virtualenvs.create false \
+    && python3 -m poetry install --no-root --no-dev -vvv
+#RUN python3 -m poetry install --no-dev
 
 FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.3.14 AS runtime
 

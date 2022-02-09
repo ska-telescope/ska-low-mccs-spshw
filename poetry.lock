@@ -1071,7 +1071,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.7"
-content-hash = "ebdb854fb6b8c5ad90ed149a5eaa0d03d73a977ece16fc2df9980edd77218e54"
+content-hash = "6d3f6b78ca8c1f25c116ece468fae98413c25ff1943b874cd7afed5a48785bdd"
 
 [metadata.files]
 astropy = [

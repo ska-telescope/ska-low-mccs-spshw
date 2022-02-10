@@ -11,7 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 from typing import Any, Callable, TypeVar, cast
 
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs.component import CommunicationStatus, MccsComponentManager
 
@@ -76,7 +76,7 @@ def check_on(func: Wrapped) -> Wrapped:
     Return a function that checks that a component is on before calling a function.
 
     The component manager will check its power mode property, which
-    needs to be PowerMode.OFF in order for the function to be called.
+    needs to be PowerState.OFF in order for the function to be called.
 
     This function is intended to be used as a decorator:
 
@@ -111,7 +111,7 @@ def check_on(func: Wrapped) -> Wrapped:
             not been established.
         :return: whatever the wrapped function returns
         """
-        if component_manager.power_mode != PowerMode.ON:
+        if component_manager.power_mode != PowerState.ON:
             raise ConnectionError(
                 f"Cannot execute {type(component_manager).__name__}.{func.__name__}. "
                 "Component is not turned on."

@@ -2,9 +2,13 @@ FROM artefact.skao.int/ska-tango-images-pytango-builder:9.3.16 AS buildenv
 RUN apt-get update && apt-get install gnupg2 -y
 #RUN ln -s /usr/bin/python /usr/bin/python3
 
+ENV PATH=/home/tango/.local/bin:$PATH
+
 ENV POETRY_HOME="/opt/poetry"
 ENV PATH="$POETRY_HOME/bin:$PATH"
 #ENV POETRY_VERSION="1.1.12"
+
+USER root
 
 #RUN pip install "poetry==$POETRY_VERSION"
 RUN python3 -m pip install poetry

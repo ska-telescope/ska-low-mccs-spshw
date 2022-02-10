@@ -23,7 +23,7 @@ from typing import Any, Callable, List, Optional
 
 import fire
 import numpy as np
-from astropy import constants
+from astropy.constants import c
 from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord, get_sun
 from astropy.time import TimeDelta
 from astropy.time.core import Time
@@ -324,7 +324,7 @@ class Pointing(object):
         path_length = np.dot(scale, self._antennas.xyz.T)
 
         # Return frequency-independent geometric delays
-        return np.multiply(1.0 / constants.c.value, path_length)
+        return np.multiply(1.0 / c.value, path_length)
 
     @staticmethod
     def _ra_dec_to_alt_az(

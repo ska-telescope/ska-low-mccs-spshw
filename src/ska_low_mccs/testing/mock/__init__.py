@@ -13,7 +13,7 @@ __all__ = [
     "MockChangeEventCallback",
     "MockDeviceBuilder",
     "MockSubarrayBuilder",
-    "MockGroupBuilder",
+    # "MockGroupBuilder",
 ]
 
 

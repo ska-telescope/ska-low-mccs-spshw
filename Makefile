@@ -16,7 +16,7 @@ PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203
 PYTHON_SWITCHES_FOR_BLACK = --line-length=110
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=110
 PYTHON_TEST_FILE = testing/src/
-PYTHON_LINT_TARGET = src/ testing/src/tests  ## Paths containing python to be formatted and linted
+PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
 PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R
 DOCS_SOURCEDIR=./docs/source
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import unittest
 from typing import Any, Callable, Generator
 
+import _pytest
 import pytest
 
 from ska_low_mccs import MccsDeviceProxy
@@ -18,8 +19,7 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
-# TODO: pytest is partially typehinted but does not yet export Config
-def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-defined]
+def pytest_configure(config: _pytest.config.Config) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
 

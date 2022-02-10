@@ -15,9 +15,9 @@ from typing import Any, Union
 import pytest
 from _pytest.fixtures import SubRequest
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import PowerState, SimulationMode
 
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
     SubrackData,
@@ -587,34 +587,34 @@ class TestSubrackComponentManager:
         :param tpm_id: the number of the tpm to use in the test
         """
         component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         )
 
         component_tpm_power_changed_callback.assert_not_called()
 
         subrack_component_manager.start_communicating()
 
-        component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
-        assert subrack_component_manager.power_mode == PowerMode.OFF
+        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
+        assert subrack_component_manager.power_mode == PowerState.OFF
         component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+            [ExtendedPowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
         )
 
         component_tpm_power_changed_callback.assert_not_called()
 
         subrack_component_manager.on()
 
-        component_power_mode_changed_callback.assert_next_call(PowerMode.ON)
-        assert subrack_component_manager.power_mode == PowerMode.ON
+        component_power_mode_changed_callback.assert_next_call(PowerState.ON)
+        assert subrack_component_manager.power_mode == PowerState.ON
 
-        expected_tpm_power_modes = [ExtendedPowerMode.OFF] * SubrackData.TPM_BAY_COUNT
+        expected_tpm_power_modes = [ExtendedPowerState.OFF] * SubrackData.TPM_BAY_COUNT
         component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
 
         assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
         component_tpm_power_changed_callback.assert_not_called()
 
         assert subrack_component_manager.turn_on_tpm(tpm_id)
-        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerMode.ON
+        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerState.ON
         component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
         assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
 
@@ -622,7 +622,7 @@ class TestSubrackComponentManager:
         component_tpm_power_changed_callback.assert_not_called()
 
         assert subrack_component_manager.turn_off_tpm(tpm_id) is True
-        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerMode.OFF
+        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerState.OFF
         component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
         assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
 
@@ -630,16 +630,16 @@ class TestSubrackComponentManager:
         component_tpm_power_changed_callback.assert_not_called()
 
         assert subrack_component_manager.off() == ResultCode.OK
-        component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
-        assert subrack_component_manager.power_mode == PowerMode.OFF
+        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
+        assert subrack_component_manager.power_mode == PowerState.OFF
 
         component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerMode.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+            [ExtendedPowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
         )
 
         subrack_component_manager.stop_communicating()
         component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         )
 
     def test_component_progress_changed_callback(

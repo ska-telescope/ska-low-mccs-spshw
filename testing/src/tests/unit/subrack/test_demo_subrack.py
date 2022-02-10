@@ -14,7 +14,7 @@ import pytest
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import ExtendedPowerMode
+from ska_low_mccs.component import ExtendedPowerState
 from ska_low_mccs.subrack.demo_subrack_device import DemoSubrack
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -68,9 +68,9 @@ class TestDemoSubrack:
             """
             for (i, is_on) in enumerate(expected):
                 assert (
-                    device_under_test.read_attribute(f"tpm{i+1}PowerMode").value == ExtendedPowerMode.ON
+                    device_under_test.read_attribute(f"tpm{i+1}PowerState").value == ExtendedPowerState.ON
                     if is_on
-                    else ExtendedPowerMode.OFF
+                    else ExtendedPowerState.OFF
                 )
 
         device_under_test.adminMode = AdminMode.ONLINE

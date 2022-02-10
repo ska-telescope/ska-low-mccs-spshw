@@ -17,9 +17,9 @@ from typing import Any, ContextManager, Mapping, Optional, Tuple, Union, cast
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerState
 
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
 from ska_low_mccs.tile.tile_orchestrator import (
     StateStimulusTupleType,
     StateTupleType,
@@ -65,7 +65,7 @@ class TestTileOrchestrator:
                         Stimulus[state[0]],
                         CommunicationStatus[state[1]],
                         state[2],
-                        ExtendedPowerMode[state[3]],
+                        ExtendedPowerState[state[3]],
                     )
                 ] = actions
             else:
@@ -74,7 +74,7 @@ class TestTileOrchestrator:
                         Stimulus[state[0]],
                         CommunicationStatus[state[1]],
                         state[2],
-                        ExtendedPowerMode[state[3]],
+                        ExtendedPowerState[state[3]],
                         CommunicationStatus[state[4]],
                     )
                 ] = actions
@@ -128,23 +128,23 @@ class TestTileOrchestrator:
                 None,
             ),
             "report_tpm_off": (
-                {"tpm_power_mode": ExtendedPowerMode.OFF},
-                {"component_power_mode_changed": [PowerMode.OFF]},
+                {"tpm_power_mode": ExtendedPowerState.OFF},
+                {"component_power_mode_changed": [PowerState.OFF]},
                 None,
             ),
             "report_tpm_on": (
-                {"tpm_power_mode": ExtendedPowerMode.ON},
-                {"component_power_mode_changed": [PowerMode.ON]},
+                {"tpm_power_mode": ExtendedPowerState.ON},
+                {"component_power_mode_changed": [PowerState.ON]},
                 None,
             ),
             "report_tpm_no_power_supply": (
-                {"tpm_power_mode": ExtendedPowerMode.NO_SUPPLY},
-                {"component_power_mode_changed": [PowerMode.OFF]},
+                {"tpm_power_mode": ExtendedPowerState.NO_SUPPLY},
+                {"component_power_mode_changed": [PowerState.OFF]},
                 None,
             ),
             "report_tpm_power_unknown": (
-                {"tpm_power_mode": ExtendedPowerMode.UNKNOWN},
-                {"component_power_mode_changed": [PowerMode.UNKNOWN]},
+                {"tpm_power_mode": ExtendedPowerState.UNKNOWN},
+                {"component_power_mode_changed": [PowerState.UNKNOWN]},
                 None,
             ),
             "set_desired_off": ({"operator_desire": False}, {}, None),
@@ -212,173 +212,173 @@ class TestTileOrchestrator:
         scope="session",
         params=[
             (CommunicationStatus.DISABLED,),
-            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.NO_SUPPLY),
-            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerMode.NO_SUPPLY),
-            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.NO_SUPPLY),
-            (CommunicationStatus.ESTABLISHED, True, ExtendedPowerMode.NO_SUPPLY),
-            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerMode.OFF),
-            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerMode.OFF),
-            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerMode.OFF),
+            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerState.NO_SUPPLY),
+            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerState.NO_SUPPLY),
+            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerState.NO_SUPPLY),
+            (CommunicationStatus.ESTABLISHED, True, ExtendedPowerState.NO_SUPPLY),
+            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerState.OFF),
+            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerState.OFF),
+            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerState.OFF),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
-                ExtendedPowerMode.ON,
+                ExtendedPowerState.ON,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 None,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 False,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 True,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 True,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
                 True,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 None,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 False,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 False,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 False,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 True,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.DISABLED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 True,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.NOT_ESTABLISHED,
             ),
             (
                 CommunicationStatus.ESTABLISHED,
                 True,
-                ExtendedPowerMode.UNKNOWN,
+                ExtendedPowerState.UNKNOWN,
                 CommunicationStatus.ESTABLISHED,
             ),
         ],
@@ -426,7 +426,7 @@ class TestTileOrchestrator:
         Tuple[CommunicationStatus],
         Tuple[
             CommunicationStatus,
-            ExtendedPowerMode,
+            ExtendedPowerState,
             CommunicationStatus,
             Optional[bool],
         ],
@@ -591,13 +591,13 @@ class TestTileOrchestrator:
                     CommunicationStatus.ESTABLISHED
                 ),
                 Stimulus.SUBRACK_SAYS_TPM_UNKNOWN: lambda tc: tc.update_tpm_power_mode(
-                    ExtendedPowerMode.UNKNOWN
+                    ExtendedPowerState.UNKNOWN
                 ),
                 Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY: lambda tc: tc.update_tpm_power_mode(
-                    ExtendedPowerMode.NO_SUPPLY
+                    ExtendedPowerState.NO_SUPPLY
                 ),
-                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(ExtendedPowerMode.OFF),
-                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(ExtendedPowerMode.ON),
+                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(ExtendedPowerState.OFF),
+                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(ExtendedPowerState.ON),
                 Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),

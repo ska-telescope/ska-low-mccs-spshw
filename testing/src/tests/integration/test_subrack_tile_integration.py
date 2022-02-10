@@ -14,7 +14,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import ExtendedPowerMode
+from ska_low_mccs.component import ExtendedPowerState
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
@@ -102,7 +102,7 @@ class TestSubrackTileIntegration:
         )
         subrack_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
-        assert subrack_device.tpm1PowerMode == ExtendedPowerMode.UNKNOWN
+        assert subrack_device.tpm1PowerState == ExtendedPowerState.UNKNOWN
 
         # Subscribe to subrack's LRC result attribute
         subrack_device.add_change_event_callback(
@@ -135,7 +135,7 @@ class TestSubrackTileIntegration:
         # The subrack device connects to its upstream power supply device and finds that
         # the subrack is turned off, so it transitions to OFF state
         subrack_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
-        assert subrack_device.tpm1PowerMode == ExtendedPowerMode.NO_SUPPLY
+        assert subrack_device.tpm1PowerState == ExtendedPowerState.NO_SUPPLY
 
         # The tile device receives a change event. Since the event indicates that the
         # subrack hardware is OFF, the tile has established that its TPM is not powered,
@@ -153,7 +153,7 @@ class TestSubrackTileIntegration:
         # Once the subrack device is connected to its subrack, it transitions to ON
         # state.
         subrack_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
-        assert subrack_device.tpm1PowerMode == ExtendedPowerMode.OFF
+        assert subrack_device.tpm1PowerState == ExtendedPowerState.OFF
 
         # The tile device is notified that its subrack is on. It now has communication
         # with its TPM. The first thing it does is subscribe to change events on the
@@ -168,7 +168,7 @@ class TestSubrackTileIntegration:
 
         tile_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
         assert tile_device.state() == tango.DevState.ON
-        assert subrack_device.tpm1PowerMode == ExtendedPowerMode.ON
+        assert subrack_device.tpm1PowerState == ExtendedPowerState.ON
 
         tpm_id = 1
         [[result_code], [unique_id]] = subrack_device.PowerOffTpm(tpm_id)
@@ -183,7 +183,7 @@ class TestSubrackTileIntegration:
         # A third party has told the subrack device to turn the TPM off. The subrack
         # device tells the subrack to turn the TPM off. The subrack device detects that
         # the TPM is off.
-        assert subrack_device.tpm1PowerMode == ExtendedPowerMode.OFF
+        assert subrack_device.tpm1PowerState == ExtendedPowerState.OFF
 
         tile_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
         assert tile_device.state() == tango.DevState.OFF

@@ -18,6 +18,7 @@ import logging
 import unittest
 from typing import Any, Callable, Generator, Set, cast
 
+import _pytest
 import pytest
 import tango
 import yaml
@@ -47,8 +48,7 @@ with open("testing/testbeds.yaml", "r") as stream:
     _testbeds: dict[str, set[str]] = yaml.safe_load(stream)
 
 
-# TODO: pytest is partially typehinted but does not yet export Config
-def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-defined]
+def pytest_configure(config: _pytest.config.Config) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
 
@@ -59,9 +59,8 @@ def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-define
         config.addinivalue_line("markers", f"needs_{tag}")
 
 
-# TODO: pytest is partially typehinted but does not yet export ArgumentParser
 def pytest_addoption(
-    parser: pytest.config.ArgumentParser,  # type: ignore[name-defined]
+    parser: _pytest.config.argparsing.Parser,  # type: ignore[name-defined]
 ) -> None:
     """
     Implement the add the `--testbed` option.
@@ -80,9 +79,8 @@ def pytest_addoption(
     )
 
 
-# TODO: pytest is partially typehinted but does not yet export Config
 def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]  # type: ignore[name-defined]
+    config: _pytest.config.Config, items: list[pytest.Item]  # type: ignore[name-defined]
 ) -> None:
     """
     Modify the list of tests to be run, after pytest has collected them.

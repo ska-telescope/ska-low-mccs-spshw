@@ -13,9 +13,9 @@ __all__ = [
     "ControlMode",
     "DeviceComponentManager",
     "DriverSimulatorSwitchingComponentManager",
-    "ExtendedPowerMode",
+    "ExtendedPowerState",
     "HardwareClient",
-    "PoolComponentManager",
+    # "PoolComponentManager",
     "PowerSupplyProxyComponentManager",
     "PowerSupplyProxySimulator",
     "MccsComponentManager",
@@ -32,7 +32,7 @@ __all__ = [
 from .component_manager import (
     CommunicationStatus,
     ControlMode,
-    ExtendedPowerMode,
+    ExtendedPowerState,
     MccsComponentManager,
     MccsComponentManagerProtocol,
 )

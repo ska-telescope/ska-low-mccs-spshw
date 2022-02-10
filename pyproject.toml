@@ -78,11 +78,7 @@ console_output_style = "progress"
 junit_family = "legacy"
 
 [tool.coverage.paths]
-source = [
-    "src",
-    ".tox/py/lib/python3.7/site-packages",
-    ".tox/py37/lib/python3.7/site-packages",
-]
+source = ["src"]
 
 [tool.coverage.run]
 data_file = ".coverage/.coverage"

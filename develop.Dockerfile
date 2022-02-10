@@ -1,11 +1,9 @@
 FROM artefact.skao.int/ska-tango-images-pytango-builder:9.3.16 AS buildenv
 RUN apt-get update && apt-get install gnupg2 -y
-#RUN ln -s /usr/bin/python /usr/bin/python3
 
-ENV PATH=/home/tango/.local/bin:$PATH
-
-ENV POETRY_HOME="/opt/poetry"
-ENV PATH="$POETRY_HOME/bin:$PATH"
+#ENV PATH=/home/tango/.local/bin:$PATH
+#ENV POETRY_HOME="/opt/poetry"
+#ENV PATH="$POETRY_HOME/bin:$PATH"
 #ENV POETRY_VERSION="1.1.12"
 
 USER root
@@ -16,9 +14,10 @@ RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./
 COPY ./pyfabil-1.0-py3-none-any.whl ./aavs_system-1.0-py3-none-any.whl ./
-#RUN poetry config virtualenvs.create true \
-#    && poetry install --no-root -vvv
+
 RUN poetry install
+
+#USER tango
 
 ARG UID
 ARG GID

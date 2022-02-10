@@ -12,7 +12,8 @@
 PROJECT = ska-low-mccs
 
 # E203 and W503 conflict with black
-PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203,FS003,W503,N802,E231 --max-line-length=110
+PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203,FS003,W503,N802,E231 --max-complexity=10 \
+    --docstring-style=SPHINX  --max-line-length=110 --rst-roles=py:attr,py:class,py:const,py:exc,py:func,py:meth,py:mod
 PYTHON_SWITCHES_FOR_BLACK = --line-length=110
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=110
 PYTHON_TEST_FILE = testing/src/
@@ -33,8 +34,6 @@ include .make/base.mk
 
 # Add this for typehints & static type checking
 python-post-lint:
+	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ testing/src/ 	
 	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
-
 .PHONY: python-post-lint
-
-

@@ -14,7 +14,8 @@ USER root
 RUN python3 -m pip install poetry
 RUN poetry config virtualenvs.create false
 
-COPY pyproject.toml poetry.lock* ./pyfabil-1.0-py3-none-any.whl ./
+COPY pyproject.toml poetry.lock* ./
+COPY ./pyfabil-1.0-py3-none-any.whl ./aavs_system-1.0-py3-none-any.whl ./
 #RUN poetry config virtualenvs.create true \
 #    && poetry install --no-root -vvv
 RUN poetry install

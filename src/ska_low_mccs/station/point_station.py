@@ -533,8 +533,8 @@ class PointingDriver:  # pragma: no cover
 
     def pointing_job(
         self: PointingDriver,
-        jobs: queue.Queue[Time],
-        results: queue.Queue[Optional[dict[str, Any]]],
+        jobs: queue.Queue(),  # queue.Queue[Time],
+        results: queue.Queue(),  # queue.Queue[Optional[dict[str, Any]]],
     ) -> None:
         """
         Worker method for pointing job processes.
@@ -588,8 +588,10 @@ class PointingDriver:  # pragma: no cover
             print("nproc must be >= 1")
             return None
 
-        job_queue: queue.Queue[Time] = multiprocessing.Queue()
-        results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
+        # job_queue: queue.Queue[Time] = multiprocessing.Queue()
+        # results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
+        job_queue: queue.Queue() = multiprocessing.Queue()
+        results_queue: queue.Queue() = multiprocessing.Queue()
 
         processes = [
             multiprocessing.Process(target=self.pointing_job, args=(job_queue, results_queue))

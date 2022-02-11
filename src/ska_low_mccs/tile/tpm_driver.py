@@ -250,6 +250,7 @@ class TpmDriver(MccsComponentManager):
                     target.update_communication_status(CommunicationStatus.ESTABLISHED)
                     return ResultCode.OK, "Connected to Tile"
                 time.sleep(0.5)
+                timeout = timeout + 1
             target.logger.error(f"Connection to tile failed after {timeout*3} seconds")
             target.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             return (

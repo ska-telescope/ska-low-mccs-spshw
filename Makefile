@@ -18,7 +18,7 @@ PYTHON_SWITCHES_FOR_BLACK = --line-length=110
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=110
 PYTHON_TEST_FILE = testing/src/
 PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
-PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R
+PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R --ignored-modules=astropy.constants --extension-pkg-whitelist=astropy.constants
 DOCS_SOURCEDIR=./docs/source
 
 

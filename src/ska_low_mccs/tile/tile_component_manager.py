@@ -636,25 +636,29 @@ class TileComponentManager(MccsComponentManager):
         """
         # Don't set comms NOT_ESTABLISHED here. It should already have been handled
         # synchronously by the orchestator.
-        self._subrack_proxy = MccsDeviceProxy(
-            self._subrack_fqdn, self._logger, connect=False
-        )
-        try:
-            self._subrack_proxy.connect()
-        except tango.DevFailed as dev_failed:
-            self._subrack_proxy = None
-            raise ConnectionError(
-                f"Could not connect to '{self._subrack_fqdn}'"
-            ) from dev_failed
+        # Check if it was already connected.
+        unconnected = self._subrack_proxy is None
+        if unconnected:
+            self._subrack_proxy = MccsDeviceProxy(
+                self._subrack_fqdn, self._logger, connect=False
+            )
+            try:
+                self._subrack_proxy.connect()
+            except tango.DevFailed as dev_failed:
+                self._subrack_proxy = None
+                raise ConnectionError(
+                    f"Could not connect to '{self._subrack_fqdn}'"
+                ) from dev_failed
 
-        self._subrack_proxy.add_change_event_callback(
+        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             f"tpm{self._subrack_tpm_id}PowerMode",
             self._tpm_power_mode_change_event_received,
         )
 
-        self._tile_orchestrator.update_subrack_communication_status(
-            CommunicationStatus.ESTABLISHED
-        )
+        if unconnected:
+            self._tile_orchestrator.update_subrack_communication_status(
+                CommunicationStatus.ESTABLISHED
+            )
 
     def _tpm_power_mode_change_event_received(
         self: TileComponentManager,

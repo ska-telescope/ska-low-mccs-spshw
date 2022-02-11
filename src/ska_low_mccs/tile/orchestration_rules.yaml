@@ -320,7 +320,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_UNKNOWN, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [report_tpm_power_unknown]
 !!python/tuple [SUBRACK_SAYS_TPM_NO_SUPPLY, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [report_tpm_no_power_supply, stop_communicating_with_tpm]
 !!python/tuple [SUBRACK_SAYS_TPM_OFF, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [report_tpm_off, stop_communicating_with_tpm]
-!!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [start_communicating_with_subrack]
+!!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
 

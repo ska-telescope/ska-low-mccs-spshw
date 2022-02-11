@@ -401,7 +401,9 @@ class TpmDriver(MccsComponentManager):
         if self.tile.tpm is None:
             return False
         with self._hardware_lock:
+            self.logger.debug("Lock acquired")
             self._is_programmed = self.tile.is_programmed()
+        self.logger.debug("Lock released")
         return self._is_programmed
 
     class DownloadFirmware(BaseCommand):
@@ -607,7 +609,10 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: board_temperature")
         # with self._hardware_lock:
         if self._hardware_lock.acquire(timeout=0.2):
-            self._board_temperature = self.tile.get_temperature()
+            try:
+                self._board_temperature = self.tile.get_temperature()
+            except Exception:
+                self.logger.warning("TpmDriver: Tile access failed")
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware lock failed")
@@ -623,14 +628,12 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: voltage")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.tpm = None
+                self._voltage = self.tile.get_voltage()
             except Exception:
                 self.logger.warning("TpmDriver: Tile access failed")
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware lock failed")
-        with self._hardware_lock:
-            self._voltage = self.tile.get_voltage()
         return self._voltage
 
     @property
@@ -651,6 +654,7 @@ class TpmDriver(MccsComponentManager):
         Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
+        :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
         res = self._hardware_lock.acquire(timeout=0.5)
@@ -662,6 +666,7 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware locked")
+            raise ConnectionError("Cannot read from FPGA")
         return self._fpga1_temperature
 
     @property
@@ -670,6 +675,7 @@ class TpmDriver(MccsComponentManager):
         Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
+        :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
         res = self._hardware_lock.acquire(timeout=0.5)
@@ -681,6 +687,7 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware locked")
+            raise ConnectionError("Cannot read from FPGA")
         return self._fpga2_temperature
 
     @property
@@ -711,8 +718,10 @@ class TpmDriver(MccsComponentManager):
         delays, contamination delays, etc.
 
         :return: the FPGAs clock time
+        :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpgas_time")
+        failed = False
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._fpgas_time = [
@@ -721,9 +730,13 @@ class TpmDriver(MccsComponentManager):
                 ]
             except Exception:
                 self.logger.warning("TpmDriver: Tile access failed")
+                failed = True
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware lock failed")
+            failed = True
+        if failed:
+            raise ConnectionError("Cannot read time from FPGA")
         return self._fpgas_time
 
     @property
@@ -753,8 +766,10 @@ class TpmDriver(MccsComponentManager):
         Return the FPGA current frame counter.
 
         :return: the FPGA_1 current frame counter
+        :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpga_current_frame")
+        failed = False
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._fpga_current_frame = self.tile[
@@ -762,9 +777,13 @@ class TpmDriver(MccsComponentManager):
                 ]
             except Exception:
                 self.logger.warning("TpmDriver: Tile access failed")
+                failed = True
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware lock failed")
+            failed = True
+        if failed:
+            raise ConnectionError("Cannot read time from FPGA")
         return self._fpga_current_frame
 
     @property
@@ -1053,7 +1072,6 @@ class TpmDriver(MccsComponentManager):
                 self.tile.set_lmc_download(
                     mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
                 )
-                self.tile.tpm = None
             except Exception:
                 self.logger.warning("TpmDriver: Tile access failed")
             self._hardware_lock.release()

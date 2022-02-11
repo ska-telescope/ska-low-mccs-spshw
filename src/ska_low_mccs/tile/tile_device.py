@@ -275,18 +275,34 @@ class MccsTile(SKABaseDevice):
             CommunicationStatus.NOT_ESTABLISHED: None,
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
-        self.logger.debug(f"communication_status: {communication_status}")
 
+        # action_map_established = {
+        #     AdminMode.ONLINE: "component_connected",
+        #     AdminMode.OFFLINE: "component_disconnected",
+        #     AdminMode.MAINTENANCE: "component_connected",
+        #     AdminMode.NOT_FITTED: "component_disconnected",
+        #     AdminMode.RESERVED: "component_disconnected",
+        # }
+
+        admin_mode = self.admin_mode_model.admin_mode
+        power_mode = self.component_manager.power_mode
+        self.logger.debug(
+            f"communication_status: {communication_status}, adminMode: {admin_mode}, powerMode: {power_mode}"
+        )
         action = action_map[communication_status]
+        # if communication_status == CommunicationStatus.ESTABLISHED:
+        #     action = action_map_established[adminMode]
         if action is not None:
             self.op_state_model.perform_action(action)
+        # if communication has been established, update power mode
+        if (communication_status == CommunicationStatus.ESTABLISHED) and (
+            admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
+        ):
+            self._component_power_mode_changed(power_mode)
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-        # if communication has been established, update power mode
-        # if communication_status == CommunicationStatus.ESTABLISHED:
-        #     self._component_power_mode_changed(self.component_manager.power_mode)
 
     def _component_power_mode_changed(
         self: MccsTile,

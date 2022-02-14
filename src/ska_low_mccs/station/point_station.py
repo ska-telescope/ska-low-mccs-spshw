@@ -533,8 +533,8 @@ class PointingDriver:  # pragma: no cover
 
     def pointing_job(
         self: PointingDriver,
-        jobs: queue.Queue(),  # queue.Queue[Time],
-        results: queue.Queue(),  # queue.Queue[Optional[dict[str, Any]]],
+        jobs: queue.Queue[Time],
+        results: queue.Queue[Optional[dict[str, Any]]],
     ) -> None:
         """
         Worker method for pointing job processes.

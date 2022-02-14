@@ -11,6 +11,8 @@
 #
 PROJECT = ska-low-mccs
 
+PYTHON_RUNNER = poetry run
+
 # E203 and W503 conflict with black
 PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203,FS003,W503,N802,E231,RST303 --max-complexity=10 \
     --docstring-style=SPHINX  --max-line-length=110 --rst-roles=py:attr,py:class,py:const,py:exc,py:func,py:meth,py:mod
@@ -35,7 +37,10 @@ include .make/base.mk
 -include PrivateRules.mak
 
 # Add this for typehints & static type checking
-python-post-lint:
+python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ testing/src/ 	
+
+python-post-lint:
 	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
-.PHONY: python-post-lint
+
+.PHONY: python-post-format python-post-lint

@@ -8,10 +8,11 @@ FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.3.14 AS runtime
 
 #ENV POETRY_HOME="/opt/poetry"
 #ENV PATH="$POETRY_HOME/bin:$PATH"
+ENV POETRY_VERSION="1.1.12"
 
 USER root
 
-RUN python3 -m pip install poetry
+RUN python3 -m pip install "poetry==$POETRY_VERSION"
 #RUN python3 -m poetry config virtualenvs.in-project true
 RUN poetry config virtualenvs.create false
 

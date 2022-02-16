@@ -50,5 +50,5 @@ include:
   #  file: 'gitlab-ci/includes/release.gitlab-ci.yml'
 
   # Helm chart
-  #- project: 'ska-telescope/templates-repository'
-  #  file: 'gitlab-ci/includes/helm-chart.gitlab-ci.yml'
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/helm-chart.gitlab-ci.yml'

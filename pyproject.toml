@@ -29,6 +29,10 @@ scipy = "^1.7.1"
 ska-ser-logging = "~0.4.1"
 ska-tango-base = "~0.12.0"
 transitions = "^0.8.8"
+pytest-timeout = "^2.1.0"
+pytest-rerunfailures = "^10.2"
+pytest-split = "^0.6.0"
+pytest-repeat = "^0.9.1"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.14.0"
@@ -60,6 +64,10 @@ pytest-timeout = "^2.1.0"
 pytest-rerunfailures = "^10.2"
 pytest-split = "^0.6.0"
 pytest-repeat = "^0.9.1"
+colorama = "^0.4.4"
+importlib-resources = "^5.4.0"
+regex = "^2022.1.18"
+types-setuptools = "^57.4.9"
 
 [tool.poetry.scripts]
 MccsAntenna = "ska_low_mccs.antenna.antenna_device:main"

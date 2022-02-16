@@ -8,9 +8,9 @@
 """This module implements a class to convert from-to unix time."""
 from __future__ import annotations
 
-import strict_rfc3339
-import datetime
+from datetime import datetime, timezone
 import numpy as np
+from .tile_data import TileData
 
 __all__ = [
     "TileTime",
@@ -24,9 +24,11 @@ class TileTime(object):
     Frame time is the time expressed as an offset in frames from a
     timestamp. Unix time is used for the timestamp. It is expressed in
     integrer seconds from 1970-01-01T01:00:00.000000Z. Time is otherwise
-    expressed as a ISO-8601 (RFC3339) string,     e.g.
+    expressed as a ISO-8601 (RFC3339) string, e.g.
     2021-03-02T12:34.56.789000Z.
     """
+
+    RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     def __init__(self: TileTime, reference_time: int = 0) -> None:
         """
@@ -35,7 +37,6 @@ class TileTime(object):
         :param reference_time: Unix timestamp of the (integer) reference time
         """
         self._ref_time = reference_time
-        self._frame_time = 1.08e-6 * 256
 
     def set_reference_time(self: TileTime, reference_time: int) -> None:
         """
@@ -47,7 +48,7 @@ class TileTime(object):
 
     def format_time_from_frame(self: TileTime, frame_count: int) -> str:
         """
-        Format a time expressed as a frame count into ISO-8601 (RFC3339) string.
+        Format a time expressed as frame count into ISO-8601 (RFC3339) string.
 
         e.g. 2021-03-02T12:34.56.789000Z. Returns the Unix zero time if
         the object is not yet initialised.
@@ -56,10 +57,10 @@ class TileTime(object):
                 256 channelised samples
         :return: ISO-8601 formatted time
         """
-        time = datetime.datetime.fromtimestamp(
-            self._ref_time + self._frame_time * frame_count
+        time = datetime.fromtimestamp(
+            self._ref_time + TileData.FRAME_PERIOD * frame_count, tz=timezone.utc
         )
-        return datetime.datetime.strftime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
+        return datetime.strftime(time, self.RFC_FORMAT)
 
     def frame_from_utc_time(self: TileTime, utc_time: str) -> int:
         """
@@ -70,14 +71,16 @@ class TileTime(object):
         """
         if self._ref_time == 0:
             return -1
-        if strict_rfc3339.validate_rfc3339(utc_time):
-            timestamp = strict_rfc3339.rfc3339_to_timestamp(utc_time) - self._ref_time
-            if timestamp < 0:
-                return -1
-            frame = int(np.ceil(timestamp / self._frame_time))
-            return frame
-        else:
+        try:
+            dt = datetime.strptime(utc_time, self.RFC_FORMAT)
+            timestamp = dt.replace(tzinfo=timezone.utc).timestamp() - self._ref_time
+        except ValueError:
+            timestamp = -1
+
+        if timestamp < 0:
             return -1
+        frame = int(np.ceil(timestamp / TileData.FRAME_PERIOD))
+        return frame
 
     def timestamp_from_utc_time(self: TileTime, utc_time: str) -> int:
         """
@@ -88,14 +91,16 @@ class TileTime(object):
         :param utc_time: Utc Time in standard rfc3339 format
         :return: Unix timestamp equal or after specified time. -1 if error
         """
-        if strict_rfc3339.validate_rfc3339(utc_time):
-            timestamp = strict_rfc3339.rfc3339_to_timestamp(utc_time)
-            if timestamp < 0:
-                return -1
-            timestamp = int(np.ceil(timestamp))
-            return timestamp
-        else:
+        try:
+            dt = datetime.strptime(utc_time, self.RFC_FORMAT)
+            timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
+        except ValueError:
+            timestamp = -1
+
+        if timestamp < 0:
             return -1
+        timestamp = int(np.ceil(timestamp))
+        return timestamp
 
     def format_time_from_timestamp(self: TileTime, timestamp: int) -> str:
         """
@@ -108,5 +113,5 @@ class TileTime(object):
         :return: ISO-8601 formatted time
         :rtype: str
         """
-        time = datetime.datetime.fromtimestamp(timestamp)
-        return datetime.datetime.strftime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
+        time = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        return datetime.strftime(time, self.RFC_FORMAT)

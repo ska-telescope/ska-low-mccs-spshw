@@ -18,6 +18,7 @@ from typing_extensions import Final
 from ska_low_mccs.component import ObjectComponent
 
 from .tpm_status import TpmStatus
+from .tile_data import TileData
 
 __all__ = ["BaseTpmSimulator"]
 
@@ -64,7 +65,6 @@ class BaseTpmSimulator(ObjectComponent):
     ARP_TABLE = {0: [0, 1], 1: [1]}
     # TPM version: "tpm_v1_2" or "tpm_v1_6"
     TPM_VERSION = 120
-    FRAME_PERIOD = 1.08e-6 * 256
 
     def _arp(self: BaseTpmSimulator, ip: str) -> str:
         """
@@ -523,7 +523,7 @@ class BaseTpmSimulator(ObjectComponent):
         if self._sync_time == 0:
             return 0
         else:
-            return int((time.time() - self._sync_time) / (self.FRAME_PERIOD))
+            return int((time.time() - self._sync_time) / (TileData.FRAME_PERIOD))
 
     def set_lmc_download(
         self: BaseTpmSimulator,

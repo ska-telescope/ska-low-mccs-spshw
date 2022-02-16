@@ -538,7 +538,7 @@ class TileComponentManager(MccsComponentManager):
             logger,
         )
 
-        self._tileTime = TileTime()
+        self._tile_time = TileTime()
 
         super().__init__(
             logger,
@@ -750,10 +750,10 @@ class TileComponentManager(MccsComponentManager):
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
                     self.initialise()
-                self._tileTime.set_reference_time(self.tile_reference_time)
+                self._tile_time.set_reference_time(self.tile_reference_time)
             if power_mode == PowerMode.STANDBY:
                 self.erase_fpga()
-                self._tileTime.set_reference_time(0)
+                self._tile_time.set_reference_time(0)
 
     @property
     def simulation_mode(self: TileComponentManager) -> SimulationMode:
@@ -837,7 +837,7 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA internal time
         """
-        return self._tileTime.format_time_from_timestamp(self.fpgas_time[0])
+        return self._tile_time.format_time_from_timestamp(self.fpgas_time[0])
 
     @property
     def fpga_reference_time(self: TileComponentManager) -> str:
@@ -850,8 +850,8 @@ class TileComponentManager(MccsComponentManager):
         :return: FPGA reference time
         """
         reference_time = self.fpga_sync_time
-        self._tileTime.set_reference_time(reference_time)
-        return self._tileTime.format_time_from_timestamp(reference_time)
+        self._tile_time.set_reference_time(reference_time)
+        return self._tile_time.format_time_from_timestamp(reference_time)
 
     @property
     def fpga_frame_time(self: TileComponentManager) -> str:
@@ -864,8 +864,8 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA reference time
         """
-        self._tileTime.set_reference_time(self.fpga_sync_time)
-        return self._tileTime.format_time_from_frame(self.fpga_current_frame)
+        self._tile_time.set_reference_time(self.fpga_sync_time)
+        return self._tile_time.format_time_from_frame(self.fpga_current_frame)
 
     __PASSTHROUGH = [
         "adc_rms",

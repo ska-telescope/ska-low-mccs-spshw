@@ -821,6 +821,39 @@ python-versions = "*"
 pytest = ">=2.9"
 
 [[package]]
+name = "pytest-rerunfailures"
+version = "10.2"
+description = "pytest plugin to re-run tests to eliminate flaky failures"
+category = "dev"
+optional = false
+python-versions = ">= 3.6"
+
+[package.dependencies]
+pytest = ">=5.3"
+
+[[package]]
+name = "pytest-split"
+version = "0.6.0"
+description = "Pytest plugin which splits the test suite to equally sized sub suites based on test execution time."
+category = "dev"
+optional = false
+python-versions = ">=3.7.1,<4.0"
+
+[package.dependencies]
+pytest = ">=5,<7"
+
+[[package]]
+name = "pytest-timeout"
+version = "2.1.0"
+description = "pytest plugin to abort hanging tests"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+pytest = ">=5.0.0"
+
+[[package]]
 name = "pytest-xdist"
 version = "1.34.0"
 description = "pytest xdist plugin for distributed testing and loop-on-failing modes"
@@ -1081,8 +1114,8 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 
 [metadata]
 lock-version = "1.1"
-python-versions = "~3.7"
-content-hash = "9990141346b7459317f8faf603a9d29ed7f9df869cdc2d951b6f25fe2cb5f1ca"
+python-versions = "~3.7.1"
+content-hash = "30ab42fb58a7ca5fd9084433ef682d18a8a3ff80de60cbccf1396186fdd7a883"
 
 [metadata.files]
 aavs-system = [
@@ -1611,6 +1644,18 @@ pytest-mock = [
 ]
 pytest-report = [
     {file = "pytest-report-0.2.1.tar.gz", hash = "sha256:d382e8db4c52a815d39dae5f21ee5edc0da3ae8ec19a22e55e9be5c60714a39d"},
+]
+pytest-rerunfailures = [
+    {file = "pytest-rerunfailures-10.2.tar.gz", hash = "sha256:9e1e1bad51e07642c5bbab809fc1d4ec8eebcb7de86f90f1a26e6ef9de446697"},
+    {file = "pytest_rerunfailures-10.2-py3-none-any.whl", hash = "sha256:d31d8e828dfd39363ad99cd390187bf506c7a433a89f15c3126c7d16ab723fe2"},
+]
+pytest-split = [
+    {file = "pytest-split-0.6.0.tar.gz", hash = "sha256:cf050201081fe9d77ca8255dea73dbc5b114147d5e20a68dcecfc418f3150d59"},
+    {file = "pytest_split-0.6.0-py3-none-any.whl", hash = "sha256:155963b85f122c3d0ee1a320dc2ba3faa341938960ba4d8ac2d3f16f660f48c6"},
+]
+pytest-timeout = [
+    {file = "pytest-timeout-2.1.0.tar.gz", hash = "sha256:c07ca07404c612f8abbe22294b23c368e2e5104b521c1790195561f37e1ac3d9"},
+    {file = "pytest_timeout-2.1.0-py3-none-any.whl", hash = "sha256:f6f50101443ce70ad325ceb4473c4255e9d74e3c7cd0ef827309dfa4c0d975c6"},
 ]
 pytest-xdist = [
     {file = "pytest-xdist-1.34.0.tar.gz", hash = "sha256:340e8e83e2a4c0d861bdd8d05c5d7b7143f6eea0aba902997db15c2a86be04ee"},

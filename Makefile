@@ -18,7 +18,7 @@ PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203
     --docstring-style=SPHINX  --max-line-length=110 --rst-roles=py:attr,py:class,py:const,py:exc,py:func,py:meth,py:mod
 PYTHON_SWITCHES_FOR_BLACK = --line-length=110
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=110
-PYTHON_TEST_FILE = testing/src/
+PYTHON_TEST_FILE = testing/src/tests/unit/subrack
 PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
 PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R,E1101,E1136 --ignored-modules=astropy.constants --extension-pkg-whitelist=astropy.constants \
     --generated-members=requests.codes.ok \

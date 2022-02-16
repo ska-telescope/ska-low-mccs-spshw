@@ -59,6 +59,7 @@ types-pyyaml = "^5.4.6"
 pytest-timeout = "^2.1.0"
 pytest-rerunfailures = "^10.2"
 pytest-split = "^0.6.0"
+pytest-repeat = "^0.9.1"
 
 [tool.poetry.scripts]
 MccsAntenna = "ska_low_mccs.antenna.antenna_device:main"

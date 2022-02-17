@@ -24,3 +24,6 @@ dependencies:
   version: 0.1.9
   repository: https://artefact.skao.int/repository/helm-internal
   condition: webjive-dashboard.enabled
+- name: ska-tango-util
+  version: 0.3.5
+  repository: https://artefact.skao.int/repository/helm-internal

@@ -227,7 +227,7 @@ class TpmDriver(MccsComponentManager):
             # The status in unknown, either because it has not been tested or
             # because it comes from an unconnected state.
             # try to determine the status. Successive tests until one fails
-            # if self.power_mode != PowerState.ON:
+            # if self.power_mode != PowerMode.ON:
             #     self._tpm_status = TpmStatus.OFF
             if self.communication_status != CommunicationStatus.ESTABLISHED:
                 self._tpm_status = TpmStatus.UNCONNECTED

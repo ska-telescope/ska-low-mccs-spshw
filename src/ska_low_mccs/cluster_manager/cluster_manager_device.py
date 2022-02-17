@@ -20,7 +20,7 @@ from typing import List, Optional, Tuple
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
+from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
 from tango import DevState
 from tango.server import attribute, command
 
@@ -156,7 +156,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
     def _component_power_mode_changed(
         self: MccsClusterManagerDevice,
-        power_mode: PowerState,
+        power_mode: PowerMode,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -168,10 +168,10 @@ class MccsClusterManagerDevice(SKABaseDevice):
         :param power_mode: the power mode of the component.
         """
         action_map = {
-            PowerState.OFF: "component_off",
-            PowerState.STANDBY: "component_standby",
-            PowerState.ON: "component_on",
-            PowerState.UNKNOWN: "component_unknown",
+            PowerMode.OFF: "component_off",
+            PowerMode.STANDBY: "component_standby",
+            PowerMode.ON: "component_on",
+            PowerMode.UNKNOWN: "component_unknown",
         }
 
         self.op_state_model.perform_action(action_map[power_mode])

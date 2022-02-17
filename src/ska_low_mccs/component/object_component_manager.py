@@ -12,7 +12,7 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import PowerMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -44,7 +44,7 @@ class ObjectComponentManager(MccsComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
+        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,
         **kwargs: Any,

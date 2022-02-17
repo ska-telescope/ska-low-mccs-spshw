@@ -18,7 +18,7 @@ import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, PowerState, SimulationMode, TestMode
+from ska_tango_base.control_model import AdminMode, HealthState, PowerMode, SimulationMode, TestMode
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.component import CommunicationStatus
@@ -275,7 +275,7 @@ class MccsTile(SKABaseDevice):
 
     def _component_power_mode_changed(
         self: MccsTile,
-        power_mode: PowerState,
+        power_mode: PowerMode,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -288,10 +288,10 @@ class MccsTile(SKABaseDevice):
         """
         self.logger.debug(f"power_mode: {power_mode}")
         action_map = {
-            PowerState.OFF: "component_off",
-            PowerState.STANDBY: "component_standby",
-            PowerState.ON: "component_on",
-            PowerState.UNKNOWN: "component_unknown",
+            PowerMode.OFF: "component_off",
+            PowerMode.STANDBY: "component_standby",
+            PowerMode.ON: "component_on",
+            PowerMode.UNKNOWN: "component_unknown",
         }
 
         self.op_state_model.perform_action(action_map[power_mode])

@@ -14,7 +14,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 import requests
-from ska_tango_base.control_model import PowerState, SimulationMode
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -65,14 +65,14 @@ def subrack_port() -> int:
 
 
 @pytest.fixture()
-def initial_power_mode() -> PowerState:
+def initial_power_mode() -> PowerMode:
     """
     Return the initial power mode of the subrack's simulated power supply.
 
     :return: the initial power mode of the subrack's simulated power
         supply.
     """
-    return PowerState.OFF
+    return PowerMode.OFF
 
 
 @pytest.fixture()
@@ -324,7 +324,7 @@ def subrack_component_manager(
     component_fault_callback: MockCallable,
     component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
-    initial_power_mode: PowerState,
+    initial_power_mode: PowerMode,
 ) -> SubrackComponentManager:
     """
     Return an subrack component manager (in simulation mode as specified).

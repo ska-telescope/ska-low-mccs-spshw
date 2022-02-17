@@ -11,7 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 from typing import Callable, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import PowerMode
 
 __all__ = ["ObjectComponent"]
 
@@ -75,7 +75,7 @@ class ObjectComponent:
             fault_callback(False)
 
     @property
-    def power_mode(self: ObjectComponent) -> PowerState:
+    def power_mode(self: ObjectComponent) -> PowerMode:
         """
         Return the power mode of the component.
 
@@ -86,11 +86,11 @@ class ObjectComponent:
 
         :return: the power mode of the component.
         """
-        return PowerState.ON
+        return PowerMode.ON
 
     def set_power_mode_changed_callback(
         self: ObjectComponent,
-        power_mode_changed_callback: Optional[Callable[[PowerState], None]],
+        power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
     ) -> None:
         """
         Set the callback to be called when the power mode of the component changes.
@@ -99,7 +99,7 @@ class ObjectComponent:
         not manage their own power mode. From their own point of view
         they are always-on devices, though there may be an upstream
         power supply device that supplies/denies them power. Thus, this
-        method calls the callback once with PowerState.ON, and doesn't
+        method calls the callback once with PowerMode.ON, and doesn't
         register the callback, so the power mode of the component will
         be ON forevermore.
 
@@ -107,7 +107,7 @@ class ObjectComponent:
             when the component changes.
         """
         if power_mode_changed_callback is not None:
-            power_mode_changed_callback(PowerState.ON)
+            power_mode_changed_callback(PowerMode.ON)
 
     def off(self: ObjectComponent) -> ResultCode | None:
         """

@@ -12,7 +12,7 @@ import logging
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState, SimulationMode
+from ska_tango_base.control_model import PowerMode, SimulationMode
 
 from ska_low_mccs.apiu import ApiuSimulator
 from ska_low_mccs.component import (
@@ -194,10 +194,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
+        component_power_mode_changed_callback: Callable[[PowerMode], None],
         component_fault_callback: Callable[[bool], None],
         component_antenna_power_changed_callback: Callable[[list[bool]], None],
-        _initial_power_mode: PowerState = PowerState.OFF,
+        _initial_power_mode: PowerMode = PowerMode.OFF,
     ) -> None:
         """
         Initialise a new instance.

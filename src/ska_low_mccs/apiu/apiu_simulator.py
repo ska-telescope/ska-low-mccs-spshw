@@ -20,7 +20,7 @@ import functools
 from typing import Any, Callable, Optional, TypeVar, cast
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import PowerMode
 from typing_extensions import Final
 
 from ska_low_mccs.component import ObjectComponent
@@ -111,7 +111,7 @@ class ApiuSimulator(ObjectComponent):
 
         self._antenna_data = [
             {
-                "power_mode": PowerState.OFF,
+                "power_mode": PowerMode.OFF,
                 "voltage": self.DEFAULT_ANTENNA_VOLTAGE,
                 "current": self.DEFAULT_ANTENNA_CURRENT,
                 "temperature": self.DEFAULT_ANTENNA_TEMPERATURE,
@@ -277,7 +277,7 @@ class ApiuSimulator(ObjectComponent):
 
         :return: whether each antenna is powered or not.
         """
-        return [antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data]
+        return [antenna["power_mode"] == PowerMode.ON for antenna in self._antenna_data]
 
     @check_antenna_id
     def is_antenna_on(self: ApiuSimulator, antenna_id: int) -> bool:
@@ -289,7 +289,7 @@ class ApiuSimulator(ObjectComponent):
 
         :return: whether the antenna is on
         """
-        return self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON
+        return self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.ON
 
     @check_antenna_id
     def turn_off_antenna(self: ApiuSimulator, antenna_id: int) -> ResultCode | None:
@@ -301,10 +301,10 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.OFF:
+        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.OFF:
             return None
 
-        self._antenna_data[antenna_id - 1]["power_mode"] = PowerState.OFF
+        self._antenna_data[antenna_id - 1]["power_mode"] = PowerMode.OFF
         self._antenna_power_changed()
         return ResultCode.OK
 
@@ -318,10 +318,10 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON:
+        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerMode.ON:
             return None
 
-        self._antenna_data[antenna_id - 1]["power_mode"] = PowerState.ON
+        self._antenna_data[antenna_id - 1]["power_mode"] = PowerMode.ON
         self._antenna_power_changed()
         return ResultCode.OK
 
@@ -331,11 +331,11 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if all(antenna["power_mode"] == PowerState.OFF for antenna in self._antenna_data):
+        if all(antenna["power_mode"] == PowerMode.OFF for antenna in self._antenna_data):
             return None
 
         for antenna in self._antenna_data:
-            antenna["power_mode"] = PowerState.OFF
+            antenna["power_mode"] = PowerMode.OFF
         self._antenna_power_changed()
         return ResultCode.OK
 
@@ -345,11 +345,11 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if all(antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data):
+        if all(antenna["power_mode"] == PowerMode.ON for antenna in self._antenna_data):
             return None
 
         for antenna in self._antenna_data:
-            antenna["power_mode"] = PowerState.ON
+            antenna["power_mode"] = PowerMode.ON
         self._antenna_power_changed()
         return ResultCode.OK
 

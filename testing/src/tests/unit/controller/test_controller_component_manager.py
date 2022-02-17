@@ -14,7 +14,7 @@ import unittest.mock
 
 import pytest
 import tango
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.control_model import HealthState, PowerMode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import CommunicationStatus
@@ -76,7 +76,7 @@ class TestControllerComponentManager:
 
         # pretend to receive events
         for fqdn in subrack_fqdns:
-            controller_component_manager._subrack_power_mode_changed(fqdn, PowerState.ON)
+            controller_component_manager._subrack_power_mode_changed(fqdn, PowerMode.ON)
         for proxy in station_proxies:
             proxy.On.assert_next_call()
 
@@ -86,7 +86,7 @@ class TestControllerComponentManager:
 
         # pretend to receive events
         for fqdn in station_fqdns:
-            controller_component_manager._station_power_mode_changed(fqdn, PowerState.OFF)
+            controller_component_manager._station_power_mode_changed(fqdn, PowerMode.OFF)
         for proxy in subrack_proxies:
             proxy.Off.assert_next_call()
 
@@ -105,17 +105,17 @@ class TestControllerComponentManager:
         """
         controller_component_manager.start_communicating()
         time.sleep(0.1)
-        component_power_mode_changed_callback.assert_next_call(PowerState.UNKNOWN)
-        assert controller_component_manager.power_mode == PowerState.UNKNOWN
+        component_power_mode_changed_callback.assert_next_call(PowerMode.UNKNOWN)
+        assert controller_component_manager.power_mode == PowerMode.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():
             station_proxy._device_state_changed("state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID)
-            assert controller_component_manager.power_mode == PowerState.UNKNOWN
+            assert controller_component_manager.power_mode == PowerMode.UNKNOWN
             component_power_mode_changed_callback.assert_not_called()
         for subrack_proxy in controller_component_manager._subracks.values():
             subrack_proxy._device_state_changed("state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID)
-        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
-        assert controller_component_manager.power_mode == PowerState.OFF
+        component_power_mode_changed_callback.assert_next_call(PowerMode.OFF)
+        assert controller_component_manager.power_mode == PowerMode.OFF
 
     def test_subarray_allocation(
         self: TestControllerComponentManager,

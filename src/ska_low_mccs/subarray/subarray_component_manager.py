@@ -15,7 +15,7 @@ from typing import Any, Callable, Optional, Sequence
 
 import ska_tango_base.subarray
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, ObsState, PowerState
+from ska_tango_base.control_model import HealthState, ObsState, PowerMode
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -182,7 +182,7 @@ class SubarrayComponentManager(
         self._station_beam_health_changed_callback = station_beam_health_changed_callback
 
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
-        self._station_power_modes: dict[str, Optional[PowerState]] = {}
+        self._station_power_modes: dict[str, Optional[PowerMode]] = {}
         self._device_obs_states: dict[str, Optional[ObsState]] = {}
         self._is_assigning = False
         self._configuring_resources: set[str] = set()
@@ -217,7 +217,7 @@ class SubarrayComponentManager(
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
             with self._power_mode_lock:
-                self.update_component_power_mode(PowerState.ON)
+                self.update_component_power_mode(PowerMode.ON)
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""
@@ -659,7 +659,7 @@ class SubarrayComponentManager(
     def _station_power_mode_changed(
         self: SubarrayComponentManager,
         fqdn: str,
-        power_mode: PowerState,
+        power_mode: PowerMode,
     ) -> None:
         self._station_power_modes[fqdn] = power_mode
 

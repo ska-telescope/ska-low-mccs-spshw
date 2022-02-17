@@ -15,7 +15,7 @@ from typing import Callable
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
+from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerMode
 from tango.server import command
 
 from ska_low_mccs import MccsDeviceProxy, MccsStation
@@ -42,8 +42,8 @@ def patched_station_device_class() -> type[MccsStation]:
         """
 
         @command(dtype_in=int)
-        def FakeSubservientDevicesPowerState(self: PatchedStationDevice, power_mode: int) -> None:
-            power_mode = PowerState(power_mode)
+        def FakeSubservientDevicesPowerMode(self: PatchedStationDevice, power_mode: int) -> None:
+            power_mode = PowerMode(power_mode)
             with self.component_manager._power_mode_lock:
                 self.component_manager._apiu_power_mode = power_mode
                 for fqdn in self.component_manager._tile_power_modes:
@@ -396,8 +396,8 @@ class TestMccsIntegrationTmc:
         # tiles and antennas, telling it they are all OFF. This makes
         # the station transition to OFF, and this flows up to the
         # controller.
-        station_1.FakeSubservientDevicesPowerState(PowerState.OFF)
-        station_2.FakeSubservientDevicesPowerState(PowerState.OFF)
+        station_1.FakeSubservientDevicesPowerMode(PowerMode.OFF)
+        station_2.FakeSubservientDevicesPowerMode(PowerMode.OFF)
 
         controller_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
 
@@ -433,8 +433,8 @@ class TestMccsIntegrationTmc:
         # tiles and antennas, telling it they are all ON. This makes
         # the station transition to ON, and this flows up to the
         # controller.
-        station_1.FakeSubservientDevicesPowerState(PowerState.ON)
-        station_2.FakeSubservientDevicesPowerState(PowerState.ON)
+        station_1.FakeSubservientDevicesPowerMode(PowerMode.ON)
+        station_2.FakeSubservientDevicesPowerMode(PowerMode.ON)
 
         # Wait for command to complete
         lrc_result_changed_callback.assert_long_running_command_result_change_event(

@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.control_model import HealthState, PowerMode
 from tango.server import command, device_property
 
 import ska_low_mccs.release as release
@@ -76,7 +76,7 @@ class MccsController(SKABaseDevice):
         :return: a component manager for this device.
         """
         self._communication_status: Optional[CommunicationStatus] = None
-        self._component_power_mode: Optional[PowerState] = None
+        self._component_power_mode: Optional[PowerMode] = None
 
         return ControllerComponentManager(
             self.MccsSubarrays,
@@ -278,13 +278,13 @@ class MccsController(SKABaseDevice):
             self.op_state_model.perform_action("component_disconnected")
         elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
             self.op_state_model.perform_action("component_unknown")
-        elif self._component_power_mode == PowerState.OFF:
+        elif self._component_power_mode == PowerMode.OFF:
             self.op_state_model.perform_action("component_off")
-        elif self._component_power_mode == PowerState.STANDBY:
+        elif self._component_power_mode == PowerMode.STANDBY:
             self.op_state_model.perform_action("component_standby")
-        elif self._component_power_mode == PowerState.ON:
+        elif self._component_power_mode == PowerMode.ON:
             self.op_state_model.perform_action("component_on")
-        elif self._component_power_mode == PowerState.UNKNOWN:
+        elif self._component_power_mode == PowerMode.UNKNOWN:
             self.op_state_model.perform_action("component_unknown")
         else:  # self._component_power_mode is None
             pass  # wait for a power mode update
@@ -293,7 +293,7 @@ class MccsController(SKABaseDevice):
 
     def _component_power_mode_changed(
         self: MccsController,
-        power_mode: PowerState,
+        power_mode: PowerMode,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -308,10 +308,10 @@ class MccsController(SKABaseDevice):
 
         if self._communication_status == CommunicationStatus.ESTABLISHED:
             action_map = {
-                PowerState.OFF: "component_off",
-                PowerState.STANDBY: "component_standby",
-                PowerState.ON: "component_on",
-                PowerState.UNKNOWN: "component_unknown",
+                PowerMode.OFF: "component_off",
+                PowerMode.STANDBY: "component_standby",
+                PowerMode.ON: "component_on",
+                PowerMode.UNKNOWN: "component_unknown",
             }
 
             self.op_state_model.perform_action(action_map[power_mode])

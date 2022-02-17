@@ -19,7 +19,7 @@ from _pytest.fixtures import SubRequest
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import SimulationMode, TestMode
 
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
@@ -42,12 +42,12 @@ class TestTileComponentManager:
     itself.
     """
 
-    @pytest.mark.parametrize("power_mode", list(ExtendedPowerState))
+    @pytest.mark.parametrize("power_mode", list(ExtendedPowerMode))
     def test_communication(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         communication_status_changed_callback: MockCallable,
-        power_mode: ExtendedPowerState,
+        power_mode: ExtendedPowerMode,
     ) -> None:
         """
         Test communication between the tile component manager and its tile.
@@ -67,14 +67,14 @@ class TestTileComponentManager:
 
         communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
 
-        if power_mode == ExtendedPowerState.UNKNOWN:
-            tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.UNKNOWN)
-        elif power_mode == ExtendedPowerState.NO_SUPPLY:
-            tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.NO_SUPPLY)
-        elif power_mode == ExtendedPowerState.OFF:
+        if power_mode == ExtendedPowerMode.UNKNOWN:
+            tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.UNKNOWN)
+        elif power_mode == ExtendedPowerMode.NO_SUPPLY:
+            tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
+        elif power_mode == ExtendedPowerMode.OFF:
             pass  # test harness starts with TPM off
-        elif power_mode == ExtendedPowerState.ON:
-            tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.ON)
+        elif power_mode == ExtendedPowerMode.ON:
+            tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
             communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
 
         tile_component_manager.stop_communicating()
@@ -86,27 +86,27 @@ class TestTileComponentManager:
     @pytest.mark.parametrize(
         "second_power_mode",
         [
-            ExtendedPowerState.UNKNOWN,
-            ExtendedPowerState.NO_SUPPLY,
-            ExtendedPowerState.OFF,
-            ExtendedPowerState.ON,
+            ExtendedPowerMode.UNKNOWN,
+            ExtendedPowerMode.NO_SUPPLY,
+            ExtendedPowerMode.OFF,
+            ExtendedPowerMode.ON,
         ],
     )
     @pytest.mark.parametrize(
         "first_power_mode",
         [
-            ExtendedPowerState.UNKNOWN,
-            ExtendedPowerState.NO_SUPPLY,
-            ExtendedPowerState.OFF,
-            ExtendedPowerState.ON,
+            ExtendedPowerMode.UNKNOWN,
+            ExtendedPowerMode.NO_SUPPLY,
+            ExtendedPowerMode.OFF,
+            ExtendedPowerMode.ON,
         ],
     )
     def test_power_mode_changes(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         communication_status_changed_callback: MockCallable,
-        first_power_mode: ExtendedPowerState,
-        second_power_mode: ExtendedPowerState,
+        first_power_mode: ExtendedPowerMode,
+        second_power_mode: ExtendedPowerMode,
     ) -> None:
         """
         Test handling of notifications of TPM power mode changes from the subrack.
@@ -129,14 +129,14 @@ class TestTileComponentManager:
 
         tile_component_manager._tpm_power_mode_changed(first_power_mode)
 
-        if first_power_mode == ExtendedPowerState.ON:
+        if first_power_mode == ExtendedPowerMode.ON:
             communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
         else:
             communication_status_changed_callback.assert_not_called()
 
         tile_component_manager._tpm_power_mode_changed(second_power_mode)
 
-        if first_power_mode != ExtendedPowerState.ON and second_power_mode == ExtendedPowerState.ON:
+        if first_power_mode != ExtendedPowerMode.ON and second_power_mode == ExtendedPowerMode.ON:
             communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
         else:
             communication_status_changed_callback.assert_not_called()
@@ -164,15 +164,15 @@ class TestTileComponentManager:
 
         communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
 
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
         tile_component_manager.on()
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.ON)
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
 
         tile_component_manager.off()
         mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
@@ -206,7 +206,7 @@ class TestTileComponentManager:
         communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
 
         # mock an event from subrack announcing it to be turned off
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.NO_SUPPLY)
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
 
         assert tile_component_manager.on() == ResultCode.QUEUED
 
@@ -214,7 +214,7 @@ class TestTileComponentManager:
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
         # mock an event from subrack announcing it to be turned on
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
+        tile_component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
 
         # now that the tile has been notified that the subrack is on,
         # it tells it to turn on its TPM
@@ -238,7 +238,7 @@ class TestStaticSimulatorCommon:
     """
 
     @pytest.fixture()
-    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> ExtendedPowerState:
+    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> ExtendedPowerMode:
         """
         Return the initial power mode of the TPM.
 
@@ -248,7 +248,7 @@ class TestStaticSimulatorCommon:
 
         :return: the initial power mode of the TPM.
         """
-        return ExtendedPowerState.ON
+        return ExtendedPowerMode.ON
 
     @pytest.fixture(
         params=[
@@ -718,7 +718,7 @@ class TestDynamicSimulatorCommon:
         return TestMode.NONE
 
     @pytest.fixture()
-    def initial_tpm_power_mode(self: TestDynamicSimulatorCommon) -> ExtendedPowerState:
+    def initial_tpm_power_mode(self: TestDynamicSimulatorCommon) -> ExtendedPowerMode:
         """
         Return the initial power mode of the TPM.
 
@@ -728,7 +728,7 @@ class TestDynamicSimulatorCommon:
 
         :return: the initial power mode of the TPM.
         """
-        return ExtendedPowerState.ON
+        return ExtendedPowerMode.ON
 
     @pytest.fixture(
         params=[

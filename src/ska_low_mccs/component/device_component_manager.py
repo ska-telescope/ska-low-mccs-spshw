@@ -13,7 +13,7 @@ from typing import Callable, Optional
 
 import tango
 from ska_tango_base.commands import BaseCommand, ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
+from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerMode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import CommunicationStatus, MccsComponentManager, check_communicating
@@ -30,7 +30,7 @@ class DeviceComponentManager(MccsComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
+        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         health_changed_callback: Optional[Callable[[Optional[HealthState]], None]] = None,
     ) -> None:
@@ -141,7 +141,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        if self.power_mode == PowerState.ON:
+        if self.power_mode == PowerMode.ON:
             return None  # already on
         on_command = self.DeviceProxyOnCommand(target=self)
         # Enqueue the on command.
@@ -175,7 +175,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        if self.power_mode == PowerState.OFF:
+        if self.power_mode == PowerMode.OFF:
             return None  # already off
         off_command = self.DeviceProxyOffCommand(target=self)
         # Enqueue the off command.
@@ -209,7 +209,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        if self.power_mode == PowerState.STANDBY:
+        if self.power_mode == PowerMode.STANDBY:
             return None  # already standby
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.Standby()
@@ -264,13 +264,13 @@ class DeviceComponentManager(MccsComponentManager):
 
         with self._power_mode_lock:
             if event_value == tango.DevState.OFF:
-                self.update_component_power_mode(PowerState.OFF)
+                self.update_component_power_mode(PowerMode.OFF)
             elif event_value == tango.DevState.STANDBY:
-                self.update_component_power_mode(PowerState.STANDBY)
+                self.update_component_power_mode(PowerMode.STANDBY)
             elif event_value == tango.DevState.ON:
-                self.update_component_power_mode(PowerState.ON)
+                self.update_component_power_mode(PowerMode.ON)
             else:  # INIT, DISABLE, UNKNOWN, FAULT
-                self.update_component_power_mode(PowerState.UNKNOWN)
+                self.update_component_power_mode(PowerMode.UNKNOWN)
 
     def _device_health_state_changed(
         self: DeviceComponentManager,
@@ -337,7 +337,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
+        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         health_changed_callback: Optional[Callable[[Optional[HealthState]], None]] = None,
         obs_state_changed_callback: Optional[Callable[[ObsState], None]] = None,

@@ -20,9 +20,10 @@ PYTHON_SWITCHES_FOR_BLACK = --line-length=110
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=110
 PYTHON_TEST_FILE = testing/src/ # tests/unit/subrack
 PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
-PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R,E1101,E1136 --ignored-modules=astropy.constants --extension-pkg-whitelist=astropy.constants \
+PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R,E1101,E1136,E0611,E0401 \
+    --ignored-modules=astropy.constants --extension-pkg-whitelist=astropy.constants \
     --generated-members=requests.codes.ok \
-	--disable=too-many-function-args,no-value-for-parameter # pylint does not recognise decorators that change the function signature
+    --disable=too-many-function-args,no-value-for-parameter # pylint does not recognise decorators that change the function signature
 DOCS_SOURCEDIR=./docs/source
 
 

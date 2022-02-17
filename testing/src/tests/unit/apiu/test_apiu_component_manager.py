@@ -13,7 +13,7 @@ from typing import Callable, Union, cast
 
 import pytest
 from _pytest.fixtures import SubRequest
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs.apiu import (
     ApiuComponentManager,
@@ -41,14 +41,14 @@ class TestApiuCommon:
     """
 
     @pytest.fixture()
-    def initial_power_mode(self: TestApiuCommon) -> PowerMode:
+    def initial_power_mode(self: TestApiuCommon) -> PowerState:
         """
         Return the initial power mode of the APIU's simulated power supply.
 
         :return: the initial power mode of the APIU's simulated power
             supply.
         """
-        return PowerMode.ON
+        return PowerState.ON
 
     @pytest.fixture(
         params=[
@@ -313,7 +313,7 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         apiu_component_manager.on()
         time.sleep(0.1)
-        assert apiu_component_manager.power_mode == PowerMode.ON
+        assert apiu_component_manager.power_mode == PowerState.ON
 
         expected_are_antennas_on = [False] * apiu_antenna_count
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on

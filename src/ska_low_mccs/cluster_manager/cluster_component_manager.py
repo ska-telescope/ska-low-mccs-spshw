@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
+from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
 from ska_low_mccs.component import (
@@ -30,7 +30,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
-        power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         fault_callback: Optional[Callable[[bool], None]],
         shadow_master_pool_node_health_changed_callback: Optional[Callable[[list[HealthState]], None]],
     ) -> None:
@@ -167,7 +167,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         push_change_event: Optional[Callable],
         initial_simulation_mode: SimulationMode,
         communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
-        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         component_shadow_master_pool_node_health_changed_callback: Optional[
             Callable[[list[HealthState]], None]

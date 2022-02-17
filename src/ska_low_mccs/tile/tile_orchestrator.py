@@ -16,9 +16,9 @@ from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
 
 import yaml
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerState
 
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerMode
+from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
 
 
 @enum.unique
@@ -82,12 +82,12 @@ StateTupleType = Union[
     Tuple[
         CommunicationStatus,
         Optional[bool],
-        ExtendedPowerMode,
+        ExtendedPowerState,
     ],
     Tuple[
         CommunicationStatus,
         Optional[bool],
-        ExtendedPowerMode,
+        ExtendedPowerState,
         CommunicationStatus,
     ],
 ]
@@ -99,13 +99,13 @@ StateStimulusTupleType = Union[
         Stimulus,
         CommunicationStatus,
         Optional[bool],
-        ExtendedPowerMode,
+        ExtendedPowerState,
     ],
     Tuple[
         Stimulus,
         CommunicationStatus,
         Optional[bool],
-        ExtendedPowerMode,
+        ExtendedPowerState,
         CommunicationStatus,
     ],
 ]
@@ -165,7 +165,7 @@ class TileOrchestrator:
         turn_tpm_off_callback: Callable[[], Any],
         turn_tpm_on_callback: Callable[[], Any],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        power_mode_changed_callback: Callable[[Optional[PowerMode]], None],
+        power_mode_changed_callback: Callable[[Optional[PowerState]], None],
         logger: logging.Logger,
         _initial_state: Optional[StateTupleType] = None,
     ) -> None:
@@ -222,14 +222,14 @@ class TileOrchestrator:
         self._tpm_power_mode = (
             _initial_state[2]  # type: ignore[misc]
             if _initial_state is not None and len(_initial_state) > 2
-            else ExtendedPowerMode.UNKNOWN
+            else ExtendedPowerState.UNKNOWN
         )
         self._tpm_communication_status = (
             _initial_state[3]  # type: ignore[misc]
             if _initial_state is not None and len(_initial_state) > 3
             else CommunicationStatus.DISABLED
         )
-        self._tpm_power_mode_on = PowerMode.UNKNOWN  # default mode if turned on
+        self._tpm_power_mode_on = PowerState.UNKNOWN  # default mode if turned on
 
         self._decision_table: dict[StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]] = {}
 
@@ -246,7 +246,7 @@ class TileOrchestrator:
                         Stimulus[state[0]],
                         CommunicationStatus[state[1]],
                         state[2],
-                        ExtendedPowerMode[state[3]],
+                        ExtendedPowerState[state[3]],
                     )
                 ] = action_calls
             else:
@@ -255,7 +255,7 @@ class TileOrchestrator:
                         Stimulus[state[0]],
                         CommunicationStatus[state[1]],
                         state[2],
-                        ExtendedPowerMode[state[3]],
+                        ExtendedPowerState[state[3]],
                         CommunicationStatus[state[4]],
                     )
                 ] = action_calls
@@ -279,7 +279,7 @@ class TileOrchestrator:
             commencing the command
         """
         with self.__lock:
-            self._tpm_power_mode_on = PowerMode.ON
+            self._tpm_power_mode_on = PowerState.ON
             return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
 
     def desire_off(self: TileOrchestrator) -> ResultCode:
@@ -302,7 +302,7 @@ class TileOrchestrator:
             commencing the command
         """
         with self.__lock:
-            self._tpm_power_mode_on = PowerMode.STANDBY
+            self._tpm_power_mode_on = PowerState.STANDBY
             return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
 
     def update_subrack_communication_status(
@@ -362,7 +362,7 @@ class TileOrchestrator:
 
     def update_tpm_power_mode(
         self: TileOrchestrator,
-        power_mode: ExtendedPowerMode,
+        power_mode: ExtendedPowerState,
     ) -> None:
         """
         Update the current power mode of the TPM.
@@ -373,13 +373,13 @@ class TileOrchestrator:
             unsupported.
         """
         with self.__lock:
-            if power_mode == ExtendedPowerMode.UNKNOWN:
+            if power_mode == ExtendedPowerState.UNKNOWN:
                 self._act(Stimulus.SUBRACK_SAYS_TPM_UNKNOWN)
-            elif power_mode == ExtendedPowerMode.NO_SUPPLY:
+            elif power_mode == ExtendedPowerState.NO_SUPPLY:
                 self._act(Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY)
-            elif power_mode == ExtendedPowerMode.OFF:
+            elif power_mode == ExtendedPowerState.OFF:
                 self._act(Stimulus.SUBRACK_SAYS_TPM_OFF)
-            elif power_mode == ExtendedPowerMode.ON:
+            elif power_mode == ExtendedPowerState.ON:
                 self._act(Stimulus.SUBRACK_SAYS_TPM_ON)
             else:
                 raise NotImplementedError()
@@ -390,7 +390,7 @@ class TileOrchestrator:
             return state
 
         state = state + [self._operator_desire, self._tpm_power_mode]
-        if self._tpm_power_mode in [ExtendedPowerMode.NO_SUPPLY, ExtendedPowerMode.OFF]:
+        if self._tpm_power_mode in [ExtendedPowerState.NO_SUPPLY, ExtendedPowerState.OFF]:
             return state
 
         state = state + [self._tpm_communication_status]
@@ -428,20 +428,20 @@ class TileOrchestrator:
     def _report_tpm_no_power_supply(
         self: TileOrchestrator,
     ) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.NO_SUPPLY
-        self._power_mode_changed_callback(PowerMode.OFF)
+        self._tpm_power_mode = ExtendedPowerState.NO_SUPPLY
+        self._power_mode_changed_callback(PowerState.OFF)
 
     def _report_tpm_off(self: TileOrchestrator) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.OFF
-        self._power_mode_changed_callback(PowerMode.OFF)
+        self._tpm_power_mode = ExtendedPowerState.OFF
+        self._power_mode_changed_callback(PowerState.OFF)
 
     def _report_tpm_on(self: TileOrchestrator) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.ON
-        self._power_mode_changed_callback(PowerMode.ON)
+        self._tpm_power_mode = ExtendedPowerState.ON
+        self._power_mode_changed_callback(PowerState.ON)
 
     def _report_tpm_power_unknown(self: TileOrchestrator) -> None:
-        self._tpm_power_mode = ExtendedPowerMode.UNKNOWN
-        self._power_mode_changed_callback(PowerMode.UNKNOWN)
+        self._tpm_power_mode = ExtendedPowerState.UNKNOWN
+        self._power_mode_changed_callback(PowerState.UNKNOWN)
 
     def _set_desired_off(self: TileOrchestrator) -> ResultCode:
         self._operator_desire = False

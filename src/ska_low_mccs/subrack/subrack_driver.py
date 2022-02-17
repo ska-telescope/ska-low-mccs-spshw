@@ -32,7 +32,7 @@ from ska_tango_base.commands import BaseCommand, ResultCode
 from ska_low_mccs.component import (
     CommunicationStatus,
     ControlMode,
-    ExtendedPowerMode,
+    ExtendedPowerState,
     MccsComponentManager,
     WebHardwareClient,
 )
@@ -76,7 +76,7 @@ class SubrackDriver(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
         component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerMode]], None],
+        component_tpm_power_changed_callback: Callable[[list[ExtendedPowerState]], None],
         tpm_present: Optional[list[bool]] = None,
     ) -> None:
         """
@@ -116,7 +116,7 @@ class SubrackDriver(MccsComponentManager):
             self._tpm_present = self.DEFAULT_TPM_PRESENT
         else:
             self._tpm_present = tpm_present
-        self._tpm_power_modes = [ExtendedPowerMode.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_modes = [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_count = self.DEFAULT_TPM_COUNT
         self._bay_count = self.DEFAULT_TPM_COUNT
 
@@ -433,7 +433,7 @@ class SubrackDriver(MccsComponentManager):
         return self._tpm_supply_fault
 
     @property
-    def tpm_power_modes(self: SubrackDriver) -> list[ExtendedPowerMode]:
+    def tpm_power_modes(self: SubrackDriver) -> list[ExtendedPowerState]:
         """
         Return whether each TPM is powered or not.
 
@@ -445,7 +445,7 @@ class SubrackDriver(MccsComponentManager):
         if response["status"] == "OK":
             are_tpms_on = cast(List[bool], response["value"])
             self._tpm_power_modes = [
-                ExtendedPowerMode.ON if is_tpm_on else ExtendedPowerMode.OFF for is_tpm_on in are_tpms_on
+                ExtendedPowerState.ON if is_tpm_on else ExtendedPowerState.OFF for is_tpm_on in are_tpms_on
             ]
         return self._tpm_power_modes
 
@@ -460,7 +460,7 @@ class SubrackDriver(MccsComponentManager):
             is off
         """
         self._check_tpm_id(logical_tpm_id)
-        return self.tpm_power_modes[logical_tpm_id - 1] == ExtendedPowerMode.ON
+        return self.tpm_power_modes[logical_tpm_id - 1] == ExtendedPowerState.ON
 
     def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """

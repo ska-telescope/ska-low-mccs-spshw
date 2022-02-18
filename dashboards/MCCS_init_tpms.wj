@@ -1,0 +1,1113 @@
+{
+  "id": "62063112ffe3c400186f30e9",
+  "name": "tile_initialise",
+  "version": "1.2.0",
+  "user": "user1",
+  "insertTime": "2022-02-11T09:49:06.695Z",
+  "updateTime": "2022-02-11T11:10:41.113Z",
+  "group": null,
+  "groupWriteAccess": false,
+  "lastUpdatedBy": "user1",
+  "widget": [
+    {
+      "id": "1",
+      "x": 2,
+      "y": 18,
+      "canvas": "0",
+      "width": 39,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "tpm1powermode",
+          "label": "TPM bay 1 power mode"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": true,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 0
+    },
+    {
+      "id": "2",
+      "x": 14,
+      "y": 27,
+      "canvas": "0",
+      "width": 27,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "fpgatime",
+          "label": "fpgaTime"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 1
+    },
+    {
+      "id": "3",
+      "x": 14,
+      "y": 31,
+      "canvas": "0",
+      "width": 27,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "fpgareferencetime",
+          "label": "fpgaReferenceTime"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 2
+    },
+    {
+      "id": "4",
+      "x": 14,
+      "y": 35,
+      "canvas": "0",
+      "width": 27,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "fpgaframetime",
+          "label": "fpgaFrameTime"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 3
+    },
+    {
+      "id": "5",
+      "x": 2,
+      "y": 27,
+      "canvas": "0",
+      "width": 11,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "PPS time",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 4
+    },
+    {
+      "id": "6",
+      "x": 3,
+      "y": 31,
+      "canvas": "0",
+      "width": 10,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Ref Time",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 5
+    },
+    {
+      "id": "7",
+      "x": 2,
+      "y": 35,
+      "canvas": "0",
+      "width": 11,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Frame Time",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 6
+    },
+    {
+      "id": "8",
+      "x": 2,
+      "y": 22,
+      "canvas": "0",
+      "width": 17,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0001",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 7
+    },
+    {
+      "id": "9",
+      "x": 35,
+      "y": 9,
+      "canvas": "0",
+      "width": 6,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/tile/0001",
+          "command": "Off",
+          "acceptedType": "DevVoid"
+        },
+        "title": "",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#c10101",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 8
+    },
+    {
+      "id": "10",
+      "x": 2,
+      "y": 40,
+      "canvas": "0",
+      "width": 39,
+      "height": 40,
+      "type": "ATTRIBUTE_PLOT",
+      "inputs": {
+        "timeWindow": 120,
+        "showZeroLine": true,
+        "logarithmic": false,
+        "attributes": [
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0001",
+              "attribute": "fpga2temperature",
+              "label": "fpga2Temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0001",
+              "attribute": "fpga1temperature",
+              "label": "fpga1Temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0001",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          }
+        ]
+      },
+      "order": 9
+    },
+    {
+      "id": "11",
+      "x": 35,
+      "y": 5,
+      "canvas": "0",
+      "width": 6,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/tile/0001",
+          "command": "On",
+          "acceptedType": "DevVoid"
+        },
+        "title": "",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#00c800",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 10
+    },
+    {
+      "id": "12",
+      "x": 21,
+      "y": 22,
+      "canvas": "0",
+      "width": 20,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "tileprogrammingstate",
+          "label": "tileProgrammingState"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 11
+    },
+    {
+      "id": "13",
+      "x": 43,
+      "y": 18,
+      "canvas": "0",
+      "width": 39,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "tpm4powermode",
+          "label": "TPM bay 4 power mode"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": true,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 12
+    },
+    {
+      "id": "14",
+      "x": 55,
+      "y": 27,
+      "canvas": "0",
+      "width": 27,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "fpgatime",
+          "label": "fpgaTime"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 13
+    },
+    {
+      "id": "15",
+      "x": 55,
+      "y": 31,
+      "canvas": "0",
+      "width": 27,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "fpgareferencetime",
+          "label": "fpgaReferenceTime"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 14
+    },
+    {
+      "id": "16",
+      "x": 55,
+      "y": 35,
+      "canvas": "0",
+      "width": 27,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "fpgaframetime",
+          "label": "fpgaFrameTime"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 15
+    },
+    {
+      "id": "17",
+      "x": 43,
+      "y": 27,
+      "canvas": "0",
+      "width": 11,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "PPS time",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 16
+    },
+    {
+      "id": "18",
+      "x": 44,
+      "y": 31,
+      "canvas": "0",
+      "width": 10,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Ref Time",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 17
+    },
+    {
+      "id": "19",
+      "x": 43,
+      "y": 35,
+      "canvas": "0",
+      "width": 11,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Frame Time",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 18
+    },
+    {
+      "id": "20",
+      "x": 43,
+      "y": 22,
+      "canvas": "0",
+      "width": 17,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0004",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 19
+    },
+    {
+      "id": "21",
+      "x": 76,
+      "y": 9,
+      "canvas": "0",
+      "width": 6,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/tile/0004",
+          "command": "Off",
+          "acceptedType": "DevVoid"
+        },
+        "title": "",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#c10000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 20
+    },
+    {
+      "id": "22",
+      "x": 43,
+      "y": 40,
+      "canvas": "0",
+      "width": 39,
+      "height": 40,
+      "type": "ATTRIBUTE_PLOT",
+      "inputs": {
+        "timeWindow": 120,
+        "showZeroLine": true,
+        "logarithmic": false,
+        "attributes": [
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0004",
+              "attribute": "fpga2temperature",
+              "label": "fpga2Temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0004",
+              "attribute": "fpga1temperature",
+              "label": "fpga1Temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0004",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          }
+        ]
+      },
+      "order": 21
+    },
+    {
+      "id": "23",
+      "x": 76,
+      "y": 5,
+      "canvas": "0",
+      "width": 6,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/tile/0004",
+          "command": "On",
+          "acceptedType": "DevVoid"
+        },
+        "title": "",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#00c800",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 22
+    },
+    {
+      "id": "24",
+      "x": 62,
+      "y": 22,
+      "canvas": "0",
+      "width": 20,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "tileprogrammingstate",
+          "label": "tileProgrammingState"
+        },
+        "precision": 2,
+        "showDevice": false,
+        "showAttribute": "None",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 23
+    },
+    {
+      "id": "26",
+      "x": 2,
+      "y": 13,
+      "canvas": "0",
+      "width": 39,
+      "height": 4,
+      "type": "COMMAND_WRITER",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/tile/0001",
+          "command": "StartAcquisition",
+          "acceptedType": "DevString"
+        },
+        "showDevice": false,
+        "showCommand": true,
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 24
+    },
+    {
+      "id": "27",
+      "x": 2,
+      "y": 5,
+      "canvas": "0",
+      "width": 31,
+      "height": 4,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "",
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "adminmode",
+          "label": "adminMode"
+        },
+        "showDevice": false,
+        "showAttribute": "Label",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 25
+    },
+    {
+      "id": "28",
+      "x": 2,
+      "y": 9,
+      "canvas": "0",
+      "width": 31,
+      "height": 4,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "",
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "simulationmode",
+          "label": "simulationMode"
+        },
+        "showDevice": false,
+        "showAttribute": "Label",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 26
+    },
+    {
+      "id": "29",
+      "x": 84,
+      "y": 9,
+      "canvas": "0",
+      "width": 31,
+      "height": 4,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "",
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "simulationmode",
+          "label": "simulationMode"
+        },
+        "showDevice": false,
+        "showAttribute": "Label",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 27
+    },
+    {
+      "id": "30",
+      "x": 84,
+      "y": 5,
+      "canvas": "0",
+      "width": 31,
+      "height": 4,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "",
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "adminmode",
+          "label": "adminMode"
+        },
+        "showDevice": false,
+        "showAttribute": "Label",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 28
+    },
+    {
+      "id": "31",
+      "x": 117,
+      "y": 5,
+      "canvas": "0",
+      "width": 6,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "On",
+          "acceptedType": "DevVoid"
+        },
+        "title": "",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#00c800",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 29
+    },
+    {
+      "id": "32",
+      "x": 84,
+      "y": 22,
+      "canvas": "0",
+      "width": 37,
+      "height": 8,
+      "type": "SPECTRUM_TABLE",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "tpmpowers",
+          "label": "TPM power"
+        },
+        "precision": 0,
+        "layout": "horizontal",
+        "showDevice": false,
+        "showAttribute": "Label",
+        "showIndex": false,
+        "showLabel": false,
+        "fontSize": 16
+      },
+      "order": 30
+    },
+    {
+      "id": "33",
+      "x": 84,
+      "y": 30,
+      "canvas": "0",
+      "width": 37,
+      "height": 8,
+      "type": "SPECTRUM_TABLE",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "tpmvoltages",
+          "label": "TPM voltage"
+        },
+        "precision": 1,
+        "layout": "horizontal",
+        "showDevice": false,
+        "showAttribute": "Label",
+        "showIndex": false,
+        "showLabel": false,
+        "fontSize": 16
+      },
+      "order": 31
+    },
+    {
+      "id": "34",
+      "x": 43,
+      "y": 9,
+      "canvas": "0",
+      "width": 31,
+      "height": 4,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "",
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "simulationmode",
+          "label": "simulationMode"
+        },
+        "showDevice": false,
+        "showAttribute": "Label",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 32
+    },
+    {
+      "id": "35",
+      "x": 43,
+      "y": 5,
+      "canvas": "0",
+      "width": 31,
+      "height": 4,
+      "type": "ATTRIBUTE_WRITER",
+      "inputs": {
+        "title": "",
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "adminmode",
+          "label": "adminMode"
+        },
+        "showDevice": false,
+        "showAttribute": "Label",
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica",
+        "widgetCss": ""
+      },
+      "order": 33
+    },
+    {
+      "id": "37",
+      "x": 117,
+      "y": 9,
+      "canvas": "0",
+      "width": 6,
+      "height": 4,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "Off",
+          "acceptedType": "DevVoid"
+        },
+        "title": "",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#c10101",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 34
+    },
+    {
+      "id": "38",
+      "x": 2,
+      "y": 1,
+      "canvas": "0",
+      "width": 39,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Tile 1",
+        "textColor": "#0000b4",
+        "backgroundColor": "#f1f500",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 35
+    },
+    {
+      "id": "39",
+      "x": 43,
+      "y": 1,
+      "canvas": "0",
+      "width": 39,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Tile 4",
+        "textColor": "#0000b4",
+        "backgroundColor": "#f1f500",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 36
+    },
+    {
+      "id": "40",
+      "x": 84,
+      "y": 1,
+      "canvas": "0",
+      "width": 39,
+      "height": 4,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Subrack",
+        "textColor": "#0000b4",
+        "backgroundColor": "#f1f500",
+        "size": 1,
+        "borderWidth": 0,
+        "borderColor": "#000000",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 37
+    },
+    {
+      "id": "41",
+      "x": 84,
+      "y": 17,
+      "canvas": "0",
+      "width": 17,
+      "height": 4,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/subrack/01",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 38
+    },
+    {
+      "id": "42",
+      "x": 84,
+      "y": 46,
+      "canvas": "0",
+      "width": 37,
+      "height": 7,
+      "type": "SPECTRUM_TABLE",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "subrackfanspeeds",
+          "label": "Subrack fans speeds (RPM)"
+        },
+        "precision": 0,
+        "layout": "horizontal",
+        "showDevice": false,
+        "showAttribute": "Label",
+        "showIndex": false,
+        "showLabel": false,
+        "fontSize": 16
+      },
+      "order": 39
+    },
+    {
+      "id": "43",
+      "x": 84,
+      "y": 38,
+      "canvas": "0",
+      "width": 37,
+      "height": 7,
+      "type": "SPECTRUM_TABLE",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "powersupplypowers",
+          "label": "power_supply Powers"
+        },
+        "precision": 0,
+        "layout": "horizontal",
+        "showDevice": false,
+        "showAttribute": "Label",
+        "showIndex": false,
+        "showLabel": false,
+        "fontSize": 16
+      },
+      "order": 40
+    },
+    {
+      "id": "44",
+      "x": 43,
+      "y": 13,
+      "canvas": "0",
+      "width": 39,
+      "height": 4,
+      "type": "COMMAND_WRITER",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/tile/0004",
+          "command": "StartAcquisition",
+          "acceptedType": "DevString"
+        },
+        "showDevice": false,
+        "showCommand": true,
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 41
+    },
+    {
+      "id": "45",
+      "x": 84,
+      "y": 53,
+      "canvas": "0",
+      "width": 37,
+      "height": 7,
+      "type": "SPECTRUM_TABLE",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "subrackfanspeedspercent",
+          "label": "Subrack fans speeds (%)"
+        },
+        "precision": 0,
+        "layout": "horizontal",
+        "showDevice": false,
+        "showAttribute": "Label",
+        "showIndex": false,
+        "showLabel": false,
+        "fontSize": 16
+      },
+      "order": 42
+    },
+    {
+      "id": "46",
+      "x": 84,
+      "y": 60,
+      "canvas": "0",
+      "width": 37,
+      "height": 7,
+      "type": "SPECTRUM_TABLE",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/subrack/01",
+          "attribute": "boardtemperatures",
+          "label": "Subrack board temperatures"
+        },
+        "precision": 0,
+        "layout": "horizontal",
+        "showDevice": false,
+        "showAttribute": "Label",
+        "showIndex": false,
+        "showLabel": false,
+        "fontSize": 16
+      },
+      "order": 43
+    }
+  ],
+  "variables": []
+}

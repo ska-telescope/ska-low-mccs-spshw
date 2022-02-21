@@ -275,18 +275,34 @@ class MccsTile(SKABaseDevice):
             CommunicationStatus.NOT_ESTABLISHED: None,
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
-        self.logger.debug(f"communication_status: {communication_status}")
 
+        # action_map_established = {
+        #     AdminMode.ONLINE: "component_connected",
+        #     AdminMode.OFFLINE: "component_disconnected",
+        #     AdminMode.MAINTENANCE: "component_connected",
+        #     AdminMode.NOT_FITTED: "component_disconnected",
+        #     AdminMode.RESERVED: "component_disconnected",
+        # }
+
+        admin_mode = self.admin_mode_model.admin_mode
+        power_mode = self.component_manager.power_mode
+        self.logger.debug(
+            f"communication_status: {communication_status}, adminMode: {admin_mode}, powerMode: {power_mode}"
+        )
         action = action_map[communication_status]
+        # if communication_status == CommunicationStatus.ESTABLISHED:
+        #     action = action_map_established[adminMode]
         if action is not None:
             self.op_state_model.perform_action(action)
+        # if communication has been established, update power mode
+        if (communication_status == CommunicationStatus.ESTABLISHED) and (
+            admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
+        ):
+            self._component_power_mode_changed(power_mode)
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-        # if communication has been established, update power mode
-        # if communication_status == CommunicationStatus.ESTABLISHED:
-        #     self._component_power_mode_changed(self.component_manager.power_mode)
 
     def _component_power_mode_changed(
         self: MccsTile,
@@ -593,9 +609,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
-        max_value=50.0,
+        max_value=70.0,
         min_alarm=16.0,
-        max_alarm=47.0,
+        max_alarm=65.0,
     )
     def boardTemperature(self: MccsTile) -> float:
         """
@@ -609,9 +625,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
-        max_value=50.0,
+        max_value=75.0,
         min_alarm=16.0,
-        max_alarm=47.0,
+        max_alarm=68.0,
     )
     def fpga1Temperature(self: MccsTile) -> float:
         """
@@ -625,9 +641,9 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         abs_change=0.2,
         min_value=15.0,
-        max_value=50.0,
+        max_value=75.0,
         min_alarm=16.0,
-        max_alarm=47.0,
+        max_alarm=68.0,
     )
     def fpga2Temperature(self: MccsTile) -> float:
         """
@@ -638,15 +654,42 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.fpga2_temperature
 
     @attribute(dtype=("DevLong",), max_dim_x=2)
-    def fpgasTime(self: MccsTile) -> list[int]:
+    def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
         Return the time for FPGAs.
 
         :return: the time for FPGAs
         """
-        return self.component_manager.fpgas_time
+        return self.component_manager.fpgas_unix_time
 
-    @attribute(dtype=("DevLong",), max_dim_x=8, label="Antenna ID's")
+    @attribute(dtype="DevString")
+    def fpgaTime(self: MccsTile) -> str:
+        """
+        Return the FPGA internal time.
+
+        :return: the FPGA time, in UTC format
+        """
+        return self.component_manager.fpga_time
+
+    @attribute(dtype="DevString")
+    def fpgaReferenceTime(self: MccsTile) -> str:
+        """
+        Return the FPGA synchronization timestamp.
+
+        :return: the FPGA timestamp, in UTC format
+        """
+        return self.component_manager.fpga_reference_time
+
+    @attribute(dtype="DevString")
+    def fpgaFrameTime(self: MccsTile) -> str:
+        """
+        Return the FPGA synchronization timestamp.
+
+        :return: the FPGA timestamp, in UTC format
+        """
+        return self.component_manager.fpga_frame_time
+
+    @attribute(dtype=("DevLong",), max_dim_x=16, label="Antenna ID's")
     def antennaIds(self: MccsTile) -> list[int]:
         """
         Return the antenna IDs.
@@ -708,6 +751,18 @@ class MccsTile(SKABaseDevice):
         :return: current frame
         """
         return self.component_manager.current_tile_beamformer_frame
+
+    @attribute(dtype="DevLong")
+    def currentFrame(self: MccsTile) -> int:
+        """
+        Return current frame.
+
+        in units of 256 ADC frames (276,48 us) Currently this is
+        required, not sure if it will remain so.
+
+        :return: current frame
+        """
+        return self.component_manager.fpga_current_frame
 
     @attribute(dtype="DevBoolean")
     def checkPendingDataRequests(self: MccsTile) -> bool:

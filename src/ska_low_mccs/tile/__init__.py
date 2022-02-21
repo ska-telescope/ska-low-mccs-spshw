@@ -14,6 +14,8 @@ modules for driving and simulating TPM hardware, and a CLI.
 
 
 __all__ = [
+    "TileData",
+    "TileTime",
     "MccsTile",
     "TileComponentManager",
     "TileHealthModel",
@@ -30,6 +32,8 @@ __all__ = [
     "TpmStatus",
 ]
 
+from .tile_data import TileData
+from .time_util import TileTime
 from .tpm_status import TpmStatus
 from .base_tpm_simulator import BaseTpmSimulator
 from .dynamic_tpm_simulator import DynamicTpmSimulator

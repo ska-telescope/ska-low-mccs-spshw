@@ -29,16 +29,16 @@ class TpmStatus(enum.IntEnum):
     UNCONNECTED = 2
     """ The TPM is not connected """
 
-    UNPROGRAMMED = 2
+    UNPROGRAMMED = 3
     """ The TPM is powered on but FPGAS are not programmed """
 
-    PROGRAMMED = 3
+    PROGRAMMED = 4
     """ The TPM is powered on and FPGAS are programmed """
 
-    INITIALISED = 3
+    INITIALISED = 5
     """ Initialise command has been issued """
 
-    SYNCHRONISED = 4
+    SYNCHRONISED = 6
     """ Time has been synchronised with UTC, timestamp is valid """
 
     """ TODO: More status values to come, for complete configuration in station """

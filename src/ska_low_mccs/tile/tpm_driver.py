@@ -233,8 +233,14 @@ class TpmDriver(MccsComponentManager):
             time.sleep(2.0)
             if self._hardware_lock.acquire(timeout=0.5):
                 try:
-                    self.tile["0x30000000"]
-                except LibraryError:
+                    self.tile[int(0x30000000)]
+                    if self.tile.is_programmed():
+                        self.logger.debug("Updating key hardware attributes...")
+                        self._fpga1_temperature = self.tile.get_fpga0_temperature()
+                        self._fpga2_temperature = self.tile.get_fpga1_temperature()
+                        self._board_temperature = self.tile.get_temperature()
+                        self._voltage = self.tile.get_voltage()
+                except Exception:
                     self.logger.warning("Connection to tpm lost!")
                     self.tpm_disconnected()
                     self.update_component_fault(True)
@@ -421,14 +427,14 @@ class TpmDriver(MccsComponentManager):
                     "Could not program Tile",
                 )
 
-    # def download_firmware(self: TpmDriver, bitfile: str) -> None:
-    #     """
-    #     Download firmware bitfile onto the TPM as a long runnning command.
+    def download_firmware(self: TpmDriver, bitfile: str) -> None:
+        """
+        Download firmware bitfile onto the TPM as a long runnning command.
 
-    #     :param bitfile: a binary firmware blob
-    #     """
-    #     download_file_command = self.ConnectToTile(target=self)
-    #     _ = self.enqueue(download_file_command)
+        :param bitfile: a binary firmware blob
+        """
+        download_file_command = self.DownloadFirmware(target=self)
+        _ = self.enqueue(download_file_command)
 
     def _download_firmware(self: TpmDriver, bitfile: str) -> bool:
         """

@@ -186,34 +186,36 @@ class TpmDriver(MccsComponentManager):
         """
         if self._desired_connection:
             self.logger.debug("Trying to connect to tpm...")
-            with self._hardware_lock:
-                self.tile.connect()
-            if self.tile.tpm is not None:
-                self.tpm_connected()
-            else:
-                timeout = 0
-                max_time = 4  # 15 seconds
-                while self.tile.tpm is None:
-                    time.sleep(0.5)
-                    with self._hardware_lock:
-                        self.tile.connect()  # this takes 2 seconds to fail
-                    timeout = timeout + 1
-                    if timeout > max_time:
-                        self.logger.error(
-                            f"Connection to tpm failed after {timeout * 3} "
-                            f"seconds. Waiting for instruction..."
-                        )
-                        self.update_component_fault(True)
-                        self._tpm_status = TpmStatus.UNCONNECTED
-                        self.update_communication_status(
-                            CommunicationStatus.NOT_ESTABLISHED
-                        )
-                        self._is_tpm_connected = False
-                        self.tile.tpm = None
-                        self.logger.debug("Tile disconnected from tpm.")
-                        time.sleep(10.0)
-                        return
-                self.tpm_connected()
+            timeout = 0
+            max_time = 5  # 15 seconds
+            self._is_programmed = False
+            while timeout < max_time:
+                if self._hardware_lock.acquire(timeout=0.5):
+                    self.logger.debug("Lock acquired")
+                    try:
+                        self.tile.connect()
+                    except Exception:
+                        self.logger.debug("Failed to communicate with tile")
+                    self._hardware_lock.release()
+                    self.logger.debug("Lock released")
+                else:
+                    self.logger.debug("Failed to acquire lock")
+                if self.tile.tpm is None:
+                    self._tpm_status = TpmStatus.UNCONNECTED
+                else:
+                    self.tpm_connected()
+                    return
+                time.sleep(0.5)
+                timeout = timeout + 1
+            self.logger.error(
+                f"Connection to tile failed after {timeout*3} seconds. Waiting for instruction..."
+            )
+            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_component_fault(True)
+            self._is_tpm_connected = False
+            self.logger.debug("Tile disconnected from tpm.")
+            time.sleep(10.0)
+            return
         else:
             time.sleep(1.0)
 
@@ -225,29 +227,20 @@ class TpmDriver(MccsComponentManager):
         """
         while self._is_tpm_connected:
             if not self._desired_connection:
-                self._tpm_status = TpmStatus.UNCONNECTED
-                self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-                self._is_tpm_connected = False
-                self.tile.tpm = None
-                self.logger.debug("Tile disconnected from tpm.")
+                self.tpm_disconnected()
+                self._is_programmed = False
                 return
             time.sleep(2.0)
-            try:
-                with self._hardware_lock:
+            if self._hardware_lock.acquire(timeout=0.5):
+                try:
                     self.tile["0x30000000"]
-            except LibraryError:
-                self.logger.warning("Connection to tpm lost!")
-                self._tpm_status = TpmStatus.UNCONNECTED
-                self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-                self._is_tpm_connected = False
-                self.tile.tpm = None
-                self.update_component_fault(True)
-            """ if self.tile.is_programmed():
-                self.logger.debug("Updating key hardware attributes...")
-                self._fpga1_temperature = self.tile.get_fpga0_temperature()
-                self._fpga2_temperature = self.tile.get_fpga1_temperature()
-                self._board_temperature = self.tile.get_temperature()
-                self._voltage = self.tile.get_voltage() """
+                except LibraryError:
+                    self.logger.warning("Connection to tpm lost!")
+                    self.tpm_disconnected()
+                    self.update_component_fault(True)
+                self._hardware_lock.release()
+            else:
+                self.logger.debug("Failed to acquire lock")
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
@@ -257,12 +250,26 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("Tpm connected to tile.")
         self._tpm_status = TpmStatus.UNPROGRAMMED
         self._is_programmed = False
-        with self._hardware_lock:
-            if self.tile.is_programmed():
-                self._tpm_status = TpmStatus.PROGRAMMED
-                self._is_programmed = True
+        if self._check_programmed():
+            self._tpm_status = TpmStatus.PROGRAMMED
+            self._is_programmed = True
         if self._is_programmed:
             self.logger.debug("Tpm programmed.")
+
+    def tpm_disconnected(self: TpmDriver) -> None:
+        """Tile disconnected to tpm."""
+        self._tpm_status = TpmStatus.UNCONNECTED
+        self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        self._is_tpm_connected = False
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.tpm = None
+            except Exception:
+                self.logger.warning("TpmDriver: Tile access failed")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+        self.logger.debug("Tile disconnected from tpm.")
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -414,14 +421,14 @@ class TpmDriver(MccsComponentManager):
                     "Could not program Tile",
                 )
 
-    def download_firmware(self: TpmDriver, bitfile: str) -> None:
-        """
-        Download firmware bitfile onto the TPM as a long runnning command.
+    # def download_firmware(self: TpmDriver, bitfile: str) -> None:
+    #     """
+    #     Download firmware bitfile onto the TPM as a long runnning command.
 
-        :param bitfile: a binary firmware blob
-        """
-        download_file_command = self.ConnectToTile(target=self)
-        _ = self.enqueue(download_file_command)
+    #     :param bitfile: a binary firmware blob
+    #     """
+    #     download_file_command = self.ConnectToTile(target=self)
+    #     _ = self.enqueue(download_file_command)
 
     def _download_firmware(self: TpmDriver, bitfile: str) -> bool:
         """

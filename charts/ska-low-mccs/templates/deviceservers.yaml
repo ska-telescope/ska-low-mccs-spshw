@@ -24,3 +24,7 @@
 {{ template "ska-tango-util.multidevice-svc.tpl" $context }}
 
 {{- end }}
+
+{{- end }} # deviceservers
+
+{{- end }} # instances

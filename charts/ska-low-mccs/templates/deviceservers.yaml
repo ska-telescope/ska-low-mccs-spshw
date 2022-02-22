@@ -2,6 +2,8 @@
 
 {{ range $key, $deviceserver := .Values.deviceServers }}
 
+{{ range $instance := $deviceserver.instances }}
+
 {{- if hasKey $deviceserver "file"}}
 
 {{- $filedeviceserver := $.Files.Get $deviceserver.file | fromYaml }} 

@@ -3,7 +3,7 @@ function: controller
 domain: ska-low-mccs
 instances: ["controller"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/controller/controller.py"
+  - path: "/app/src/ska_low_mccs/controller/controller_device.py"
     name: "controller.MccsController"
 server: 
   name: "MccsController"

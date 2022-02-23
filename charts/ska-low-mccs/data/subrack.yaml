@@ -3,7 +3,7 @@ function: subrack
 domain: ska-low-mccs
 instances: ["subrack_01"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/subrack/subrack.py"
+  - path: "/app/src/ska_low_mccs/subrack/subrack_device.py"
     name: "subrack.MccsSubrack"
 server: 
   name: "MccsSubrack"

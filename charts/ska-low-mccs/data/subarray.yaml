@@ -3,7 +3,7 @@ function: subarray
 domain: ska-low-mccs
 instances: ["subarray_01", "subarray_02"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/subarray/subarray.py"
+  - path: "/app/src/ska_low_mccs/subarray/subarray_device.py"
     name: "subarray.MccsSubarray"
 server: 
   name: "MccsSubarray"

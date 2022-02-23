@@ -3,7 +3,7 @@ function: station
 domain: ska-low-mccs
 instances: ["station_001", "station_002"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/station/station.py"
+  - path: "/app/src/ska_low_mccs/station/station_device.py"
     name: "station.MccsStation"
 server: 
   name: "MccsStation"

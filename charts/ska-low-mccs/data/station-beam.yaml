@@ -3,7 +3,7 @@ function: beam
 domain: ska-low-mccs
 instances: ["beam_01", "beam_02", "beam_03", "beam_04"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/station_beam/station_beam.py"
+  - path: "/app/src/ska_low_mccs/station_beam/station_beam_device.py"
     name: "stationbeam.MccsStationBeam"
 server: 
   name: "MccsStationBeam"

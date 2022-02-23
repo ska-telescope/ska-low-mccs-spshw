@@ -3,7 +3,7 @@ function: apiu
 domain: ska-low-mccs
 instances: ["apiu_001", "apiu_002"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/apiu/apiu.py"
+  - path: "/app/src/ska_low_mccs/apiu/apiu_device.py"
     name: "apiu.MccsApiu"
 server: 
   name: "MccsApiu"

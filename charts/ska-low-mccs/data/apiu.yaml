@@ -3,8 +3,8 @@ function: apiu
 domain: ska-low-mccs
 instances: ["apiu_001", "apiu_002"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/apiu/apiu_device.py"
-    name: "apiu.MccsApiu"
+  - name: "apiu.MccsApiu"
+    path: "/app/src/ska_low_mccs/apiu/apiu_device.py"
 server: 
   name: "MccsApiu"
   instances:
@@ -37,11 +37,9 @@ server:
             - "low-mccs/antenna/000008"
           - name: "LoggingLevelDefault"
             values: 
-            - "3"
-                  
+            - "3"              
 depends_on:
   - device: sys/database/2
-  
 image:
   registry: "{{.Values.low_mccs.image.registry}}"
   image: "{{.Values.low_mccs.image.image}}"

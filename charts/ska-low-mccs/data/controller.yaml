@@ -3,8 +3,8 @@ function: controller
 domain: ska-low-mccs
 instances: ["controller"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/controller/controller_device.py"
-    name: "controller.MccsController"
+  - name: "controller.MccsController"
+    path: "/app/src/ska_low_mccs/controller/controller_device.py"
 server: 
   name: "MccsController"
   instances:
@@ -45,11 +45,9 @@ server:
               - "low-mccs/subarraybeam/04"
           - name: "LoggingLevelDefault"
             values: 
-            "3"
-            
+            "3"          
 depends_on:
   - device: sys/database/2
-  
 image:
   registry: "{{.Values.low_mccs.image.registry}}"
   image: "{{.Values.low_mccs.image.image}}"

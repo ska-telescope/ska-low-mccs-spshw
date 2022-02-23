@@ -3,8 +3,8 @@ function: tile
 domain: ska-low-mccs
 instances: ["tile_0001", "tile_0002", "tile_0003", "tile_0004"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/tile/tile_device.py"
-    name: "tile.MccsTile"
+  - name: "tile.MccsTile"
+    path: "/app/src/ska_low_mccs/tile/tile_device.py"
 server: 
   name: "MccsTile"
   instances:
@@ -140,10 +140,8 @@ server:
             - name: "__value"
               values:
               - "1"
-                  
 depends_on:
   - device: sys/database/2
-  
 image:
   registry: "{{.Values.low_mccs.image.registry}}"
   image: "{{.Values.low_mccs.image.image}}"

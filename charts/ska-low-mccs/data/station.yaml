@@ -3,8 +3,8 @@ function: station
 domain: ska-low-mccs
 instances: ["station_001", "station_002"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/station/station_device.py"
-    name: "station.MccsStation"
+  - name: "station.MccsStation"
+    path: "/app/src/ska_low_mccs/station/station_device.py"
 server: 
   name: "MccsStation"
   instances:
@@ -57,11 +57,9 @@ server:
             - "low-mccs/antenna/000008"
           - name: "LoggingLevelDefault"
             values: 
-            -"3"
-                  
+            -"3"          
 depends_on:
   - device: sys/database/2
-  
 image:
   registry: "{{.Values.low_mccs.image.registry}}"
   image: "{{.Values.low_mccs.image.image}}"

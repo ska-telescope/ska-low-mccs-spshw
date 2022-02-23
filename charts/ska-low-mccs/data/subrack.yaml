@@ -3,8 +3,8 @@ function: subrack
 domain: ska-low-mccs
 instances: ["subrack_01"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/subrack/subrack_device.py"
-    name: "subrack.MccsSubrack"
+  - name: "subrack.MccsSubrack"
+    path: "/app/src/ska_low_mccs/subrack/subrack_device.py"
 server: 
   name: "MccsSubrack"
   instances:
@@ -31,7 +31,6 @@ server:
             - "8081"       
 depends_on:
   - device: sys/database/2
-  
 image:
   registry: "{{.Values.low_mccs.image.registry}}"
   image: "{{.Values.low_mccs.image.image}}"

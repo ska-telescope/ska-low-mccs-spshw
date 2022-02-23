@@ -3,8 +3,8 @@ function: subarraybeam
 domain: ska-low-mccs
 instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
 entrypoints:
-  - path: "/app/src/ska_low_mccs/subarray_beam/subarray_beam_device.py"
-    name: "subarraybeam.MccsSubarrayBeam"
+  - name: "subarraybeam.MccsSubarrayBeam"
+    path: "/app/src/ska_low_mccs/subarray_beam/subarray_beam_device.py"
 server: 
   name: "MccsSubarrayBeam"
   instances:
@@ -56,10 +56,8 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-                  
 depends_on:
   - device: sys/database/2
-  
 image:
   registry: "{{.Values.low_mccs.image.registry}}"
   image: "{{.Values.low_mccs.image.image}}"

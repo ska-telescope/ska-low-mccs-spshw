@@ -1,5 +1,5 @@
 name: "apiu-{{.Release.Name}}"
-function: apiu
+function: ska-low-mccs-apiu
 domain: ska-low-mccs
 instances: ["apiu_001", "apiu_002"]
 entrypoints:

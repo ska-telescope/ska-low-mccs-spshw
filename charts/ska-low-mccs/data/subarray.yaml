@@ -1,5 +1,5 @@
 name: "subarray-{{.Release.Name}}"
-function: subarray
+function: ska-low-mccs-subarray
 domain: ska-low-mccs
 instances: ["subarray_01", "subarray_02"]
 entrypoints:

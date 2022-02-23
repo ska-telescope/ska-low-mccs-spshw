@@ -1,5 +1,5 @@
 name: "controller-{{.Release.Name}}"
-function: controller
+function: ska-low-mccs-controller
 domain: ska-low-mccs
 instances: ["controller"]
 entrypoints:

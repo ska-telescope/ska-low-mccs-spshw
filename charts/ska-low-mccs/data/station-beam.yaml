@@ -1,5 +1,5 @@
 name: "station-beam-{{.Release.Name}}"
-function: beam
+function: ska-low-mccs-beam
 domain: ska-low-mccs
 instances: ["beam_01", "beam_02", "beam_03", "beam_04"]
 entrypoints:

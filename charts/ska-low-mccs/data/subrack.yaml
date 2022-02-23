@@ -1,5 +1,5 @@
 name: "subrack-{{.Release.Name}}"
-function: subrack
+function: ska-low-mccs-subrack
 domain: ska-low-mccs
 instances: ["subrack_01"]
 entrypoints:

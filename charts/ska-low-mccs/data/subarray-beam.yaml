@@ -1,5 +1,5 @@
-name: "subarray-beam-{{.Release.Name}}"
-function: subarraybeam
+name: "subarraybeam-{{.Release.Name}}"
+function: ska-low-mccs-subarraybeam
 domain: ska-low-mccs
 instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
 entrypoints:

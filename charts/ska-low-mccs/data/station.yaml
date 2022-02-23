@@ -1,5 +1,5 @@
 name: "station-{{.Release.Name}}"
-function: station
+function: ska-low-mccs-station
 domain: ska-low-mccs
 instances: ["station_001", "station_002"]
 entrypoints:

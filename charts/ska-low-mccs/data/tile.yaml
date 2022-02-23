@@ -1,5 +1,5 @@
 name: "tile-{{.Release.Name}}"
-function: tile
+function: ska-low-mccs-tile
 domain: ska-low-mccs
 instances: ["tile_0001", "tile_0002", "tile_0003", "tile_0004"]
 entrypoints:

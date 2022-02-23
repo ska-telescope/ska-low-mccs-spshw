@@ -217,7 +217,7 @@ class TpmDriver(MccsComponentManager):
             time.sleep(10.0)
             return
         else:
-            time.sleep(1.0)
+            time.sleep(0.2)
 
     def monitor_connection(self: TpmDriver) -> None:
         """
@@ -226,27 +226,39 @@ class TpmDriver(MccsComponentManager):
         :return: None
         """
         while self._is_tpm_connected:
-            if not self._desired_connection:
-                self.tpm_disconnected()
-                self._is_programmed = False
-                return
-            time.sleep(2.0)
+            counter = 0
+            while counter < 10:
+                if not self._desired_connection:
+                    self.tpm_disconnected()
+                    self._is_programmed = False
+                    return
+                counter += 1
+                time.sleep(0.2)
             if self._hardware_lock.acquire(timeout=0.5):
                 try:
                     self.tile[int(0x30000000)]
-                    if self.tile.is_programmed():
-                        self.logger.debug("Updating key hardware attributes...")
-                        self._fpga1_temperature = self.tile.get_fpga0_temperature()
-                        self._fpga2_temperature = self.tile.get_fpga1_temperature()
-                        self._board_temperature = self.tile.get_temperature()
-                        self._voltage = self.tile.get_voltage()
                 except Exception:
                     self.logger.warning("Connection to tpm lost!")
                     self.tpm_disconnected()
                     self.update_component_fault(True)
+                    self._hardware_lock.release()
+                    return
+                self.updating_attributes()
                 self._hardware_lock.release()
             else:
                 self.logger.debug("Failed to acquire lock")
+
+    def updating_attributes(self: TpmDriver) -> None:
+        """Update key hardware attributes."""
+        try:
+            if self.tile.is_programmed():
+                self.logger.debug("Updating key hardware attributes...")
+                self._fpga1_temperature = self.tile.get_fpga0_temperature()
+                self._fpga2_temperature = self.tile.get_fpga1_temperature()
+                self._board_temperature = self.tile.get_temperature()
+                self._voltage = self.tile.get_voltage()
+        except Exception:
+            self.logger.debug("Failed to update key hardware attributes...")
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
@@ -267,14 +279,17 @@ class TpmDriver(MccsComponentManager):
         self._tpm_status = TpmStatus.UNCONNECTED
         self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
         self._is_tpm_connected = False
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self.tile.tpm = None
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
+        while True:
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    self.tile.tpm = None
+                except Exception:
+                    self.logger.warning("TpmDriver: Tile access failed")
+                self._hardware_lock.release()
+                break
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
+                time.sleep(0.5)
         self.logger.debug("Tile disconnected from tpm.")
 
     @property

@@ -1,0 +1,49 @@
+name: "apiu-{{.Release.Name}}"
+function: apiu
+domain: ska-low-mccs
+instances: ["apiu_001", "apiu_002"]
+entrypoints:
+  - path: "/app/src/ska_low_mccs/apiu/apiu.py"
+    name: "apiu.MccsApiu"
+server: 
+  name: "MccsApiu"
+  instances:
+    - name: "apiu_001"
+      classes:
+      - name: "MccsApiu"
+        devices:
+        - name: "low_mccs/apiu/001"
+          properties:
+          - name: "AntennaFQDNs"
+            values:
+            - "low-mccs/antenna/000001"
+            - "low-mccs/antenna/000002"
+            - "low-mccs/antenna/000003"
+            - "low-mccs/antenna/000004"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "apiu_002"
+      classes:
+      - name: "MccsApiu"
+        devices:
+        - name: "low_mccs/apiu/002"
+          properties:
+          - name: "AntennaFQDNs"
+            values:
+            - "low-mccs/antenna/000005"
+            - "low-mccs/antenna/000006"
+            - "low-mccs/antenna/000007"
+            - "low-mccs/antenna/000008"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+                  
+depends_on:
+  - device: sys/database/2
+  
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"

@@ -1,0 +1,39 @@
+name: "subrack-{{.Release.Name}}"
+function: subrack
+domain: ska-low-mccs
+instances: ["subrack_01"]
+entrypoints:
+  - path: "/app/src/ska_low_mccs/subrack/subrack.py"
+    name: "subrack.MccsSubrack"
+server: 
+  name: "MccsSubrack"
+  instances:
+    - name: "subrack_01"
+      classes:
+      - name: "MccsSubrack"
+        devices:
+        - name: "low_mccs/subrack/01"
+          properties:
+          - name: "TileFQDNs"
+            values:
+            - "low-mccs/tile/0001"
+            - "low-mccs/tile/0002"
+            - "low-mccs/tile/0003"
+            - "low-mccs/tile/0004"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "SubrackIp"
+            values: 
+            - "10.0.10.64"
+          - name: "SubrackPort"
+            values: 
+            - "8081"       
+depends_on:
+  - device: sys/database/2
+  
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"

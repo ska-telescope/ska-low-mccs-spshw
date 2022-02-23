@@ -1,0 +1,69 @@
+name: "station-{{.Release.Name}}"
+function: station
+domain: ska-low-mccs
+instances: ["station_001", "station_002"]
+entrypoints:
+  - path: "/app/src/ska_low_mccs/station/station.py"
+    name: "station.MccsStation"
+server: 
+  name: "MccsStation"
+  instances:
+    - name: "station_001"
+      classes:
+      - name: "MccsStation"
+        devices:
+        - name: "low_mccs/station/001"
+          properties:
+          - name: "StationId"
+            values:
+            - "1"
+          - name: "APIUFQDN"
+            values:
+            - "low-mccs/apiu/001"
+          - name: "TileFQDNs"
+            values:
+            - "low-mccs/tile/0001"
+            - "low-mccs/tile/0002"
+          - name: "AntennaFQDNs"
+            values:
+            - "low-mccs/antenna/000001"
+            - "low-mccs/antenna/000002"
+            - "low-mccs/antenna/000003"
+            - "low-mccs/antenna/000004"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "station_002"
+      classes:
+      - name: "MccsStation"
+        devices:
+        - name: "low_mccs/station/002"
+          properties:
+          - name: "StationId"
+            values:
+            - "2"
+          - name: "APIUFQDN"
+            values:
+            - "low-mccs/apiu/002"
+          - name: "TileFQDNs"
+            values:
+            - "low-mccs/tile/0003"
+            - "low-mccs/tile/0004"
+          - name: "AntennaFQDNs"
+            values:
+            - "low-mccs/antenna/000005"
+            - "low-mccs/antenna/000006"
+            - "low-mccs/antenna/000007"
+            - "low-mccs/antenna/000008"
+          - name: "LoggingLevelDefault"
+            values: 
+            -"3"
+                  
+depends_on:
+  - device: sys/database/2
+  
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"

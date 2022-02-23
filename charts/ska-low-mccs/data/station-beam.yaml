@@ -1,0 +1,67 @@
+name: "station-beam-{{.Release.Name}}"
+function: beam
+domain: ska-low-mccs
+instances: ["beam_01", "beam_02", "beam_03", "beam_04"]
+entrypoints:
+  - path: "/app/src/ska_low_mccs/station_beam/station_beam.py"
+    name: "stationbeam.MccsStationBeam"
+server: 
+  name: "MccsStationBeam"
+  instances:
+    - name: "beam_01"
+      classes:
+      - name: "MccsStationBeam"
+        devices:
+        - name: "low_mccs/beam/01"
+          properties:
+          - name: "BeamId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "beam_02"
+      classes:
+      - name: "MccsStationBeam"
+        devices:
+        - name: "low_mccs/beam/02"
+          properties:
+          - name: "BeamId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "beam_03"
+      classes:
+      - name: "MccsStationBeam"
+        devices:
+        - name: "low_mccs/beam/03"
+          properties:
+          - name: "BeamId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "beam_04"
+      classes:
+      - name: "MccsStationBeam"
+        devices:
+        - name: "low_mccs/beam/04"
+          properties:
+          - name: "BeamId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+                  
+depends_on:
+  - device: sys/database/2
+  
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"

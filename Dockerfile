@@ -4,21 +4,14 @@ FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.3.14 AS runtime
 # create ipython profile to so that itango doesn't fail if ipython hasn't run yet
 #RUN ipython profile create
 
-#ENV PATH=/home/tango/.local/bin:$PATH
-
-#ENV POETRY_HOME="/opt/poetry"
-#ENV PATH="$POETRY_HOME/bin:$PATH"
-ENV POETRY_VERSION="1.1.12"
-
 USER root
 
-RUN python3 -m pip install "poetry==$POETRY_VERSION"
-#RUN python3 -m poetry config virtualenvs.in-project true
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python -
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./
 COPY ./pyfabil-1.0-py3-none-any.whl ./aavs_system-1.0-py3-none-any.whl ./
 
-RUN poetry install --no-dev 
+RUN poetry install --no-dev -vvv
 
 USER tango

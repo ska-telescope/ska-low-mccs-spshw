@@ -57,7 +57,7 @@ server:
             - "low-mccs/antenna/000008"
           - name: "LoggingLevelDefault"
             values: 
-            -"3"          
+            - "3"          
 depends_on:
   - device: sys/database/2
 image:

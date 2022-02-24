@@ -240,7 +240,8 @@ class TpmDriver(MccsComponentManager):
                 except Exception:
                     self.logger.warning("Connection to tpm lost!")
                     self.tpm_disconnected()
-                    self.update_component_fault(True)
+                    if not self._desired_connection:
+                        self.update_component_fault(True)
                     self._hardware_lock.release()
                     return
                 self.updating_attributes()

@@ -1,4 +1,5 @@
-{{ if .Values.cli.enabled }}
+{{ if .Values.mccs_cli.enabled }}
+
 {{ $default_tango_host := printf "%s-%s" "databaseds-tango-base-" .Release.Name }}
 {{ $tango_host := tpl (coalesce .Values.global.tango_host .Values.tango_host $default_tango_host | toString) . }}
 {{ $dsconfig := coalesce .Values.global.dsconfig .Values.dsconfig}}
@@ -6,14 +7,14 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ .Values.subsystem }}-{{ .Values.cli.component }}
+  name: {{ .Values.subsystem }}-{{ .Values.mccs_cli.component }}
   namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml (coalesce .Values.global.labels .Values.labels "label:none") | indent 4 }}
-    component: {{ .Values.cli.component }}
-    function: {{ .Values.cli.function }}
-    domain: {{ .Values.cli.domain }}
-    intent: {{ .Values.cli.intent }}
+    component: {{ .Values.mccs_cli.component }}
+    function: {{ .Values.mccs_cli.function }}
+    domain: {{ .Values.mccs_cli.domain }}
+    intent: {{ .Values.mccs_cli.intent }}
   annotations:
 {{ toYaml (coalesce .Values.global.annotations .Values.annotations "annotations:none") | indent 4 }}
 spec:
@@ -32,9 +33,9 @@ spec:
     - name: TANGO_HOST
       value: {{ $tango_host }}
   containers:
-  - name: cli
-    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
-    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+  - name: mccs_cli
+    image: "{{ .Values.low_mccs.image.registry }}/{{ .Values.low_mccs.image.image }}:{{ .Values.low_mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.low_mccs.image.pullPolicy }}
     command:
       - /usr/local/bin/wait-for-it.sh
       - {{ $tango_host }}
@@ -47,7 +48,7 @@ spec:
     - name: TANGO_HOST
       value: "{{ $tango_host }}"
     resources:
-{{ toYaml .Values.cli.resources | indent 6 }}
+{{ toYaml .Values.mccs_cli.resources | indent 6 }}
   restartPolicy: Always
 {{- with .Values.nodeSelector }}
   nodeSelector:

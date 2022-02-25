@@ -8,7 +8,7 @@ xauthority: "~/.Xauthority"
 enabled: true
 
 system: SW-infrastructure
-subsystem: mccs
+subsystem: low-mccs
 telescope: SKA-low
 
 labels:
@@ -20,15 +20,13 @@ annotations:
 global:
   minikube: true
   tango_host: databaseds-tango-base-test:10000
-  
+
 dsconfig:
-  configuration_file: data/configuration.json
-  timeout: 300s
   image:
-      registry: artefact.skao.int
-      image: ska-tango-images-tango-dsconfig
-      tag: 1.5.1
-      pullPolicy: IfNotPresent
+    registry: artefact.skao.int
+    image: ska-tango-images-tango-dsconfig
+    tag: 1.5.3
+    pullPolicy: IfNotPresent
 
 resources:
   limits:
@@ -40,7 +38,7 @@ resources:
 
 
 # Default docker image - used by all of MCCS
-mccs:
+low_mccs:
   enabled: true
   image:
     registry: artefact.skao.int
@@ -94,10 +92,10 @@ deviceServers:
     instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
     file: "data/subarray-beam.yaml"
 
-cli:
+mccs_cli:
   # use the MCCS unix cli tool
   enabled: true
-  component: mccs-cli
+  component: ska-low-mccs-cli
   function: mccs-cli-tango-client
   domain: interactive-testing
   intent: enabling

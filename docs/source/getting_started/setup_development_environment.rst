@@ -232,16 +232,17 @@ Try it out:
    me@local:~/ska-low-mccs$ make python-test
    ... [output from Docker building the container image] ...
    ... [output from Docker launching the container] ...
-   ... [output from tox building its virtual environment] ...
+   ... [output from poetry building its virtual environment] ...
    ... [output from pytest launching its test session] ...
 
    ============================= test session starts ==============================
-   platform linux -- Python 3.7.3, pytest-5.4.3, py-1.10.0, pluggy-0.13.1 -- /app/.tox/py/bin/python
-   cachedir: .tox/py/.pytest_cache
-   metadata: {'Python': '3.7.3', 'Platform': 'Linux-5.4.0-73-generic-x86_64-with-debian-10.8', 'Packages': {'pytest': '5.4.3', 'py': '1.10.0', 'pluggy': '0.13.1'}, 'Plugins': {'bdd': '4.0.2', 'forked': '1.3.0', 'mock': '3.6.1', 'cov': '2.12.0', 'repeat': '0.9.1', 'json-report': '1.3.0', 'metadata': '1.11.0', 'xdist': '1.34.0'}}
-   rootdir: /app, inifile: setup.cfg, testpaths: testing/src/
-   plugins: bdd-4.0.2, forked-1.3.0, mock-3.6.1, cov-2.12.0, repeat-0.9.1, json-report-1.3.0, metadata-1.11.0, xdist-1.34.0
-   collecting ... collected 974 items
+   platform linux -- Python 3.7.3, pytest-6.2.5, py-1.11.0, pluggy-1.0.0 -- /usr/bin/python3
+   cachedir: .pytest_cache
+
+   metadata: {'Python': '3.7.3', 'Platform': 'Linux-5.13.0-28-generic-x86_64-with-debian-10.11', 'Packages': {'pytest': '6.2.5', 'py': '1.11.0', 'pluggy': '1.0.0'}, 'Plugins': {'repeat': '0.9.1', 'rerunfailures': '10.2', 'cov': '2.12.1', 'report': '0.2.1', 'xdist': '1.34.0', 'bdd': '4.1.0', 'timeout': '2.1.0', 'split': '0.6.0', 'json-report': '1.4.1', 'metadata': '1.11.0', 'forked': '1.4.0', 'pydocstyle': '2.2.0', 'pylint': '0.18.0', 'pycodestyle': '2.2.0', 'mock': '3.7.0'}}
+rootdir: /workspaces/ska-low-mccs, configfile: pyproject.toml, testpaths: testing/src/
+plugins: repeat-0.9.1, rerunfailures-10.2, cov-2.12.1, report-0.2.1, xdist-1.34.0, bdd-4.1.0, timeout-2.1.0, split-0.6.0, json-report-1.4.1, metadata-1.11.0, forked-1.4.0, pydocstyle-2.2.0, pylint-0.18.0, pycodestyle-2.2.0, mock-3.7.0
+collected 1529 items
 
    testing/src/tests/integration/test_health_management.py::test_controller_health_rollup PASSED [  0%]
    testing/src/tests/functional/test_controller_subarray_interactions.py::test_allocate_subarray SKIPPED       [  0%]
@@ -259,7 +260,7 @@ Try it out:
    Coverage HTML written to dir build/htmlcov
    Coverage XML written to file build/reports/code-coverage.xml
    
-   ================================= 962 passed, 12 skipped, 1 warning in 377.42s (0:06:17) ==================================
+   ================================= 1403 passed, 125 skipped, 1 xfailed, 10 warnings in 673.29s (0:11:13) ==================================
    _________________________________________________________ summary _________________________________________________________
 
    me@local:~/ska-low-mccs$
@@ -277,7 +278,7 @@ all the tests, but serious developers will want fine-grained control of
 what tests to run.
 
 To run tests in a specific file or directory change the ``PYTHON_TEST_FILE``
-variable in the Makefile.
+variable in the Makefile. This can also be done from the command line.
 
 Since the repository is read-write mounted in the container, it is
 possible to edit the code from inside the container. However this is not

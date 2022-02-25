@@ -163,7 +163,7 @@ Git
 
    .. code-block:: shell-session
 
-     me@local:~$ git clone https://gitlab.com/ska-telescope/ska-low-mccs.git
+     me@local:~$ git clone -recurse--submodules https://gitlab.com/ska-telescope/ska-low-mccs.git
 
 
 POSIX shell
@@ -219,15 +219,9 @@ Basic development tools
 You now have a basic development setup. The following Make targets are
 available to you:
 
-* **make tests** - run the tests in a SKA docker container
+* **make python-test** - run the tests in a SKA docker container
      
-* **make lint** - run linting in a SKA docker container
-  
-* **make docs** - build the project documentation in a ReadTheDocs
-  docker container
-  
-* **make testdocs** - build the test documentation in a ReadTheDocs
-  docker container
+* **make python-lint** - run linting in a SKA docker container
 
 Try it out:
 
@@ -235,7 +229,7 @@ Try it out:
    :emphasize-lines: 3,4,5,6,19
 
    me@local:~$ cd ska-low-mccs
-   me@local:~/ska-low-mccs$ make tests
+   me@local:~/ska-low-mccs$ make python-test
    ... [output from Docker building the container image] ...
    ... [output from Docker launching the container] ...
    ... [output from tox building its virtual environment] ...
@@ -267,8 +261,7 @@ Try it out:
    
    ================================= 962 passed, 12 skipped, 1 warning in 377.42s (0:06:17) ==================================
    _________________________________________________________ summary _________________________________________________________
-     py37: commands succeeded
-     congratulations :)
+
    me@local:~/ska-low-mccs$
    
 (The first time you run these commands, they may take a very long time.
@@ -279,58 +272,12 @@ the image is cached, so the command will run much faster in future.)
 Advanced development setup
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 The approach described above provides a few basic tools, but serious
-developers will want more than this. For example, ``make tests`` runs
+developers will want more than this. For example, ``make python-test`` runs
 all the tests, but serious developers will want fine-grained control of 
 what tests to run.
 
-This is achieved by using ``make develop`` to launch a shell inside your
-container. From that shell, you have fine-grained control of testing and
-linting via the ``tox`` command.
-
-.. code-block:: shell-session
-
-   me@local:~/ska-low-mccs$ make develop
-   user@caa98e8e264d:/app$
-
-Note the change in prompt. You are now user ``user`` in a bash terminal
-session that is running inside a Docker container named ``caa98e8e264d``
-(the name of your container will differ).
-
-List the contents of the current ``/app`` directory; you will see that
-the ska-low-mccs repository is mounted inside the container:
-     
-.. code-block:: shell-session
-
-  user@caa98e8e264d:/app$ ls
-  CHANGELOG   build               dist           pyfabil-1.0-py3-none-any.whl  setup.cfg  values-demo.yaml
-  Dockerfile  charts              docs           requirements-dev.txt          setup.py   values-development.yaml
-  LICENSE     dashboards          itpm_v1_2.bit  requirements-lint.txt         src        values-gitlab-ci.yaml
-  Makefile    demos               itpm_v1_6.bit  requirements.txt              testing    values-psi.yaml
-  README.md   develop.Dockerfile  pogo           scripts                       tox.ini    values-test.yaml
-          
-From inside the container, testing and linting is managed by ``tox``:
-
-  .. code-block:: shell-session
-    :emphasize-lines: 2
-
-    user@caa98e8e264d:/app$ tox
-    ...
-    ================================= 962 passed, 12 skipped, 1 warning in 377.42s (0:06:17) ==================================
-    _________________________________________________________ summary _________________________________________________________
-      py37: commands succeeded
-      congratulations :)
-    user@caa98e8e264d:/app$ 
-
-Tox commands you may find useful:
-
-* ``tox -e py37`` - run the tests
-
-* ``tox -e py37 -- -x`` - run the tests but stop on first failure
-
-* ``tox -e py37 -- -k MccsController`` - run the tests for just the
-  MccsController device
-
-* ``tox -e lint`` - format and lint the code
+To run tests in a specific file or directory change the ``PYTHON_TEST_FILE``
+variable in the Makefile.
 
 Since the repository is read-write mounted in the container, it is
 possible to edit the code from inside the container. However this is not

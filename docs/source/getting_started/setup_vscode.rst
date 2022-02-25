@@ -71,7 +71,7 @@ vscode IDE terminal runs inside a Docker container.
 
    .. code-block:: shell-session
 
-     tango@18a8d6ab7934:/workspaces/ska-low-mccs$ tox -e py
+     tango@18a8d6ab7934:/workspaces/ska-low-mccs$ make python-test
 
    The tests run because they are being run inside the Docker container,
    which contains all the dependencies.

@@ -6,7 +6,7 @@ FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.3.14 AS runtime
 
 USER root
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python -
+RUN python3 -m pip install poetry
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./

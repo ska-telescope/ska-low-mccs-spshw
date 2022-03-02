@@ -1,5 +1,5 @@
 apiVersion: v2
-name: mccs-umbrella
+name: umbrella-mccs
 description: A Helm chart for Kubernetes MCCS
 type: application
 version: 0.1.2

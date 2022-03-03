@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install gnupg2 -y
 
 USER root
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python -
+RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python -
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./

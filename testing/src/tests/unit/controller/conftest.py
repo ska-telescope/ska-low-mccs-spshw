@@ -404,7 +404,7 @@ def unique_id() -> str:
 
 @pytest.fixture()
 def mock_component_manager(
-    mocker: pytest_mock.mocker,
+    mocker: pytest_mock.mocker,  # type: ignore[valid-type]
     unique_id: str,
 ) -> unittest.mock.Mock:
     """
@@ -420,7 +420,7 @@ def mock_component_manager(
 
     :return: a mock component manager
     """
-    mock = mocker.Mock()
+    mock = mocker.Mock()  # type: ignore[attr-defined]
     mock.is_communicating = False
 
     def _start_communicating(mock: unittest.mock.Mock) -> None:

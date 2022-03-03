@@ -149,8 +149,8 @@ class Pointing(object):
 
         # Placeholder for delays and flag for below horizon
         self._below_horizon = False
-        self._delays: np.ndarray = None
-        self._delay_rates: np.ndarray = None
+        self._delays: np.ndarray = None  # type: ignore[assignment]
+        self._delay_rates: np.ndarray = None  # type: ignore[assignment]
 
     # -------------------------------- POINTING FUNCTIONS -------------------------------------
     def point_to_sun(self: Pointing, pointing_time: Optional[float] = None) -> None:
@@ -204,7 +204,7 @@ class Pointing(object):
             self._below_horizon = False
 
         # Compute the delays
-        self._delays = self._delays_from_altitude_azimuth(altitude_angle.rad, azimuth_angle.rad)
+        self._delays = self._delays_from_altitude_azimuth(altitude_angle.rad, azimuth_angle.rad)  # type: ignore[assignment]
         self._delay_rates = self._delays * 0
 
     def point_array(
@@ -272,7 +272,7 @@ class Pointing(object):
 
     def get_pointing_coefficients(
         self: Pointing, start_channel: int, nof_channels: int
-    ) -> Optional[tuple[np.complex]]:
+    ) -> Optional[tuple[np.complex]]:  # type: ignore[name-defined]
         """
         Get complex pointing coefficients from generated delays.
 
@@ -287,7 +287,7 @@ class Pointing(object):
 
         # If below horizon flat is set, return 0s
         if self._below_horizon:
-            return np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)
+            return np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)  # type: ignore[return-value, attr-defined]
 
         # Compute frequency range
         channel_bandwidth = 400e6 / 512.0
@@ -296,13 +296,13 @@ class Pointing(object):
         )
 
         # Generate coefficients
-        coefficients = np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)
+        coefficients = np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)  # type: ignore[attr-defined]
         for i in range(nof_channels):
             delays = 2.0 * np.pi * frequencies[i] * self._delays
             coefficients[:, i] = np.cos(delays) + 1j * np.sin(delays)
 
         # All done, return coefficients
-        return coefficients
+        return coefficients  # type: ignore[return-value]
 
     def _delays_from_altitude_azimuth(self: Pointing, altitude: float, azimuth: float) -> List[float]:
         """
@@ -599,8 +599,8 @@ class PointingDriver:  # pragma: no cover
 
         # job_queue: queue.Queue[Time] = multiprocessing.Queue()
         # results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
-        job_queue: queue.Queue() = multiprocessing.Queue()
-        results_queue: queue.Queue() = multiprocessing.Queue()
+        job_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
+        results_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
 
         processes = [
             multiprocessing.Process(target=self.pointing_job, args=(job_queue, results_queue))

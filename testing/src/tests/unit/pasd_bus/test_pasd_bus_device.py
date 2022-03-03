@@ -38,7 +38,7 @@ class TestMccsPasdBus:
     """Tests of the MCCS transient buffer device."""
 
     @pytest.fixture()
-    def mock_component_manager(self: TestMccsPasdBus, mocker: pytest_mock.mocker) -> unittest.mock.Mock:
+    def mock_component_manager(self: TestMccsPasdBus, mocker: pytest_mock.mocker) -> unittest.mock.Mock:  # type: ignore[valid-type]
         """
         Return a mock to be used as a component manager for the PaSD bus device.
 
@@ -48,7 +48,7 @@ class TestMccsPasdBus:
         :return: a mock to be used as a component manager for the
             transient buffer device.
         """
-        return mocker.Mock()
+        return mocker.Mock()  # type: ignore[attr-defined]
 
     @pytest.fixture()
     def patched_device_class(
@@ -206,7 +206,7 @@ class TestMccsPasdBus:
     )
     def test_readonly_attribute(
         self: TestMccsPasdBus,
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.mocker,  # type: ignore[valid-type]
         device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
         device_attribute: str,
@@ -230,7 +230,7 @@ class TestMccsPasdBus:
         :param example_value: any value of the correct type for the
             device attribute.
         """
-        property_mock = mocker.PropertyMock(return_value=example_value)
+        property_mock = mocker.PropertyMock(return_value=example_value)  # type: ignore[attr-defined]
         setattr(
             type(mock_component_manager),
             component_manager_property,
@@ -396,7 +396,7 @@ class TestMccsPasdBus:
     )
     def test_command(
         self: TestMccsPasdBus,
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.mocker,  # type: ignore[valid-type]
         device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
         device_command: str,
@@ -428,7 +428,7 @@ class TestMccsPasdBus:
         :param expected_device_command_return: the expected return value
             of the device command
         """
-        method_mock = mocker.Mock(return_value=component_manager_method_return)
+        method_mock = mocker.Mock(return_value=component_manager_method_return)  # type: ignore[attr-defined]
         setattr(mock_component_manager, component_manager_method, method_mock)
         method_mock.assert_not_called()
 

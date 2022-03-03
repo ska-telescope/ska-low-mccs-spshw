@@ -22,4 +22,4 @@ webjive-auth:
 # demo config
 ska-low-mccs:
   dsconfig:
-    configuration_file: data/configuration.json
+    configuration_file: data/deployment_configuration.json

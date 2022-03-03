@@ -48,6 +48,7 @@ with open("testing/testbeds.yaml", "r") as stream:
     _testbeds: dict[str, set[str]] = yaml.safe_load(stream)
 
 
+# TODO: pytest is partially typehinted but does not yet export Config
 def pytest_configure(config: _pytest.config.Config) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
@@ -59,6 +60,7 @@ def pytest_configure(config: _pytest.config.Config) -> None:  # type: ignore[nam
         config.addinivalue_line("markers", f"needs_{tag}")
 
 
+# TODO: pytest is partially typehinted but does not yet export Parser
 def pytest_addoption(
     parser: _pytest.config.argparsing.Parser,  # type: ignore[name-defined]
 ) -> None:
@@ -79,6 +81,7 @@ def pytest_addoption(
     )
 
 
+# TODO: pytest is partially typehinted but does not yet export Config
 def pytest_collection_modifyitems(
     config: _pytest.config.Config, items: list[pytest.Item]  # type: ignore[name-defined]
 ) -> None:

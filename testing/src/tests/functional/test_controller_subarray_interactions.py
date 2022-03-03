@@ -98,9 +98,11 @@ def we_have_mvplow_running_an_instance_of(
     controller.add_change_event_callback(
         "state", controller_device_state_changed_callback
     )
-    controller_device_state_changed_callback.assert_next_change_event(
-        tango.DevState.DISABLE
-    )
+    # The below is no longer be true as the test harness writes the adminMode val
+    # to running devices, meaning the last change event will be adminMode.ONLINE.
+    # controller_device_state_changed_callback.assert_next_change_event(
+    #    tango.DevState.DISABLE
+    # )
 
     # TODO: Looking for a very stable way to bring the MCCS devices into
     # ONLINE state. Doing that all at once has been seen to be unstable.
@@ -139,15 +141,7 @@ def we_have_mvplow_running_an_instance_of(
     }
 
     for device in admin_mode_0_device_sequence:
-        device.adminMode = AdminMode.ONLINE
-        timeout = 5.0
-        elapsed_time = 0.0
-        while elapsed_time <= timeout:
-            if not device.adminMode == tango.DevState.OFF:
-                sleep(0.1)
-                elapsed_time += 0.1
-            else:
-                break
+        assert device.adminMode == AdminMode.ONLINE
 
     controller_device_state_changed_callback.assert_last_change_event(
         tango.DevState.OFF

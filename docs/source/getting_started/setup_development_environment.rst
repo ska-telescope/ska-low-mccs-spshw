@@ -278,7 +278,9 @@ all the tests, but serious developers will want fine-grained control of
 what tests to run.
 
 To run tests in a specific file or directory change the ``PYTHON_TEST_FILE``
-variable in the Makefile. This can also be done from the command line.
+variable in the Makefile. This can also be done from the command line, for example: 
+``make PYTHON_TEST_FILE=testing/src/tests/unit/tile python-test`` will run all tests 
+found in the tile directory.
 
 Since the repository is read-write mounted in the container, it is
 possible to edit the code from inside the container. However this is not

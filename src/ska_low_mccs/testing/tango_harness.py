@@ -25,11 +25,13 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Type, cast
 from typing_extensions import TypedDict
 import unittest.mock
 
+from time import sleep
+
 import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.control_model import TestMode
+from ska_tango_base.control_model import TestMode, AdminMode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
@@ -624,6 +626,16 @@ class DeploymentContextTangoHarness(ClientProxyTangoHarness):
         if "adminMode" in memorized:
             [value] = memorized["adminMode"]
             device.write_attribute("adminMode", int(value))
+            timeout = 5.0
+            elapsed_time = 0.0
+            while elapsed_time <= timeout:
+                if not device.adminMode == AdminMode.ONLINE:
+                    sleep(0.1)
+                    elapsed_time += 0.1
+                else:
+                    break
+            if elapsed_time > timeout:
+                print("AdminMode is ", device.adminMode)
 
 
 class WrapperTangoHarness(TangoHarness):

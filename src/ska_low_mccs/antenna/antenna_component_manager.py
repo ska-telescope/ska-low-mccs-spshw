@@ -409,7 +409,8 @@ class AntennaComponentManager(MccsComponentManager):
         self._tile_proxy.stop_communicating()
 
     def _apiu_communication_status_changed(
-        self: AntennaComponentManager, communication_status: CommunicationStatus
+        self: AntennaComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
@@ -421,7 +422,8 @@ class AntennaComponentManager(MccsComponentManager):
         self._update_joint_communication_status()
 
     def _tile_communication_status_changed(
-        self: AntennaComponentManager, communication_status: CommunicationStatus
+        self: AntennaComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the tile.
@@ -432,7 +434,9 @@ class AntennaComponentManager(MccsComponentManager):
         self._tile_communication_status = communication_status
         self._update_joint_communication_status()
 
-    def _update_joint_communication_status(self: AntennaComponentManager) -> None:
+    def _update_joint_communication_status(
+        self: AntennaComponentManager,
+    ) -> None:
         """
         Update the status of communication with the antenna.
 

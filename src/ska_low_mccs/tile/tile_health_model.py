@@ -28,7 +28,10 @@ class TileHealthModel(HealthModel):
     for a future, better implementation.
     """
 
-    def __init__(self: TileHealthModel, health_changed_callback: Callable[[HealthState], None]) -> None:
+    def __init__(
+        self: TileHealthModel,
+        health_changed_callback: Callable[[HealthState], None],
+    ) -> None:
         """
         Initialise a new instance.
 

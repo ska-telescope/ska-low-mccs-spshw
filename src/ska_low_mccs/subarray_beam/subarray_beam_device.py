@@ -237,7 +237,13 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         self.component_manager.logical_beam_id = logical_beam_id
 
-    @attribute(dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0)
+    @attribute(
+        dtype="DevDouble",
+        unit="Hz",
+        standard_unit="s^-1",
+        max_value=1e37,
+        min_value=0,
+    )
     def updateRate(self: MccsSubarrayBeam) -> float:
         """
         Return the update rate (in hertz) for this subarray beam.

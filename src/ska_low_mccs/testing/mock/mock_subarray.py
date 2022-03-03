@@ -38,9 +38,18 @@ class MockSubarrayBuilder(MockDeviceBuilder):
             ("Off", "Subarray Off command completed OK"),
             ("AssignResources", "AssignResources command completed OK"),
             ("ReleaseResources", "ReleaseResources command completed OK"),
-            ("ReleaseAllResources", "ReleaseAllResources command completed OK"),
-            ("Configure", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
-            ("Restart", MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK]),
+            (
+                "ReleaseAllResources",
+                "ReleaseAllResources command completed OK",
+            ),
+            (
+                "Configure",
+                MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK],
+            ),
+            (
+                "Restart",
+                MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK],
+            ),
             (
                 "SendTransientBuffer",
                 MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],

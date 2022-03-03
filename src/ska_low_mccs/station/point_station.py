@@ -141,7 +141,10 @@ class Pointing(object):
 
         # Get reference antenna location
         self._reference_antenna_loc = EarthLocation.from_geodetic(
-            self._longitude, self._latitude, height=self._height, ellipsoid="WGS84"
+            self._longitude,
+            self._latitude,
+            height=self._height,
+            ellipsoid="WGS84",
         )
 
         # Placeholder for delays and flag for below horizon
@@ -328,7 +331,10 @@ class Pointing(object):
 
     @staticmethod
     def _ra_dec_to_alt_az(
-        right_ascension: float, declination: float, time: float, location: float
+        right_ascension: float,
+        declination: float,
+        time: float,
+        location: float,
     ) -> List[Angle]:
         """
         Calculate the altitude and azimuth coordinates of a sky object.
@@ -363,7 +369,10 @@ class Pointing(object):
         return angle
 
     def is_above_horizon(
-        self: Pointing, right_ascension: float, declination: float, pointing_time: float
+        self: Pointing,
+        right_ascension: float,
+        declination: float,
+        pointing_time: float,
     ) -> bool:
         """
         Check if the target is above the horizon, given time for the reference antenna.

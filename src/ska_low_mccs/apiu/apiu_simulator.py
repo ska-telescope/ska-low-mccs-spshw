@@ -48,7 +48,12 @@ def check_antenna_id(func: Wrapped) -> Wrapped:
     """
 
     @functools.wraps(func)
-    def _wrapper(apiu_simulator: ApiuSimulator, antenna_id: int, *args: Any, **kwargs: Any) -> Any:
+    def _wrapper(
+        apiu_simulator: ApiuSimulator,
+        antenna_id: int,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """
         Check power_mode before calling the function.
 

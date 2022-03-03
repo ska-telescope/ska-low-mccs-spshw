@@ -68,7 +68,10 @@ class TestUtils:
 
     def test_call_with_json_posargs(self: TestUtils) -> None:
         """Test for `call_with_json` with posargs provided."""
-        arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
+        arg_dict = {
+            "stations": ["station1", "station2"],
+            "tiles": ["tile1", "tile2"],
+        }
 
         returned = call_with_json(
             self.json_input_posargs_tester,
@@ -79,7 +82,10 @@ class TestUtils:
 
     def test_call_with_json_kwargs(self: TestUtils) -> None:
         """Test for `call_with_json` with kwargs dictionary provided."""
-        arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
+        arg_dict = {
+            "stations": ["station1", "station2"],
+            "tiles": ["tile1", "tile2"],
+        }
 
         returned = call_with_json(self.json_input_posargs_tester, **arg_dict)
         assert returned == arg_dict

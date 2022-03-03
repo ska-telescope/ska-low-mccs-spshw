@@ -95,7 +95,12 @@ class TestDeviceComponentManager:
 
     @pytest.mark.parametrize(
         ("component_manager_command", "device_command"),
-        [("on", "On"), ("standby", "Standby"), ("off", "Off"), ("reset", "Reset")],
+        [
+            ("on", "On"),
+            ("standby", "Standby"),
+            ("off", "Off"),
+            ("reset", "Reset"),
+        ],
     )
     def test_command(
         self: TestDeviceComponentManager,
@@ -114,7 +119,10 @@ class TestDeviceComponentManager:
         :param device_command: the name of the command that is expected
             to be called on the device.
         """
-        with pytest.raises(ConnectionError, match="Communication with component is not established"):
+        with pytest.raises(
+            ConnectionError,
+            match="Communication with component is not established",
+        ):
             getattr(component_manager, component_manager_command)()
         getattr(mock_proxy, device_command).assert_not_called()
 

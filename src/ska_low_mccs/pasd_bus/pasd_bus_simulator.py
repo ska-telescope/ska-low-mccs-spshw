@@ -933,7 +933,10 @@ class PasdBusSimulator(ObjectComponent):
             antenna_id = antenna_config["antenna_id"]
             smartbox_id = antenna_config["smartbox_id"]
             smartbox_port = antenna_config["smartbox_port"]
-            self._antenna_smartbox_ports[antenna_id - 1] = (smartbox_id, smartbox_port)
+            self._antenna_smartbox_ports[antenna_id - 1] = (
+                smartbox_id,
+                smartbox_port,
+            )
             smartbox_ports_connected[smartbox_id - 1][smartbox_port - 1] = True
 
         for (smartbox_index, ports_connected) in enumerate(smartbox_ports_connected):
@@ -1215,7 +1218,9 @@ class PasdBusSimulator(ObjectComponent):
         return [smartbox.input_voltage for smartbox in self._smartbox_simulators]
 
     @property
-    def smartbox_power_supply_output_voltages(self: PasdBusSimulator) -> list[float]:
+    def smartbox_power_supply_output_voltages(
+        self: PasdBusSimulator,
+    ) -> list[float]:
         """
         Return each smartbox's power supply output voltage, in volts.
 
@@ -1233,7 +1238,9 @@ class PasdBusSimulator(ObjectComponent):
         return [smartbox.status for smartbox in self._smartbox_simulators]
 
     @property
-    def smartbox_power_supply_temperatures(self: PasdBusSimulator) -> list[float]:
+    def smartbox_power_supply_temperatures(
+        self: PasdBusSimulator,
+    ) -> list[float]:
         """
         Return each smartbox's power supply temperature, in celcius.
 

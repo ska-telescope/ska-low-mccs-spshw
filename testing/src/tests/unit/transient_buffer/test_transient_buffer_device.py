@@ -53,7 +53,8 @@ class TestMccsTransientBuffer:
 
     @pytest.fixture()
     def patched_device_class(
-        self: TestMccsTransientBuffer, mock_component_manager: unittest.mock.Mock
+        self: TestMccsTransientBuffer,
+        mock_component_manager: unittest.mock.Mock,
     ) -> type[MccsTransientBuffer]:
         """
         Return a transient buffer device that is patched with a mock component manager.
@@ -82,7 +83,8 @@ class TestMccsTransientBuffer:
 
     @pytest.fixture()
     def device_to_load(
-        self: TestMccsTransientBuffer, patched_device_class: MccsTransientBuffer
+        self: TestMccsTransientBuffer,
+        patched_device_class: MccsTransientBuffer,
     ) -> DeviceToLoadType:
         """
         Fixture that specifies the device to be loaded for testing.
@@ -125,7 +127,11 @@ class TestMccsTransientBuffer:
         ("device_attribute", "component_manager_property", "example_value"),
         [
             ("stationId", "station_id", "example_string"),
-            ("transientBufferJobId", "transient_buffer_job_id", "example_string"),
+            (
+                "transientBufferJobId",
+                "transient_buffer_job_id",
+                "example_string",
+            ),
             ("transientFrequencyWindow", "transient_frequency_window", (0.0,)),
             ("resamplingBits", "resampling_bits", 0),
             ("nStations", "n_stations", 0),
@@ -159,7 +165,11 @@ class TestMccsTransientBuffer:
             device attribute.
         """
         property_mock = mocker.PropertyMock(return_value=example_value)
-        setattr(type(mock_component_manager), component_manager_property, property_mock)
+        setattr(
+            type(mock_component_manager),
+            component_manager_property,
+            property_mock,
+        )
         property_mock.assert_not_called()
 
         _ = getattr(device_under_test, device_attribute)

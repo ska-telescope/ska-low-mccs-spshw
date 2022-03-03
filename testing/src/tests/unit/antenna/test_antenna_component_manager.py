@@ -171,7 +171,11 @@ class TestAntennaTileProxy:
         communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
 
     @pytest.mark.parametrize("command", ["on", "standby", "off"])
-    def test_power_command(self: TestAntennaTileProxy, antenna_tile_proxy: _TileProxy, command: str) -> None:
+    def test_power_command(
+        self: TestAntennaTileProxy,
+        antenna_tile_proxy: _TileProxy,
+        command: str,
+    ) -> None:
         """
         Test that this proxy will refuse to try to run power commands on the antenna.
 

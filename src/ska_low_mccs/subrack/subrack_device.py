@@ -360,7 +360,12 @@ class MccsSubrack(SKABaseDevice):
         """
         self.component_manager.test_mode = TestMode(value)
 
-    @attribute(dtype=("DevFloat",), max_dim_x=2, label="Backplane temperatures", unit="Celsius")
+    @attribute(
+        dtype=("DevFloat",),
+        max_dim_x=2,
+        label="Backplane temperatures",
+        unit="Celsius",
+    )
     def backplaneTemperatures(self: MccsSubrack) -> tuple[float]:
         """
         Return the temperatures of the subrack backplane.

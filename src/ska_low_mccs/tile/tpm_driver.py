@@ -55,8 +55,18 @@ class TpmDriver(MccsComponentManager):
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+        0: {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        },
+        1: {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        },
     }
 
     def __init__(
@@ -129,7 +139,12 @@ class TpmDriver(MccsComponentManager):
 
         self.tile = cast(
             Tile12,
-            HwTile(ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version),
+            HwTile(
+                ip=self._ip,
+                port=self._port,
+                logger=logger,
+                tpm_version=tpm_version,
+            ),
         )
 
         super().__init__(
@@ -556,7 +571,11 @@ class TpmDriver(MccsComponentManager):
         return reg
 
     def read_register(
-        self: TpmDriver, register_name: str, nb_read: int, offset: int, device: int
+        self: TpmDriver,
+        register_name: str,
+        nb_read: int,
+        offset: int,
+        device: int,
     ) -> list[int]:
         """
         Read the values in a named register.
@@ -592,7 +611,11 @@ class TpmDriver(MccsComponentManager):
         return lvalue[nmin:nmax]
 
     def write_register(
-        self: TpmDriver, register_name: str, values: list[Any], offset: int, device: int
+        self: TpmDriver,
+        register_name: str,
+        values: list[Any],
+        offset: int,
+        device: int,
     ) -> None:
         """
         Read the values in a register.
@@ -678,7 +701,13 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: configure_40g_core")
         with self._hardware_lock:
             self.tile.configure_40g_core(
-                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+                core_id,
+                arp_table_entry,
+                src_mac,
+                src_ip,
+                src_port,
+                dst_ip,
+                dst_port,
             )
 
     def get_40g_configuration(
@@ -813,7 +842,10 @@ class TpmDriver(MccsComponentManager):
             self.tile.load_calibration_coefficients(calibration_coefficients)
 
     def load_calibration_curve(
-        self: TpmDriver, antenna: int, beam: int, calibration_coefficients: list[int]
+        self: TpmDriver,
+        antenna: int,
+        beam: int,
+        calibration_coefficients: list[int],
     ) -> None:
         """
         Load calibration curve.

@@ -508,7 +508,10 @@ class TestSmartboxSimulator:
     @pytest.mark.parametrize(
         ("location", "temperature"),
         [
-            ("power_supply", SmartboxSimulator.DEFAULT_POWER_SUPPLY_TEMPERATURE),
+            (
+                "power_supply",
+                SmartboxSimulator.DEFAULT_POWER_SUPPLY_TEMPERATURE,
+            ),
             ("outside", SmartboxSimulator.DEFAULT_OUTSIDE_TEMPERATURE),
             ("pcb", SmartboxSimulator.DEFAULT_PCB_TEMPERATURE),
         ],

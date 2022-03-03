@@ -145,7 +145,9 @@ class MockCallable:
             raise AssertionError("Callback has not been called.")
         called_mock.assert_called_once_with(*args, **kwargs)
 
-    def get_next_call(self: MockCallable) -> Tuple[Sequence[Any], Sequence[Any]]:
+    def get_next_call(
+        self: MockCallable,
+    ) -> Tuple[Sequence[Any], Sequence[Any]]:
         """
         Return the arguments of the next call to this mock callback.
 

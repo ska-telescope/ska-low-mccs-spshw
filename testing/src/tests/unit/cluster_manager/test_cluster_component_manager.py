@@ -46,7 +46,7 @@ class TestClusterCommon:
         cluster_simulator_component_manager: ClusterSimulatorComponentManager,
         cluster_component_manager: ClusterComponentManager,
         request: SubRequest,
-    ) -> Union[ClusterSimulator, ClusterSimulatorComponentManager, ClusterComponentManager]:
+    ) -> Union[ClusterSimulator, ClusterSimulatorComponentManager, ClusterComponentManager,]:
         """
         Return the hardware under test.
 
@@ -448,5 +448,10 @@ class TestClusterComponentManager:
 
         cluster_component_manager._component.simulate_node_failure(1, True)
         component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            [HealthState.FAILED, HealthState.OK, HealthState.OK, HealthState.OK]
+            [
+                HealthState.FAILED,
+                HealthState.OK,
+                HealthState.OK,
+                HealthState.OK,
+            ]
         )

@@ -390,7 +390,10 @@ class TileOrchestrator:
             return state
 
         state = state + [self._operator_desire, self._tpm_power_mode]
-        if self._tpm_power_mode in [ExtendedPowerState.NO_SUPPLY, ExtendedPowerState.OFF]:
+        if self._tpm_power_mode in [
+            ExtendedPowerState.NO_SUPPLY,
+            ExtendedPowerState.OFF,
+        ]:
             return state
 
         state = state + [self._tpm_communication_status]
@@ -413,7 +416,9 @@ class TileOrchestrator:
                 result_code = action_result_code
         return result_code
 
-    def _raise_cannot_turn_off_on_when_offline(self: TileOrchestrator) -> NoReturn:
+    def _raise_cannot_turn_off_on_when_offline(
+        self: TileOrchestrator,
+    ) -> NoReturn:
         raise ConnectionError("TPM cannot be turned off / on when not online.")
 
     def _report_communication_disabled(self: TileOrchestrator) -> None:

@@ -132,7 +132,9 @@ class PowerSupplyProxySimulator(PowerSupplyProxyComponentManager, ObjectComponen
             self._update_supplied_power_mode(PowerState.OFF)
             return ResultCode.OK
 
-        def power_on(self: PowerSupplyProxySimulator._Component) -> ResultCode | None:
+        def power_on(
+            self: PowerSupplyProxySimulator._Component,
+        ) -> ResultCode | None:
             """
             Supply power to the downstream device.
 
@@ -145,7 +147,8 @@ class PowerSupplyProxySimulator(PowerSupplyProxyComponentManager, ObjectComponen
             return ResultCode.OK
 
         def _update_supplied_power_mode(
-            self: PowerSupplyProxySimulator._Component, supplied_power_mode: PowerState
+            self: PowerSupplyProxySimulator._Component,
+            supplied_power_mode: PowerState,
         ) -> None:
             """
             Update the supplied power mode, ensuring callbacks are called.
@@ -292,7 +295,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             component_fault_callback,
         )
 
-    def start_communicating(self: ComponentManagerWithUpstreamPowerSupply) -> None:
+    def start_communicating(
+        self: ComponentManagerWithUpstreamPowerSupply,
+    ) -> None:
         """Establish communication with the hardware and the upstream power supply."""
         super().start_communicating()
 
@@ -301,7 +306,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         else:
             self._power_supply_component_manager.start_communicating()
 
-    def stop_communicating(self: ComponentManagerWithUpstreamPowerSupply) -> None:
+    def stop_communicating(
+        self: ComponentManagerWithUpstreamPowerSupply,
+    ) -> None:
         """Establish communication with the hardware and the upstream power supply."""
         super().stop_communicating()
         self._hardware_component_manager.stop_communicating()
@@ -381,7 +388,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._review_power()
 
     @check_communicating
-    def off(self: ComponentManagerWithUpstreamPowerSupply) -> ResultCode | None:
+    def off(
+        self: ComponentManagerWithUpstreamPowerSupply,
+    ) -> ResultCode | None:
         """
         Tell the upstream power supply proxy to turn the hardware off.
 

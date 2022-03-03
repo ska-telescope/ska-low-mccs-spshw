@@ -100,7 +100,10 @@ class TestMccsTelState:
             attribute.
         :param write_value: a value to write to check that it sticks
         """
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = getattr(device_under_test, attribute)
 
         device_under_test.adminMode = AdminMode.ONLINE

@@ -215,7 +215,10 @@ class ClusterSimulator(ObjectComponent):
         ] = None
         super().__init__()
 
-    def set_fault_callback(self: ClusterSimulator, fault_callback: Optional[Callable[[bool], None]]) -> None:
+    def set_fault_callback(
+        self: ClusterSimulator,
+        fault_callback: Optional[Callable[[bool], None]],
+    ) -> None:
         """
         Set the callback to be called when the component faults.
 

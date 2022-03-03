@@ -27,7 +27,10 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback
 # from ska_low_mccs.testing.tango_harness import TangoHarness
 
 
-@scenario("features/controller_subarray_interactions.feature", "MCCS Turn on low telescope")
+@scenario(
+    "features/controller_subarray_interactions.feature",
+    "MCCS Turn on low telescope",
+)
 def test_turn_on_low_telescope(
     controller: MccsDeviceProxy,
     subarrays: dict[int, MccsDeviceProxy],

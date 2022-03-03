@@ -109,8 +109,14 @@ class MccsTile(SKABaseDevice):
             ("GetArpTable", self.GetArpTableCommand),
             ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
-            ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
-            ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
+            (
+                "ConfigureStationBeamformer",
+                self.ConfigureStationBeamformerCommand,
+            ),
+            (
+                "LoadCalibrationCoefficients",
+                self.LoadCalibrationCoefficientsCommand,
+            ),
             ("LoadCalibrationCurve", self.LoadCalibrationCurveCommand),
             ("LoadBeamAngle", self.LoadBeamAngleCommand),
             ("SwitchCalibrationBank", self.SwitchCalibrationBankCommand),
@@ -121,7 +127,10 @@ class MccsTile(SKABaseDevice):
                 "ConfigureIntegratedChannelData",
                 self.ConfigureIntegratedChannelDataCommand,
             ),
-            ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
+            (
+                "ConfigureIntegratedBeamData",
+                self.ConfigureIntegratedBeamDataCommand,
+            ),
             ("StopIntegratedData", self.StopIntegratedDataCommand),
             ("SendRawData", self.SendRawDataCommand),
             ("SendChannelisedData", self.SendChannelisedDataCommand),
@@ -161,7 +170,10 @@ class MccsTile(SKABaseDevice):
             self.logger,
             self.AntennasPerTile,
         )
-        self.register_command_object("LoadAntennaTapering", self.LoadAntennaTaperingCommand(*antenna_args))
+        self.register_command_object(
+            "LoadAntennaTapering",
+            self.LoadAntennaTaperingCommand(*antenna_args),
+        )
         self.register_command_object("SetPointingDelay", self.SetPointingDelayCommand(*antenna_args))
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -1248,7 +1260,13 @@ class MccsTile(SKABaseDevice):
                 raise ValueError(message)
 
             component_manager.configure_40g_core(
-                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+                core_id,
+                arp_table_entry,
+                src_mac,
+                src_ip,
+                src_port,
+                dst_ip,
+                dst_port,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1669,7 +1687,8 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.LoadCalibrationCoefficientsCommand, argin: list[float]
+            self: MccsTile.LoadCalibrationCoefficientsCommand,
+            argin: list[float],
         ) -> Tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.LoadCalibrationCoefficients` commands.
@@ -2668,7 +2687,9 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def ComputeCalibrationCoefficients(self: MccsTile) -> DevVarLongStringArrayType:
+    def ComputeCalibrationCoefficients(
+        self: MccsTile,
+    ) -> DevVarLongStringArrayType:
         """
         Compute the calibration coefficients.
 
@@ -3301,7 +3322,9 @@ class MccsTile(SKABaseDevice):
             component_manager.test_generator_active = active
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-        def check_allowed(self: MccsTile.ConfigureTestGeneratorCommand) -> bool:
+        def check_allowed(
+            self: MccsTile.ConfigureTestGeneratorCommand,
+        ) -> bool:
             """
             Check if command is allowed.
 

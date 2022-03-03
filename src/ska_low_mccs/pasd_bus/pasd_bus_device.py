@@ -105,7 +105,10 @@ class MccsPasdBus(SKABaseDevice):
             ("TurnSmartboxOn", self.TurnSmartboxOnCommand),
             ("TurnSmartboxOff", self.TurnSmartboxOffCommand),
             ("TurnSmartboxServiceLedOn", self.TurnSmartboxServiceLedOnCommand),
-            ("TurnSmartboxServiceLedOff", self.TurnSmartboxServiceLedOffCommand),
+            (
+                "TurnSmartboxServiceLedOff",
+                self.TurnSmartboxServiceLedOffCommand,
+            ),
             ("GetAntennaInfo", self.GetAntennaInfoCommand),
             ("ResetAntennaBreaker", self.ResetAntennaBreakerCommand),
             ("TurnAntennaOn", self.TurnAntennaOnCommand),

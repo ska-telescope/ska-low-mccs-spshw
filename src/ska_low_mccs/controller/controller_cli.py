@@ -87,7 +87,9 @@ class CliMeta(type):
         return _wrapper
 
 
-def format_wrapper(method: Callable) -> Callable[[tuple[ResultCode, str]], str]:
+def format_wrapper(
+    method: Callable,
+) -> Callable[[tuple[ResultCode, str]], str]:
     """
     Wrap the return message as a two line string.
 

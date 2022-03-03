@@ -31,7 +31,10 @@ class HealthModel:
     subclasses to implement support for DEGRADED if required.
     """
 
-    def __init__(self: HealthModel, health_changed_callback: Callable[[HealthState], None]) -> None:
+    def __init__(
+        self: HealthModel,
+        health_changed_callback: Callable[[HealthState], None],
+    ) -> None:
         """
         Initialise a new instance.
 

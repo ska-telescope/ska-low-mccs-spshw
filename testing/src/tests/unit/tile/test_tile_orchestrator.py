@@ -84,7 +84,7 @@ class TestTileOrchestrator:
     @pytest.fixture(scope="session")
     def checks(
         self: TestTileOrchestrator,
-    ) -> Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]]:
+    ) -> Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager],],]:
         """
         Return a static dictionary of orchestrator action checks.
 
@@ -212,12 +212,36 @@ class TestTileOrchestrator:
         scope="session",
         params=[
             (CommunicationStatus.DISABLED,),
-            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerState.NO_SUPPLY),
-            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerState.NO_SUPPLY),
-            (CommunicationStatus.ESTABLISHED, None, ExtendedPowerState.NO_SUPPLY),
-            (CommunicationStatus.ESTABLISHED, True, ExtendedPowerState.NO_SUPPLY),
-            (CommunicationStatus.NOT_ESTABLISHED, None, ExtendedPowerState.OFF),
-            (CommunicationStatus.NOT_ESTABLISHED, True, ExtendedPowerState.OFF),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerState.NO_SUPPLY,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                True,
+                ExtendedPowerState.NO_SUPPLY,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                None,
+                ExtendedPowerState.NO_SUPPLY,
+            ),
+            (
+                CommunicationStatus.ESTABLISHED,
+                True,
+                ExtendedPowerState.NO_SUPPLY,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                None,
+                ExtendedPowerState.OFF,
+            ),
+            (
+                CommunicationStatus.NOT_ESTABLISHED,
+                True,
+                ExtendedPowerState.OFF,
+            ),
             (CommunicationStatus.ESTABLISHED, None, ExtendedPowerState.OFF),
             (
                 CommunicationStatus.NOT_ESTABLISHED,
@@ -505,11 +529,15 @@ class TestTileOrchestrator:
         rules: Mapping[StateStimulusTupleType, str],
         checks: Mapping[
             str,
-            Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],
+            Tuple[
+                Mapping[str, Any],
+                Mapping[str, list[Any]],
+                Optional[ContextManager],
+            ],
         ],
         state: StateTupleType,
         stimulus: Stimulus,
-    ) -> Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]]]:
+    ) -> Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager],]]:
         """
         Return checks to be performed as part of this test.
 
@@ -558,7 +586,11 @@ class TestTileOrchestrator:
         callbacks: Mapping[str, unittest.mock.Mock],
         state: StateTupleType,
         stimulus: Stimulus,
-        check: Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager]],
+        check: Tuple[
+            Mapping[str, Any],
+            Mapping[str, list[Any]],
+            Optional[ContextManager],
+        ],
     ) -> None:
         """
         Test orchestrator actions.

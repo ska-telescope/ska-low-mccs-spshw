@@ -104,9 +104,15 @@ class TestSubrackSimulatorCommon:
                 "backplane_temperatures",
                 SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
             ),
-            ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURES),
+            (
+                "board_temperatures",
+                SubrackSimulator.DEFAULT_BOARD_TEMPERATURES,
+            ),
             ("board_current", SubrackSimulator.DEFAULT_BOARD_CURRENT),
-            ("subrack_fan_speeds", SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS),
+            (
+                "subrack_fan_speeds",
+                SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS,
+            ),
             (
                 "subrack_fan_speeds_percent",
                 [
@@ -255,10 +261,19 @@ class TestSubrackSimulatorCommon:
             ("simulate_board_temperatures", [0.5, 0.6]),
             ("simulate_board_current", [0.7, 0.8]),
             ("simulate_subrack_fan_speeds", [0.9, 1.0]),
-            ("simulate_tpm_temperatures", [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8]),
-            ("simulate_tpm_currents", [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8]),
+            (
+                "simulate_tpm_temperatures",
+                [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8],
+            ),
+            (
+                "simulate_tpm_currents",
+                [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8],
+            ),
             ("simulate_tpm_powers", [3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8]),
-            ("simulate_tpm_voltages", [4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8]),
+            (
+                "simulate_tpm_voltages",
+                [4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8],
+            ),
             ("simulate_power_supply_fan_speeds", [1.7, 1.8]),
             ("simulate_power_supply_currents", [1.9, 2.0]),
             ("simulate_power_supply_powers", [2.1, 2.2]),
@@ -361,7 +376,9 @@ class TestSubrackDriverCommon:
         raise ValueError("subrack fixture parametrized with unrecognised option")
 
     @pytest.fixture()
-    def web_hardware_client_mock(self: TestSubrackDriverCommon) -> unittest.mock.Mock:
+    def web_hardware_client_mock(
+        self: TestSubrackDriverCommon,
+    ) -> unittest.mock.Mock:
         """
         Provide a mock for the web hardware client.
 
@@ -430,9 +447,15 @@ class TestSubrackDriverCommon:
                 "backplane_temperatures",
                 SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
             ),
-            ("board_temperatures", SubrackSimulator.DEFAULT_BOARD_TEMPERATURES),
+            (
+                "board_temperatures",
+                SubrackSimulator.DEFAULT_BOARD_TEMPERATURES,
+            ),
             ("board_current", SubrackSimulator.DEFAULT_BOARD_CURRENT),
-            ("subrack_fan_speeds", SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS),
+            (
+                "subrack_fan_speeds",
+                SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS,
+            ),
             (
                 "subrack_fan_speeds_percent",
                 [

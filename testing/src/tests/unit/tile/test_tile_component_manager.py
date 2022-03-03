@@ -198,7 +198,10 @@ class TestTileComponentManager:
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
         """
-        with pytest.raises(ConnectionError, match="TPM cannot be turned off / on when not online."):
+        with pytest.raises(
+            ConnectionError,
+            match="TPM cannot be turned off / on when not online.",
+        ):
             tile_component_manager.on()
 
         tile_component_manager.start_communicating()
@@ -238,7 +241,9 @@ class TestStaticSimulatorCommon:
     """
 
     @pytest.fixture()
-    def initial_tpm_power_mode(self: TestStaticSimulatorCommon) -> ExtendedPowerState:
+    def initial_tpm_power_mode(
+        self: TestStaticSimulatorCommon,
+    ) -> ExtendedPowerState:
         """
         Return the initial power mode of the TPM.
 
@@ -370,7 +375,13 @@ class TestStaticSimulatorCommon:
 
     @pytest.mark.parametrize(
         ("attribute_name", "initial_value", "values_to_write"),
-        (("phase_terminal_count", StaticTpmSimulator.PHASE_TERMINAL_COUNT, [1, 2]),),
+        (
+            (
+                "phase_terminal_count",
+                StaticTpmSimulator.PHASE_TERMINAL_COUNT,
+                [1, 2],
+            ),
+        ),
     )
     def test_write_attribute(
         self: TestStaticSimulatorCommon,
@@ -718,7 +729,9 @@ class TestDynamicSimulatorCommon:
         return TestMode.NONE
 
     @pytest.fixture()
-    def initial_tpm_power_mode(self: TestDynamicSimulatorCommon) -> ExtendedPowerState:
+    def initial_tpm_power_mode(
+        self: TestDynamicSimulatorCommon,
+    ) -> ExtendedPowerState:
         """
         Return the initial power mode of the TPM.
 
@@ -832,7 +845,10 @@ class TestDynamicSimulatorCommon:
             ("pps_delay", DynamicTpmSimulator.PPS_DELAY),
             ("firmware_available", DynamicTpmSimulator.FIRMWARE_AVAILABLE),
             ("arp_table", DynamicTpmSimulator.ARP_TABLE),
-            ("register_list", list(DynamicTpmSimulator.REGISTER_MAP[0].keys())),
+            (
+                "register_list",
+                list(DynamicTpmSimulator.REGISTER_MAP[0].keys()),
+            ),
         ),
     )
     def test_read_static_attribute(

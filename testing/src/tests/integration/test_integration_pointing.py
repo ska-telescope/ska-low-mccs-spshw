@@ -178,10 +178,22 @@ class TestMccsIntegration:
 
         time.sleep(0.1)
 
-        stationbeam_1.pointingDelay = [BEAM_1_DELAY_AZIMUTH, BEAM_1_DELAY_ELEVATION]
-        stationbeam_2.pointingDelay = [BEAM_2_DELAY_AZIMUTH, BEAM_2_DELAY_ELEVATION]
-        stationbeam_3.pointingDelay = [BEAM_3_DELAY_AZIMUTH, BEAM_3_DELAY_ELEVATION]
-        stationbeam_4.pointingDelay = [BEAM_4_DELAY_AZIMUTH, BEAM_4_DELAY_ELEVATION]
+        stationbeam_1.pointingDelay = [
+            BEAM_1_DELAY_AZIMUTH,
+            BEAM_1_DELAY_ELEVATION,
+        ]
+        stationbeam_2.pointingDelay = [
+            BEAM_2_DELAY_AZIMUTH,
+            BEAM_2_DELAY_ELEVATION,
+        ]
+        stationbeam_3.pointingDelay = [
+            BEAM_3_DELAY_AZIMUTH,
+            BEAM_3_DELAY_ELEVATION,
+        ]
+        stationbeam_4.pointingDelay = [
+            BEAM_4_DELAY_AZIMUTH,
+            BEAM_4_DELAY_ELEVATION,
+        ]
         stationbeam_1.pointingDelayRate = [
             BEAM_1_DELAY_RATE_AZIMUTH,
             BEAM_1_DELAY_RATE_ELEVATION,

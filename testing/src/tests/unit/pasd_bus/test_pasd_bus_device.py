@@ -153,8 +153,16 @@ class TestMccsPasdBus:
                 "smartbox_outside_temperatures",
                 [40.0, 40.1],
             ),
-            ("smartboxPcbTemperatures", "smartbox_pcb_temperatures", [40.0, 40.1]),
-            ("smartboxServiceLedsOn", "smartbox_service_leds_on", [False, True]),
+            (
+                "smartboxPcbTemperatures",
+                "smartbox_pcb_temperatures",
+                [40.0, 40.1],
+            ),
+            (
+                "smartboxServiceLedsOn",
+                "smartbox_service_leds_on",
+                [False, True],
+            ),
             ("smartboxFndhPorts", "smartbox_fndh_ports", [12, 4, 1]),
             (
                 "smartboxDesiredPowerOnline",
@@ -223,7 +231,11 @@ class TestMccsPasdBus:
             device attribute.
         """
         property_mock = mocker.PropertyMock(return_value=example_value)
-        setattr(type(mock_component_manager), component_manager_property, property_mock)
+        setattr(
+            type(mock_component_manager),
+            component_manager_property,
+            property_mock,
+        )
         property_mock.assert_not_called()
 
         _ = getattr(device_under_test, device_attribute)
@@ -261,7 +273,10 @@ class TestMccsPasdBus:
                 None,
                 True,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'FNDH service LED on' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'FNDH service LED on' successful"],
+                ],
             ),
             (
                 "TurnFndhServiceLedOff",
@@ -269,7 +284,10 @@ class TestMccsPasdBus:
                 None,
                 False,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'FNDH service LED off' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'FNDH service LED off' successful"],
+                ],
             ),
             (
                 "GetSmartboxInfo",
@@ -301,7 +319,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 service LED on' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'smartbox 1 service LED on' successful"],
+                ],
             ),
             (
                 "TurnSmartboxServiceLedOn",
@@ -309,7 +330,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 False,
-                [[ResultCode.FAILED], ["PaSD bus 'smartbox 1 service LED on' failed"]],
+                [
+                    [ResultCode.FAILED],
+                    ["PaSD bus 'smartbox 1 service LED on' failed"],
+                ],
             ),
             (
                 "TurnSmartboxServiceLedOn",
@@ -328,7 +352,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 service LED off' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'smartbox 1 service LED off' successful"],
+                ],
             ),
             (
                 "GetAntennaInfo",
@@ -344,7 +371,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'antenna 1 breaker reset' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'antenna 1 breaker reset' successful"],
+                ],
             ),
             (
                 "TurnAntennaOn",

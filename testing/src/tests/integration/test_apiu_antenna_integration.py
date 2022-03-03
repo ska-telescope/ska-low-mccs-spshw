@@ -55,7 +55,9 @@ def mock_tile() -> unittest.mock.Mock:
 
 
 @pytest.fixture()
-def initial_mocks(mock_tile: unittest.mock.Mock) -> dict[str, unittest.mock.Mock]:
+def initial_mocks(
+    mock_tile: unittest.mock.Mock,
+) -> dict[str, unittest.mock.Mock]:
     """
     Return a specification of the mock devices to be set up in the Tango test harness.
 

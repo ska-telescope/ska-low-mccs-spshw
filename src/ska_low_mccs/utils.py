@@ -202,7 +202,10 @@ class ThreadsafeCheckingMeta(type):  # pragma: no cover
         return _wrapper
 
     def __new__(
-        cls: type[ThreadsafeCheckingMeta], name: str, bases: tuple[type], attrs: dict
+        cls: type[ThreadsafeCheckingMeta],
+        name: str,
+        bases: tuple[type],
+        attrs: dict,
     ) -> ThreadsafeCheckingMeta:
         """
         Construct Class.

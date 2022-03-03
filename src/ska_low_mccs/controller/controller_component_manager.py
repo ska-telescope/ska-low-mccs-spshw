@@ -491,7 +491,9 @@ class ControllerComponentManager(MccsComponentManager):
             return
         self._evaluate_communication_status()
 
-    def _evaluate_communication_status(self: ControllerComponentManager) -> None:
+    def _evaluate_communication_status(
+        self: ControllerComponentManager,
+    ) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
@@ -597,7 +599,9 @@ class ControllerComponentManager(MccsComponentManager):
             account.
         """
         self._resource_manager.set_health(
-            "subarray_beams", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+            "subarray_beams",
+            fqdn,
+            health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
         if self._subarray_beam_health_changed_callback is not None:
             self._subarray_beam_health_changed_callback(fqdn, health)
@@ -617,7 +621,9 @@ class ControllerComponentManager(MccsComponentManager):
             account.
         """
         self._resource_manager.set_health(
-            "station_beams", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+            "station_beams",
+            fqdn,
+            health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
         if self._station_beam_health_changed_callback is not None:
             self._station_beam_health_changed_callback(fqdn, health)

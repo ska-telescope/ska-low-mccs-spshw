@@ -25,7 +25,9 @@ from ska_low_mccs.tile import StaticTpmSimulator
 
 
 @pytest.fixture()
-def device_to_load(patched_tile_device_class: type[MccsTile]) -> DeviceToLoadType:
+def device_to_load(
+    patched_tile_device_class: type[MccsTile],
+) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
@@ -117,8 +119,16 @@ class TestMccsTile:
                 StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
                 None,
             ),
-            ("phaseTerminalCount", StaticTpmSimulator.PHASE_TERMINAL_COUNT, 45),
-            ("adcPower", pytest.approx(tuple(float(i) for i in range(32))), None),
+            (
+                "phaseTerminalCount",
+                StaticTpmSimulator.PHASE_TERMINAL_COUNT,
+                45,
+            ),
+            (
+                "adcPower",
+                pytest.approx(tuple(float(i) for i in range(32))),
+                None,
+            ),
             ("ppsDelay", 12, None),
         ],
     )
@@ -163,7 +173,10 @@ class TestMccsTile:
         )
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = getattr(tile_device, attribute)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -254,18 +267,37 @@ class TestMccsTileCommands:
             ("SetBeamFormerRegions", (2, 8, 5, 0, 0)),
             (
                 "ConfigureStationBeamformer",
-                json.dumps({"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}),
+                json.dumps(
+                    {
+                        "StartChannel": 2,
+                        "NumTiles": 4,
+                        "IsFirst": True,
+                        "IsLast": False,
+                    }
+                ),
             ),
             ("LoadBeamAngle", tuple(float(i) for i in range(16))),
             ("LoadAntennaTapering", tuple(float(i) for i in range(17))),
             ("SetPointingDelay", [3] * 5),  # 2 * antennas_per_tile + 1
             (
                 "ConfigureIntegratedChannelData",
-                json.dumps({"Integration Time": 6.284, "First channel": 0, "Last Channel": 511}),
+                json.dumps(
+                    {
+                        "Integration Time": 6.284,
+                        "First channel": 0,
+                        "Last Channel": 511,
+                    }
+                ),
             ),
             (
                 "ConfigureIntegratedBeamData",
-                json.dumps({"Integration Time": 3.142, "First channel": 0, "Last Channel": 191}),
+                json.dumps(
+                    {
+                        "Integration Time": 3.142,
+                        "First channel": 0,
+                        "Last Channel": 191,
+                    }
+                ),
             ),
             ("SendRawData", json.dumps({"Sync": True, "Seconds": 6.7})),
             (
@@ -309,7 +341,14 @@ class TestMccsTileCommands:
             ),
             (
                 "CalculateDelay",
-                json.dumps({"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}),
+                json.dumps(
+                    {
+                        "CurrentDelay": 5.0,
+                        "CurrentTC": 2,
+                        "RefLo": 3.0,
+                        "RefHi": 78.0,
+                    }
+                ),
             ),
             (
                 "ConfigureTestGenerator",
@@ -362,7 +401,10 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         args = [] if arg is None else [arg]
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = getattr(tile_device, device_command)(*args)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -453,7 +495,10 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = tile_device.Initialise()
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -465,7 +510,10 @@ class TestMccsTileCommands:
         tile_device.MockTpmOff()
         time.sleep(0.1)
 
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = tile_device.Initialise()
 
         tile_device.MockTpmOn()
@@ -511,7 +559,10 @@ class TestMccsTileCommands:
         device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert tile_device.state() == tango.DevState.DISABLE
 
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -520,7 +571,10 @@ class TestMccsTileCommands:
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
         # At this point, the component should be unconnected, as not turned on
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.MockTpmOn()
@@ -702,7 +756,10 @@ class TestMccsTileCommands:
         for exclude_key in arg.keys():
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
             bad_json_arg = json.dumps(bad_arg)
-            with pytest.raises(tango.DevFailed, match=f"{exclude_key} is a mandatory parameter"):
+            with pytest.raises(
+                tango.DevFailed,
+                match=f"{exclude_key} is a mandatory parameter",
+            ):
                 _ = tile_device.ReadRegister(bad_json_arg)
 
     def test_WriteRegister(
@@ -752,7 +809,10 @@ class TestMccsTileCommands:
         for exclude_key in arg.keys():
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
             bad_json_arg = json.dumps(bad_arg)
-            with pytest.raises(tango.DevFailed, match=f"{exclude_key} is a mandatory parameter"):
+            with pytest.raises(
+                tango.DevFailed,
+                match=f"{exclude_key} is a mandatory parameter",
+            ):
                 _ = tile_device.WriteRegister(bad_json_arg)
 
     def test_ReadAddress(
@@ -1002,7 +1062,12 @@ class TestMccsTileCommands:
 
         antenna = float(2)
         complex_coefficients = [
-            [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
+            [
+                complex(3.4, 1.2),
+                complex(2.3, 4.1),
+                complex(4.6, 8.2),
+                complex(6.8, 2.4),
+            ]
         ] * 5
         inp = list(itertools.chain.from_iterable(complex_coefficients))
         out = [[v.real, v.imag] for v in inp]
@@ -1052,7 +1117,12 @@ class TestMccsTileCommands:
         antenna = 2
         beam = 0
         complex_coefficients = [
-            [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
+            [
+                complex(3.4, 1.2),
+                complex(2.3, 4.1),
+                complex(4.6, 8.2),
+                complex(6.8, 2.4),
+            ]
         ] * 5
         inp = list(itertools.chain.from_iterable(complex_coefficients))
         out = [[v.real, v.imag] for v in inp]

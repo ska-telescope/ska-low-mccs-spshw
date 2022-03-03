@@ -272,7 +272,9 @@ class TangoHarness:
         MccsDeviceProxy.set_default_connection_factory(self.connection_factory)
 
     @property
-    def connection_factory(self: TangoHarness) -> Callable[[str], tango.DeviceProxy]:
+    def connection_factory(
+        self: TangoHarness,
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         Establish connections to devices with this factory.
 
@@ -688,7 +690,9 @@ class StartingStateTangoHarness(WrapperTangoHarness):
 
         super().__init__(harness, *args, **kwargs)
 
-    def __enter__(self: StartingStateTangoHarness) -> StartingStateTangoHarness:
+    def __enter__(
+        self: StartingStateTangoHarness,
+    ) -> StartingStateTangoHarness:
         """
         Entry method for "with" context.
 

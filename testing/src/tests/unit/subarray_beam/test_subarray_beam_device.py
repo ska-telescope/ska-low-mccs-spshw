@@ -104,7 +104,10 @@ class TestMccsSubarrayBeam(object):
             attribute.
         :param write_value: a value to write to check that it sticks
         """
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = getattr(device_under_test, attribute)
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -130,7 +133,10 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = device_under_test.stationIds
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -162,7 +168,10 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :param attribute: name of the attribute under test.
         """
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = getattr(device_under_test, attribute)
         device_under_test.adminMode = AdminMode.ONLINE
         assert getattr(device_under_test, attribute) is None
@@ -182,7 +191,10 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(tango.DevFailed, match="Communication with component is not established"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="Communication with component is not established",
+        ):
             _ = device_under_test.desiredPointing
         device_under_test.adminMode = AdminMode.ONLINE
 

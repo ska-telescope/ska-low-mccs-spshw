@@ -48,8 +48,18 @@ class BaseTpmSimulator(ObjectComponent):
         "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
     REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+        0: {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        },
+        1: {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        },
     }
     # ARP resolution table
     # Values are consistent with unit test test_MccsTile
@@ -110,7 +120,9 @@ class BaseTpmSimulator(ObjectComponent):
         self._test_generator_active = False
 
     @property
-    def firmware_available(self: BaseTpmSimulator) -> dict[str, dict[str, Any]]:
+    def firmware_available(
+        self: BaseTpmSimulator,
+    ) -> dict[str, dict[str, Any]]:
         """
         Return the firmware list for this TPM simulator.
 
@@ -573,7 +585,9 @@ class BaseTpmSimulator(ObjectComponent):
         raise NotImplementedError
 
     def load_calibration_coefficients(
-        self: BaseTpmSimulator, antenna: int, calibration_coefficients: list[int]
+        self: BaseTpmSimulator,
+        antenna: int,
+        calibration_coefficients: list[int],
     ) -> None:
         """
         Load calibration coefficients.

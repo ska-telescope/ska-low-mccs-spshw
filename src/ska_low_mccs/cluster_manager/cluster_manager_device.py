@@ -487,7 +487,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
         return self.component_manager.shadow_master_pool_node_ids
 
     @attribute(dtype=("DevState",), max_dim_x=100, label="shadowMasterPoolStatus")
-    def shadowMasterPoolStatus(self: MccsClusterManagerDevice) -> list[DevState]:
+    def shadowMasterPoolStatus(
+        self: MccsClusterManagerDevice,
+    ) -> list[DevState]:
         """
         Return the states of nodes in the shadow master pool.
 
@@ -671,7 +673,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def ClearJobStats(self: MccsClusterManagerDevice) -> DevVarLongStringArrayType:
+    def ClearJobStats(
+        self: MccsClusterManagerDevice,
+    ) -> DevVarLongStringArrayType:
         """
         Reset all job counters.
 
@@ -707,7 +711,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def PingMasterPool(self: MccsClusterManagerDevice) -> DevVarLongStringArrayType:
+    def PingMasterPool(
+        self: MccsClusterManagerDevice,
+    ) -> DevVarLongStringArrayType:
         """
         Pings all nodes in shadow master pool, to maintain status of each.
 

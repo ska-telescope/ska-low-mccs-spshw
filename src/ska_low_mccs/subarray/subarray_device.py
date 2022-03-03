@@ -399,7 +399,13 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(target, obs_state_model, "assign", op_state_model, logger=logger)
+            super().__init__(
+                target,
+                obs_state_model,
+                "assign",
+                op_state_model,
+                logger=logger,
+            )
 
         def do(  # type: ignore[override]
             self: MccsSubarray.AssignResourcesCommand, argin: str
@@ -468,7 +474,13 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(target, obs_state_model, "release", op_state_model, logger=logger)
+            super().__init__(
+                target,
+                obs_state_model,
+                "release",
+                op_state_model,
+                logger=logger,
+            )
 
         def do(  # type: ignore[override]
             self: MccsSubarray.ReleaseResourcesCommand, argin: str
@@ -521,7 +533,13 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(target, obs_state_model, "release", op_state_model, logger=logger)
+            super().__init__(
+                target,
+                obs_state_model,
+                "release",
+                op_state_model,
+                logger=logger,
+            )
 
         def do(  # type: ignore[override]
             self: MccsSubarray.ReleaseAllResourcesCommand,
@@ -572,7 +590,13 @@ class MccsSubarray(SKASubarray):
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
-            super().__init__(target, obs_state_model, "configure", op_state_model, logger=logger)
+            super().__init__(
+                target,
+                obs_state_model,
+                "configure",
+                op_state_model,
+                logger=logger,
+            )
 
         def do(  # type: ignore[override]
             self: MccsSubarray.ConfigureCommand,

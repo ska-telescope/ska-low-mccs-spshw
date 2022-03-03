@@ -136,7 +136,9 @@ class MccsComponentManagerProtocol(Protocol):
     """
 
     @property
-    def communication_status(self: MccsComponentManagerProtocol) -> CommunicationStatus:
+    def communication_status(
+        self: MccsComponentManagerProtocol,
+    ) -> CommunicationStatus:
         """Return the status of communication with the component."""
         ...
 
@@ -295,7 +297,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         return self.communication_status == CommunicationStatus.ESTABLISHED
 
     @property
-    def communication_status(self: MccsComponentManager) -> CommunicationStatus:
+    def communication_status(
+        self: MccsComponentManager,
+    ) -> CommunicationStatus:
         """
         Return the communication status of this component manager.
 

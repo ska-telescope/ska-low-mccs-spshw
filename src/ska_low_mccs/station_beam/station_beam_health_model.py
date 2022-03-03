@@ -52,7 +52,11 @@ class StationBeamHealthModel(HealthModel):
 
         station_fault_health = HealthState.FAILED if self._station_fault else HealthState.OK
 
-        for health in [HealthState.FAILED, HealthState.UNKNOWN, HealthState.DEGRADED]:
+        for health in [
+            HealthState.FAILED,
+            HealthState.UNKNOWN,
+            HealthState.DEGRADED,
+        ]:
             if super_health == health:
                 return health
             if self._beam_health == health:

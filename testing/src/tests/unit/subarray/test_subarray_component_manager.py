@@ -150,7 +150,9 @@ class TestSubarrayComponentManager:
         }
 
         resources_changed_callback.assert_next_call(
-            {station_off_fqdn}, {subarray_beam_off_fqdn}, {station_beam_off_fqdn}
+            {station_off_fqdn},
+            {subarray_beam_off_fqdn},
+            {station_beam_off_fqdn},
         )
 
         # Further assign

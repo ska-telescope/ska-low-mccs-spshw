@@ -318,7 +318,9 @@ def pointing_delays(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:
 
 
 @pytest.fixture()
-def mock_component_manager(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:
+def mock_component_manager(
+    mocker: pytest_mock.MockerFixture,
+) -> unittest.mock.Mock:
     """
     Return a mock to be used as a component manager for the station device.
 

@@ -137,7 +137,9 @@ def mock_subrack_device_proxy(subrack_fqdn: str, logger: logging.Logger) -> Mccs
 
 
 @pytest.fixture()
-def tile_power_mode_changed_callback(subrack_tpm_id: int) -> MockChangeEventCallback:
+def tile_power_mode_changed_callback(
+    subrack_tpm_id: int,
+) -> MockChangeEventCallback:
     """
     Return a mock callback for tile power mode change.
 

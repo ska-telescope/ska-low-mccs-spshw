@@ -501,7 +501,10 @@ class SubarrayComponentManager(
         :return: a result code
         """
         result_code = ResultCode.OK
-        for (subarray_beam_id, configuration) in subarray_beam_configuration.items():
+        for (
+            subarray_beam_id,
+            configuration,
+        ) in subarray_beam_configuration.items():
             subarray_beam_fqdn = f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
             subarray_beam_proxy = self._subarray_beams[subarray_beam_fqdn]
             proxy_result_code = subarray_beam_proxy.configure(configuration)

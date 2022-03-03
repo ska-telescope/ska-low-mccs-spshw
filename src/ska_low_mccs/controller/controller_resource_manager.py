@@ -159,4 +159,7 @@ class ControllerResourceManager:
 
         :return: the resources allocated to the subarray.
         """
-        return cast(Mapping[str, Iterable[str]], self._resource_manager.get_allocated(subarray))
+        return cast(
+            Mapping[str, Iterable[str]],
+            self._resource_manager.get_allocated(subarray),
+        )

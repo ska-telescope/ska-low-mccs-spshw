@@ -165,7 +165,10 @@ class MccsController(SKABaseDevice):
             """
             result_code = self.target.component_manager.on()
             if result_code == ResultCode.FAILED:
-                return (ResultCode.FAILED, "Controller failed to initiate On command")
+                return (
+                    ResultCode.FAILED,
+                    "Controller failed to initiate On command",
+                )
 
             def wait_until_on(
                 device: MccsDeviceProxy, timeout: float, period: float = 0.5
@@ -210,7 +213,10 @@ class MccsController(SKABaseDevice):
             """
             result_code = self.target.component_manager.off()
             if result_code == ResultCode.FAILED:
-                return (ResultCode.FAILED, "Controller failed to initiate Off command")
+                return (
+                    ResultCode.FAILED,
+                    "Controller failed to initiate Off command",
+                )
 
             def wait_until_off(
                 device: MccsDeviceProxy, timeout: float, period: float = 0.5

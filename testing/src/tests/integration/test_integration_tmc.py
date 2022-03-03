@@ -56,7 +56,9 @@ def patched_station_device_class() -> type[MccsStation]:
 
 
 @pytest.fixture()
-def devices_to_load(patched_station_device_class: MccsStation) -> DevicesToLoadType:
+def devices_to_load(
+    patched_station_device_class: MccsStation,
+) -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 

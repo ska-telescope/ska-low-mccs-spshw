@@ -69,7 +69,8 @@ def devices_to_load(
 
 @pytest.fixture()
 def mock_callback_factory(
-    mock_callback_called_timeout: float, mock_callback_not_called_timeout: float
+    mock_callback_called_timeout: float,
+    mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallable]:
     """
     Return a factory that returns a new mock callback each time it is called.

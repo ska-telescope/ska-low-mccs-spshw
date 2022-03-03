@@ -488,7 +488,10 @@ class MccsStation(SKAObsDevice):
             try:
                 result_code = component_manager.configure(station_id)
             except ValueError as value_error:
-                return (ResultCode.FAILED, f"Configure command failed: {value_error}")
+                return (
+                    ResultCode.FAILED,
+                    f"Configure command failed: {value_error}",
+                )
 
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)

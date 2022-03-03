@@ -46,8 +46,8 @@ include:
     file: 'gitlab-ci/includes/finaliser.gitlab-ci.yml'
 
   # Create a release
-  #- project: 'ska-telescope/templates-repository'
-  #  file: 'gitlab-ci/includes/release.gitlab-ci.yml'
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/release.gitlab-ci.yml'
 
   # Helm chart
   - project: 'ska-telescope/templates-repository'

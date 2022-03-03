@@ -227,8 +227,6 @@ def tango_harness_factory(
             device_info = MccsDeviceInfo(**devices_to_load)
 
         tango_harness: TangoHarness  # type hint only
-        print("testbed = ", testbed)
-        print("tango_config = ", tango_config)
         if testbed == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
         elif testbed == "local":

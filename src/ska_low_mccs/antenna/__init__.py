@@ -11,7 +11,7 @@ __all__ = [
     "AntennaComponentManager",
     "AntennaHealthModel",
     "MccsAntenna",
-    # "demo_antenna_device",
+    "demo_antenna_device",
 ]
 
 from .antenna_health_model import AntennaHealthModel

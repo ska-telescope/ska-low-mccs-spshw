@@ -29,7 +29,7 @@ import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.control_model import AdminMode, TestMode
+from ska_tango_base.control_model import TestMode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
@@ -231,12 +231,14 @@ class MccsDeviceInfo:
         """
         return dict(self._proxies)
 
-    def get_memorized_attributes(self: MccsDeviceInfo, name: str):
+    def get_memorized_attributes(
+        self: MccsDeviceInfo, name: str
+    ) -> dict[str, list[str]]:
         """
-        Return a map of memorized attributes associated with a device given the device
-        name.
+        Return a map of memorized attributes for a device.
 
-        :return: a map of memorized attributes
+        :param name: name of device
+        :return: a map of the device's memorized attributes
         """
         return self._devices[name]["memorized"]
 
@@ -579,36 +581,45 @@ class DeploymentContextTangoHarness(ClientProxyTangoHarness):
     """
     A test harness for testing running MCCS Tango devices.
 
-    It stands up a
-    :py:class:`tango.test_context.MultiDeviceTestContext` with the
-    specified devices.
+    It sets the adminMode of the devices under test to the value
+    specified in the device_info, which is loaded from the configuration
+    json file.
     """
 
     def __init__(
-        self: TestContextTangoHarness,
-        device_info: Optional[MccsDeviceInfo],
+        self: DeploymentContextTangoHarness,
+        device_info: MccsDeviceInfo,
         logger: logging.Logger,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        """Some text."""
+        """
+        Initialise a new instance.
+
+        :param device_info: object that makes device info available
+        :param logger: a logger for the harness
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
+        """
         print("DeploymentContextTangoHarness initialization")
         super().__init__(device_info, logger, *args, **kwargs)
         print("super init complete")
         self._device_info = device_info
         # self.exported_devices = tango.Database().get_device_exported('*')
         # print(self.exported_devices)
-        if self._device_info:
+        if self._device_info is not None:
             self._setup_devices()
 
-    def _setup_devices(self: TestContextTangoHarness):
+    def _setup_devices(self: DeploymentContextTangoHarness) -> None:
         for name, fqdn in self._device_info.fqdn_map.items():
             print("Setting up device ", name, fqdn)
             # if fqdn in self.exported_devices:
             # print('Device ', name, 'found in ', self.exported_devices)
             self._write_memorized(name, fqdn)
 
-    def _write_memorized(self, name: str, fqdn: str):
+    def _write_memorized(
+        self: DeploymentContextTangoHarness, name: str, fqdn: str
+    ) -> None:
         memorized = self._device_info.get_memorized_attributes(name)
         print("memorized = ", memorized)
         # device = self.get_device(self._device_info.fqdn_map[name])

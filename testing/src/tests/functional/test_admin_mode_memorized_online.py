@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import pytest
 
-from ska_tango_base.control_model import (
-    AdminMode
-)
+from typing import Callable
+
+from ska_tango_base.control_model import AdminMode
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockChangeEventCallback, MockCallable
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType
 
 
 @pytest.fixture(scope="module")
@@ -113,37 +114,30 @@ def test_admin_mode_memorized_online(
     apius: dict[int, MccsDeviceProxy],
     tiles: dict[int, MccsDeviceProxy],
     antennas: dict[int, MccsDeviceProxy],
-    device_admin_mode_changed_callback: MockChangeEventCallback
+    device_admin_mode_changed_callback: MockChangeEventCallback,
 ) -> None:
     """
-    Check all devices have adminMode set to ONLINE
+    Check all devices have adminMode set to ONLINE.
 
     :param controller: a proxy to the controller device
-    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param subrack: a proxy to the subrack device
-    :type subrack: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param subarrays: proxies to the subarray devices, keyed by number
-    :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param subarray_beams: proxies to the subarray_beam devices, keyed by number
-    :type subarray_beams: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
-    :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param station_beams: proxies to the station_beam devices, keyed by number
-    :type station_beams: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param apius: proxies to the apiu devices, keyed by number
-    :type apius: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param tiles: proxies to the tile devices, keyed by number
-    :type tiles: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param antennas: proxies to the antenna devices, keyed by number
-    :type antennas: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param device_admin_mode_changed_callback: a callback that
+        we can use to subscribe to admin mode changes on the device
     """
     controller.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
-        )
+        "adminMode",
+        device_admin_mode_changed_callback,
+    )
     device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
     assert controller.adminMode == AdminMode.ONLINE
-    
+
     subrack.add_change_event_callback(
         "adminMode",
         device_admin_mode_changed_callback,
@@ -198,7 +192,7 @@ def test_admin_mode_memorized_online(
         )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
-    
+
     for antenna_device in antennas.values():
         antenna_device.add_change_event_callback(
             "adminMode",

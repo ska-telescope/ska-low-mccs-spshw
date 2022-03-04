@@ -48,10 +48,12 @@ class ControllerHealthModel(HealthModel):
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
         self._subarray_beam_health: dict[str, Optional[HealthState]] = {
-            subarray_beam_fqdn: HealthState.UNKNOWN for subarray_beam_fqdn in subarray_beam_fqdns
+            subarray_beam_fqdn: HealthState.UNKNOWN
+            for subarray_beam_fqdn in subarray_beam_fqdns
         }
         self._station_beam_health: dict[str, Optional[HealthState]] = {
-            station_beam_fqdn: HealthState.UNKNOWN for station_beam_fqdn in station_beam_fqdns
+            station_beam_fqdn: HealthState.UNKNOWN
+            for station_beam_fqdn in station_beam_fqdns
         }
         super().__init__(health_changed_callback)
 

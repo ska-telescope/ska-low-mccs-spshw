@@ -112,7 +112,9 @@ class MccsTelState(SKATelState):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def health_changed(self: MccsTelState, health: HealthState) -> None:
         """

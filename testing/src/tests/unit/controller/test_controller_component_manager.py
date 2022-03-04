@@ -39,16 +39,31 @@ class TestControllerComponentManager:
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert controller_component_manager.communication_status == CommunicationStatus.DISABLED
+        assert (
+            controller_component_manager.communication_status
+            == CommunicationStatus.DISABLED
+        )
 
         controller_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
-        assert controller_component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        assert (
+            controller_component_manager.communication_status
+            == CommunicationStatus.ESTABLISHED
+        )
 
         controller_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
-        assert controller_component_manager.communication_status == CommunicationStatus.DISABLED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
+        assert (
+            controller_component_manager.communication_status
+            == CommunicationStatus.DISABLED
+        )
 
     def test_power_commands(
         self: TestControllerComponentManager,
@@ -76,7 +91,9 @@ class TestControllerComponentManager:
 
         # pretend to receive events
         for fqdn in subrack_fqdns:
-            controller_component_manager._subrack_power_mode_changed(fqdn, PowerState.ON)
+            controller_component_manager._subrack_power_mode_changed(
+                fqdn, PowerState.ON
+            )
         for proxy in station_proxies:
             proxy.On.assert_next_call()
 
@@ -86,7 +103,9 @@ class TestControllerComponentManager:
 
         # pretend to receive events
         for fqdn in station_fqdns:
-            controller_component_manager._station_power_mode_changed(fqdn, PowerState.OFF)
+            controller_component_manager._station_power_mode_changed(
+                fqdn, PowerState.OFF
+            )
         for proxy in subrack_proxies:
             proxy.Off.assert_next_call()
 
@@ -109,11 +128,15 @@ class TestControllerComponentManager:
         assert controller_component_manager.power_mode == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():
-            station_proxy._device_state_changed("state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID)
+            station_proxy._device_state_changed(
+                "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
+            )
             assert controller_component_manager.power_mode == PowerState.UNKNOWN
             component_power_mode_changed_callback.assert_not_called()
         for subrack_proxy in controller_component_manager._subracks.values():
-            subrack_proxy._device_state_changed("state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID)
+            subrack_proxy._device_state_changed(
+                "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
+            )
         component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
         assert controller_component_manager.power_mode == PowerState.OFF
 
@@ -159,28 +182,44 @@ class TestControllerComponentManager:
 
         # Subarray is an always-on device, so this should always be received after we
         # establish communication with it.
-        controller_component_manager._subarrays["low-mccs/subarray/01"]._device_state_changed(
+        controller_component_manager._subarrays[
+            "low-mccs/subarray/01"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._subarrays["low-mccs/subarray/02"]._device_state_changed(
+        controller_component_manager._subarrays[
+            "low-mccs/subarray/02"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._subarray_beams["low-mccs/subarraybeam/01"]._device_state_changed(
+        controller_component_manager._subarray_beams[
+            "low-mccs/subarraybeam/01"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._subarray_beams["low-mccs/subarraybeam/02"]._device_state_changed(
+        controller_component_manager._subarray_beams[
+            "low-mccs/subarraybeam/02"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._station_beams["low-mccs/beam/01"]._device_state_changed(
+        controller_component_manager._station_beams[
+            "low-mccs/beam/01"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._station_beams["low-mccs/beam/02"]._device_state_changed(
+        controller_component_manager._station_beams[
+            "low-mccs/beam/02"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._station_beams["low-mccs/beam/03"]._device_state_changed(
+        controller_component_manager._station_beams[
+            "low-mccs/beam/03"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._station_beams["low-mccs/beam/04"]._device_state_changed(
+        controller_component_manager._station_beams[
+            "low-mccs/beam/04"
+        ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
         controller_component_manager._station_beam_health_changed(
@@ -211,9 +250,13 @@ class TestControllerComponentManager:
         # Fake events to tell this controller component manager that its devices are all
         # turned on, so that it decided that it is turned on.
         for station_proxy in controller_component_manager._stations.values():
-            station_proxy._device_state_changed("state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID)
+            station_proxy._device_state_changed(
+                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+            )
         for subrack_proxy in controller_component_manager._subracks.values():
-            subrack_proxy._device_state_changed("state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID)
+            subrack_proxy._device_state_changed(
+                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+            )
 
         with pytest.raises(ValueError, match="Unsupported resources"):
             controller_component_manager.allocate(
@@ -274,7 +317,9 @@ class TestControllerComponentManager:
         )
 
         time.sleep(0.1)
-        subarray_proxies["low-mccs/subarray/01"].AssignResources.assert_called_once_with(
+        subarray_proxies[
+            "low-mccs/subarray/01"
+        ].AssignResources.assert_called_once_with(
             json.dumps(
                 {
                     "stations": [["low-mccs/station/001"]],
@@ -287,7 +332,9 @@ class TestControllerComponentManager:
 
         controller_component_manager.deallocate_all(1)
         time.sleep(0.2)
-        subarray_proxies["low-mccs/subarray/01"].ReleaseAllResources.assert_called_once_with()
+        subarray_proxies[
+            "low-mccs/subarray/01"
+        ].ReleaseAllResources.assert_called_once_with()
 
         controller_component_manager.allocate(
             2,
@@ -297,7 +344,9 @@ class TestControllerComponentManager:
         )
 
         time.sleep(0.1)
-        subarray_proxies["low-mccs/subarray/02"].AssignResources.assert_called_once_with(
+        subarray_proxies[
+            "low-mccs/subarray/02"
+        ].AssignResources.assert_called_once_with(
             json.dumps(
                 {
                     "stations": [["low-mccs/station/001"]],
@@ -321,7 +370,9 @@ class TestControllerComponentManager:
         # Now all 48 channel blocks of station 1 are assigned to subarray 1,
         # assigning any more to subarray 2 should fail
         time.sleep(0.1)
-        with pytest.raises(ValueError, match="No free resources of type: channel_blocks."):
+        with pytest.raises(
+            ValueError, match="No free resources of type: channel_blocks."
+        ):
             controller_component_manager.allocate(
                 2,
                 [["low-mccs/station/001"]],

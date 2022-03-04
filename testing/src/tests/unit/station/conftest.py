@@ -20,7 +20,11 @@ from ska_tango_base.control_model import HealthState
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockChangeEventCallback,
+    MockDeviceBuilder,
+)
 
 
 @pytest.fixture()
@@ -167,7 +171,9 @@ def initial_mocks(
         test harness.
     """
     initial_mocks = {apiu_fqdn: mock_apiu}
-    initial_mocks.update({antenna_fqdn: mock_antenna_factory() for antenna_fqdn in antenna_fqdns})
+    initial_mocks.update(
+        {antenna_fqdn: mock_antenna_factory() for antenna_fqdn in antenna_fqdns}
+    )
     initial_mocks.update({tile_fqdn: mock_tile_factory() for tile_fqdn in tile_fqdns})
     return initial_mocks
 
@@ -379,7 +385,9 @@ def apiu_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def tile_proxies(tile_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
+def tile_proxies(
+    tile_fqdns: Iterable[str], logger: logging.Logger
+) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to tile devices.
 
@@ -392,7 +400,9 @@ def tile_proxies(tile_fqdns: Iterable[str], logger: logging.Logger) -> list[Mccs
 
 
 @pytest.fixture()
-def antenna_proxies(antenna_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
+def antenna_proxies(
+    antenna_fqdns: Iterable[str], logger: logging.Logger
+) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to antenna devices.
 

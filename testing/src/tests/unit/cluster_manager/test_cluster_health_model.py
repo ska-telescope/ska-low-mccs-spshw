@@ -88,7 +88,9 @@ class TestClusterHealthModel:
         cluster_health_model.component_fault(False)
         assert_health_changed(HealthState.UNKNOWN)
 
-        cluster_health_model.shadow_master_pool_node_health_changed([HealthState.OK, HealthState.OK])
+        cluster_health_model.shadow_master_pool_node_health_changed(
+            [HealthState.OK, HealthState.OK]
+        )
         assert_health_changed(HealthState.OK)
 
         cluster_health_model.is_communicating(False)
@@ -98,7 +100,9 @@ class TestClusterHealthModel:
         cluster_health_model.is_communicating(True)
         assert_health_changed(HealthState.OK)
 
-        cluster_health_model.shadow_master_pool_node_health_changed([HealthState.OK, HealthState.FAILED])
+        cluster_health_model.shadow_master_pool_node_health_changed(
+            [HealthState.OK, HealthState.FAILED]
+        )
         assert_health_changed(HealthState.DEGRADED)
 
         cluster_health_model.is_communicating(False)

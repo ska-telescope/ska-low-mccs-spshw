@@ -29,7 +29,9 @@ class CliMeta(type):
     exceptions.
     """
 
-    def __new__(cls: Type[CliMeta], name: str, bases: tuple[type], attrs: dict) -> CliMeta:
+    def __new__(
+        cls: Type[CliMeta], name: str, bases: tuple[type], attrs: dict
+    ) -> CliMeta:
         """
         Class constructor.
 
@@ -116,7 +118,9 @@ def format_wrapper(
              string
         """
         reslist = method(*args, **kwargs)
-        return f"Return code: {ResultCode(reslist[0][0]).name}\nMessage: {reslist[1][0]}"
+        return (
+            f"Return code: {ResultCode(reslist[0][0]).name}\nMessage: {reslist[1][0]}"
+        )
 
     return _wrapper
 
@@ -124,7 +128,9 @@ def format_wrapper(
 class MccsControllerCli(metaclass=CliMeta):
     """Command-line interface to the MccsController tango device."""
 
-    def __init__(self: MccsControllerCli, fqdn: str = "low-mccs/control/control") -> None:
+    def __init__(
+        self: MccsControllerCli, fqdn: str = "low-mccs/control/control"
+    ) -> None:
         """
         Initialise a new CLI instance.
 
@@ -132,7 +138,9 @@ class MccsControllerCli(metaclass=CliMeta):
             defaults to "low-mccs/control/control"
         """
         self._dp = tango.DeviceProxy(fqdn)
-        self._log_levels = [lvl for lvl in dir(self._dp.logginglevel.__class__) if lvl.isupper()]
+        self._log_levels = [
+            lvl for lvl in dir(self._dp.logginglevel.__class__) if lvl.isupper()
+        ]
 
     def adminmode(self: MccsControllerCli) -> str:
         """

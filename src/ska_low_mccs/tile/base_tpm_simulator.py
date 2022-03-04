@@ -273,7 +273,8 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'board_temperature' must be " "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'board_temperature' must be "
+            "implemented in a subclass."
         )
 
     @property
@@ -285,7 +286,8 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'voltage' must be " "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'voltage' must be "
+            "implemented in a subclass."
         )
 
     @property
@@ -297,7 +299,8 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'current' must be " "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'current' must be "
+            "implemented in a subclass."
         )
 
     @property
@@ -309,7 +312,8 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'fpga1_temperature' must be " "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'fpga1_temperature' must be "
+            "implemented in a subclass."
         )
 
     @property
@@ -321,7 +325,8 @@ class BaseTpmSimulator(ObjectComponent):
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'fpga2_temperature' must be " "implemented in a subclass."
+            "BaseTpmSimulator is abstract; property 'fpga2_temperature' must be "
+            "implemented in a subclass."
         )
 
     @property
@@ -631,7 +636,9 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_calibration_curve")
         raise NotImplementedError
 
-    def load_beam_angle(self: BaseTpmSimulator, angle_coefficients: list[float]) -> None:
+    def load_beam_angle(
+        self: BaseTpmSimulator, angle_coefficients: list[float]
+    ) -> None:
         """
         Load the beam angle.
 
@@ -644,7 +651,9 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_beam_angle")
         raise NotImplementedError
 
-    def load_antenna_tapering(self: BaseTpmSimulator, beam: int, tapering_coefficients: list[float]) -> None:
+    def load_antenna_tapering(
+        self: BaseTpmSimulator, beam: int, tapering_coefficients: list[float]
+    ) -> None:
         """
         Loat the antenna tapering coefficients.
 
@@ -688,7 +697,9 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: compute_calibration_coefficients")
         raise NotImplementedError
 
-    def set_pointing_delay(self: BaseTpmSimulator, delay_array: list[float], beam_index: int) -> None:
+    def set_pointing_delay(
+        self: BaseTpmSimulator, delay_array: list[float], beam_index: int
+    ) -> None:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -1132,7 +1143,10 @@ class BaseTpmSimulator(ObjectComponent):
         )
         amplitude_adu = round(amplitude_noise * 255) * 0.102
         self.logger.debug(
-            "TpmSimulator: set_test_generator noise: " + str(amplitude_adu) + " ADUs @" + str(load_time)
+            "TpmSimulator: set_test_generator noise: "
+            + str(amplitude_adu)
+            + " ADUs @"
+            + str(load_time)
         )
         freqs = [16, 12, 8, 6, 4, 3, 2, 1]
         frequency = 0.925925 * freqs[pulse_code]
@@ -1154,7 +1168,9 @@ class BaseTpmSimulator(ObjectComponent):
 
         :param bit_mask: Bit mask of inputs using test signal
         """
-        self.logger.debug("TpmSimulator: test_generator_input_select: " + str(hex(bit_mask)))
+        self.logger.debug(
+            "TpmSimulator: test_generator_input_select: " + str(hex(bit_mask))
+        )
         # raise NotImplementedError
 
     @property
@@ -1176,7 +1192,9 @@ class BaseTpmSimulator(ObjectComponent):
         self._test_generator_active = active
 
     @staticmethod
-    def calculate_delay(current_delay: float, current_tc: int, ref_lo: float, ref_hi: float) -> None:
+    def calculate_delay(
+        current_delay: float, current_tc: int, ref_lo: float, ref_hi: float
+    ) -> None:
         """
         Calculate the delay.
 

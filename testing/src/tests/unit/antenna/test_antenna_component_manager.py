@@ -43,15 +43,21 @@ class TestAntennaApiuProxy:
 
         # communication status is NOT_ESTABLISHED because establishing
         # a connection to MccsAPIU has been enqueued but not yet run
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
 
         # communication status is ESTABLISHED because MccsAPIU's state
         # is OFF, from which we can infer that the antenna is powered
         # off.
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
 
         antenna_apiu_proxy.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
 
     def test_power_command(
         self: TestAntennaApiuProxy,
@@ -92,7 +98,9 @@ class TestAntennaApiuProxy:
         mock_apiu_device_proxy.On.assert_next_call()
 
         # Fake an event that tells this proxy that the APIU has been turned on.
-        antenna_apiu_proxy._device_state_changed("state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID)
+        antenna_apiu_proxy._device_state_changed(
+            "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        )
         assert antenna_apiu_proxy.power_mode == PowerState.ON
 
         assert antenna_apiu_proxy.supplied_power_mode == PowerState.OFF
@@ -164,11 +172,17 @@ class TestAntennaTileProxy:
         """
         assert antenna_tile_proxy.communication_status == CommunicationStatus.DISABLED
         antenna_tile_proxy.start_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
 
         antenna_tile_proxy.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
 
     @pytest.mark.parametrize("command", ["on", "standby", "off"])
     def test_power_command(
@@ -218,17 +232,32 @@ class TestAntennaComponentManager:
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert antenna_component_manager.communication_status == CommunicationStatus.DISABLED
+        assert (
+            antenna_component_manager.communication_status
+            == CommunicationStatus.DISABLED
+        )
 
         antenna_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
-        assert antenna_component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        assert (
+            antenna_component_manager.communication_status
+            == CommunicationStatus.ESTABLISHED
+        )
 
         antenna_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
-        assert antenna_component_manager.communication_status == CommunicationStatus.DISABLED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
+        assert (
+            antenna_component_manager.communication_status
+            == CommunicationStatus.DISABLED
+        )
 
     def test_power_commands(
         self: TestAntennaComponentManager,
@@ -330,8 +359,12 @@ class TestAntennaComponentManager:
         """
         antenna_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
 
         assert antenna_component_manager.on() == ResultCode.QUEUED
 

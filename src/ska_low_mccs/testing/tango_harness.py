@@ -175,7 +175,9 @@ class MccsDeviceInfo:
                 fqdn = next(iter(device_spec[class_name]))
                 properties = device_spec[class_name][fqdn]["properties"]
 
-                attribute_properties = device_spec[class_name][fqdn].get("attribute_properties", {})
+                attribute_properties = device_spec[class_name][fqdn].get(
+                    "attribute_properties", {}
+                )
                 memorized = {
                     name: value["__value"]
                     for name, value in attribute_properties.items()
@@ -234,7 +236,9 @@ class MccsDeviceInfo:
         :return: device info in a format required by
             :py:class:`tango.test_context.MultiDeviceTestContext`.
         """
-        devices_by_class: dict[type[SKABaseDevice], list[MdtcDeviceInfoType]] = defaultdict(list)
+        devices_by_class: dict[
+            type[SKABaseDevice], list[MdtcDeviceInfoType]
+        ] = defaultdict(list)
         for device in self._devices.values():
             devices_by_class[device["class"]].append(
                 {
@@ -244,7 +248,8 @@ class MccsDeviceInfo:
                 }
             )
         mdtc_device_info: list[MdtcInfoType] = [
-            {"class": klass, "devices": devices} for klass, devices in devices_by_class.items()
+            {"class": klass, "devices": devices}
+            for klass, devices in devices_by_class.items()
         ]
         return mdtc_device_info
 
@@ -519,7 +524,9 @@ class TestContextTangoHarness(BaseTangoHarness):
 
             :return: a connection to the device
             """
-            return tango.DeviceProxy(f"tango://{self._host}:{self._port}/{fqdn}#dbase=no")
+            return tango.DeviceProxy(
+                f"tango://{self._host}:{self._port}/{fqdn}#dbase=no"
+            )
 
         return connect
 
@@ -549,7 +556,9 @@ class TestContextTangoHarness(BaseTangoHarness):
         :returns: whether the exception (if any) has been fully handled
             by this method and should be swallowed i.e. not re-raised
         """
-        if self._test_context is not None and self._test_context.__exit__(exc_type, exception, trace):
+        if self._test_context is not None and self._test_context.__exit__(
+            exc_type, exception, trace
+        ):
             return super().__exit__(None, None, None)
         else:
             return super().__exit__(exc_type, exception, trace)

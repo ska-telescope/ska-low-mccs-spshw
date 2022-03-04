@@ -107,7 +107,9 @@ class ApiuSimulator(ObjectComponent):
         """
         self._is_faulty = initial_fault
         self._fault_callback: Optional[Callable[[bool], None]] = None
-        self._antenna_power_changed_callback: Optional[Callable[[list[bool]], None]] = None
+        self._antenna_power_changed_callback: Optional[
+            Callable[[list[bool]], None]
+        ] = None
 
         self._voltage = self.DEFAULT_VOLTAGE
         self._current = self.DEFAULT_CURRENT
@@ -133,7 +135,9 @@ class ApiuSimulator(ObjectComponent):
         """
         return self._is_faulty
 
-    def set_fault_callback(self: ApiuSimulator, fault_callback: Optional[Callable[[bool], None]]) -> None:
+    def set_fault_callback(
+        self: ApiuSimulator, fault_callback: Optional[Callable[[bool], None]]
+    ) -> None:
         """
         Set the callback to be called when the component faults.
 
@@ -282,7 +286,9 @@ class ApiuSimulator(ObjectComponent):
 
         :return: whether each antenna is powered or not.
         """
-        return [antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data]
+        return [
+            antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data
+        ]
 
     @check_antenna_id
     def is_antenna_on(self: ApiuSimulator, antenna_id: int) -> bool:
@@ -336,7 +342,9 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if all(antenna["power_mode"] == PowerState.OFF for antenna in self._antenna_data):
+        if all(
+            antenna["power_mode"] == PowerState.OFF for antenna in self._antenna_data
+        ):
             return None
 
         for antenna in self._antenna_data:
@@ -350,7 +358,9 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if all(antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data):
+        if all(
+            antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data
+        ):
             return None
 
         for antenna in self._antenna_data:
@@ -376,7 +386,9 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["current"]
 
     @check_antenna_id
-    def simulate_antenna_current(self: ApiuSimulator, antenna_id: int, current: float) -> None:
+    def simulate_antenna_current(
+        self: ApiuSimulator, antenna_id: int, current: float
+    ) -> None:
         """
         Simulate a change in antenna current.
 
@@ -409,7 +421,9 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["voltage"]
 
     @check_antenna_id
-    def simulate_antenna_voltage(self: ApiuSimulator, antenna_id: int, voltage: float) -> None:
+    def simulate_antenna_voltage(
+        self: ApiuSimulator, antenna_id: int, voltage: float
+    ) -> None:
         """
         Simulate a change in antenna voltage.
 
@@ -442,7 +456,9 @@ class ApiuSimulator(ObjectComponent):
         return self._antenna_data[antenna_id - 1]["temperature"]
 
     @check_antenna_id
-    def simulate_antenna_temperature(self: ApiuSimulator, antenna_id: int, temperature: float) -> None:
+    def simulate_antenna_temperature(
+        self: ApiuSimulator, antenna_id: int, temperature: float
+    ) -> None:
         """
         Simulate a change in antenna temperature.
 

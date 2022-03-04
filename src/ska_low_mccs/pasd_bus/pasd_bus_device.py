@@ -116,7 +116,9 @@ class MccsPasdBus(SKABaseDevice):
         ]:
             self.register_command_object(
                 command_name,
-                command_object(self.component_manager, self.op_state_model, self.logger),
+                command_object(
+                    self.component_manager, self.op_state_model, self.logger
+                ),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -176,9 +178,13 @@ class MccsPasdBus(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
-    def _component_power_mode_changed(self: MccsPasdBus, power_mode: PowerState) -> None:
+    def _component_power_mode_changed(
+        self: MccsPasdBus, power_mode: PowerState
+    ) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -368,7 +374,9 @@ class MccsPasdBus(SKABaseDevice):
         :return: whether each FNDH port has had its power locally
             forced.
         """
-        return [forcing is not None for forcing in self.component_manager.fndh_port_forcings]
+        return [
+            forcing is not None for forcing in self.component_manager.fndh_port_forcings
+        ]
 
     @attribute(
         dtype=("DevBoolean",),
@@ -557,7 +565,9 @@ class MccsPasdBus(SKABaseDevice):
         :return: a list of booleans indicating whether each antenna is
             forces
         """
-        return [forcing is not None for forcing in self.component_manager.antenna_forcings]
+        return [
+            forcing is not None for forcing in self.component_manager.antenna_forcings
+        ]
 
     @attribute(
         dtype=("DevBoolean",),
@@ -865,7 +875,9 @@ class MccsPasdBus(SKABaseDevice):
             return create_return(success, f"smartbox {argin} service LED on")
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOn(
+        self: MccsPasdBus, argin: int
+    ) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox's blue service LED.
 
@@ -901,7 +913,9 @@ class MccsPasdBus(SKABaseDevice):
             return create_return(success, f"smartbox {argin} service LED off")
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOff(
+        self: MccsPasdBus, argin: int
+    ) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox's blue service LED.
 

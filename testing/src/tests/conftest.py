@@ -107,11 +107,18 @@ def pytest_collection_modifyitems(
 
     prefix = "needs_"
     for item in items:
-        needs_tags = set(tag[len(prefix) :] for tag in item.keywords if tag.startswith(prefix))
+        needs_tags = set(
+            tag[len(prefix) :] for tag in item.keywords if tag.startswith(prefix)
+        )
         unmet_tags = list(needs_tags - available_tags)
         if unmet_tags:
             item.add_marker(
-                pytest.mark.skip(reason=(f"Testbed '{testbed}' does not meet test needs: " f"{unmet_tags}."))
+                pytest.mark.skip(
+                    reason=(
+                        f"Testbed '{testbed}' does not meet test needs: "
+                        f"{unmet_tags}."
+                    )
+                )
             )
 
 
@@ -228,7 +235,9 @@ def tango_harness_factory(
 
         starting_state_harness = StartingStateTangoHarness(tango_harness)
 
-        mocking_harness = MockingTangoHarness(starting_state_harness, mock_factory, initial_mocks)
+        mocking_harness = MockingTangoHarness(
+            starting_state_harness, mock_factory, initial_mocks
+        )
 
         return mocking_harness
 
@@ -278,7 +287,9 @@ def tango_harness(
 
     :yields: a tango test harness
     """
-    with tango_harness_factory(tango_config, devices_to_load, mock_factory, initial_mocks) as harness:
+    with tango_harness_factory(
+        tango_config, devices_to_load, mock_factory, initial_mocks
+    ) as harness:
         yield harness
 
 

@@ -16,7 +16,11 @@ from ska_tango_base.commands import BaseCommand, ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import CommunicationStatus, MccsComponentManager, check_communicating
+from ska_low_mccs.component import (
+    CommunicationStatus,
+    MccsComponentManager,
+    check_communicating,
+)
 
 __all__ = ["DeviceComponentManager", "ObsDeviceComponentManager"]
 
@@ -32,7 +36,9 @@ class DeviceComponentManager(MccsComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[Callable[[Optional[HealthState]], None]] = None,
+        health_changed_callback: Optional[
+            Callable[[Optional[HealthState]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -106,14 +112,22 @@ class DeviceComponentManager(MccsComponentManager):
                 target._proxy.connect()
             except tango.DevFailed as dev_failed:
                 target._proxy = None
-                raise ConnectionError(f"Could not connect to '{target._fqdn}'") from dev_failed
+                raise ConnectionError(
+                    f"Could not connect to '{target._fqdn}'"
+                ) from dev_failed
 
             target.update_communication_status(CommunicationStatus.ESTABLISHED)
-            target._proxy.add_change_event_callback("state", target._device_state_changed)
+            target._proxy.add_change_event_callback(
+                "state", target._device_state_changed
+            )
 
             if target._health_changed_callback is not None:
-                target._proxy.add_change_event_callback("healthState", target._device_health_state_changed)
-                target._proxy.add_change_event_callback("adminMode", target._device_admin_mode_changed)
+                target._proxy.add_change_event_callback(
+                    "healthState", target._device_health_state_changed
+                )
+                target._proxy.add_change_event_callback(
+                    "adminMode", target._device_admin_mode_changed
+                )
             return ResultCode.OK, f"Connected to '{target._fqdn}'"
 
     class ConnectToDevice(ConnectToDeviceBase):
@@ -164,7 +178,9 @@ class DeviceComponentManager(MccsComponentManager):
                 assert self.target._proxy is not None  # for the type checker
                 ([result_code], _) = self.target._proxy.On()  # Fire and forget
             except TypeError as type_error:
-                self.target._logger.fatal(f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}")
+                self.target._logger.fatal(
+                    f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
+                )
                 result_code = ResultCode.FAILED
             return result_code
 
@@ -201,7 +217,9 @@ class DeviceComponentManager(MccsComponentManager):
                     _,
                 ) = self.target._proxy.Off()  # Fire and forget
             except TypeError as type_error:
-                self.target._logger.fatal(f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}")
+                self.target._logger.fatal(
+                    f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
+                )
                 result_code = ResultCode.FAILED
             return result_code
 
@@ -258,7 +276,9 @@ class DeviceComponentManager(MccsComponentManager):
         :param event_value: the new state
         :param event_quality: the quality of the change event
         """
-        assert event_name.lower() == "state", f"state changed callback called but event_name is {event_name}."
+        assert (
+            event_name.lower() == "state"
+        ), f"state changed callback called but event_name is {event_name}."
 
         if event_value == tango.DevState.FAULT and not self.faulty:
             self.update_component_fault(True)
@@ -342,7 +362,9 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[Callable[[Optional[HealthState]], None]] = None,
+        health_changed_callback: Optional[
+            Callable[[Optional[HealthState]], None]
+        ] = None,
         obs_state_changed_callback: Optional[Callable[[ObsState], None]] = None,
     ) -> None:
         """
@@ -399,7 +421,9 @@ class ObsDeviceComponentManager(DeviceComponentManager):
             """
             result_code, message = super().do()
             assert self.target._proxy is not None  # for the type checker
-            self.target._proxy.add_change_event_callback("obsState", self.target._obs_state_changed)
+            self.target._proxy.add_change_event_callback(
+                "obsState", self.target._obs_state_changed
+            )
             return result_code, message
 
     def _obs_state_changed(

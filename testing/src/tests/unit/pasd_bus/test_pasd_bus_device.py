@@ -80,7 +80,9 @@ class TestMccsPasdBus:
         return PatchedMccsPasdBus
 
     @pytest.fixture()
-    def device_to_load(self: TestMccsPasdBus, patched_device_class: MccsPasdBus) -> DeviceToLoadType:
+    def device_to_load(
+        self: TestMccsPasdBus, patched_device_class: MccsPasdBus
+    ) -> DeviceToLoadType:
         """
         Fixture that specifies the device to be loaded for testing.
 

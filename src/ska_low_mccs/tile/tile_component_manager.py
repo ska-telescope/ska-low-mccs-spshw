@@ -26,7 +26,12 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.component.component_manager import MccsComponentManager
-from ska_low_mccs.tile import BaseTpmSimulator, DynamicTpmSimulator, StaticTpmSimulator, TpmDriver
+from ska_low_mccs.tile import (
+    BaseTpmSimulator,
+    DynamicTpmSimulator,
+    StaticTpmSimulator,
+    TpmDriver,
+)
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
 from ska_low_mccs.tile.tpm_status import TpmStatus
 
@@ -208,7 +213,9 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
             super().__setattr__(name, value)
 
     @check_communicating
-    def _set_in_component(self: _TpmSimulatorComponentManager, name: str, value: Any) -> None:
+    def _set_in_component(
+        self: _TpmSimulatorComponentManager, name: str, value: Any
+    ) -> None:
         """
         Set an attribute in the component (if we are communicating with it).
 
@@ -394,7 +401,9 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         simulation_mode: SimulationMode  # typehints only
         test_mode: TestMode  # typehints only
 
-        (simulation_mode, test_mode) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
+        (simulation_mode, test_mode) = cast(
+            Tuple[SimulationMode, TestMode], self.switcher_mode
+        )
         if simulation_mode != value:
             communicating = self.is_communicating
             if communicating:
@@ -427,7 +436,9 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         simulation_mode: SimulationMode  # typehint only
         test_mode: TestMode  # typehint only
 
-        (simulation_mode, test_mode) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
+        (simulation_mode, test_mode) = cast(
+            Tuple[SimulationMode, TestMode], self.switcher_mode
+        )
 
         if test_mode != value:
             communicating = self.is_communicating
@@ -494,17 +505,20 @@ class TileComponentManager(MccsComponentManager):
         self._subrack_communication_status = CommunicationStatus.DISABLED
         self._tpm_communication_status = CommunicationStatus.DISABLED
 
-        self._tpm_component_manager = _tpm_component_manager or SwitchingTpmComponentManager(
-            initial_simulation_mode,
-            initial_test_mode,
-            logger,
-            push_change_event,
-            tile_id,
-            tpm_ip,
-            tpm_cpld_port,
-            tpm_version,
-            self._tpm_communication_status_changed,
-            self.component_fault_changed,
+        self._tpm_component_manager = (
+            _tpm_component_manager
+            or SwitchingTpmComponentManager(
+                initial_simulation_mode,
+                initial_test_mode,
+                logger,
+                push_change_event,
+                tile_id,
+                tpm_ip,
+                tpm_cpld_port,
+                tpm_version,
+                self._tpm_communication_status_changed,
+                self.component_fault_changed,
+            )
         )
 
         self._tile_orchestrator = TileOrchestrator(
@@ -580,7 +594,9 @@ class TileComponentManager(MccsComponentManager):
         :param communication_status: the status of communication with
             the antenna via the APIU.
         """
-        self._tile_orchestrator.update_subrack_communication_status(communication_status)
+        self._tile_orchestrator.update_subrack_communication_status(
+            communication_status
+        )
 
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,
@@ -613,19 +629,25 @@ class TileComponentManager(MccsComponentManager):
         """
         # Don't set comms NOT_ESTABLISHED here. It should already have been handled
         # synchronously by the orchestator.
-        self._subrack_proxy = MccsDeviceProxy(self._subrack_fqdn, self._logger, connect=False)
+        self._subrack_proxy = MccsDeviceProxy(
+            self._subrack_fqdn, self._logger, connect=False
+        )
         try:
             self._subrack_proxy.connect()
         except tango.DevFailed as dev_failed:
             self._subrack_proxy = None
-            raise ConnectionError(f"Could not connect to '{self._subrack_fqdn}'") from dev_failed
+            raise ConnectionError(
+                f"Could not connect to '{self._subrack_fqdn}'"
+            ) from dev_failed
 
         self._subrack_proxy.add_change_event_callback(
             f"tpm{self._subrack_tpm_id}PowerState",
             self._tpm_power_mode_change_event_received,
         )
 
-        self._tile_orchestrator.update_subrack_communication_status(CommunicationStatus.ESTABLISHED)
+        self._tile_orchestrator.update_subrack_communication_status(
+            CommunicationStatus.ESTABLISHED
+        )
 
     def _tpm_power_mode_change_event_received(
         self: TileComponentManager,
@@ -660,7 +682,9 @@ class TileComponentManager(MccsComponentManager):
         ([result_code], _) = self._subrack_proxy.PowerOffTpm(self._subrack_tpm_id)
         # TODO better handling of result code and exceptions.
         if result_code > 2:
-            self.logger.error(f"Turn off tpm {self._subrack_tpm_id} returns {result_code}")
+            self.logger.error(
+                f"Turn off tpm {self._subrack_tpm_id} returns {result_code}"
+            )
         return result_code
 
     # TODO: Convert this to a LRC. Converted in subrack
@@ -670,7 +694,9 @@ class TileComponentManager(MccsComponentManager):
         ([result_code], _) = self._subrack_proxy.PowerOnTpm(self._subrack_tpm_id)
         # TODO better handling of result code and exceptions.
         if result_code > 2:
-            self.logger.error(f"Turn on tpm {self._subrack_tpm_id} returns {result_code}")
+            self.logger.error(
+                f"Turn on tpm {self._subrack_tpm_id} returns {result_code}"
+            )
         return result_code
 
     def _tpm_power_mode_changed(
@@ -691,7 +717,9 @@ class TileComponentManager(MccsComponentManager):
         """
         self._tile_orchestrator.update_tpm_communication_status(communication_status)
 
-    def update_tpm_power_mode(self: TileComponentManager, power_mode: Optional[PowerState]) -> None:
+    def update_tpm_power_mode(
+        self: TileComponentManager, power_mode: Optional[PowerState]
+    ) -> None:
         """
         Update the power mode, calling callbacks as required.
 
@@ -704,10 +732,14 @@ class TileComponentManager(MccsComponentManager):
             callback is called next time a real value is pushed.
         """
         self.update_component_power_mode(power_mode)
-        self.logger.debug(f"power mode: {self.power_mode}, communication status: {self.communication_status}")
+        self.logger.debug(
+            f"power mode: {self.power_mode}, communication status: {self.communication_status}"
+        )
         if self.communication_status == CommunicationStatus.ESTABLISHED:
             if power_mode == PowerState.ON:
-                if (not self.is_programmed) or (self.tpm_status == TpmStatus.PROGRAMMED):
+                if (not self.is_programmed) or (
+                    self.tpm_status == TpmStatus.PROGRAMMED
+                ):
                     self.initialise()
             if power_mode == PowerState.STANDBY:
                 self.erase_fpga()
@@ -719,7 +751,9 @@ class TileComponentManager(MccsComponentManager):
 
         :return: the simulation mode
         """
-        return cast(SwitchingTpmComponentManager, self._tpm_component_manager).simulation_mode
+        return cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).simulation_mode
 
     @simulation_mode.setter
     def simulation_mode(self: TileComponentManager, value: SimulationMode) -> None:
@@ -728,7 +762,9 @@ class TileComponentManager(MccsComponentManager):
 
         :param value: the new value for the simulation mode.
         """
-        cast(SwitchingTpmComponentManager, self._tpm_component_manager).simulation_mode = value
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).simulation_mode = value
 
     @property
     def test_mode(self: TileComponentManager) -> TestMode:
@@ -749,7 +785,9 @@ class TileComponentManager(MccsComponentManager):
 
         :param value: the new value for the test mode.
         """
-        cast(SwitchingTpmComponentManager, self._tpm_component_manager).test_mode = value
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).test_mode = value
 
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
@@ -766,7 +804,9 @@ class TileComponentManager(MccsComponentManager):
         elif self.communication_status != CommunicationStatus.ESTABLISHED:
             status = TpmStatus.UNCONNECTED
         else:
-            status = cast(SwitchingTpmComponentManager, self._tpm_component_manager).tpm_status
+            status = cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).tpm_status
         return status
 
     __PASSTHROUGH = [

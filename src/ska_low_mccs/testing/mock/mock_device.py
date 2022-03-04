@@ -90,7 +90,9 @@ class MockDeviceBuilder:
         """
         self.add_command("state", state)
 
-    def _setup_read_attribute(self: MockDeviceBuilder, mock_device: unittest.mock.Mock) -> None:
+    def _setup_read_attribute(
+        self: MockDeviceBuilder, mock_device: unittest.mock.Mock
+    ) -> None:
         """
         Set up attribute reads for a mock device.
 
@@ -101,7 +103,9 @@ class MockDeviceBuilder:
         :param mock_device: the mock being set up
         """
 
-        def _mock_read_attribute(name: str, *args: Any, **kwargs: Any) -> tango.DeviceAttribute:
+        def _mock_read_attribute(
+            name: str, *args: Any, **kwargs: Any
+        ) -> tango.DeviceAttribute:
             """
             Mock side-effect for read_attribute method.
 
@@ -117,13 +121,17 @@ class MockDeviceBuilder:
             """
             mock_attribute = unittest.mock.Mock()
             mock_attribute.name = name
-            mock_attribute.value = mock_device.state() if name == "state" else getattr(mock_device, name)
+            mock_attribute.value = (
+                mock_device.state() if name == "state" else getattr(mock_device, name)
+            )
             mock_attribute.quality = tango.AttrQuality.ATTR_VALID
             return mock_attribute
 
         mock_device.read_attribute.side_effect = _mock_read_attribute
 
-    def _setup_command_inout(self: MockDeviceBuilder, mock_device: unittest.mock.Mock) -> None:
+    def _setup_command_inout(
+        self: MockDeviceBuilder, mock_device: unittest.mock.Mock
+    ) -> None:
         """
         Set up command_inout for a mock device.
 
@@ -191,7 +199,9 @@ class MockDeviceBuilder:
 
         mock_device.command_inout_reply.side_effect = _mock_command_inout_reply
 
-    def _setup_subscribe_event(self: MockDeviceBuilder, mock_device: unittest.mock.Mock) -> None:
+    def _setup_subscribe_event(
+        self: MockDeviceBuilder, mock_device: unittest.mock.Mock
+    ) -> None:
         """
         Set up subscribe_event for a mock device.
 
@@ -221,7 +231,9 @@ class MockDeviceBuilder:
             :param stateless: whether this is a stateless subscription
             """
             attribute_value = (
-                mock_device.state() if attribute_name == "state" else getattr(mock_device, attribute_name)
+                mock_device.state()
+                if attribute_name == "state"
+                else getattr(mock_device, attribute_name)
             )
             if attribute_value is not None:
                 mock_event_data = unittest.mock.Mock()
@@ -247,7 +259,9 @@ class MockDeviceBuilder:
         mock_device = self._from_factory()
 
         for command in self._return_values:
-            self._configuration[command] = MockCallable(return_value=self._return_values[command])
+            self._configuration[command] = MockCallable(
+                return_value=self._return_values[command]
+            )
 
         mock_device.configure_mock(**self._configuration)
 

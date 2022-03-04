@@ -37,7 +37,9 @@ class TestMccsStationBeam(object):
     """Test class for MccsStationBeam tests."""
 
     @pytest.fixture()
-    def device_under_test(self: TestMccsStationBeam, tango_harness: TangoHarness) -> MccsDeviceProxy:
+    def device_under_test(
+        self: TestMccsStationBeam, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -65,7 +67,9 @@ class TestMccsStationBeam(object):
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     @pytest.mark.parametrize(

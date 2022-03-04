@@ -125,7 +125,10 @@ class MccsDeviceProxy:
             """
             fqdn = details["args"][1]
             elapsed = details["elapsed"]
-            self._logger.warning(f"Gave up trying to connect to device {fqdn} after " f"{elapsed} seconds.")
+            self._logger.warning(
+                f"Gave up trying to connect to device {fqdn} after "
+                f"{elapsed} seconds."
+            )
 
         @backoff.on_exception(
             backoff.expo,
@@ -151,7 +154,9 @@ class MccsDeviceProxy:
             """
             return _connect(connection_factory, fqdn)
 
-        def _connect(connection_factory: Callable[[str], tango.DeviceProxy], fqdn: str) -> tango.DeviceProxy:
+        def _connect(
+            connection_factory: Callable[[str], tango.DeviceProxy], fqdn: str
+        ) -> tango.DeviceProxy:
             """
             Make a single attempt to connect to a device.
 
@@ -272,15 +277,17 @@ class MccsDeviceProxy:
         attribute_key = attribute_name.lower()
         if attribute_key not in self._change_event_subscription_ids:
             self._change_event_callbacks[attribute_key] = [callback]
-            self._change_event_subscription_ids[attribute_key] = self._subscribe_change_event(
-                attribute_name, stateless=stateless
-            )
+            self._change_event_subscription_ids[
+                attribute_key
+            ] = self._subscribe_change_event(attribute_name, stateless=stateless)
         else:
             self._change_event_callbacks[attribute_key].append(callback)
             self._call_callback(callback, self._read(attribute_name))
 
     @backoff.on_exception(backoff.expo, tango.DevFailed, factor=1, max_time=120)
-    def _subscribe_change_event(self: MccsDeviceProxy, attribute_name: str, stateless: bool = False) -> int:
+    def _subscribe_change_event(
+        self: MccsDeviceProxy, attribute_name: str, stateless: bool = False
+    ) -> int:
         """
         Subscribe to a change event.
 
@@ -319,7 +326,9 @@ class MccsDeviceProxy:
         with self._change_event_lock:
             attribute_data = self._process_event(event)
             if attribute_data is not None:
-                for callback in self._change_event_callbacks[attribute_data.name.lower()]:
+                for callback in self._change_event_callbacks[
+                    attribute_data.name.lower()
+                ]:
                     self._call_callback(callback, attribute_data)
 
     def _call_callback(
@@ -336,7 +345,9 @@ class MccsDeviceProxy:
         """
         callback(attribute_data.name, attribute_data.value, attribute_data.quality)
 
-    def _process_event(self: MccsDeviceProxy, event: tango.EventData) -> Optional[tango.DeviceAttribute]:
+    def _process_event(
+        self: MccsDeviceProxy, event: tango.EventData
+    ) -> Optional[tango.DeviceAttribute]:
         """
         Process a received event.
 
@@ -349,7 +360,9 @@ class MccsDeviceProxy:
         :return: the attribute value data
         """
         if event.err:
-            self._logger.warning(f"Received failed change event: error stack is {event.errors}.")
+            self._logger.warning(
+                f"Received failed change event: error stack is {event.errors}."
+            )
             return None
         elif event.attr_value is None:
             warning_message = (

@@ -16,7 +16,10 @@ from tango.server import attribute
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.transient_buffer import TransientBufferComponentManager, TransientBufferHealthModel
+from ska_low_mccs.transient_buffer import (
+    TransientBufferComponentManager,
+    TransientBufferHealthModel,
+)
 
 __all__ = ["MccsTransientBuffer", "main"]
 
@@ -115,7 +118,9 @@ class MccsTransientBuffer(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def health_changed(self: MccsTransientBuffer, health: HealthState) -> None:
         """

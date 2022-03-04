@@ -16,7 +16,9 @@ from ska_low_mccs.controller import ControllerResourceManager
 class TestControllerResourceManager:
     """Tests of the controller resource manager."""
 
-    def test_validate_subarray(self, controller_resource_manager: ControllerResourceManager) -> None:
+    def test_validate_subarray(
+        self, controller_resource_manager: ControllerResourceManager
+    ) -> None:
         """
         Test that a allocation to a dodgy subarray fails validation.
 
@@ -24,13 +26,17 @@ class TestControllerResourceManager:
             manager under test.
         """
         dodgy_subarray = "low-mccs/subarray/dodgy"
-        with pytest.raises(ValueError, match=f"Unsupported allocatee: {dodgy_subarray}"):
+        with pytest.raises(
+            ValueError, match=f"Unsupported allocatee: {dodgy_subarray}"
+        ):
             controller_resource_manager.allocate(
                 dodgy_subarray,
                 stations=["low-mccs/station/001", "low-mccs/station/002"],
             )
 
-    def test_validate_resources(self, controller_resource_manager: ControllerResourceManager) -> None:
+    def test_validate_resources(
+        self, controller_resource_manager: ControllerResourceManager
+    ) -> None:
         """
         Test that a dodgy resource fails validation.
 
@@ -50,7 +56,9 @@ class TestControllerResourceManager:
                 ],
             )
 
-    def test_ready_healthy(self, controller_resource_manager: ControllerResourceManager) -> None:
+    def test_ready_healthy(
+        self, controller_resource_manager: ControllerResourceManager
+    ) -> None:
         """
         Test that we can't allocate to a subarray that isn't ready.
 
@@ -86,7 +94,9 @@ class TestControllerResourceManager:
                 ],
             )
 
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/01", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
 
         with pytest.raises(
             ValueError,
@@ -100,7 +110,9 @@ class TestControllerResourceManager:
                 ],
             )
 
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/02", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/02", True
+        )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
@@ -123,8 +135,12 @@ class TestControllerResourceManager:
         :param controller_resource_manager: the controller resource
             manager under test.
         """
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/01", True)
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/02", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/02", True
+        )
         controller_resource_manager.set_health("subracks", "low-mccs/subrack/01", True)
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
 
@@ -153,15 +169,21 @@ class TestControllerResourceManager:
             subracks=["low-mccs/subrack/01"],
         )
 
-    def test_deallocation(self, controller_resource_manager: ControllerResourceManager) -> None:
+    def test_deallocation(
+        self, controller_resource_manager: ControllerResourceManager
+    ) -> None:
         """
         Test that resources can be allocated after being deallocated.
 
         :param controller_resource_manager: the controller resource
             manager under test.
         """
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/01", True)
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/02", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/02", True
+        )
         controller_resource_manager.set_health("subracks", "low-mccs/subrack/01", True)
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
         controller_resource_manager.set_ready("low-mccs/subarray/02", True)
@@ -211,7 +233,9 @@ class TestControllerResourceManager:
             subracks=["low-mccs/subrack/01"],
         )
 
-    def test_health(self, controller_resource_manager: ControllerResourceManager) -> None:
+    def test_health(
+        self, controller_resource_manager: ControllerResourceManager
+    ) -> None:
         """
         Test that we can deallocate but not allocate an unhealthy resource.
 
@@ -220,21 +244,27 @@ class TestControllerResourceManager:
         """
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
 
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/01", True)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", True
+        )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
             subarray_beams=["low-mccs/subarraybeam/01"],
         )
 
-        controller_resource_manager.set_health("subarray_beams", "low-mccs/subarraybeam/01", False)
+        controller_resource_manager.set_health(
+            "subarray_beams", "low-mccs/subarraybeam/01", False
+        )
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
             subarray_beams=["low-mccs/subarraybeam/01"],
         )
 
-        controller_resource_manager.deallocate(subarray_beams=["low-mccs/subarraybeam/01"])
+        controller_resource_manager.deallocate(
+            subarray_beams=["low-mccs/subarraybeam/01"]
+        )
 
         with pytest.raises(
             ValueError,

@@ -13,7 +13,12 @@ import unittest.mock
 
 import pytest
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import ControlMode, HealthState, SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
 
 from ska_low_mccs import MccsDeviceProxy, MccsStation, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -98,7 +103,9 @@ class TestMccsStation:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     # overridden base class attributes
@@ -136,7 +143,10 @@ class TestMccsStation:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)

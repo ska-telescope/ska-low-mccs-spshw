@@ -59,7 +59,9 @@ def cluster_simulator_component_manager(
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
-    component_shadow_master_pool_node_health_changed_callback: Callable[[list[HealthState]], None],
+    component_shadow_master_pool_node_health_changed_callback: Callable[
+        [list[HealthState]], None
+    ],
 ) -> ClusterSimulatorComponentManager:
     """
     Return a cluster simulator component manager.
@@ -97,7 +99,9 @@ def cluster_component_manager(
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
-    component_shadow_master_pool_node_health_changed_callback: Callable[[list[HealthState]], None],
+    component_shadow_master_pool_node_health_changed_callback: Callable[
+        [list[HealthState]], None
+    ],
 ) -> ClusterComponentManager:
     """
     Return a cluster component manager in simulation mode.

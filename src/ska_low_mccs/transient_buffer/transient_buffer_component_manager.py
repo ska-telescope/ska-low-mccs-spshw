@@ -11,7 +11,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
-from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager, check_communicating
+from ska_low_mccs.component import (
+    CommunicationStatus,
+    ObjectComponentManager,
+    check_communicating,
+)
 from ska_low_mccs.transient_buffer import TransientBuffer
 
 __all__ = ["TransientBufferComponentManager"]

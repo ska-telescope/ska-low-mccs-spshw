@@ -89,7 +89,9 @@ class HardwareClient:
         """
         pass
 
-    def execute_command(self: HardwareClient, command: str, parameters: str = "") -> CommandResponseType:
+    def execute_command(
+        self: HardwareClient, command: str, parameters: str = ""
+    ) -> CommandResponseType:
         """
         Execute the command.
 
@@ -186,7 +188,9 @@ class WebHardwareClient(HardwareClient):
         """Disconnect from the client."""
         self._conn = None
 
-    def execute_command(self: WebHardwareClient, command: str, parameters: str = "") -> CommandResponseType:
+    def execute_command(
+        self: WebHardwareClient, command: str, parameters: str = ""
+    ) -> CommandResponseType:
         """
         Execute a named command, with or without parameters.
 
@@ -265,7 +269,9 @@ class WebHardwareClient(HardwareClient):
             }
         return result
 
-    def set_attribute(self: WebHardwareClient, attribute: str, value: Any) -> AttributeResponseType:
+    def set_attribute(
+        self: WebHardwareClient, attribute: str, value: Any
+    ) -> AttributeResponseType:
         """
         Set the value associated to a named attribute.
 

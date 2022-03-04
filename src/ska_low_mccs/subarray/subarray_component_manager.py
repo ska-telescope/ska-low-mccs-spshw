@@ -126,8 +126,12 @@ class SubarrayComponentManager(
         scanning_changed_callback: Callable[[bool], None],
         obs_fault_callback: Callable[[], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        subarray_beam_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        station_beam_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        subarray_beam_health_changed_callback: Callable[
+            [str, Optional[HealthState]], None
+        ],
+        station_beam_health_changed_callback: Callable[
+            [str, Optional[HealthState]], None
+        ],
     ) -> None:
         """
         Initialise a new instance.
@@ -178,8 +182,12 @@ class SubarrayComponentManager(
         self._scanning_changed_callback = scanning_changed_callback
         self._obs_fault_callback = obs_fault_callback
         self._station_health_changed_callback = station_health_changed_callback
-        self._subarray_beam_health_changed_callback = subarray_beam_health_changed_callback
-        self._station_beam_health_changed_callback = station_beam_health_changed_callback
+        self._subarray_beam_health_changed_callback = (
+            subarray_beam_health_changed_callback
+        )
+        self._station_beam_health_changed_callback = (
+            station_beam_health_changed_callback
+        )
 
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
         self._station_power_modes: dict[str, Optional[PowerState]] = {}
@@ -284,7 +292,9 @@ class SubarrayComponentManager(
         station_fqdns_to_add = sorted(station_fqdn_set) - self._stations.keys()
         subarray_beam_fqdns_to_add = subarray_beam_fqdns - self._subarray_beams.keys()
         station_beam_fqdns_to_add = station_beam_fqdns - self._station_beams.keys()
-        fqdns_to_add = station_fqdns_to_add.union(subarray_beam_fqdns_to_add, station_beam_fqdns_to_add)
+        fqdns_to_add = station_fqdns_to_add.union(
+            subarray_beam_fqdns_to_add, station_beam_fqdns_to_add
+        )
 
         if fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
@@ -312,7 +322,9 @@ class SubarrayComponentManager(
                     functools.partial(self._device_communication_status_changed, fqdn),
                     None,
                     None,
-                    functools.partial(self._subarray_beam_health_changed_callback, fqdn),
+                    functools.partial(
+                        self._subarray_beam_health_changed_callback, fqdn
+                    ),
                     functools.partial(self._device_obs_state_changed, fqdn),
                 )
             for fqdn in station_beam_fqdns_to_add:
@@ -374,7 +386,9 @@ class SubarrayComponentManager(
 
         :return: this subarray's resources.
         """
-        return set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
+        return (
+            set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
+        )
 
     @property  # type: ignore[misc]
     @check_communicating
@@ -451,7 +465,8 @@ class SubarrayComponentManager(
         station_configuration = {station["station_id"]: station for station in stations}
         subarray_beams = configuration["subarray_beams"]
         subarray_beam_configuration = {
-            subarray_beam["subarray_beam_id"]: subarray_beam for subarray_beam in subarray_beams
+            subarray_beam["subarray_beam_id"]: subarray_beam
+            for subarray_beam in subarray_beams
         }
 
         result_code = self._configure_stations(station_configuration)

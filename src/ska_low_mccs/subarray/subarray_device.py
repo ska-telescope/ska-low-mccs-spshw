@@ -15,7 +15,12 @@ from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import ObservationCommand, ResponseCommand, ResultCode, StateModelCommand
+from ska_tango_base.commands import (
+    ObservationCommand,
+    ResponseCommand,
+    ResultCode,
+    StateModelCommand,
+)
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.subarray import SKASubarray
 from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
@@ -154,7 +159,9 @@ class MccsSubarray(SKASubarray):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def _assign_completed(
         self: MccsSubarray,
@@ -245,7 +252,9 @@ class MccsSubarray(SKASubarray):
             self.obs_state_model.perform_action("component_resourced")
         else:
             self.obs_state_model.perform_action("component_unresourced")
-        self._health_model.resources_changed(station_fqdns, subarray_beam_fqdns, station_beam_fqdns)
+        self._health_model.resources_changed(
+            station_fqdns, subarray_beam_fqdns, station_beam_fqdns
+        )
 
     def _configured_changed(
         self: MccsSubarray,
@@ -347,9 +356,12 @@ class MccsSubarray(SKASubarray):
         resource_dict = self.component_manager.assigned_resources_dict
         stations = []
         for station_group in resource_dict["stations"]:
-            stations.append([station.split("/")[-1].lstrip("0") for station in station_group])
+            stations.append(
+                [station.split("/")[-1].lstrip("0") for station in station_group]
+            )
         subarray_beams = [
-            subarray_beam.split("/")[-1].lstrip("0") for subarray_beam in resource_dict["subarray_beams"]
+            subarray_beam.split("/")[-1].lstrip("0")
+            for subarray_beam in resource_dict["subarray_beams"]
         ]
         channel_blocks = resource_dict["channel_blocks"]
         return json.dumps(
@@ -364,7 +376,9 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    class AssignResourcesCommand(ObservationCommand, ResponseCommand, StateModelCommand):
+    class AssignResourcesCommand(
+        ObservationCommand, ResponseCommand, StateModelCommand
+    ):
         """
         A class for MccsSubarray's AssignResources() command.
 
@@ -439,7 +453,9 @@ class MccsSubarray(SKASubarray):
         (return_code, message) = handler(params)
         return ([return_code], [message])
 
-    class ReleaseResourcesCommand(ObservationCommand, ResponseCommand, StateModelCommand):
+    class ReleaseResourcesCommand(
+        ObservationCommand, ResponseCommand, StateModelCommand
+    ):
         """
         A class for MccsSubarray's ReleaseResources() command.
 
@@ -498,7 +514,9 @@ class MccsSubarray(SKASubarray):
             result_code = component_manager.release(argin)
             return (result_code, self.RESULT_MESSAGES[result_code])
 
-    class ReleaseAllResourcesCommand(ObservationCommand, ResponseCommand, StateModelCommand):
+    class ReleaseAllResourcesCommand(
+        ObservationCommand, ResponseCommand, StateModelCommand
+    ):
         """
         A class for MccsSubarray's ReleaseAllResources() command.
 
@@ -830,7 +848,9 @@ class MccsSubarray(SKASubarray):
             return (result_code, self.RESULT_MESSAGES[result_code])
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SendTransientBuffer(self: MccsSubarray, argin: list[int]) -> DevVarLongStringArrayType:
+    def SendTransientBuffer(
+        self: MccsSubarray, argin: list[int]
+    ) -> DevVarLongStringArrayType:
         """
         Cause the subarray to send the requested segment of the transient buffer to SDP.
 

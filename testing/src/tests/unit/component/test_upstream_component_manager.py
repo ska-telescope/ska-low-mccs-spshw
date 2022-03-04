@@ -65,12 +65,18 @@ class TestPowerSupplyProxySimulator:
         """
         assert component_manager.communication_status == CommunicationStatus.DISABLED
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
         assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 
     def test_communication_failure(
@@ -91,28 +97,46 @@ class TestPowerSupplyProxySimulator:
 
         with pytest.raises(ConnectionError, match="Failed to connect"):
             component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        assert component_manager.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        assert (
+            component_manager.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 
         component_manager.simulate_communication_failure(False)
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
         assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
 
         component_manager.simulate_communication_failure(True)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        assert component_manager.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        assert (
+            component_manager.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
 
         with pytest.raises(ConnectionError, match="Failed to connect"):
             component_manager.start_communicating()
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 
     @pytest.mark.parametrize(

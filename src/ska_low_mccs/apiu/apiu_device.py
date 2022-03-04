@@ -109,7 +109,9 @@ class MccsAPIU(SKABaseDevice):
         ]:
             self.register_command_object(
                 command_name,
-                command_object(self.component_manager, self.op_state_model, self.logger),
+                command_object(
+                    self.component_manager, self.op_state_model, self.logger
+                ),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -169,7 +171,9 @@ class MccsAPIU(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def _component_power_mode_changed(
         self: MccsAPIU,

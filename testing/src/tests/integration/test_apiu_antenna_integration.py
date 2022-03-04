@@ -78,7 +78,9 @@ def initial_mocks(
 class TestApiuAntennaIntegration:
     """Integration test cases for interactions between APIU and antenna."""
 
-    def test_apiu_antenna_integration(self: TestApiuAntennaIntegration, tango_harness: TangoHarness) -> None:
+    def test_apiu_antenna_integration(
+        self: TestApiuAntennaIntegration, tango_harness: TangoHarness
+    ) -> None:
         """
         Test the integration of antenna within the APIU.
 

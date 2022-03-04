@@ -82,25 +82,33 @@ class TestSubrackTileIntegration:
             "adminMode",
             tile_device_admin_mode_changed_callback,
         )
-        tile_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        tile_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.OFFLINE
+        )
 
         tile_device.add_change_event_callback(
             "state",
             tile_device_state_changed_callback,
         )
-        tile_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        tile_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
 
         subrack_device.add_change_event_callback(
             "adminMode",
             subrack_device_admin_mode_changed_callback,
         )
-        subrack_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        subrack_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.OFFLINE
+        )
 
         subrack_device.add_change_event_callback(
             "state",
             subrack_device_state_changed_callback,
         )
-        subrack_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
 
         assert subrack_device.tpm1PowerState == ExtendedPowerState.UNKNOWN
 
@@ -109,32 +117,45 @@ class TestSubrackTileIntegration:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in subrack_device._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in subrack_device._change_event_subscription_ids
+        )
         initial_lrc_result = ("", "", "")
         assert subrack_device.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         tile_device.adminMode = AdminMode.ONLINE
 
-        tile_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        tile_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.ONLINE
+        )
 
         # Before the tile device tries to connect with its TPM, it need to find out from
         # its subrack whether the TPM is event turned on. So it subscribes to change
         # events on the state of its subrack Tango device. The subrack device advises it
         # that it is OFFLINE. Therefore tile remains in UNKNOWN state.
-        tile_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
+        tile_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
         assert tile_device.state() == tango.DevState.UNKNOWN
 
         subrack_device.adminMode = AdminMode.ONLINE
-        subrack_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        subrack_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.ONLINE
+        )
 
         # The subrack device tries to establish a connection to its upstream power
         # supply device. Until this connection is established, it is in UNKNOWN state.
-        subrack_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
 
         # The subrack device connects to its upstream power supply device and finds that
         # the subrack is turned off, so it transitions to OFF state
-        subrack_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )
         assert subrack_device.tpm1PowerState == ExtendedPowerState.NO_SUPPLY
 
         # The tile device receives a change event. Since the event indicates that the
@@ -148,11 +169,15 @@ class TestSubrackTileIntegration:
         # Once the upstream power supply has powered the subrack on, the subrack device
         # tries to establish a connection to the subrack. Until that connection is
         # established, it is in UNKNOWN state.
-        subrack_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
+        subrack_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
 
         # Once the subrack device is connected to its subrack, it transitions to ON
         # state.
-        subrack_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+        subrack_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        )
         assert subrack_device.tpm1PowerState == ExtendedPowerState.OFF
 
         # The tile device is notified that its subrack is on. It now has communication

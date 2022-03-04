@@ -53,7 +53,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
     def _init_state_model(self: MccsClusterManagerDevice) -> None:
         """Initialise the state model."""
         super()._init_state_model()
-        self._health_state: Optional[HealthState] = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_state: Optional[
+            HealthState
+        ] = None  # SKABaseDevice.InitCommand.do() does this too late.
         self._health_model = ClusterHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
@@ -152,7 +154,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def _component_power_mode_changed(
         self: MccsClusterManagerDevice,
@@ -529,7 +533,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
+    def StartJob(
+        self: MccsClusterManagerDevice, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Command to start a particular job.
 
@@ -571,7 +577,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StopJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
+    def StopJob(
+        self: MccsClusterManagerDevice, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Command to stop a particular job.
 

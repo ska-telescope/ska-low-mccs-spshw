@@ -158,7 +158,9 @@ class SubrackSimulator(ObjectComponent):
         self._tpm_present = tpm_present[0 : self._bay_count]
         self._tpm_supply_fault = [0] * self._bay_count
 
-        self._are_tpms_on_changed_callback: Optional[Callable[[list[bool]], None]] = None
+        self._are_tpms_on_changed_callback: Optional[
+            Callable[[list[bool]], None]
+        ] = None
 
     def set_are_tpms_on_changed_callback(
         self: SubrackSimulator,
@@ -212,7 +214,9 @@ class SubrackSimulator(ObjectComponent):
         """
         return self._backplane_temperatures
 
-    def simulate_backplane_temperatures(self: SubrackSimulator, backplane_temperatures: list[float]) -> None:
+    def simulate_backplane_temperatures(
+        self: SubrackSimulator, backplane_temperatures: list[float]
+    ) -> None:
         """
         Set the simulated backplane temperatures for this subrack simulator.
 
@@ -230,7 +234,9 @@ class SubrackSimulator(ObjectComponent):
         """
         return self._board_temperatures
 
-    def simulate_board_temperatures(self: SubrackSimulator, board_temperatures: list[float]) -> None:
+    def simulate_board_temperatures(
+        self: SubrackSimulator, board_temperatures: list[float]
+    ) -> None:
         """
         Set the simulated board temperatures for this subrack simulator.
 
@@ -265,7 +271,9 @@ class SubrackSimulator(ObjectComponent):
         """
         return self._subrack_fan_speeds
 
-    def simulate_subrack_fan_speeds(self: SubrackSimulator, subrack_fan_speeds: list[float]) -> None:
+    def simulate_subrack_fan_speeds(
+        self: SubrackSimulator, subrack_fan_speeds: list[float]
+    ) -> None:
         """
         Set the simulated fan speed for this subrack simulator.
 
@@ -280,7 +288,10 @@ class SubrackSimulator(ObjectComponent):
 
         :return: the fan speed, in percent
         """
-        return [speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED for speed in self._subrack_fan_speeds]
+        return [
+            speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
+            for speed in self._subrack_fan_speeds
+        ]
 
     @property
     def subrack_fan_modes(self: SubrackSimulator) -> list[ControlMode]:
@@ -320,10 +331,13 @@ class SubrackSimulator(ObjectComponent):
         """
         if logical_tpm_id < 1 or logical_tpm_id > self.bay_count:
             raise ValueError(
-                f"Cannot access TPM {logical_tpm_id}; " f"this subrack has {self.bay_count} TPM bays."
+                f"Cannot access TPM {logical_tpm_id}; "
+                f"this subrack has {self.bay_count} TPM bays."
             )
         if self._tpm_present[logical_tpm_id - 1] is False:
-            raise ValueError(f"Cannot access TPM {logical_tpm_id}; TPM not present in this bay")
+            raise ValueError(
+                f"Cannot access TPM {logical_tpm_id}; TPM not present in this bay"
+            )
 
     @property
     def tpm_temperatures(self: SubrackSimulator) -> list[float]:
@@ -335,7 +349,9 @@ class SubrackSimulator(ObjectComponent):
         with self._tpm_data_lock:
             return [tpm_data["temperature"] for tpm_data in self._tpm_data]
 
-    def simulate_tpm_temperatures(self: SubrackSimulator, tpm_temperatures: list[float]) -> None:
+    def simulate_tpm_temperatures(
+        self: SubrackSimulator, tpm_temperatures: list[float]
+    ) -> None:
         """
         Set the simulated temperatures for all TPMs housed in this subrack simulator.
 
@@ -361,7 +377,9 @@ class SubrackSimulator(ObjectComponent):
         with self._tpm_data_lock:
             return [tpm_data["current"] for tpm_data in self._tpm_data]
 
-    def simulate_tpm_currents(self: SubrackSimulator, tpm_currents: list[float]) -> None:
+    def simulate_tpm_currents(
+        self: SubrackSimulator, tpm_currents: list[float]
+    ) -> None:
         """
         Set the simulated currents for all TPMs housed in this subrack simulator.
 
@@ -413,7 +431,9 @@ class SubrackSimulator(ObjectComponent):
         with self._tpm_data_lock:
             return [tpm_data["voltage"] for tpm_data in self._tpm_data]
 
-    def simulate_tpm_voltages(self: SubrackSimulator, tpm_voltages: list[float]) -> None:
+    def simulate_tpm_voltages(
+        self: SubrackSimulator, tpm_voltages: list[float]
+    ) -> None:
         """
         Set the simulated voltages for all TPMs housed in this subrack simulator.
 
@@ -457,7 +477,9 @@ class SubrackSimulator(ObjectComponent):
         """
         return self._power_supply_currents
 
-    def simulate_power_supply_currents(self: SubrackSimulator, power_supply_currents: list[float]) -> None:
+    def simulate_power_supply_currents(
+        self: SubrackSimulator, power_supply_currents: list[float]
+    ) -> None:
         """
         Set the power supply current for this subrack.
 
@@ -478,7 +500,9 @@ class SubrackSimulator(ObjectComponent):
         ]
         return powers
 
-    def simulate_power_supply_powers(self: SubrackSimulator, power_supply_powers: list[float]) -> None:
+    def simulate_power_supply_powers(
+        self: SubrackSimulator, power_supply_powers: list[float]
+    ) -> None:
         """
         Set the power supply power for this subrack.
 
@@ -498,7 +522,9 @@ class SubrackSimulator(ObjectComponent):
         """
         return self._power_supply_voltages
 
-    def simulate_power_supply_voltages(self: SubrackSimulator, power_supply_voltages: list[float]) -> None:
+    def simulate_power_supply_voltages(
+        self: SubrackSimulator, power_supply_voltages: list[float]
+    ) -> None:
         """
         Set the power supply voltage for this subrack.
 
@@ -637,16 +663,22 @@ class SubrackSimulator(ObjectComponent):
                 return True
             return None
 
-    def set_subrack_fan_speed(self: SubrackSimulator, fan_id: int, speed_percent: float) -> None:
+    def set_subrack_fan_speed(
+        self: SubrackSimulator, fan_id: int, speed_percent: float
+    ) -> None:
         """
         Set the subrack backplane fan speed in percent.
 
         :param fan_id: id of the selected fan accepted value: 1-4
         :param speed_percent: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
         """
-        self._subrack_fan_speeds[fan_id - 1] = speed_percent / 100.0 * SubrackData.MAX_SUBRACK_FAN_SPEED
+        self._subrack_fan_speeds[fan_id - 1] = (
+            speed_percent / 100.0 * SubrackData.MAX_SUBRACK_FAN_SPEED
+        )
 
-    def set_subrack_fan_modes(self: SubrackSimulator, fan_id: int, mode: ControlMode) -> None:
+    def set_subrack_fan_modes(
+        self: SubrackSimulator, fan_id: int, mode: ControlMode
+    ) -> None:
         """
         Set Fan Operational Mode for the subrack's fan.
 

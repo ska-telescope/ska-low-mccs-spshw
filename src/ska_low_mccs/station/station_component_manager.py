@@ -42,7 +42,9 @@ class _TileProxy(DeviceComponentManager):
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerState], None],
         component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[Callable[[Optional[HealthState]], None]] = None,
+        health_changed_callback: Optional[
+            Callable[[Optional[HealthState]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -208,7 +210,9 @@ class StationComponentManager(MccsComponentManager):
                 antenna_fqdn,
                 logger,
                 push_change_event,
-                functools.partial(self._device_communication_status_changed, antenna_fqdn),
+                functools.partial(
+                    self._device_communication_status_changed, antenna_fqdn
+                ),
                 functools.partial(self._antenna_power_mode_changed, antenna_fqdn),
                 None,
                 functools.partial(antenna_health_changed_callback, antenna_fqdn),
@@ -275,7 +279,10 @@ class StationComponentManager(MccsComponentManager):
 
             if CommunicationStatus.DISABLED in self._communication_statuses.values():
                 self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-            elif CommunicationStatus.NOT_ESTABLISHED in self._communication_statuses.values():
+            elif (
+                CommunicationStatus.NOT_ESTABLISHED
+                in self._communication_statuses.values()
+            ):
                 self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             else:
                 self.update_communication_status(CommunicationStatus.ESTABLISHED)
@@ -404,14 +411,20 @@ class StationComponentManager(MccsComponentManager):
         :return: a result code
         """
         with self._power_mode_lock:
-            if not all(power_mode == PowerState.ON for power_mode in self._tile_power_modes.values()):
+            if not all(
+                power_mode == PowerState.ON
+                for power_mode in self._tile_power_modes.values()
+            ):
                 results = []
                 for proxy in self._tile_proxies:
                     result_code = proxy.on()
                     results.append(result_code)
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
-            if not all(power_mode == PowerState.ON for power_mode in self._antenna_power_modes.values()):
+            if not all(
+                power_mode == PowerState.ON
+                for power_mode in self._antenna_power_modes.values()
+            ):
                 results = [proxy.on() for proxy in self._antenna_proxies]
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
@@ -431,7 +444,9 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        results = [tile_proxy.set_pointing_delay(delays) for tile_proxy in self._tile_proxies]
+        results = [
+            tile_proxy.set_pointing_delay(delays) for tile_proxy in self._tile_proxies
+        ]
         if ResultCode.FAILED in results:
             return ResultCode.FAILED
         elif ResultCode.QUEUED in results:

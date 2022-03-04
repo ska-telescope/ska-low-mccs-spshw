@@ -16,11 +16,21 @@ from typing import List, Optional, Tuple
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, PowerState, SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    AdminMode,
+    HealthState,
+    PowerState,
+    SimulationMode,
+    TestMode,
+)
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
-from ska_low_mccs.subrack import SubrackComponentManager, SubrackData, SubrackHealthModel
+from ska_low_mccs.subrack import (
+    SubrackComponentManager,
+    SubrackData,
+    SubrackHealthModel,
+)
 
 __all__ = ["MccsSubrack", "main"]
 
@@ -126,7 +136,9 @@ class MccsSubrack(SKABaseDevice):
         ]:
             self.register_command_object(
                 command_name,
-                command_object(self.component_manager, self.op_state_model, self.logger),
+                command_object(
+                    self.component_manager, self.op_state_model, self.logger
+                ),
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -184,13 +196,17 @@ class MccsSubrack(SKABaseDevice):
             PowerState.OFF: "component_off",
             PowerState.ON: "component_on",
         }
-        self.logger.debug("Component communication status changed to " + str(communication_status))
+        self.logger.debug(
+            "Component communication status changed to " + str(communication_status)
+        )
 
         action = action_map[communication_status]
         if action is not None:
             self.op_state_model.perform_action(action)
         else:
-            power_supply_status = self.component_manager._power_supply_component_manager.supplied_power_mode
+            power_supply_status = (
+                self.component_manager._power_supply_component_manager.supplied_power_mode
+            )
             if (
                 self.admin_mode_model.admin_mode
                 in [
@@ -201,16 +217,21 @@ class MccsSubrack(SKABaseDevice):
             ):
                 action = power_map[power_supply_status]
                 self.logger.debug(
-                    "Switch component according to power supply status" + str(power_supply_status)
+                    "Switch component according to power supply status"
+                    + str(power_supply_status)
                 )
                 self.op_state_model.perform_action(action)
             else:
                 self.op_state_model.perform_action("component_unknown")
                 self.logger.debug("Power supply status unknown")
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
         power_status = self.component_manager.power_mode
-        self.logger.debug(f"Power mode: {power_status}, Communicating: {self._health_model._communicating}")
+        self.logger.debug(
+            f"Power mode: {power_status}, Communicating: {self._health_model._communicating}"
+        )
         if (power_status == PowerState.ON) and self._health_model._communicating:
             self.logger.debug("Checking tpm power modes")
             self.component_manager.check_tpm_power_modes()
@@ -293,7 +314,9 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
-    def _tpm_power_modes_changed(self: MccsSubrack, tpm_power_modes: list[ExtendedPowerState]) -> None:
+    def _tpm_power_modes_changed(
+        self: MccsSubrack, tpm_power_modes: list[ExtendedPowerState]
+    ) -> None:
         """
         Update the power mode of a specified TPM.
 
@@ -304,7 +327,10 @@ class MccsSubrack(SKABaseDevice):
         :param tpm_power_modes: the power modes of the TPMs
         """
         self.logger.debug(
-            "TPM power modes changed: old" + str(self._tpm_power_modes) + "new: " + str(tpm_power_modes)
+            "TPM power modes changed: old"
+            + str(self._tpm_power_modes)
+            + "new: "
+            + str(tpm_power_modes)
         )
 
         with self._tpm_power_modes_lock:
@@ -914,7 +940,9 @@ class MccsSubrack(SKABaseDevice):
             fan_id = params.get("FanID", None)
             speed_percent = params.get("SpeedPWN%", None)
             if fan_id or speed_percent is None:
-                component_manager.logger.error("fan_ID and fan speed are mandatory parameters")
+                component_manager.logger.error(
+                    "fan_ID and fan speed are mandatory parameters"
+                )
                 raise ValueError("fan_ID and fan speed are mandatory parameters")
 
             success = component_manager.set_subrack_fan_speed(fan_id, speed_percent)
@@ -969,7 +997,9 @@ class MccsSubrack(SKABaseDevice):
             fan_id = params.get("fan_id", None)
             mode = params.get("mode", None)
             if fan_id or mode is None:
-                component_manager.logger.error("Fan_id and mode are mandatory parameters")
+                component_manager.logger.error(
+                    "Fan_id and mode are mandatory parameters"
+                )
                 raise ValueError("Fan_id and mode are mandatory parameter")
 
             success = component_manager.set_subrack_fan_modes(fan_id, mode)
@@ -1028,13 +1058,19 @@ class MccsSubrack(SKABaseDevice):
                 component_manager.logger.error(
                     "power_supply_fan_id and speed_percent are mandatory " "parameters"
                 )
-                raise ValueError("power_supply_fan_id and speed_percent are mandatory " "parameters")
+                raise ValueError(
+                    "power_supply_fan_id and speed_percent are mandatory " "parameters"
+                )
 
-            success = component_manager.set_power_supply_fan_speed(power_supply_fan_id, speed_percent)
+            success = component_manager.set_power_supply_fan_speed(
+                power_supply_fan_id, speed_percent
+            )
             return create_return(success, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetPowerSupplyFanSpeed(self: MccsSubrack, argin: str) -> DevVarLongStringArrayType:
+    def SetPowerSupplyFanSpeed(
+        self: MccsSubrack, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Set the selected power supply fan speed.
 

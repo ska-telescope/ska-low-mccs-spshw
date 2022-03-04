@@ -85,13 +85,16 @@ class SubarrayHealthModel(HealthModel):
             to this subarray
         """
         self._station_healths = {
-            fqdn: self._station_healths.get(fqdn, HealthState.UNKNOWN) for fqdn in station_fqdns
+            fqdn: self._station_healths.get(fqdn, HealthState.UNKNOWN)
+            for fqdn in station_fqdns
         }
         self._subarray_beam_fqdns = {
-            fqdn: self._subarray_beam_healths.get(fqdn, HealthState.UNKNOWN) for fqdn in subarray_beam_fqdns
+            fqdn: self._subarray_beam_healths.get(fqdn, HealthState.UNKNOWN)
+            for fqdn in subarray_beam_fqdns
         }
         self._station_beam_fqdns = {
-            fqdn: self._station_beam_healths.get(fqdn, HealthState.UNKNOWN) for fqdn in station_beam_fqdns
+            fqdn: self._station_beam_healths.get(fqdn, HealthState.UNKNOWN)
+            for fqdn in station_beam_fqdns
         }
         self.update_health()
 

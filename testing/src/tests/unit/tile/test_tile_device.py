@@ -92,7 +92,9 @@ class TestMccsTile:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -708,7 +710,9 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        assert tile_device.GetRegisterList() == list(StaticTpmSimulator.REGISTER_MAP[0].keys())
+        assert tile_device.GetRegisterList() == list(
+            StaticTpmSimulator.REGISTER_MAP[0].keys()
+        )
 
     def test_ReadRegister(
         self: TestMccsTileCommands,
@@ -978,7 +982,9 @@ class TestMccsTileCommands:
             "ArpTableEntry": 0,
         }
         json_arg = json.dumps(arg)
-        with pytest.raises(tango.DevFailed, match="Invalid core id or arp table id specified"):
+        with pytest.raises(
+            tango.DevFailed, match="Invalid core id or arp table id specified"
+        ):
             _ = tile_device.Get40GCoreConfiguration(json_arg)
 
     @pytest.mark.parametrize("channels", (2, 3))
@@ -1019,7 +1025,9 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        array: list[float] = [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
+        array: list[float] = (
+            [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
+        )
 
         with pytest.raises(tango.DevFailed, match="NotImplementedError"):
             _ = tile_device.SetChanneliserTruncation(array)

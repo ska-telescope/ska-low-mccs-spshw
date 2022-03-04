@@ -48,7 +48,9 @@ class MccsSubarrayBeam(SKAObsDevice):
 
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
-        self._obs_state_model = SubarrayBeamObsStateModel(self.logger, self._update_obs_state)
+        self._obs_state_model = SubarrayBeamObsStateModel(
+            self.logger, self._update_obs_state
+        )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubarrayBeamHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
@@ -141,7 +143,9 @@ class MccsSubarrayBeam(SKAObsDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
         """

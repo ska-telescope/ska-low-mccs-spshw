@@ -17,7 +17,8 @@ author = "Team MCCS"
 author_email = "malte.marquarding at csiro dot au"
 url = "https://www.skatelescope.org/"
 license = "BSD-3-Clause"  # noqa: A001
-copyright = "CSIRO and STFC Daresbury Laboratory and University of Manchester"  # noqa: A001
+copyright = "CSIRO and STFC Daresbury Laboratory \
+    and University of Manchester"  # noqa: A001
 
 
 def get_release_info(clsname: Optional[str] = None) -> str:

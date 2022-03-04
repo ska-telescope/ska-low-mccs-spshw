@@ -10,7 +10,13 @@ from __future__ import annotations
 
 import pytest
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, ControlMode, HealthState, SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
 from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -38,7 +44,9 @@ class TestMccsSubrack:
     """Test class for MccsSubrack tests."""
 
     @pytest.fixture()
-    def device_under_test(self: TestMccsSubrack, tango_harness: TangoHarness) -> MccsDeviceProxy:
+    def device_under_test(
+        self: TestMccsSubrack, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -84,7 +92,9 @@ class TestMccsSubrack:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
@@ -107,7 +117,10 @@ class TestMccsSubrack:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
@@ -123,13 +136,21 @@ class TestMccsSubrack:
         )
 
         assert (
-            list(device_under_test.backplaneTemperatures) == SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES
+            list(device_under_test.backplaneTemperatures)
+            == SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES
         )
-        assert list(device_under_test.boardTemperatures) == SubrackSimulator.DEFAULT_BOARD_TEMPERATURES
-        assert device_under_test.boardCurrent == SubrackSimulator.DEFAULT_BOARD_CURRENT
-        assert list(device_under_test.subrackFanSpeeds) == SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
         assert (
-            list(device_under_test.powerSupplyFanSpeeds) == SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS
+            list(device_under_test.boardTemperatures)
+            == SubrackSimulator.DEFAULT_BOARD_TEMPERATURES
+        )
+        assert device_under_test.boardCurrent == SubrackSimulator.DEFAULT_BOARD_CURRENT
+        assert (
+            list(device_under_test.subrackFanSpeeds)
+            == SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
+        )
+        assert (
+            list(device_under_test.powerSupplyFanSpeeds)
+            == SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS
         )
         assert device_under_test.powerSupplyCurrents == pytest.approx(
             SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS
@@ -138,7 +159,10 @@ class TestMccsSubrack:
             SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES
         )
 
-        assert list(device_under_test.powerSupplyPowers) == SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS
+        assert (
+            list(device_under_test.powerSupplyPowers)
+            == SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS
+        )
         assert (
             list(device_under_test.tpmTemperatures)
             == [SubrackSimulator.DEFAULT_TPM_TEMPERATURE] * device_under_test.tpmCount
@@ -173,7 +197,10 @@ class TestMccsSubrack:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
@@ -228,7 +255,10 @@ class TestMccsSubrack:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)

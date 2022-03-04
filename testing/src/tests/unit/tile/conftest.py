@@ -20,7 +20,11 @@ from tango.server import command
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.component import ExtendedPowerState
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockChangeEventCallback,
+    MockDeviceBuilder,
+)
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
@@ -84,7 +88,9 @@ def initial_tpm_power_mode() -> ExtendedPowerState:
 
 
 @pytest.fixture()
-def mock_subrack(subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerState) -> unittest.mock.Mock:
+def mock_subrack(
+    subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerState
+) -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsSubrack device.
 
@@ -124,7 +130,9 @@ def initial_mocks(
 
 
 @pytest.fixture()
-def mock_subrack_device_proxy(subrack_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
+def mock_subrack_device_proxy(
+    subrack_fqdn: str, logger: logging.Logger
+) -> MccsDeviceProxy:
     """
     Return a mock device proxy to an subrack device.
 

@@ -11,7 +11,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
-from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager, check_communicating
+from ska_low_mccs.component import (
+    CommunicationStatus,
+    ObjectComponentManager,
+    check_communicating,
+)
 from ska_low_mccs.tel_state import TelState
 
 __all__ = ["TelStateComponentManager"]
@@ -113,7 +117,9 @@ class TelStateComponentManager(ObjectComponentManager):
             super().__setattr__(name, value)
 
     @check_communicating
-    def _set_in_component(self: TelStateComponentManager, name: str, value: Any) -> None:
+    def _set_in_component(
+        self: TelStateComponentManager, name: str, value: Any
+    ) -> None:
         """
         Set an attribute in the component (if we are communicating with it).
 

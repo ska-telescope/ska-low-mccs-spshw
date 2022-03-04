@@ -29,10 +29,14 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         self: ClusterSimulatorComponentManager,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
-        communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
         power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         fault_callback: Optional[Callable[[bool], None]],
-        shadow_master_pool_node_health_changed_callback: Optional[Callable[[list[HealthState]], None]],
+        shadow_master_pool_node_health_changed_callback: Optional[
+            Callable[[list[HealthState]], None]
+        ],
     ) -> None:
         self._fault_callback = fault_callback
         self._shadow_master_pool_node_health_changed_callback = (
@@ -74,13 +78,17 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
 
     def start_communicating(self: ClusterSimulatorComponentManager) -> None:
         super().start_communicating()
-        cast(ClusterSimulator, self._component).set_shadow_master_pool_node_health_changed_callback(
+        cast(
+            ClusterSimulator, self._component
+        ).set_shadow_master_pool_node_health_changed_callback(
             self.component_shadow_master_pool_node_health_changed
         )
 
     def stop_communicating(self: ClusterSimulatorComponentManager) -> None:
         super().stop_communicating()
-        cast(ClusterSimulator, self._component).set_shadow_master_pool_node_health_changed_callback(None)
+        cast(
+            ClusterSimulator, self._component
+        ).set_shadow_master_pool_node_health_changed_callback(None)
 
     def __getattr__(
         self: ClusterSimulatorComponentManager,
@@ -166,7 +174,9 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         initial_simulation_mode: SimulationMode,
-        communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
         component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         component_shadow_master_pool_node_health_changed_callback: Optional[

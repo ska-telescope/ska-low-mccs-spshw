@@ -20,7 +20,11 @@ from tango.server import attribute, command, device_property
 
 import ska_low_mccs.release as release
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.station import StationComponentManager, StationHealthModel, StationObsStateModel
+from ska_low_mccs.station import (
+    StationComponentManager,
+    StationHealthModel,
+    StationObsStateModel,
+)
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
@@ -53,7 +57,9 @@ class MccsStation(SKAObsDevice):
 
     def _init_state_model(self: MccsStation) -> None:
         super()._init_state_model()
-        self._obs_state_model = StationObsStateModel(self.logger, self._update_obs_state)
+        self._obs_state_model = StationObsStateModel(
+            self.logger, self._update_obs_state
+        )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = StationHealthModel(
             self.APIUFQDN,
@@ -92,11 +98,15 @@ class MccsStation(SKAObsDevice):
 
         self.register_command_object(
             "Configure",
-            self.ConfigureCommand(self.component_manager, self.op_state_model, self.logger),
+            self.ConfigureCommand(
+                self.component_manager, self.op_state_model, self.logger
+            ),
         )
         self.register_command_object(
             "ApplyPointing",
-            self.ApplyPointingCommand(self.component_manager, self.op_state_model, self.logger),
+            self.ApplyPointingCommand(
+                self.component_manager, self.op_state_model, self.logger
+            ),
         )
 
     class InitCommand(SKAObsDevice.InitCommand):
@@ -217,7 +227,9 @@ class MccsStation(SKAObsDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def _component_power_mode_changed(
         self: MccsStation,
@@ -550,7 +562,9 @@ class MccsStation(SKAObsDevice):
         dtype_in="DevVarDoubleArray",
         dtype_out="DevVarLongStringArray",
     )
-    def ApplyPointing(self: MccsStation, argin: list[float]) -> DevVarLongStringArrayType:
+    def ApplyPointing(
+        self: MccsStation, argin: list[float]
+    ) -> DevVarLongStringArrayType:
         """
         Set the pointing delay parameters of this Station's Tiles.
 

@@ -46,7 +46,11 @@ class TestClusterCommon:
         cluster_simulator_component_manager: ClusterSimulatorComponentManager,
         cluster_component_manager: ClusterComponentManager,
         request: SubRequest,
-    ) -> Union[ClusterSimulator, ClusterSimulatorComponentManager, ClusterComponentManager,]:
+    ) -> Union[
+        ClusterSimulator,
+        ClusterSimulatorComponentManager,
+        ClusterComponentManager,
+    ]:
         """
         Return the hardware under test.
 
@@ -108,7 +112,9 @@ class TestClusterCommon:
         """
         assert getattr(cluster, resource) == ClusterSimulator.CONFIGURATION[resource]
 
-    @pytest.mark.parametrize("status", ["errored", "failed", "finished", "killed", "lost"])
+    @pytest.mark.parametrize(
+        "status", ["errored", "failed", "finished", "killed", "lost"]
+    )
     def test_closed_jobs_stats(
         self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
@@ -125,11 +131,15 @@ class TestClusterCommon:
             test
         """
         job_status = JobStatus[status.upper()]
-        assert getattr(cluster, f"jobs_{status}") == ClusterSimulator.JOB_STATS[job_status]
+        assert (
+            getattr(cluster, f"jobs_{status}") == ClusterSimulator.JOB_STATS[job_status]
+        )
         cluster.clear_job_stats()
         assert getattr(cluster, f"jobs_{status}") == 0
 
-    @pytest.mark.parametrize("status", ("staging", "starting", "running", "killing", "unreachable"))
+    @pytest.mark.parametrize(
+        "status", ("staging", "starting", "running", "killing", "unreachable")
+    )
     def test_open_jobs_stats(
         self: TestClusterCommon,
         cluster: Union[ClusterSimulator, ClusterComponentManager],
@@ -153,7 +163,9 @@ class TestClusterCommon:
         """
         jobs = ClusterSimulator.OPEN_JOBS.keys()
         job_status = JobStatus[status.upper()]
-        jobs_of_status = [job for job in jobs if cluster.get_job_status(job) == job_status]
+        jobs_of_status = [
+            job for job in jobs if cluster.get_job_status(job) == job_status
+        ]
 
         assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
 
@@ -251,16 +263,23 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
-        assert cluster.memory_avail + cluster.memory_used == pytest.approx(cluster.memory_total)
-        assert cluster.nodes_avail + cluster.nodes_in_use == pytest.approx(cluster.nodes_total)
-        assert 100.0 * cluster.master_cpus_used / cluster.master_cpus_total == pytest.approx(
-            cluster.master_cpus_allocated_percent
+        assert cluster.memory_avail + cluster.memory_used == pytest.approx(
+            cluster.memory_total
         )
-        assert 100.0 * cluster.master_disk_used / cluster.master_disk_total == pytest.approx(
-            cluster.master_disk_percent
+        assert cluster.nodes_avail + cluster.nodes_in_use == pytest.approx(
+            cluster.nodes_total
         )
-        assert 100.0 * cluster.master_mem_used / cluster.master_mem_total == pytest.approx(
-            cluster.master_mem_percent
+        assert (
+            100.0 * cluster.master_cpus_used / cluster.master_cpus_total
+            == pytest.approx(cluster.master_cpus_allocated_percent)
+        )
+        assert (
+            100.0 * cluster.master_disk_used / cluster.master_disk_total
+            == pytest.approx(cluster.master_disk_percent)
+        )
+        assert (
+            100.0 * cluster.master_mem_used / cluster.master_mem_total
+            == pytest.approx(cluster.master_mem_percent)
         )
 
     def test_ping_master_pool(
@@ -355,7 +374,9 @@ class TestClusterCommon:
 class TestClusterSimulator:
     """Contains tests specific to ClusterSimulator."""
 
-    def test_node_failure(self: TestClusterSimulator, cluster_simulator: ClusterSimulator) -> None:
+    def test_node_failure(
+        self: TestClusterSimulator, cluster_simulator: ClusterSimulator
+    ) -> None:
         """
         Test for the master node id is as expected.
 
@@ -369,16 +390,27 @@ class TestClusterSimulator:
         :param cluster_simulator: the simulated cluster
         """
         master_node_id = None
-        assert cluster_simulator.master_node_id == ClusterSimulator.CONFIGURATION["master_node_id"]
+        assert (
+            cluster_simulator.master_node_id
+            == ClusterSimulator.CONFIGURATION["master_node_id"]
+        )
 
-        while any(status == HealthState.OK for status in cluster_simulator.shadow_master_pool_status):
+        while any(
+            status == HealthState.OK
+            for status in cluster_simulator.shadow_master_pool_status
+        ):
             assert cluster_simulator.master_node_id != master_node_id
             master_node_id = cluster_simulator.master_node_id
             assert cluster_simulator._node_statuses[master_node_id] == HealthState.OK
-            assert cluster_simulator.master_node_id in cluster_simulator.shadow_master_pool_node_ids
+            assert (
+                cluster_simulator.master_node_id
+                in cluster_simulator.shadow_master_pool_node_ids
+            )
 
             cluster_simulator.simulate_node_failure(master_node_id, True)
-            assert cluster_simulator._node_statuses[master_node_id] == HealthState.FAILED
+            assert (
+                cluster_simulator._node_statuses[master_node_id] == HealthState.FAILED
+            )
 
         assert cluster_simulator.master_node_id == master_node_id
 

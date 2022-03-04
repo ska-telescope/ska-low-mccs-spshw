@@ -187,10 +187,13 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
             provide a pre-created component manager for the simulator,
             rather than letting this component manager create one.
         """
-        pasd_bus_simulator = _simulator_component_manager or PasdBusSimulatorComponentManager(
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
+        pasd_bus_simulator = (
+            _simulator_component_manager
+            or PasdBusSimulatorComponentManager(
+                logger,
+                push_change_event,
+                communication_status_changed_callback,
+                component_fault_callback,
+            )
         )
         super().__init__(None, pasd_bus_simulator, initial_simulation_mode)

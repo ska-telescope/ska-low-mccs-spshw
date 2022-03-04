@@ -115,7 +115,9 @@ def tango_harness(
 
     :yields: the test harness
     """
-    with tango_harness_factory(tango_config, devices_to_load, mock_factory, initial_mocks) as harness:
+    with tango_harness_factory(
+        tango_config, devices_to_load, mock_factory, initial_mocks
+    ) as harness:
         yield harness
 
 

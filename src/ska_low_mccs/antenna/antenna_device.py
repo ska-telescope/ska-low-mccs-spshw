@@ -50,7 +50,9 @@ class MccsAntenna(SKABaseDevice):
 
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
-        self._health_state: Optional[HealthState] = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_state: Optional[
+            HealthState
+        ] = None  # SKABaseDevice.InitCommand.do() does this too late.
         self._health_model = AntennaHealthModel(self.health_changed)
         self.set_change_event("healthState", True, False)
 
@@ -179,7 +181,9 @@ class MccsAntenna(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def _component_power_mode_changed(
         self: MccsAntenna,

@@ -84,7 +84,14 @@ class TestTileOrchestrator:
     @pytest.fixture(scope="session")
     def checks(
         self: TestTileOrchestrator,
-    ) -> Mapping[str, Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager],],]:
+    ) -> Mapping[
+        str,
+        Tuple[
+            Mapping[str, Any],
+            Mapping[str, list[Any]],
+            Optional[ContextManager],
+        ],
+    ]:
         """
         Return a static dictionary of orchestrator action checks.
 
@@ -537,7 +544,13 @@ class TestTileOrchestrator:
         ],
         state: StateTupleType,
         stimulus: Stimulus,
-    ) -> Optional[Tuple[Mapping[str, Any], Mapping[str, list[Any]], Optional[ContextManager],]]:
+    ) -> Optional[
+        Tuple[
+            Mapping[str, Any],
+            Mapping[str, list[Any]],
+            Optional[ContextManager],
+        ]
+    ]:
         """
         Return checks to be performed as part of this test.
 
@@ -628,8 +641,12 @@ class TestTileOrchestrator:
                 Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY: lambda tc: tc.update_tpm_power_mode(
                     ExtendedPowerState.NO_SUPPLY
                 ),
-                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(ExtendedPowerState.OFF),
-                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(ExtendedPowerState.ON),
+                Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_mode(
+                    ExtendedPowerState.OFF
+                ),
+                Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_mode(
+                    ExtendedPowerState.ON
+                ),
                 Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
@@ -653,8 +670,9 @@ class TestTileOrchestrator:
             :param expected_state_changes: keyword arguments that
                 specify state values that should have changed.
             """
-            assert tile_orchestrator._subrack_communication_status == expected_state_changes.get(
-                "subrack_communication_status", state[0]
+            assert (
+                tile_orchestrator._subrack_communication_status
+                == expected_state_changes.get("subrack_communication_status", state[0])
             )
             if len(state) > 1:
                 assert tile_orchestrator._operator_desire == expected_state_changes.get(
@@ -665,8 +683,11 @@ class TestTileOrchestrator:
                     "tpm_power_mode", state[2]  # type: ignore[misc]
                 )
             if len(state) > 3:
-                assert tile_orchestrator._tpm_communication_status == expected_state_changes.get(
-                    "tpm_communication_status", state[3]  # type: ignore[misc]
+                assert (
+                    tile_orchestrator._tpm_communication_status
+                    == expected_state_changes.get(
+                        "tpm_communication_status", state[3]  # type: ignore[misc]
+                    )
                 )
 
         def check_callbacks(**expected_args: list[Any]) -> None:

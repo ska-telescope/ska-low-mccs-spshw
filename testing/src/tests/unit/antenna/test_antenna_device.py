@@ -13,7 +13,13 @@ import time
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, ControlMode, HealthState, LoggingLevel, SimulationMode
+from ska_tango_base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    LoggingLevel,
+    SimulationMode,
+)
 
 from ska_low_mccs import MccsAntenna, MccsDeviceProxy
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -399,7 +405,9 @@ class TestMccsAntenna:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     def test_controlMode(

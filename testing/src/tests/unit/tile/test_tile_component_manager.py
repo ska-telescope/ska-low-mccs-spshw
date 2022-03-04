@@ -60,12 +60,16 @@ class TestTileComponentManager:
         :param power_mode: the power mode of the TPM when we break off
             comms
         """
-        assert tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        assert (
+            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        )
 
         # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
         tile_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
 
         if power_mode == ExtendedPowerState.UNKNOWN:
             tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.UNKNOWN)
@@ -75,12 +79,18 @@ class TestTileComponentManager:
             pass  # test harness starts with TPM off
         elif power_mode == ExtendedPowerState.ON:
             tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.ON)
-            communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+            communication_status_changed_callback.assert_next_call(
+                CommunicationStatus.ESTABLISHED
+            )
 
         tile_component_manager.stop_communicating()
 
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
-        assert tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
+        assert (
+            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        )
 
     # TODO: find out if TPM has standby mode, and if so add this case
     @pytest.mark.parametrize(
@@ -119,25 +129,39 @@ class TestTileComponentManager:
         :param first_power_mode: the power mode of the initial event
         :param second_power_mode: the power mode of the subsequent event
         """
-        assert tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        assert (
+            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+        )
 
         tile_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
 
-        assert tile_component_manager.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            tile_component_manager.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
 
         tile_component_manager._tpm_power_mode_changed(first_power_mode)
 
         if first_power_mode == ExtendedPowerState.ON:
-            communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+            communication_status_changed_callback.assert_next_call(
+                CommunicationStatus.ESTABLISHED
+            )
         else:
             communication_status_changed_callback.assert_not_called()
 
         tile_component_manager._tpm_power_mode_changed(second_power_mode)
 
-        if first_power_mode != ExtendedPowerState.ON and second_power_mode == ExtendedPowerState.ON:
-            communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
+        if (
+            first_power_mode != ExtendedPowerState.ON
+            and second_power_mode == ExtendedPowerState.ON
+        ):
+            communication_status_changed_callback.assert_next_call(
+                CommunicationStatus.ESTABLISHED
+            )
         else:
             communication_status_changed_callback.assert_not_called()
 
@@ -162,7 +186,9 @@ class TestTileComponentManager:
         """
         tile_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
 
         tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
 
@@ -206,7 +232,9 @@ class TestTileComponentManager:
 
         tile_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
 
         # mock an event from subrack announcing it to be turned off
         tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.NO_SUPPLY)
@@ -323,7 +351,9 @@ class TestStaticSimulatorCommon:
             return switching_tpm_component_manager
         elif request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
-            communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
+            communication_status_changed_callback.assert_next_call(
+                CommunicationStatus.NOT_ESTABLISHED
+            )
             time.sleep(0.1)
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
@@ -570,7 +600,10 @@ class TestStaticSimulatorCommon:
             buffer[write_offset + index] = value
         expected_read = buffer[read_offset : (read_offset + read_length)]
         tile.write_register(register, write_values, write_offset, device)
-        assert tile.read_register(register, read_length, read_offset, device) == expected_read
+        assert (
+            tile.read_register(register, read_length, read_offset, device)
+            == expected_read
+        )
 
     @pytest.mark.parametrize(
         "write_address",
@@ -756,7 +789,11 @@ class TestDynamicSimulatorCommon:
         switching_tpm_component_manager: SwitchingTpmComponentManager,
         tile_component_manager: TileComponentManager,
         request: SubRequest,
-    ) -> Union[DynamicTpmSimulatorComponentManager, SwitchingTpmComponentManager, TileComponentManager,]:
+    ) -> Union[
+        DynamicTpmSimulatorComponentManager,
+        SwitchingTpmComponentManager,
+        TileComponentManager,
+    ]:
         """
         Return the tile component under test.
 
@@ -921,7 +958,9 @@ class TestDriverCommon:
             ip: str,
             port: int,
             tpm_version: str,
-            communication_status_changed_callback: Callable[[CommunicationStatus], None],
+            communication_status_changed_callback: Callable[
+                [CommunicationStatus], None
+            ],
             component_fault_callback: Callable[[bool], None],
             aavs_tile: unittest.mock.Mock,
         ) -> None:
@@ -1013,14 +1052,25 @@ class TestDriverCommon:
         hardware_tile_mock.tpm = None
         assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
-        assert patched_tpm_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
         # Wait for the message to execute
         time.sleep(3.1)
         hardware_tile_mock.connect.assert_called_with()
         assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
-        assert patched_tpm_driver._queue_manager._task_result[1] == str(ResultCode.FAILED.value)
-        assert patched_tpm_driver._queue_manager._task_result[2] == "Could not connect to Tile"
-        assert patched_tpm_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        assert patched_tpm_driver._queue_manager._task_result[1] == str(
+            ResultCode.FAILED.value
+        )
+        assert (
+            patched_tpm_driver._queue_manager._task_result[2]
+            == "Could not connect to Tile"
+        )
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
 
     def test_communication(
         self: TestDriverCommon,
@@ -1040,12 +1090,19 @@ class TestDriverCommon:
         hardware_tile_mock.tpm = True
         assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
-        assert patched_tpm_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            patched_tpm_driver.communication_status
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
 
         # Wait for the message to execute
         time.sleep(0.1)
         hardware_tile_mock.connect.assert_called_once()
         assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
-        assert patched_tpm_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
+        assert patched_tpm_driver._queue_manager._task_result[1] == str(
+            ResultCode.OK.value
+        )
         assert patched_tpm_driver._queue_manager._task_result[2] == "Connected to Tile"
-        assert patched_tpm_driver.communication_status == CommunicationStatus.ESTABLISHED
+        assert (
+            patched_tpm_driver.communication_status == CommunicationStatus.ESTABLISHED
+        )

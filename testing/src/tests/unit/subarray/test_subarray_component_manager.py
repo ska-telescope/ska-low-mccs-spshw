@@ -52,9 +52,16 @@ class TestSubarrayComponentManager:
         :param channel_blocks: a mock list of channel blocks
         """
         subarray_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
-        assert subarray_component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        assert (
+            subarray_component_manager.communication_status
+            == CommunicationStatus.ESTABLISHED
+        )
 
         resource_spec = {
             "stations": [station_on_fqdn],
@@ -64,18 +71,37 @@ class TestSubarrayComponentManager:
         }
         result_code = subarray_component_manager.assign(resource_spec)
         assert result_code == ResultCode.OK
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
-        assert subarray_component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        assert (
+            subarray_component_manager.communication_status
+            == CommunicationStatus.ESTABLISHED
+        )
 
         subarray_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.DISABLED)
-        assert subarray_component_manager.communication_status == CommunicationStatus.DISABLED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.DISABLED
+        )
+        assert (
+            subarray_component_manager.communication_status
+            == CommunicationStatus.DISABLED
+        )
 
         subarray_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.NOT_ESTABLISHED)
-        communication_status_changed_callback.assert_next_call(CommunicationStatus.ESTABLISHED)
-        assert subarray_component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_status_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        assert (
+            subarray_component_manager.communication_status
+            == CommunicationStatus.ESTABLISHED
+        )
 
     def test_assign_and_release(
         self: TestSubarrayComponentManager,
@@ -139,7 +165,9 @@ class TestSubarrayComponentManager:
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
-        subarray_component_manager._station_power_mode_changed(station_off_fqdn, PowerState.OFF)
+        subarray_component_manager._station_power_mode_changed(
+            station_off_fqdn, PowerState.OFF
+        )
 
         assign_completed_callback.assert_next_call()
         assert subarray_component_manager.assigned_resources_dict == {
@@ -168,7 +196,9 @@ class TestSubarrayComponentManager:
         # subarray connects to stations, subscribes to change events on power mode,
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
-        subarray_component_manager._station_power_mode_changed(station_off_fqdn, PowerState.ON)
+        subarray_component_manager._station_power_mode_changed(
+            station_off_fqdn, PowerState.ON
+        )
 
         assign_completed_callback.assert_next_call()
         assert subarray_component_manager.assigned_resources_dict == {
@@ -295,7 +325,9 @@ class TestSubarrayComponentManager:
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
         time.sleep(0.1)
-        subarray_component_manager._station_power_mode_changed(station_off_fqdn, PowerState.ON)
+        subarray_component_manager._station_power_mode_changed(
+            station_off_fqdn, PowerState.ON
+        )
         assign_completed_callback.assert_next_call()
 
         with pytest.raises(ConnectionError, match="Component is not turned on"):
@@ -321,7 +353,9 @@ class TestSubarrayComponentManager:
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
         time.sleep(0.1)
-        subarray_component_manager._station_power_mode_changed(station_on_fqdn, PowerState.ON)
+        subarray_component_manager._station_power_mode_changed(
+            station_on_fqdn, PowerState.ON
+        )
         assign_completed_callback.assert_next_call()
 
         with pytest.raises(ConnectionError, match="Component is not turned on"):
@@ -332,7 +366,9 @@ class TestSubarrayComponentManager:
                 }
             )
 
-        mock_station_on.Configure.assert_next_call(json.dumps({"station_id": station_on_id}))
+        mock_station_on.Configure.assert_next_call(
+            json.dumps({"station_id": station_on_id})
+        )
         mock_subarray_beam_off.Configure.assert_not_called()
 
         result_code = subarray_component_manager.release_all()
@@ -349,7 +385,9 @@ class TestSubarrayComponentManager:
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
         time.sleep(0.1)
-        subarray_component_manager._station_power_mode_changed(station_on_fqdn, PowerState.ON)
+        subarray_component_manager._station_power_mode_changed(
+            station_on_fqdn, PowerState.ON
+        )
         assign_completed_callback.assert_next_call()
 
         with pytest.raises(ConnectionError, match="Component is not turned on"):
@@ -380,7 +418,9 @@ class TestSubarrayComponentManager:
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
         time.sleep(0.1)
-        subarray_component_manager._station_power_mode_changed(station_on_fqdn, PowerState.ON)
+        subarray_component_manager._station_power_mode_changed(
+            station_on_fqdn, PowerState.ON
+        )
         assign_completed_callback.assert_next_call()
 
         result_code = subarray_component_manager.configure(
@@ -391,7 +431,9 @@ class TestSubarrayComponentManager:
         )
         assert result_code == ResultCode.QUEUED
         mock_station_off.Configure.assert_not_called()
-        mock_station_on.Configure.assert_next_call(json.dumps({"station_id": station_on_id}))
+        mock_station_on.Configure.assert_next_call(
+            json.dumps({"station_id": station_on_id})
+        )
         mock_subarray_beam_off.Configure.assert_not_called()
         mock_subarray_beam_on.Configure.assert_next_call(
             json.dumps({"subarray_beam_id": subarray_beam_on_id})
@@ -403,9 +445,9 @@ class TestSubarrayComponentManager:
         )
 
         configure_completed_callback.assert_not_called()
-        subarray_component_manager._subarray_beams[subarray_beam_on_fqdn]._obs_state_changed(
-            "obsState", ObsState.READY, tango.AttrQuality.ATTR_VALID
-        )
+        subarray_component_manager._subarray_beams[
+            subarray_beam_on_fqdn
+        ]._obs_state_changed("obsState", ObsState.READY, tango.AttrQuality.ATTR_VALID)
 
         configure_completed_callback.assert_next_call()
 

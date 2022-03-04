@@ -328,7 +328,9 @@ class StationBeamComponentManager(MccsComponentManager):
         return self._pointing_delay_rate
 
     @pointing_delay_rate.setter
-    def pointing_delay_rate(self: StationBeamComponentManager, value: list[float]) -> None:
+    def pointing_delay_rate(
+        self: StationBeamComponentManager, value: list[float]
+    ) -> None:
         """
         Set the pointing delay rate.
 
@@ -386,9 +388,13 @@ class StationBeamComponentManager(MccsComponentManager):
         :return: a result code
         """
         zipped_delays_and_rates = [
-            item for pair in zip(self.pointing_delay, self.pointing_delay_rate + [0]) for item in pair
+            item
+            for pair in zip(self.pointing_delay, self.pointing_delay_rate + [0])
+            for item in pair
         ]
-        station_pointing_args = [cast(float, self.logical_beam_id)] + zipped_delays_and_rates
+        station_pointing_args = [
+            cast(float, self.logical_beam_id)
+        ] + zipped_delays_and_rates
 
         assert self._station_proxy is not None
         return self._station_proxy.apply_pointing(station_pointing_args)

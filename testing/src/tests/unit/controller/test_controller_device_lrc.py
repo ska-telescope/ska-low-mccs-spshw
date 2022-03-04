@@ -68,7 +68,10 @@ class TestMccsControllerLrc:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)

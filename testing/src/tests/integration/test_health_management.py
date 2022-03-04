@@ -178,14 +178,20 @@ class TestHealthManagement:
 
         # register a callback so we can block on state changes
         # instead of sleeping
-        controller.add_change_event_callback("state", controller_device_state_changed_callback)
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        controller.add_change_event_callback(
+            "state", controller_device_state_changed_callback
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
 
         controller.add_change_event_callback(
             "healthState",
             controller_device_health_state_changed_callback,
         )
-        controller_device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        controller_device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
 
         assert antenna_1.healthState == HealthState.UNKNOWN
         assert antenna_2.healthState == HealthState.UNKNOWN
@@ -225,8 +231,12 @@ class TestHealthManagement:
         antenna_7.adminMode = AdminMode.ONLINE
         antenna_8.adminMode = AdminMode.ONLINE
 
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )
 
         assert antenna_1.state() == tango.DevState.OFF
         assert antenna_2.state() == tango.DevState.OFF
@@ -247,7 +257,9 @@ class TestHealthManagement:
         assert subrack.state() == tango.DevState.OFF
         assert controller.state() == tango.DevState.OFF
 
-        controller_device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
+        controller_device_health_state_changed_callback.assert_next_change_event(
+            HealthState.OK
+        )
 
         assert antenna_1.healthState == HealthState.OK
         assert antenna_2.healthState == HealthState.OK

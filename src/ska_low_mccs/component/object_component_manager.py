@@ -43,7 +43,9 @@ class ObjectComponentManager(MccsComponentManager):
         component: ObjectComponent,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
-        communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
         component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,
@@ -95,7 +97,9 @@ class ObjectComponentManager(MccsComponentManager):
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
         self._component.set_fault_callback(self.component_fault_changed)
-        self._component.set_power_mode_changed_callback(self.component_power_mode_changed)
+        self._component.set_power_mode_changed_callback(
+            self.component_power_mode_changed
+        )
 
     @threadsafe
     def stop_communicating(self: ObjectComponentManager) -> None:
@@ -104,7 +108,9 @@ class ObjectComponentManager(MccsComponentManager):
         self._component.set_fault_callback(None)
         self._component.set_power_mode_changed_callback(None)
 
-    def simulate_communication_failure(self: ObjectComponentManager, fail_communicate: bool) -> None:
+    def simulate_communication_failure(
+        self: ObjectComponentManager, fail_communicate: bool
+    ) -> None:
         """
         Simulate (or stop simulating) a failure to communicate with the component.
 
@@ -112,7 +118,10 @@ class ObjectComponentManager(MccsComponentManager):
             is failing
         """
         self._fail_communicate = fail_communicate
-        if fail_communicate and self.communication_status == CommunicationStatus.ESTABLISHED:
+        if (
+            fail_communicate
+            and self.communication_status == CommunicationStatus.ESTABLISHED
+        ):
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating

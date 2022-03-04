@@ -27,7 +27,9 @@ class CliMeta(type):
     They get turned into `fire.core.FireError` exceptions.
     """
 
-    def __new__(cls: Type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict) -> CliMeta:
+    def __new__(
+        cls: Type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict
+    ) -> CliMeta:
         """
         Class constructor.
 
@@ -105,7 +107,9 @@ def command_result_as_string(method: Callable) -> Callable:
         """
         reslist = method(*args, **kwargs)
         # The commands convert the command tuple to the form [[return_code], [message]]
-        return f"Return code: {ResultCode(reslist[0][0]).name}\nMessage: {reslist[1][0]}"
+        return (
+            f"Return code: {ResultCode(reslist[0][0]).name}\nMessage: {reslist[1][0]}"
+        )
 
     return _wrapper
 
@@ -303,10 +307,14 @@ class MccsTileCli(metaclass=CliMeta):
             message indicating status. The message is for
             information purpose only.
         """
-        return self._dp.command_inout("ConfigureIntegratedChannelData", integration_time)
+        return self._dp.command_inout(
+            "ConfigureIntegratedChannelData", integration_time
+        )
 
     @command_result_as_string
-    def StartBeamformer(self: MccsTileCli, start_time: int = 0, duration: int = -1) -> Tuple[ResultCode, str]:
+    def StartBeamformer(
+        self: MccsTileCli, start_time: int = 0, duration: int = -1
+    ) -> Tuple[ResultCode, str]:
         """
         Start the beamformer at the specified time delay.
 
@@ -334,7 +342,9 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.command_inout("StopBeamformer")
 
     @command_result_as_string
-    def LoadPointingDelay(self: MccsTileCli, load_time: int = 0) -> Tuple[ResultCode, str]:
+    def LoadPointingDelay(
+        self: MccsTileCli, load_time: int = 0
+    ) -> Tuple[ResultCode, str]:
         """
         Load the pointing delays at the specified time delay.
 

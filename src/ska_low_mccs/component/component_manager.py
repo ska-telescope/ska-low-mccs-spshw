@@ -190,7 +190,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         self: MccsComponentManager,
         logger: logging.Logger,
         push_change_event: Optional[Callable],
-        communication_status_changed_callback: Optional[Callable[[CommunicationStatus], None]],
+        communication_status_changed_callback: Optional[
+            Callable[[CommunicationStatus], None]
+        ],
         component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,
@@ -218,11 +220,15 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
         self.__communication_lock = threading.Lock()
         self._communication_status = CommunicationStatus.DISABLED
-        self._communication_status_changed_callback = communication_status_changed_callback
+        self._communication_status_changed_callback = (
+            communication_status_changed_callback
+        )
 
         self._power_mode_lock = threading.RLock()
         self._power_mode: Optional[PowerState] = None
-        self._component_power_mode_changed_callback = component_power_mode_changed_callback
+        self._component_power_mode_changed_callback = (
+            component_power_mode_changed_callback
+        )
 
         self._faulty: Optional[bool] = None
         self._component_fault_callback = component_fault_callback
@@ -311,7 +317,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         return self._communication_status
 
     @threadsafe
-    def update_component_power_mode(self: MccsComponentManager, power_mode: Optional[PowerState]) -> None:
+    def update_component_power_mode(
+        self: MccsComponentManager, power_mode: Optional[PowerState]
+    ) -> None:
         """
         Update the power mode, calling callbacks as required.
 
@@ -324,10 +332,15 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         if self._power_mode != power_mode:
             self._power_mode = power_mode
-            if self._component_power_mode_changed_callback is not None and power_mode is not None:
+            if (
+                self._component_power_mode_changed_callback is not None
+                and power_mode is not None
+            ):
                 self._component_power_mode_changed_callback(power_mode)
 
-    def component_power_mode_changed(self: MccsComponentManager, power_mode: PowerState) -> None:
+    def component_power_mode_changed(
+        self: MccsComponentManager, power_mode: PowerState
+    ) -> None:
         """
         Handle notification that the component's power mode has changed.
 
@@ -347,7 +360,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         return self._power_mode
 
-    def update_component_fault(self: MccsComponentManager, faulty: Optional[bool]) -> None:
+    def update_component_fault(
+        self: MccsComponentManager, faulty: Optional[bool]
+    ) -> None:
         """
         Update the component fault status, calling callbacks as required.
 

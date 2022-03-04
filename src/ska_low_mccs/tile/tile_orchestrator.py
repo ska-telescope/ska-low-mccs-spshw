@@ -151,7 +151,9 @@ class TileOrchestrator:
         # initialise an instance. (We can't hardcode a relative path here, because
         # sphinx-build imports this with a different current directory.)
         if cls.RULES is None:
-            rules_string = importlib.resources.read_text(__package__, "orchestration_rules.yaml")
+            rules_string = importlib.resources.read_text(
+                __package__, "orchestration_rules.yaml"
+            )
             cls.RULES = yaml.load(rules_string, Loader=yaml.Loader) or {}
             # we've no logger so there's no point catching any exceptions.
         return cls.RULES
@@ -196,15 +198,23 @@ class TileOrchestrator:
         """
         self.__lock = threading.RLock()
 
-        self._start_communicating_with_subrack = start_communicating_with_subrack_callback
-        self._stop_communicating_with_subrack_callback = stop_communicating_with_subrack_callback
+        self._start_communicating_with_subrack = (
+            start_communicating_with_subrack_callback
+        )
+        self._stop_communicating_with_subrack_callback = (
+            stop_communicating_with_subrack_callback
+        )
         self._start_communicating_with_tpm = start_communicating_with_tpm_callback
-        self._stop_communicating_with_tpm_callback = stop_communicating_with_tpm_callback
+        self._stop_communicating_with_tpm_callback = (
+            stop_communicating_with_tpm_callback
+        )
 
         self._turn_tpm_off = turn_tpm_off_callback
         self._turn_tpm_on = turn_tpm_on_callback
 
-        self._communication_status_changed_callback = communication_status_changed_callback
+        self._communication_status_changed_callback = (
+            communication_status_changed_callback
+        )
         self._power_mode_changed_callback = power_mode_changed_callback
 
         self._logger = logger
@@ -231,7 +241,9 @@ class TileOrchestrator:
         )
         self._tpm_power_mode_on = PowerState.UNKNOWN  # default mode if turned on
 
-        self._decision_table: dict[StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]] = {}
+        self._decision_table: dict[
+            StateStimulusTupleType, list[Callable[[], Optional[ResultCode]]]
+        ] = {}
 
         for state, actions in self._load_rules().items():
             action_calls = [getattr(self, f"_{action}") for action in actions]

@@ -163,7 +163,9 @@ class _PasdPortSimulator:
         """
         self._connected = is_connected
 
-    def turn_on(self: _PasdPortSimulator, stay_on_when_offline: bool = True) -> Optional[bool]:
+    def turn_on(
+        self: _PasdPortSimulator, stay_on_when_offline: bool = True
+    ) -> Optional[bool]:
         """
         Turn the port on.
 
@@ -177,7 +179,9 @@ class _PasdPortSimulator:
         if self._forcing is False:
             return False  # Can't turn a port on if it is locally forced off
 
-        if self._desired_on_when_online and (self._desired_on_when_offline == stay_on_when_offline):
+        if self._desired_on_when_online and (
+            self._desired_on_when_offline == stay_on_when_offline
+        ):
             return None
 
         self._desired_on_when_online = True
@@ -210,7 +214,9 @@ class _PasdPortSimulator:
         """
         return self._forcing
 
-    def simulate_forcing(self: _PasdPortSimulator, forcing: Optional[bool]) -> Optional[bool]:
+    def simulate_forcing(
+        self: _PasdPortSimulator, forcing: Optional[bool]
+    ) -> Optional[bool]:
         """
         Simulate locally forcing this port.
 
@@ -375,7 +381,9 @@ class PasdHardwareSimulator:
         """
         return [port.forcing for port in self._ports]
 
-    def get_port_forcing(self: PasdHardwareSimulator, port_number: int) -> Optional[bool]:
+    def get_port_forcing(
+        self: PasdHardwareSimulator, port_number: int
+    ) -> Optional[bool]:
         """
         Return the forcing status of a specified port.
 
@@ -442,7 +450,9 @@ class PasdHardwareSimulator:
 
         :return: whether successful, or None if there was nothing to do
         """
-        return self._ports[port_number - 1].turn_on(stay_on_when_offline=stay_on_when_offline)
+        return self._ports[port_number - 1].turn_on(
+            stay_on_when_offline=stay_on_when_offline
+        )
 
     def turn_port_off(
         self: PasdHardwareSimulator,
@@ -517,7 +527,9 @@ class PasdHardwareSimulator:
         """
         return [port.desired_power_when_offline for port in self._ports]
 
-    def is_port_commanded_powered(self: PasdHardwareSimulator, port_number: int) -> bool:
+    def is_port_commanded_powered(
+        self: PasdHardwareSimulator, port_number: int
+    ) -> bool:
         """
         Return whether a given port is commanded powered.
 
@@ -891,10 +903,14 @@ class PasdBusSimulator(ObjectComponent):
         self._logger = logger
 
         self._fndh_simulator = FndhSimulator()
-        self._smartbox_simulators = [SmartboxSimulator() for _ in range(self.NUMBER_OF_SMARTBOXES)]
+        self._smartbox_simulators = [
+            SmartboxSimulator() for _ in range(self.NUMBER_OF_SMARTBOXES)
+        ]
 
         self._smartbox_fndh_ports: list[int] = [0] * self.NUMBER_OF_SMARTBOXES
-        self._antenna_smartbox_ports: list[Tuple[int, int]] = [(0, 0)] * self.NUMBER_OF_ANTENNAS
+        self._antenna_smartbox_ports: list[Tuple[int, int]] = [
+            (0, 0)
+        ] * self.NUMBER_OF_ANTENNAS
 
         self._antenna_configs: list[_AntennaConfigType] = []
         self.reload_database()
@@ -915,7 +931,9 @@ class PasdBusSimulator(ObjectComponent):
             try:
                 config = yaml.safe_load(stream)
             except yaml.YAMLError as exception:
-                self._logger.error(f"PaSD Bus simulator could not load configuration: {exception}.")
+                self._logger.error(
+                    f"PaSD Bus simulator could not load configuration: {exception}."
+                )
                 raise
 
         my_config = config["stations"][self._station_id - 1]
@@ -928,7 +946,9 @@ class PasdBusSimulator(ObjectComponent):
             fndh_port_is_connected[fndh_port - 1] = True
         self._fndh_simulator.configure(fndh_port_is_connected)
 
-        smartbox_ports_connected = [[False] * SmartboxSimulator.NUMBER_OF_PORTS] * self.NUMBER_OF_SMARTBOXES
+        smartbox_ports_connected = [
+            [False] * SmartboxSimulator.NUMBER_OF_PORTS
+        ] * self.NUMBER_OF_SMARTBOXES
         for antenna_config in my_config["antennas"]:
             antenna_id = antenna_config["antenna_id"]
             smartbox_id = antenna_config["smartbox_id"]
@@ -1103,7 +1123,9 @@ class PasdBusSimulator(ObjectComponent):
         """
         return list(self._fndh_simulator.port_forcings)
 
-    def get_fndh_port_forcing(self: PasdBusSimulator, port_number: int) -> Optional[bool]:
+    def get_fndh_port_forcing(
+        self: PasdBusSimulator, port_number: int
+    ) -> Optional[bool]:
         """
         Return the forcing status of a specified FNDH port.
 
@@ -1117,7 +1139,9 @@ class PasdBusSimulator(ObjectComponent):
         """
         return self._fndh_simulator.get_port_forcing(port_number)
 
-    def simulate_fndh_port_forcing(self: PasdBusSimulator, port_number: int, forcing: Optional[bool]) -> None:
+    def simulate_fndh_port_forcing(
+        self: PasdBusSimulator, port_number: int, forcing: Optional[bool]
+    ) -> None:
         """
         Simulate local forcing of the power of a specified FNDH port.
 
@@ -1204,9 +1228,11 @@ class PasdBusSimulator(ObjectComponent):
         :return: whether power is sensed that the specified port.
         """
         fndh_port = self._smartbox_fndh_ports[smartbox_id - 1]
-        return self._fndh_simulator.is_port_power_sensed(fndh_port) and self._smartbox_simulators[
-            smartbox_id - 1
-        ].is_port_power_sensed(smartbox_port_number)
+        return self._fndh_simulator.is_port_power_sensed(
+            fndh_port
+        ) and self._smartbox_simulators[smartbox_id - 1].is_port_power_sensed(
+            smartbox_port_number
+        )
 
     @property
     def smartbox_input_voltages(self: PasdBusSimulator) -> list[float]:
@@ -1226,7 +1252,10 @@ class PasdBusSimulator(ObjectComponent):
 
         :return: a list of voltages.
         """
-        return [smartbox.power_supply_output_voltage for smartbox in self._smartbox_simulators]
+        return [
+            smartbox.power_supply_output_voltage
+            for smartbox in self._smartbox_simulators
+        ]
 
     @property
     def smartbox_statuses(self: PasdBusSimulator) -> list[str]:
@@ -1246,7 +1275,9 @@ class PasdBusSimulator(ObjectComponent):
 
         :return: a list of temperatures.
         """
-        return [smartbox.power_supply_temperature for smartbox in self._smartbox_simulators]
+        return [
+            smartbox.power_supply_temperature for smartbox in self._smartbox_simulators
+        ]
 
     @property
     def smartbox_outside_temperatures(self: PasdBusSimulator) -> list[float]:
@@ -1331,7 +1362,9 @@ class PasdBusSimulator(ObjectComponent):
             for fndh_port in self._smartbox_fndh_ports
         ]
 
-    def get_smartbox_ports_power_sensed(self: PasdBusSimulator, smartbox_id: int) -> list[bool]:
+    def get_smartbox_ports_power_sensed(
+        self: PasdBusSimulator, smartbox_id: int
+    ) -> list[bool]:
         """
         Return whether power is sensed at each port of a smartbox.
 
@@ -1369,9 +1402,13 @@ class PasdBusSimulator(ObjectComponent):
             online.
         """
         fndh_ports = [
-            self._smartbox_fndh_ports[smartbox_id - 1] for (smartbox_id, _) in self._antenna_smartbox_ports
+            self._smartbox_fndh_ports[smartbox_id - 1]
+            for (smartbox_id, _) in self._antenna_smartbox_ports
         ]
-        return [self._fndh_simulator.is_port_power_sensed(fndh_port) for fndh_port in fndh_ports]
+        return [
+            self._fndh_simulator.is_port_power_sensed(fndh_port)
+            for fndh_port in fndh_ports
+        ]
 
     @property
     def antenna_forcings(self: PasdBusSimulator) -> list[Optional[bool]]:
@@ -1400,7 +1437,9 @@ class PasdBusSimulator(ObjectComponent):
             means it is not forced.
         """
         (smartbox_id, smartbox_port) = self._antenna_smartbox_ports[antenna_id - 1]
-        return self._smartbox_simulators[smartbox_id - 1].get_port_forcing(smartbox_port)
+        return self._smartbox_simulators[smartbox_id - 1].get_port_forcing(
+            smartbox_port
+        )
 
     def simulate_antenna_forcing(
         self: PasdBusSimulator, antenna_id: int, forcing: Optional[bool]
@@ -1416,9 +1455,13 @@ class PasdBusSimulator(ObjectComponent):
         :return: whether successful, or None if there was nothing to do
         """
         (smartbox_id, smartbox_port) = self._antenna_smartbox_ports[antenna_id - 1]
-        return self._smartbox_simulators[smartbox_id - 1].simulate_port_forcing(smartbox_port, forcing)
+        return self._smartbox_simulators[smartbox_id - 1].simulate_port_forcing(
+            smartbox_port, forcing
+        )
 
-    def simulate_antenna_breaker_trip(self: PasdBusSimulator, antenna_id: int) -> Optional[bool]:
+    def simulate_antenna_breaker_trip(
+        self: PasdBusSimulator, antenna_id: int
+    ) -> Optional[bool]:
         """
         Simulate an antenna breaker trip.
 
@@ -1428,9 +1471,13 @@ class PasdBusSimulator(ObjectComponent):
         :return: whether successful, or None if there was nothing to do
         """
         (smartbox_id, smartbox_port) = self._antenna_smartbox_ports[antenna_id - 1]
-        return self._smartbox_simulators[smartbox_id - 1].simulate_port_breaker_trip(smartbox_port)
+        return self._smartbox_simulators[smartbox_id - 1].simulate_port_breaker_trip(
+            smartbox_port
+        )
 
-    def reset_antenna_breaker(self: PasdBusSimulator, antenna_id: int) -> Optional[bool]:
+    def reset_antenna_breaker(
+        self: PasdBusSimulator, antenna_id: int
+    ) -> Optional[bool]:
         """
         Reset a tripped antenna breaker.
 
@@ -1440,7 +1487,9 @@ class PasdBusSimulator(ObjectComponent):
         :return: Whether successful, or None if there was nothing to do
         """
         (smartbox_id, smartbox_port) = self._antenna_smartbox_ports[antenna_id - 1]
-        return self._smartbox_simulators[smartbox_id - 1].reset_port_breaker(smartbox_port)
+        return self._smartbox_simulators[smartbox_id - 1].reset_port_breaker(
+            smartbox_port
+        )
 
     @property
     def antennas_tripped(self: PasdBusSimulator) -> list[bool]:
@@ -1451,7 +1500,9 @@ class PasdBusSimulator(ObjectComponent):
             had its breaker tripped.
         """
         return [
-            self._smartbox_simulators[smartbox_id - 1].is_port_breaker_tripped(smartbox_port)
+            self._smartbox_simulators[smartbox_id - 1].is_port_breaker_tripped(
+                smartbox_port
+            )
             for (smartbox_id, smartbox_port) in self._antenna_smartbox_ports
         ]
 
@@ -1476,7 +1527,9 @@ class PasdBusSimulator(ObjectComponent):
         if self.turn_smartbox_on(smartbox_id, desired_on_if_offline) is False:
             return False
 
-        return self._smartbox_simulators[smartbox_id - 1].turn_port_on(smartbox_port, desired_on_if_offline)
+        return self._smartbox_simulators[smartbox_id - 1].turn_port_on(
+            smartbox_port, desired_on_if_offline
+        )
 
     def turn_antenna_off(self: PasdBusSimulator, antenna_id: int) -> Optional[bool]:
         """
@@ -1489,7 +1542,9 @@ class PasdBusSimulator(ObjectComponent):
         """
         (smartbox_id, smartbox_port) = self._antenna_smartbox_ports[antenna_id - 1]
         result = self._smartbox_simulators[smartbox_id - 1].turn_port_off(smartbox_port)
-        if result and not any(self._smartbox_simulators[smartbox_id - 1].ports_desired_power_online):
+        if result and not any(
+            self._smartbox_simulators[smartbox_id - 1].ports_desired_power_online
+        ):
             _ = self.turn_smartbox_off(smartbox_id)
         return result
 
@@ -1502,7 +1557,9 @@ class PasdBusSimulator(ObjectComponent):
             powered on.
         """
         return [
-            self._smartbox_simulators[smartbox_id - 1].is_port_power_sensed(smartbox_port)
+            self._smartbox_simulators[smartbox_id - 1].is_port_power_sensed(
+                smartbox_port
+            )
             for (smartbox_id, smartbox_port) in self._antenna_smartbox_ports
         ]
 
@@ -1515,7 +1572,9 @@ class PasdBusSimulator(ObjectComponent):
             online.
         """
         return [
-            self._smartbox_simulators[smartbox_id - 1].get_port_desired_power_online(smartbox_port)
+            self._smartbox_simulators[smartbox_id - 1].get_port_desired_power_online(
+                smartbox_port
+            )
             for (smartbox_id, smartbox_port) in self._antenna_smartbox_ports
         ]
 
@@ -1528,7 +1587,9 @@ class PasdBusSimulator(ObjectComponent):
             offline.
         """
         return [
-            self._smartbox_simulators[smartbox_id - 1].get_port_desired_power_offline(smartbox_port)
+            self._smartbox_simulators[smartbox_id - 1].get_port_desired_power_offline(
+                smartbox_port
+            )
             for (smartbox_id, smartbox_port) in self._antenna_smartbox_ports
         ]
 
@@ -1540,7 +1601,9 @@ class PasdBusSimulator(ObjectComponent):
         :return: a list of currents.
         """
         return [
-            self._smartbox_simulators[smartbox_id - 1].get_port_current_draw(smartbox_port)
+            self._smartbox_simulators[smartbox_id - 1].get_port_current_draw(
+                smartbox_port
+            )
             for (smartbox_id, smartbox_port) in self._antenna_smartbox_ports
         ]
 

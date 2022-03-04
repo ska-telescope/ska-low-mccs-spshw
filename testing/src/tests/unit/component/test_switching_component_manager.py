@@ -89,7 +89,9 @@ class TestSwitcher:
         option_a.bah.assert_not_called()
         option_b.bah.assert_called_once_with()
 
-        with pytest.raises(NotImplementedError, match="Unimplemented switcher mode 'c'."):
+        with pytest.raises(
+            NotImplementedError, match="Unimplemented switcher mode 'c'."
+        ):
             switcher.switcher_mode = "c"
         assert switcher.switcher_mode == "b"
 

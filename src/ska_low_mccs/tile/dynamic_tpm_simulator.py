@@ -79,7 +79,9 @@ class _DynamicValuesGenerator:
         # First let's calculate the interval into which `in_range_rate`
         # proportion of values will fall, if we were drawing uniform
         # values from the range [-1, 1].
-        interval = scipy.stats.norm.interval(in_range_rate, scale=math.sqrt(window_size / 3.0))
+        interval = scipy.stats.norm.interval(
+            in_range_rate, scale=math.sqrt(window_size / 3.0)
+        )
 
         # Now we calculate the scale and offset that will shift that
         # interval to the interval we want: [soft_min, soft_max].
@@ -179,8 +181,12 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         self._fpga2_temperature: Optional[float] = None
 
         self._updater = _DynamicValuesUpdater(1.0)
-        self._updater.add_target(_DynamicValuesGenerator(4.55, 5.45), self._voltage_changed)
-        self._updater.add_target(_DynamicValuesGenerator(0.05, 2.95), self._current_changed)
+        self._updater.add_target(
+            _DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
+        )
+        self._updater.add_target(
+            _DynamicValuesGenerator(0.05, 2.95), self._current_changed
+        )
         self._updater.add_target(
             _DynamicValuesGenerator(16.0, 47.0),
             self._board_temperature_changed,
@@ -211,7 +217,9 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         assert self._board_temperature is not None  # for the type checker
         return self._board_temperature
 
-    def _board_temperature_changed(self: DynamicTpmSimulator, board_temperature: float) -> None:
+    def _board_temperature_changed(
+        self: DynamicTpmSimulator, board_temperature: float
+    ) -> None:
         """
         Call this method when the board temperature changes.
 
@@ -265,7 +273,9 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         assert self._fpga1_temperature is not None  # for the type checker
         return self._fpga1_temperature
 
-    def _fpga1_temperature_changed(self: DynamicTpmSimulator, fpga1_temperature: float) -> None:
+    def _fpga1_temperature_changed(
+        self: DynamicTpmSimulator, fpga1_temperature: float
+    ) -> None:
         """
         Call this method when the FPGA1 temperature changes.
 
@@ -283,7 +293,9 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         assert self._fpga2_temperature is not None  # for the type checker
         return self._fpga2_temperature
 
-    def _fpga2_temperature_changed(self: DynamicTpmSimulator, fpga2_temperature: float) -> None:
+    def _fpga2_temperature_changed(
+        self: DynamicTpmSimulator, fpga2_temperature: float
+    ) -> None:
         """
         Call this method when the FPGA2 temperature changes.
 

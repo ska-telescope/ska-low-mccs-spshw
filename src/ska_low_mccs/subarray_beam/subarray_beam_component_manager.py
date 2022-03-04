@@ -11,7 +11,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, cast
 
-from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager, check_communicating
+from ska_low_mccs.component import (
+    CommunicationStatus,
+    ObjectComponentManager,
+    check_communicating,
+)
 from ska_low_mccs.subarray_beam import SubarrayBeam
 
 __all__ = ["SubarrayBeamComponentManager"]
@@ -147,7 +151,9 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             super().__setattr__(name, value)
 
     @check_communicating
-    def _set_in_component(self: SubarrayBeamComponentManager, name: str, value: Any) -> None:
+    def _set_in_component(
+        self: SubarrayBeamComponentManager, name: str, value: Any
+    ) -> None:
         """
         Set an attribute in the component (if we are communicating with it).
 

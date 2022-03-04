@@ -112,7 +112,9 @@ class TestMccsDeviceProxy:
             # that other mock callbacks were not called.
             for j in range(event_count):
                 if i == j:
-                    mock_callbacks[j].assert_called_once_with(event_name, event_value, event_quality)
+                    mock_callbacks[j].assert_called_once_with(
+                        event_name, event_value, event_quality
+                    )
                     mock_callbacks[j].reset_mock()
                 else:
                     mock_callbacks[j].assert_not_called()

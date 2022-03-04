@@ -76,7 +76,9 @@ class ResourceManager:
             resource manager
         """
         unsupported_types = {
-            resource_type for resource_type in resources if resource_type not in self._allocations
+            resource_type
+            for resource_type in resources
+            if resource_type not in self._allocations
         }
         if unsupported_types:
             raise ValueError(f"Unsupported resource types: {unsupported_types}.")
@@ -147,7 +149,9 @@ class ResourceManager:
             if unallocatable[resource_type]
         }
         if unallocatable:
-            raise ValueError(f"Cannot allocate resources: {unallocatable} to allocatee {allocatee}.")
+            raise ValueError(
+                f"Cannot allocate resources: {unallocatable} to allocatee {allocatee}."
+            )
 
     def allocate(
         self: ResourceManager,
@@ -242,7 +246,9 @@ class ResourceManager:
 
         # discard empty entries
         allocated = {
-            resource_type: allocated[resource_type] for resource_type in allocated if allocated[resource_type]
+            resource_type: allocated[resource_type]
+            for resource_type in allocated
+            if allocated[resource_type]
         }
 
         return allocated
@@ -350,7 +356,9 @@ class _HealthfulResourceManager(ResourceManager):
         }
         # discard empty entries
         unhealthy = {
-            resource_type: unhealthy[resource_type] for resource_type in unhealthy if unhealthy[resource_type]
+            resource_type: unhealthy[resource_type]
+            for resource_type in unhealthy
+            if unhealthy[resource_type]
         }
         if unhealthy:
             raise ValueError(f"Cannot allocate unhealthy resources: {unhealthy}.")
@@ -375,7 +383,9 @@ class _HealthfulResourceManager(ResourceManager):
         self._validate_resources(**{resource_type: {resource}})
 
         if resource_type not in self._healthy:
-            raise ValueError(f"Resource type {resource_type} is not managed for health.")
+            raise ValueError(
+                f"Resource type {resource_type} is not managed for health."
+            )
         self._healthy[resource_type][resource] = is_healthy
 
 

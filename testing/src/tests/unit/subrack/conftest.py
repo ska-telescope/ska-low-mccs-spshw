@@ -229,7 +229,11 @@ def subrack_driver(
             "subrack_fan_modes": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES,
             "tpm_count": SubrackData.TPM_BAY_COUNT,
             #  "tpm_temperatures" is not implemented in driver
-            "tpm_powers": [SubrackSimulator.DEFAULT_TPM_VOLTAGE * SubrackSimulator.DEFAULT_TPM_CURRENT] * 8,
+            "tpm_powers": [
+                SubrackSimulator.DEFAULT_TPM_VOLTAGE
+                * SubrackSimulator.DEFAULT_TPM_CURRENT
+            ]
+            * 8,
             "tpm_voltages": [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8,
             "power_supply_fan_speeds": SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
             "power_supply_currents": SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
@@ -239,7 +243,9 @@ def subrack_driver(
             "tpm_currents": [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8,
         }
 
-        def __init__(self: MockResponse, params: Optional[dict[str, str]] = None) -> None:
+        def __init__(
+            self: MockResponse, params: Optional[dict[str, str]] = None
+        ) -> None:
             """
             Initialise a new instance.
 

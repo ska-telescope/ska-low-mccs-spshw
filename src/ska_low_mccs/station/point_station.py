@@ -265,7 +265,9 @@ class Pointing(object):
                 self._reference_antenna_loc,
             )
             # TODO: This code needs investigation
-            self._delay_rates = self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
+            self._delay_rates = (
+                self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
+            )
 
         # Set above horizon flag
         self._below_horizon = False
@@ -292,7 +294,10 @@ class Pointing(object):
         # Compute frequency range
         channel_bandwidth = 400e6 / 512.0
         frequencies = np.array(
-            [start_channel * channel_bandwidth + i * channel_bandwidth for i in range(nof_channels)]
+            [
+                start_channel * channel_bandwidth + i * channel_bandwidth
+                for i in range(nof_channels)
+            ]
         )
 
         # Generate coefficients
@@ -304,7 +309,9 @@ class Pointing(object):
         # All done, return coefficients
         return coefficients  # type: ignore[return-value]
 
-    def _delays_from_altitude_azimuth(self: Pointing, altitude: float, azimuth: float) -> List[float]:
+    def _delays_from_altitude_azimuth(
+        self: Pointing, altitude: float, azimuth: float
+    ) -> List[float]:
         """
         Calculate the delay using a target altitude Azimuth.
 
@@ -416,7 +423,9 @@ class PointingDriver:  # pragma: no cover
         self.pointing = Pointing(station)
         self._results: list[dict[str, Any]] = []
 
-    def statpos(self: PointingDriver, lat: float, lon: float, height: float) -> PointingDriver:
+    def statpos(
+        self: PointingDriver, lat: float, lon: float, height: float
+    ) -> PointingDriver:
         """
         Command to set the station reference position.
 
@@ -577,7 +586,9 @@ class PointingDriver:  # pragma: no cover
         # An empty jobs queue means we can signal completion with None
         results.put(None)
 
-    def msequence(self: PointingDriver, count: int, interval: float, nproc: int) -> Optional[PointingDriver]:
+    def msequence(
+        self: PointingDriver, count: int, interval: float, nproc: int
+    ) -> Optional[PointingDriver]:
         """
         Multiprocessing version of the sequence CLI command.
 
@@ -603,7 +614,9 @@ class PointingDriver:  # pragma: no cover
         results_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
 
         processes = [
-            multiprocessing.Process(target=self.pointing_job, args=(job_queue, results_queue))
+            multiprocessing.Process(
+                target=self.pointing_job, args=(job_queue, results_queue)
+            )
             for x in range(nproc)
         ]
 
@@ -671,7 +684,9 @@ class PointingDriver:  # pragma: no cover
                 outfile.write(",")
                 outfile.write(str(result["el"]))
                 outfile.write(",")
-                delays = result["delays"].reshape((1, self.pointing.station.antennas.nof_elements))
+                delays = result["delays"].reshape(
+                    (1, self.pointing.station.antennas.nof_elements)
+                )
                 np.savetxt(outfile, delays, delimiter=",")
 
     def done(self: PointingDriver) -> None:

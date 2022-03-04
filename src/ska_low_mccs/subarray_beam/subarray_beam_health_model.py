@@ -50,7 +50,9 @@ class SubarrayBeamHealthModel(HealthModel):
             health = HealthState.DEGRADED
         return health
 
-    def is_beam_locked_changed(self: SubarrayBeamHealthModel, is_beam_locked: bool) -> None:
+    def is_beam_locked_changed(
+        self: SubarrayBeamHealthModel, is_beam_locked: bool
+    ) -> None:
         """
         Handle a change in whether the subarray beam is locked.
 

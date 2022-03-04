@@ -13,7 +13,10 @@ from typing import Any, Union
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_low_mccs.transient_buffer import TransientBuffer, TransientBufferComponentManager
+from ska_low_mccs.transient_buffer import (
+    TransientBuffer,
+    TransientBufferComponentManager,
+)
 
 
 class TestTransientBuffer:
@@ -63,7 +66,9 @@ class TestTransientBuffer:
         elif request.param == "transient_buffer_component_manager":
             transient_buffer_component_manager.start_communicating()
             return transient_buffer_component_manager
-        raise ValueError("transient_buffer fixture parametrized with unrecognised option")
+        raise ValueError(
+            "transient_buffer fixture parametrized with unrecognised option"
+        )
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),

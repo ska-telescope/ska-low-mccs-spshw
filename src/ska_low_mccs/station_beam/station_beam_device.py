@@ -19,7 +19,10 @@ from tango.server import attribute, command, device_property
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.station_beam import StationBeamComponentManager, StationBeamHealthModel
+from ska_low_mccs.station_beam import (
+    StationBeamComponentManager,
+    StationBeamHealthModel,
+)
 
 __all__ = ["MccsStationBeam", "main"]
 
@@ -134,7 +137,9 @@ class MccsStationBeam(SKAObsDevice):
         }
 
         self.op_state_model.perform_action(action_map[communication_status])
-        self._health_model.is_communicating(communication_status == CommunicationStatus.ESTABLISHED)
+        self._health_model.is_communicating(
+            communication_status == CommunicationStatus.ESTABLISHED
+        )
 
     def health_changed(self: MccsStationBeam, health: HealthState) -> None:
         """

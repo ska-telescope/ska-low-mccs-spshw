@@ -15,7 +15,10 @@ import pytest
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
-from ska_low_mccs.transient_buffer import TransientBuffer, TransientBufferComponentManager
+from ska_low_mccs.transient_buffer import (
+    TransientBuffer,
+    TransientBufferComponentManager,
+)
 
 
 @pytest.fixture()

@@ -42,7 +42,9 @@ def patched_station_device_class() -> type[MccsStation]:
         """
 
         @command(dtype_in=int)
-        def FakeSubservientDevicesPowerState(self: PatchedStationDevice, power_mode: int) -> None:
+        def FakeSubservientDevicesPowerState(
+            self: PatchedStationDevice, power_mode: int
+        ) -> None:
             power_mode = PowerState(power_mode)
             with self.component_manager._power_mode_lock:
                 self.component_manager._apiu_power_mode = power_mode
@@ -371,13 +373,21 @@ class TestMccsIntegrationTmc:
 
         # register a callback so we can block on state changes
         # instead of sleeping
-        controller.add_change_event_callback("state", controller_device_state_changed_callback)
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        controller.add_change_event_callback(
+            "state", controller_device_state_changed_callback
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
 
         # register a callback so we can block on obsState changes
         # instead of sleeping
-        subarray_1.add_change_event_callback("obsState", subarray_device_obs_state_changed_callback)
-        subarray_device_obs_state_changed_callback.assert_next_change_event(ObsState.EMPTY)
+        subarray_1.add_change_event_callback(
+            "obsState", subarray_device_obs_state_changed_callback
+        )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.EMPTY
+        )
 
         subarray_1.adminMode = AdminMode.ONLINE
         subarray_2.adminMode = AdminMode.ONLINE
@@ -392,7 +402,9 @@ class TestMccsIntegrationTmc:
         time.sleep(0.1)
         controller.adminMode = AdminMode.ONLINE
 
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
 
         # Make the station think it has received events from its APIU,
         # tiles and antennas, telling it they are all OFF. This makes
@@ -401,7 +413,9 @@ class TestMccsIntegrationTmc:
         station_1.FakeSubservientDevicesPowerState(PowerState.OFF)
         station_2.FakeSubservientDevicesPowerState(PowerState.OFF)
 
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )
 
         assert controller.state() == tango.DevState.OFF
         assert subarray_1.state() == tango.DevState.ON
@@ -422,14 +436,19 @@ class TestMccsIntegrationTmc:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in controller._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in controller._change_event_subscription_ids
+        )
 
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
         assert "OnCommand" in unique_id
 
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
 
         # Make the station think it has received events from its APIU,
         # tiles and antennas, telling it they are all ON. This makes
@@ -445,7 +464,9 @@ class TestMccsIntegrationTmc:
             expected_message="Controller On command completed OK",
         )
 
-        controller_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        )
 
         assert controller.state() == tango.DevState.ON
         assert subarray_1.state() == tango.DevState.ON
@@ -470,9 +491,13 @@ class TestMccsIntegrationTmc:
         assert result_code == ResultCode.OK
         assert "Allocate command completed OK" in message
 
-        subarray_device_obs_state_changed_callback.assert_next_change_event(ObsState.RESOURCING)
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.RESOURCING
+        )
 
-        subarray_device_obs_state_changed_callback.assert_next_change_event(ObsState.IDLE)
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.IDLE
+        )
 
         assert subarray_beam_1.state() == tango.DevState.ON
         assert subarray_beam_2.state() == tango.DevState.ON
@@ -545,8 +570,12 @@ class TestMccsIntegrationTmc:
         assert result_code == ResultCode.QUEUED
         assert "Release command queued" in message
 
-        subarray_device_obs_state_changed_callback.assert_next_change_event(ObsState.RESOURCING)
-        subarray_device_obs_state_changed_callback.assert_next_change_event(ObsState.EMPTY)
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.RESOURCING
+        )
+        subarray_device_obs_state_changed_callback.assert_next_change_event(
+            ObsState.EMPTY
+        )
 
         ([result_code], [unique_id]) = controller.Off()
         assert result_code == ResultCode.QUEUED
@@ -573,7 +602,9 @@ class TestMccsIntegrationTmc:
         ]
         self._show_state_of_devices(devices)
 
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.OFF
+        )
 
     def _show_state_of_devices(
         self: TestMccsIntegrationTmc,

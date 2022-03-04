@@ -99,8 +99,12 @@ def we_have_mvplow_running_an_instance_of(
     if subsystem_name == "tmc":
         return
 
-    controller.add_change_event_callback("state", controller_device_state_changed_callback)
-    controller_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+    controller.add_change_event_callback(
+        "state", controller_device_state_changed_callback
+    )
+    controller_device_state_changed_callback.assert_next_change_event(
+        tango.DevState.DISABLE
+    )
 
     # TODO: Looking for a very stable way to bring the MCCS devices into
     # ONLINE state. Doing that all at once has been seen to be unstable.
@@ -149,7 +153,9 @@ def we_have_mvplow_running_an_instance_of(
             else:
                 break
 
-    controller_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+    controller_device_state_changed_callback.assert_last_change_event(
+        tango.DevState.OFF
+    )
 
 
 @given(parsers.parse("{subsystem_name} is ready to {direction} on command"))

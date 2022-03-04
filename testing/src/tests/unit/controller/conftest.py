@@ -19,7 +19,11 @@ from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.controller import ControllerComponentManager, ControllerResourceManager, MccsController
+from ska_low_mccs.controller import (
+    ControllerComponentManager,
+    ControllerResourceManager,
+    MccsController,
+)
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
     MockCallable,
@@ -347,14 +351,22 @@ def initial_mocks(
     :return: specification of the mock devices to be set up in the Tango
         test harness.
     """
-    initial_mocks = {subarray_fqdn: mock_subarray_factory() for subarray_fqdn in subarray_fqdns}
-    initial_mocks.update({station_fqdn: mock_station_factory() for station_fqdn in station_fqdns})
-    initial_mocks.update({subrack_fqdn: mock_subrack_factory() for subrack_fqdn in subrack_fqdns})
+    initial_mocks = {
+        subarray_fqdn: mock_subarray_factory() for subarray_fqdn in subarray_fqdns
+    }
+    initial_mocks.update(
+        {station_fqdn: mock_station_factory() for station_fqdn in station_fqdns}
+    )
+    initial_mocks.update(
+        {subrack_fqdn: mock_subrack_factory() for subrack_fqdn in subrack_fqdns}
+    )
     return initial_mocks
 
 
 @pytest.fixture()
-def subarray_proxies(subarray_fqdns: Iterable[str], logger: logging.Logger) -> dict[str, MccsDeviceProxy]:
+def subarray_proxies(
+    subarray_fqdns: Iterable[str], logger: logging.Logger
+) -> dict[str, MccsDeviceProxy]:
     """
     Return a dictioanry of proxies to subarray devices.
 
@@ -367,7 +379,9 @@ def subarray_proxies(subarray_fqdns: Iterable[str], logger: logging.Logger) -> d
 
 
 @pytest.fixture()
-def station_proxies(station_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
+def station_proxies(
+    station_fqdns: Iterable[str], logger: logging.Logger
+) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to station devices.
 
@@ -380,7 +394,9 @@ def station_proxies(station_fqdns: Iterable[str], logger: logging.Logger) -> lis
 
 
 @pytest.fixture()
-def subrack_proxies(subrack_fqdns: Iterable[str], logger: logging.Logger) -> list[MccsDeviceProxy]:
+def subrack_proxies(
+    subrack_fqdns: Iterable[str], logger: logging.Logger
+) -> list[MccsDeviceProxy]:
     """
     Return a list of proxies to subrack devices.
 
@@ -464,8 +480,12 @@ def patched_controller_device_class(
             self._communication_status: Optional[CommunicationStatus] = None
             self._component_power_mode: Optional[PowerState] = None
 
-            mock_component_manager._communication_status_changed_callback = self._communication_status_changed
-            mock_component_manager._component_power_mode_changed_callback = self._component_power_mode_changed
+            mock_component_manager._communication_status_changed_callback = (
+                self._communication_status_changed
+            )
+            mock_component_manager._component_power_mode_changed_callback = (
+                self._component_power_mode_changed
+            )
             mock_component_manager._subrack_health_changed_callback = (
                 self._health_model.subrack_health_changed
             )

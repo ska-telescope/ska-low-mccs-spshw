@@ -142,7 +142,9 @@ class TestPowerManagement:
         for device in devices:
             assert device.state() == expected_state, f"device = {device.name}"
 
-    def test_controller_state_rollup(self: TestPowerManagement, tango_harness: TangoHarness) -> None:
+    def test_controller_state_rollup(
+        self: TestPowerManagement, tango_harness: TangoHarness
+    ) -> None:
         """
         Test rollup.
 
@@ -241,7 +243,9 @@ class TestPowerManagement:
         assert subrack.state() == tango.DevState.DISABLE
         subrack.adminMode = AdminMode.ONLINE
         time.sleep(0.1)
-        self._check_states(tiles + stations + [controller] + [subrack], tango.DevState.OFF)
+        self._check_states(
+            tiles + stations + [controller] + [subrack], tango.DevState.OFF
+        )
 
     @pytest.mark.timeout(19)
     def test_power_on(
@@ -283,7 +287,9 @@ class TestPowerManagement:
             controller_device_state_changed_callback,
         )
         assert "state" in controller._change_event_subscription_ids
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.DISABLE
+        )
 
         devices = [
             apiu_1,
@@ -309,8 +315,12 @@ class TestPowerManagement:
         for device in devices:
             device.adminMode = AdminMode.ONLINE
 
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
-        controller_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.OFF
+        )
 
         for device in devices:
             assert device.state() == tango.DevState.OFF
@@ -320,7 +330,10 @@ class TestPowerManagement:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in controller._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in controller._change_event_subscription_ids
+        )
         time.sleep(0.1)  # allow event system time to run
         initial_lrc_result = ("", "", "")
         assert controller.longRunningCommandResult == initial_lrc_result

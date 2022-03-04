@@ -128,7 +128,10 @@ class TestSubrackSimulatorCommon:
             ),
             (
                 "tpm_powers",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE * SubrackSimulator.DEFAULT_TPM_CURRENT]
+                [
+                    SubrackSimulator.DEFAULT_TPM_VOLTAGE
+                    * SubrackSimulator.DEFAULT_TPM_CURRENT
+                ]
                 * SubrackData.TPM_BAY_COUNT,
             ),
             (
@@ -332,7 +335,11 @@ class TestSubrackDriverCommon:
         switching_subrack_component_manager: SwitchingSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
         request: SubRequest,
-    ) -> Union[SubrackDriver, SwitchingSubrackComponentManager, SubrackComponentManager,]:
+    ) -> Union[
+        SubrackDriver,
+        SwitchingSubrackComponentManager,
+        SubrackComponentManager,
+    ]:
         """
         Return the subrack class under test.
 
@@ -402,7 +409,9 @@ class TestSubrackDriverCommon:
         web_hardware_client_mock.connect.return_value = True
         assert subrack_driver.communication_status == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
-        assert subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
 
         # Wait for the message to execute
         time.sleep(0.1)
@@ -430,15 +439,21 @@ class TestSubrackDriverCommon:
         web_hardware_client_mock.connect.return_value = False
         assert subrack_driver.communication_status == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
-        assert subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
 
         # Wait for the message to execute
         time.sleep(0.1)
         web_hardware_client_mock.connect.assert_called_once()
         assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
-        assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.FAILED.value)
+        assert subrack_driver._queue_manager._task_result[1] == str(
+            ResultCode.FAILED.value
+        )
         assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
-        assert subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+        )
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -468,7 +483,10 @@ class TestSubrackDriverCommon:
             ("tpm_temperatures", [0.0] * SubrackData.TPM_BAY_COUNT),
             (
                 "tpm_powers",
-                [SubrackSimulator.DEFAULT_TPM_VOLTAGE * SubrackSimulator.DEFAULT_TPM_CURRENT]
+                [
+                    SubrackSimulator.DEFAULT_TPM_VOLTAGE
+                    * SubrackSimulator.DEFAULT_TPM_CURRENT
+                ]
                 * SubrackData.TPM_BAY_COUNT,
             ),
             (

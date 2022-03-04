@@ -20,7 +20,11 @@ import yaml
 from ska_tango_base.control_model import SimulationMode
 
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.pasd_bus import PasdBusComponentManager, PasdBusSimulator, PasdBusSimulatorComponentManager
+from ska_low_mccs.pasd_bus import (
+    PasdBusComponentManager,
+    PasdBusSimulator,
+    PasdBusSimulatorComponentManager,
+)
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
@@ -145,7 +149,9 @@ def mock_pasd_bus_simulator(
         setattr(
             type(mock_simulator),
             property_name,
-            mocker.PropertyMock(return_value=getattr(pasd_bus_simulator, property_name)),
+            mocker.PropertyMock(
+                return_value=getattr(pasd_bus_simulator, property_name)
+            ),
         )
 
     return mock_simulator

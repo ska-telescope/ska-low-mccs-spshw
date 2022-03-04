@@ -152,7 +152,9 @@ def initial_mocks(
 class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
-    def test_stationbeam_apply_pointing(self: TestMccsIntegration, tango_harness: TangoHarness) -> None:
+    def test_stationbeam_apply_pointing(
+        self: TestMccsIntegration, tango_harness: TangoHarness
+    ) -> None:
         """
         Test that a MccsStationBeam can apply delays to associated MccsTiles.
 

@@ -49,7 +49,9 @@ def patched_subarray_device_class() -> Type[MccsSubarray]:
         """
 
         @command(dtype_in=int)
-        def FakeSubservientDevicesObsState(self: PatchedSubarrayDevice, obs_state: ObsState) -> None:
+        def FakeSubservientDevicesObsState(
+            self: PatchedSubarrayDevice, obs_state: ObsState
+        ) -> None:
             obs_state = ObsState(obs_state)
 
             for fqdn in self.component_manager._device_obs_states:
@@ -100,7 +102,9 @@ class TestMccsSubarray:
     """Test class for MccsSubarray tests."""
 
     @pytest.fixture()
-    def device_under_test(self: TestMccsSubarray, tango_harness: TangoHarness) -> MccsDeviceProxy:
+    def device_under_test(
+        self: TestMccsSubarray, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
         """
         Fixture that returns the device under test.
 
@@ -152,7 +156,9 @@ class TestMccsSubarray:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     def test_GetVersionInfo(
@@ -174,7 +180,10 @@ class TestMccsSubarray:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
@@ -317,7 +326,10 @@ class TestMccsSubarray:
             "longRunningCommandResult",
             lrc_result_changed_callback,
         )
-        assert "longRunningCommandResult".casefold() in device_under_test._change_event_subscription_ids
+        assert (
+            "longRunningCommandResult".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
         time.sleep(0.1)  # allow event system time to run
         initial_lrc_result = ("", "", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result

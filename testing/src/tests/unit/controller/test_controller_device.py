@@ -13,7 +13,13 @@ import unittest
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, ControlMode, HealthState, SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
 
 from ska_low_mccs import MccsController, MccsDeviceProxy, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -214,21 +220,27 @@ class TestMccsController:
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
         mock_component_manager._subrack_health_changed_callback(
             "low-mccs/subrack/01",
             HealthState.FAILED,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.FAILED)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.FAILED
+        )
         assert device_under_test.healthState == HealthState.FAILED
 
         mock_component_manager._subrack_health_changed_callback(
             "low-mccs/subrack/01",
             HealthState.OK,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     def test_controlMode(

@@ -61,7 +61,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :raises AssertionError: if parameters are out of bounds
         """
-        assert logical_antenna_id > 0, "An APIU's logical antenna id must be positive integer."
+        assert (
+            logical_antenna_id > 0
+        ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
 
         self._antenna_change_registered = False
@@ -168,7 +170,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        assert event_name.lower() == "state", "state changed callback called but event_name is {event_name}."
+        assert (
+            event_name.lower() == "state"
+        ), "state changed callback called but event_name is {event_name}."
 
         super()._device_state_changed(event_name, event_value, event_quality)
         if event_value == tango.DevState.ON and not self._antenna_change_registered:
@@ -203,10 +207,13 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         :param event_quality: the quality of the change event
         """
         assert event_name.lower() == "areAntennasOn".lower(), (
-            "APIU 'areAntennasOn' attribute changed callback called but " f"event_name is {event_name}."
+            "APIU 'areAntennasOn' attribute changed callback called but "
+            f"event_name is {event_name}."
         )
         self.update_supplied_power_mode(
-            PowerState.ON if event_value[self._logical_antenna_id - 1] else PowerState.OFF
+            PowerState.ON
+            if event_value[self._logical_antenna_id - 1]
+            else PowerState.OFF
         )
 
 
@@ -251,7 +258,9 @@ class _TileProxy(DeviceComponentManager):
             component faults (or stops faulting)
         :raises AssertionError: if parameters are out of bounds
         """
-        assert logical_antenna_id > 0, "An APIU's logical antenna id must be positive integer."
+        assert (
+            logical_antenna_id > 0
+        ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
 
         super().__init__(
@@ -275,7 +284,9 @@ class _TileProxy(DeviceComponentManager):
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
-        raise NotImplementedError("Antenna power mode is not controlled via Tile device.")
+        raise NotImplementedError(
+            "Antenna power mode is not controlled via Tile device."
+        )
 
     def standby(self: _TileProxy) -> None:
         """
@@ -290,7 +301,9 @@ class _TileProxy(DeviceComponentManager):
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
-        raise NotImplementedError("Antenna power mode is not controlled via Tile device.")
+        raise NotImplementedError(
+            "Antenna power mode is not controlled via Tile device."
+        )
 
     def on(self: _TileProxy) -> None:
         """
@@ -304,7 +317,9 @@ class _TileProxy(DeviceComponentManager):
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
-        raise NotImplementedError("Antenna power mode is not controlled via Tile device.")
+        raise NotImplementedError(
+            "Antenna power mode is not controlled via Tile device."
+        )
 
     def reset(self: _TileProxy) -> None:
         """
@@ -364,8 +379,12 @@ class AntennaComponentManager(MccsComponentManager):
         self._apiu_power_mode = PowerState.UNKNOWN
         self._target_power_mode: Optional[PowerState] = None
 
-        self._apiu_communication_status: CommunicationStatus = CommunicationStatus.DISABLED
-        self._tile_communication_status: CommunicationStatus = CommunicationStatus.DISABLED
+        self._apiu_communication_status: CommunicationStatus = (
+            CommunicationStatus.DISABLED
+        )
+        self._tile_communication_status: CommunicationStatus = (
+            CommunicationStatus.DISABLED
+        )
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
@@ -489,7 +508,9 @@ class AntennaComponentManager(MccsComponentManager):
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_apiu = faulty
-        self.update_component_fault(self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile)
+        self.update_component_fault(
+            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
+        )
 
     def _tile_component_fault_changed(
         self: AntennaComponentManager,
@@ -501,7 +522,9 @@ class AntennaComponentManager(MccsComponentManager):
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_tile = faulty
-        self.update_component_fault(self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile)
+        self.update_component_fault(
+            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
+        )
 
     # @check_communicating
     def off(self: AntennaComponentManager) -> ResultCode | None:
@@ -549,11 +572,17 @@ class AntennaComponentManager(MccsComponentManager):
 
             if self._apiu_power_mode != PowerState.ON:
                 return ResultCode.QUEUED
-            if self.power_mode == PowerState.OFF and self._target_power_mode == PowerState.ON:
+            if (
+                self.power_mode == PowerState.OFF
+                and self._target_power_mode == PowerState.ON
+            ):
                 result_code = self._apiu_proxy.power_on()
                 self._target_power_mode = None
                 return result_code
-            if self.power_mode == PowerState.ON and self._target_power_mode == PowerState.OFF:
+            if (
+                self.power_mode == PowerState.ON
+                and self._target_power_mode == PowerState.OFF
+            ):
                 result_code = self._apiu_proxy.power_off()
                 self._target_power_mode = None
                 return result_code

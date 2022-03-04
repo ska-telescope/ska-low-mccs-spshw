@@ -97,9 +97,7 @@ nitpick_ignore = [
     ("py:exc", "PluginError"),
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "Status"),
-    ("py:exc", "yaml.YAMLError"),
-    ("py:class", "ska_tango_base.control_model.PowerState")
-    # TODO: Remove once our ska_tango_base version contains the rename to PowerState
+    ("py:exc", "yaml.YAMLError")
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

@@ -30,6 +30,7 @@ from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
     StaticTpmSimulator,
+    TileTime,
     TpmDriver,
 )
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
@@ -104,6 +105,8 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "fpga1_temperature",
         "fpga2_temperature",
         "fpgas_time",
+        "fpga_sync_time",
+        "fpga_current_frame",
         "get_40g_configuration",
         "tpm_version",
         "initialise_beamformer",
@@ -533,6 +536,8 @@ class TileComponentManager(MccsComponentManager):
             logger,
         )
 
+        self._tile_time = TileTime()
+
         super().__init__(
             logger,
             push_change_event,
@@ -629,25 +634,29 @@ class TileComponentManager(MccsComponentManager):
         """
         # Don't set comms NOT_ESTABLISHED here. It should already have been handled
         # synchronously by the orchestator.
-        self._subrack_proxy = MccsDeviceProxy(
-            self._subrack_fqdn, self._logger, connect=False
-        )
-        try:
-            self._subrack_proxy.connect()
-        except tango.DevFailed as dev_failed:
-            self._subrack_proxy = None
-            raise ConnectionError(
-                f"Could not connect to '{self._subrack_fqdn}'"
-            ) from dev_failed
+        # Check if it was already connected.
+        unconnected = self._subrack_proxy is None
+        if unconnected:
+            self._subrack_proxy = MccsDeviceProxy(
+                self._subrack_fqdn, self._logger, connect=False
+            )
+            try:
+                self._subrack_proxy.connect()
+            except tango.DevFailed as dev_failed:
+                self._subrack_proxy = None
+                raise ConnectionError(
+                    f"Could not connect to '{self._subrack_fqdn}'"
+                ) from dev_failed
 
-        self._subrack_proxy.add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerState",
+        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
+            f"tpm{self._subrack_tpm_id}PowerMode",
             self._tpm_power_mode_change_event_received,
         )
 
-        self._tile_orchestrator.update_subrack_communication_status(
-            CommunicationStatus.ESTABLISHED
-        )
+        if unconnected:
+            self._tile_orchestrator.update_subrack_communication_status(
+                CommunicationStatus.ESTABLISHED
+            )
 
     def _tpm_power_mode_change_event_received(
         self: TileComponentManager,
@@ -675,8 +684,7 @@ class TileComponentManager(MccsComponentManager):
     def _stop_communicating_with_subrack(self: TileComponentManager) -> None:
         self._subrack_proxy = None
 
-    # TODO: Convert this to a LRC, but lower priority. COnverted in subrack
-    # @enqueue
+    # Converted to a LRC, in subrack
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], _) = self._subrack_proxy.PowerOffTpm(self._subrack_tpm_id)
@@ -687,8 +695,7 @@ class TileComponentManager(MccsComponentManager):
             )
         return result_code
 
-    # TODO: Convert this to a LRC. Converted in subrack
-    # @enqueue
+    # Converted to a LRC, in subrack
     def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], _) = self._subrack_proxy.PowerOnTpm(self._subrack_tpm_id)
@@ -741,8 +748,10 @@ class TileComponentManager(MccsComponentManager):
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
                     self.initialise()
+                self._tile_time.set_reference_time(self.tile_reference_time)
             if power_mode == PowerState.STANDBY:
                 self.erase_fpga()
+                self._tile_time.set_reference_time(0)
 
     @property
     def simulation_mode(self: TileComponentManager) -> SimulationMode:
@@ -809,6 +818,53 @@ class TileComponentManager(MccsComponentManager):
             ).tpm_status
         return status
 
+    @property
+    def fpgas_unix_time(self: TileComponentManager) -> list[int]:
+        """
+        Return FPGA internal Unix time.
+
+        Used to check proper synchronization
+        :return: list of two Unix time integers
+        """
+        return self.fpgas_time
+
+    @property
+    def fpga_time(self: TileComponentManager) -> str:
+        """
+        Return FPGA internal time in UTC format.
+
+        :return: FPGA internal time
+        """
+        return self._tile_time.format_time_from_timestamp(self.fpgas_time[0])
+
+    @property
+    def fpga_reference_time(self: TileComponentManager) -> str:
+        """
+        Return FPGA reference time in UTC format.
+
+        Reference time is set as part of start_observation.
+        It represents the timestamp  for the first frame
+
+        :return: FPGA reference time
+        """
+        reference_time = self.fpga_sync_time
+        self._tile_time.set_reference_time(reference_time)
+        return self._tile_time.format_time_from_timestamp(reference_time)
+
+    @property
+    def fpga_frame_time(self: TileComponentManager) -> str:
+        """
+        Return FPGA frame time in UTC format.
+
+        frame time is the timestamp for the current frame being processed.
+        Value reported here refers to the ADC frames, but the total processing
+        delay is < 1ms and thus irrelevant on the timescales of MCCS response time
+
+        :return: FPGA reference time
+        """
+        self._tile_time.set_reference_time(self.fpga_sync_time)
+        return self._tile_time.format_time_from_frame(self.fpga_current_frame)
+
     __PASSTHROUGH = [
         "adc_rms",
         "arp_table",
@@ -831,6 +887,8 @@ class TileComponentManager(MccsComponentManager):
         "fpga1_temperature",
         "fpga2_temperature",
         "fpgas_time",
+        "fpga_sync_time",
+        "fpga_current_frame",
         "get_40g_configuration",
         "hardware_version",
         "initialise_beamformer",

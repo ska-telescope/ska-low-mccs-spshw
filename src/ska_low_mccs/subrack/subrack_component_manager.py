@@ -576,9 +576,12 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
-        cast(
-            SwitchingSubrackComponentManager, self._hardware_component_manager
-        ).turn_off_tpms()
+        try:
+            cast(
+                SwitchingSubrackComponentManager, self._hardware_component_manager
+            ).turn_off_tpms()
+        except ConnectionError:
+            self.logger.error("Cannot turn off the TPMs, the subrack is disconnected")
         result_code = super().off()
         return result_code
 

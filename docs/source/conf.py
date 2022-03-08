@@ -54,6 +54,7 @@ autodoc_mock_imports = [
     "pyaavs",
     "scipy",
     "ska_tango_base",
+    "strict_rfc3339",
     "tango",
     "uritools",
     "yaml",

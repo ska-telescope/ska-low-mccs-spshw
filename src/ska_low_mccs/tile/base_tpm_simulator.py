@@ -11,12 +11,14 @@ from __future__ import annotations  # allow forward references in type hints
 
 import copy
 import logging
+import time
 from typing import Any, Optional
 
 from typing_extensions import Final
 
 from ska_low_mccs.component import ObjectComponent
 
+from .tile_data import TileData
 from .tpm_status import TpmStatus
 
 __all__ = ["BaseTpmSimulator"]
@@ -118,6 +120,7 @@ class BaseTpmSimulator(ObjectComponent):
         self._forty_gb_core_list: list[dict[str, Any]] = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._test_generator_active = False
+        self._sync_time = 0
 
     @property
     def firmware_available(
@@ -349,6 +352,8 @@ class BaseTpmSimulator(ObjectComponent):
         :return: the FPGAs clock time
         """
         self.logger.debug("TpmSimulator: fpgas_time")
+        # self._fpgas_time[0] = int(time.time())
+        # self._fpgas_time[1] = self._fpgas_time[0]
         return self._fpgas_time
 
     @property
@@ -511,6 +516,27 @@ class BaseTpmSimulator(ObjectComponent):
         """
         self.logger.debug("TpmSimulator: arp_table")
         return copy.deepcopy(self._arp_table)
+
+    @property
+    def fpga_sync_time(self: BaseTpmSimulator) -> int:
+        """
+        Return reference time for timestamp.
+
+        :return: reference time
+        """
+        return self._sync_time
+
+    @property
+    def fpga_current_frame(self: BaseTpmSimulator) -> int:
+        """
+        Return current frame from timestamp.
+
+        :return: current frame
+        """
+        if self._sync_time == 0:
+            return 0
+        else:
+            return int((time.time() - self._sync_time) / (TileData.FRAME_PERIOD))
 
     def set_lmc_download(
         self: BaseTpmSimulator,
@@ -900,12 +926,12 @@ class BaseTpmSimulator(ObjectComponent):
         :param start_time: the time at which to start data acquisition,
             defaults to None
         :param delay: delay start, defaults to 2
-
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
         self.logger.debug("TpmSimulator:Start acquisition")
         self._tpm_status = TpmStatus.SYNCHRONISED
+        self._sync_time = int(time.time())
         raise NotImplementedError
 
     def set_time_delays(self: BaseTpmSimulator, delay: int) -> None:

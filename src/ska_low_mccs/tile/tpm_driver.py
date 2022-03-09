@@ -16,6 +16,7 @@ case, or a NotImplementedError exception raised.
 
 from __future__ import annotations  # allow forward references in type hints
 
+import sys
 import time
 import copy
 import logging
@@ -94,8 +95,6 @@ class TpmDriver(MccsComponentManager):
         """
         self._hardware_lock = threading.RLock()
         self._is_programmed = False
-        self._is_tpm_connected = False
-        self._desired_connection = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
 
@@ -149,18 +148,27 @@ class TpmDriver(MccsComponentManager):
             component_fault_callback,
         )
 
-        self._connection_thread = threading.Thread(
-            target=self.manage_tile_connection, daemon=True
-        )
-        self._connection_thread.start()
+        self._polling_period = 2.0
+        self._stop_polling_event = threading.Event()
 
-    def start_communicating(self: TpmDriver) -> None:
+        self._polling_thread = threading.Thread(
+            target=self._polling_thread_target,
+            daemon=True,
+        )
+
+    def start_communicating(self) -> None:
         """Establish communication with the TPM."""
         self.logger.debug("Start communication with the TPM...")
-        super().start_communicating()
-        self._desired_connection = True
+        # super().start_communicating()
+        if self.communication_status == CommunicationStatus.ESTABLISHED:
+            return
+        if self.communication_status == CommunicationStatus.DISABLED:
+            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        self._stop_polling_event.clear()
+        self._polling_thread.start()
+        return
 
-    def stop_communicating(self: TpmDriver) -> None:
+    def stop_communicating(self) -> None:
         """
         Stop communicating with the TPM.
 
@@ -168,15 +176,11 @@ class TpmDriver(MccsComponentManager):
             disconnect() method that we can call here?
         """
         self.logger.debug("Stop communication with the TPM...")
-        super().stop_communicating()
-        self._desired_connection = False
-
-    def manage_tile_connection(self: TpmDriver) -> None:
-        """Thread to establish and monitor communication with tpm."""
-        while True:
-            self.start_connection()
-
-            self.monitor_connection()
+        # super().stop_communicating()
+        if self.communication_status == CommunicationStatus.DISABLED:
+            return
+        self._stop_polling_event.set()
+        return
 
     def start_connection(self: TpmDriver) -> None:
         """
@@ -184,7 +188,8 @@ class TpmDriver(MccsComponentManager):
 
         :return: None
         """
-        if self._desired_connection:
+        while not ((self.communication_status == CommunicationStatus.ESTABLISHED) | (
+                self._stop_polling_event.is_set())):
             self.logger.debug("Trying to connect to tpm...")
             timeout = 0
             max_time = 5  # 15 seconds
@@ -208,46 +213,47 @@ class TpmDriver(MccsComponentManager):
                 time.sleep(0.5)
                 timeout = timeout + 1
             self.logger.error(
-                f"Connection to tile failed after {timeout*3} seconds. Waiting for instruction..."
+                f"Connection to tile failed after {timeout*3} seconds. Waiting for "
+                f"instruction..."
             )
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             self.update_component_fault(True)
-            self._is_tpm_connected = False
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
-            return
-        else:
-            time.sleep(0.2)
 
-    def monitor_connection(self: TpmDriver) -> None:
+    def _polling_thread_target(self) -> None:
         """
         Monitor tile connection to tpm.
 
         :return: None
         """
-        while self._is_tpm_connected:
-            counter = 0
-            while counter < 10:
-                if not self._desired_connection:
-                    self.tpm_disconnected()
-                    self._is_programmed = False
-                    return
-                counter += 1
-                time.sleep(0.2)
-            if self._hardware_lock.acquire(timeout=0.5):
-                try:
-                    self.tile[int(0x30000000)]
-                except Exception:
-                    self.logger.warning("Connection to tpm lost!")
-                    self.tpm_disconnected()
-                    if not self._desired_connection:
+        while not self._stop_polling_event.is_set():
+            if self.communication_status == CommunicationStatus.ESTABLISHED:
+                if self._hardware_lock.acquire(timeout=0.5):
+                    try:
+                        self.tile[int(0x30000000)]
+                    except Exception:
+                        # polling attempt was unsuccessful
+                        self.logger.warning("Connection to tpm lost!")
+                        self.tpm_disconnected()
                         self.update_component_fault(True)
+                        self._hardware_lock.release()
+                        continue
+                    # polling attempt succeeded
+                    self.updating_attributes()
                     self._hardware_lock.release()
-                    return
-                self.updating_attributes()
-                self._hardware_lock.release()
+                else:
+                    self.logger.debug("Failed to acquire lock")
+                # wait for a polling_period
+                self._stop_polling_event.wait(self._polling_period)
             else:
-                self.logger.debug("Failed to acquire lock")
+                self.start_connection()
+
+        # Polling loop has stopped, so we must have been told to stop communicating
+        self._is_programmed = False
+        self.tpm_disconnected()
+        sys.exit()
+        return
 
     def updating_attributes(self: TpmDriver) -> None:
         """Update key hardware attributes."""
@@ -260,11 +266,11 @@ class TpmDriver(MccsComponentManager):
                 self._voltage = self.tile.get_voltage()
         except Exception:
             self.logger.debug("Failed to update key hardware attributes...")
+        return
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
-        self._is_tpm_connected = True
         self.update_component_fault(False)
         self.logger.debug("Tpm connected to tile.")
         self._tpm_status = TpmStatus.UNPROGRAMMED
@@ -274,12 +280,12 @@ class TpmDriver(MccsComponentManager):
             self._is_programmed = True
         if self._is_programmed:
             self.logger.debug("Tpm programmed.")
+        return
 
     def tpm_disconnected(self: TpmDriver) -> None:
         """Tile disconnected to tpm."""
         self._tpm_status = TpmStatus.UNCONNECTED
         self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-        self._is_tpm_connected = False
         while True:
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
@@ -292,6 +298,7 @@ class TpmDriver(MccsComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
                 time.sleep(0.5)
         self.logger.debug("Tile disconnected from tpm.")
+        return
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:

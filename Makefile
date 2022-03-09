@@ -11,11 +11,6 @@
 #
 PROJECT = ska-low-mccs
 
-#PYTHON_RUNNER = poetry run
-
-# E203 and W503 conflict with black
-PYTHON_SWITCHES_FOR_FLAKE8 = --extend-ignore=BLK,T --enable=DAR104 --ignore=E203,FS003,W503,N802,E231,RST303 --max-complexity=10 \
-    --docstring-style=SPHINX  --max-line-length=135 --rst-roles=py:attr,py:class,py:const,py:exc,py:func,py:meth,py:mod
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = testing/src/

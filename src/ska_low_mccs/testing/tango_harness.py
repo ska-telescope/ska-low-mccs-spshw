@@ -614,8 +614,7 @@ class DeploymentContextTangoHarness(ClientProxyTangoHarness):
         """
         Write any memorized attributes defined in the configuration file to the device.
 
-        Currently this only writes adminMode, waiting for the result (equiv. to
-        green_mode is Synchronous) for up to 5 seconds.
+        Currently this only writes adminMode.
 
         :param name: the device name
         :param fqdn: the device fully qualified domain name
@@ -624,7 +623,7 @@ class DeploymentContextTangoHarness(ClientProxyTangoHarness):
         device = self.get_device(fqdn)
         if "adminMode" in memorized:
             [value] = memorized["adminMode"]
-            device.write_attribute("adminMode", int(value), wait=True, timeout=5.0)
+            device.write_attribute("adminMode", int(value))
 
 
 class WrapperTangoHarness(TangoHarness):

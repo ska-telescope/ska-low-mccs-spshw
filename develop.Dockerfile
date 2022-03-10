@@ -3,15 +3,16 @@ RUN apt-get update && apt-get install gnupg2 -y
 
 USER root
 
-RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python -
+ENV POETRY_HOME="/opt/poetry"
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
+RUN python3 -m pip install poetry
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./
 COPY ./pyfabil-1.0-py3-none-any.whl ./aavs_system-1.0-py3-none-any.whl ./
 
 RUN poetry install -vvv
-
-#USER tango
 
 ARG UID
 ARG GID

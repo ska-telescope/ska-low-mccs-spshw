@@ -649,7 +649,7 @@ class TileComponentManager(MccsComponentManager):
                 ) from dev_failed
 
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerMode",
+            f"tpm{self._subrack_tpm_id}PowerState",
             self._tpm_power_mode_change_event_received,
         )
 

@@ -107,7 +107,8 @@ nitpick_ignore = [
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "Status"),
     ("py:exc", "yaml.YAMLError"),
-    ("py:class", "ska_tango_base.control_model.PowerMode")
+    ("py:class", "ska_tango_base.control_model.PowerMode"),
+    ("py:class", "ska_tango_base.base.task_queue_manager.QueueManager")
     # TODO: Remove once our ska_tango_base version contains the rename to PowerState
 ]
 

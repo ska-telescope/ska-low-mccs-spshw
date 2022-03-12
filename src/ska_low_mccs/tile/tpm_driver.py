@@ -16,7 +16,6 @@ case, or a NotImplementedError exception raised.
 
 from __future__ import annotations  # allow forward references in type hints
 
-import sys
 import time
 import copy
 import logging
@@ -180,7 +179,7 @@ class TpmDriver(MccsComponentManager):
             return
         self._stop_polling_event.set()
 
-    def _polling_loop(self):
+    def _polling_loop(self) -> None:
         while True:
             # block on "start" event
             self._start_polling_event.wait()
@@ -230,8 +229,10 @@ class TpmDriver(MccsComponentManager):
 
         :return: None
         """
-        while not ((self.communication_status == CommunicationStatus.ESTABLISHED) | (
-                self._stop_polling_event.is_set())):
+        while not (
+            (self.communication_status == CommunicationStatus.ESTABLISHED)
+            | (self._stop_polling_event.is_set())
+        ):
             self.logger.debug("Trying to connect to tpm...")
             timeout = 0
             max_time = 5  # 15 seconds

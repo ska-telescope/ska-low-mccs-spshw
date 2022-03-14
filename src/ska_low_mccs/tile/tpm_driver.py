@@ -147,80 +147,164 @@ class TpmDriver(MccsComponentManager):
             component_fault_callback,
         )
 
-    def start_communicating(self: TpmDriver) -> None:
+        self._poll_rate = 2.0
+        self._start_polling_event = threading.Event()
+        self._stop_polling_event = threading.Event()
+
+        self._polling_thread = threading.Thread(
+            target=self._polling_loop,
+            name="alveo_polling_thread",
+            daemon=True,
+        )
+        self._polling_thread.start()  # doesn't start polling, only starts the thread
+
+    def start_communicating(self) -> None:
         """Establish communication with the TPM."""
-        self.logger.debug("Establish communication with the TPM")
-        super().start_communicating()
-        connect_to_tile_command = self.ConnectToTile(target=self)
-        _ = self.enqueue(connect_to_tile_command)
+        self.logger.debug("Start communication with the TPM...")
+        if self.communication_status == CommunicationStatus.ESTABLISHED:
+            return
+        if self.communication_status == CommunicationStatus.DISABLED:
+            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        self._start_polling_event.set()
 
-    class ConnectToTile(BaseCommand):
-        """Connect to Tile command class."""
-
-        def do(  # type: ignore[override]
-            self: TpmDriver.ConnectToTile,
-        ) -> tuple[ResultCode, str]:
-            """
-            Establish communication with the tile, then start monitoring.
-
-            This contains the actual communication logic that is enqueued to
-            be run asynchronously.
-
-            :return: a result code and message
-            """
-            target = self.target
-            target.logger.debug("Trying to connect to tile")
-            timeout = 0
-            max_time = 5  # 15 seconds
-            target._is_programmed = False
-            while timeout < max_time:
-                if target._hardware_lock.acquire(timeout=0.5):
-                    target.logger.debug("Lock acquired")
-                    try:
-                        target.tile.connect()
-                    except Exception:
-                        target.logger.debug("Failed to communicate with tile")
-                    target._hardware_lock.release()
-                    target.logger.debug("Lock released")
-                else:
-                    target.logger.debug("Failed to acquire lock")
-                if target.tile.tpm is None:
-                    target._tpm_status = TpmStatus.UNCONNECTED
-                else:
-                    target._tpm_status = TpmStatus.UNPROGRAMMED
-                    if target._check_programmed():
-                        target._tpm_status = TpmStatus.PROGRAMMED
-                    target.logger.debug("Connected to tile")
-                    target.update_communication_status(CommunicationStatus.ESTABLISHED)
-                    return ResultCode.OK, "Connected to Tile"
-                time.sleep(0.5)
-                timeout = timeout + 1
-            target.logger.error(f"Connection to tile failed after {timeout*3} seconds")
-            target.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-            return (
-                ResultCode.FAILED,
-                "Could not connect to Tile",
-            )
-
-    def stop_communicating(self: TpmDriver) -> None:
+    def stop_communicating(self) -> None:
         """
         Stop communicating with the TPM.
 
         :todo: is there a better way to do this? Should Tile16 have a
             disconnect() method that we can call here?
         """
-        super().stop_communicating()
+        self.logger.debug("Stop communication with the TPM...")
+        if self.communication_status == CommunicationStatus.DISABLED:
+            return
+        self._stop_polling_event.set()
+
+    def _polling_loop(self) -> None:
+        while True:
+            # block on "start" event
+            self._start_polling_event.wait()
+
+            # "start" event received; update state then poll until "stop" event received
+            self._stop_polling_event.clear()
+            while not self._stop_polling_event.is_set():
+                self._poll()
+                self._stop_polling_event.wait(self._poll_rate)
+
+            # "stop" event received; update state, then back to top of loop i.e. block
+            # on "start" event
+            self.tpm_disconnected()
+            self._is_programmed = False
+            self._start_polling_event.clear()
+
+    def _poll(self) -> None:
+        """
+        Monitor tile connection to tpm.
+
+        :return: None
+        """
+        if self.communication_status == CommunicationStatus.ESTABLISHED:
+            if self._hardware_lock.acquire(timeout=0.5):
+                try:
+                    self.tile[int(0x30000000)]
+                except Exception:
+                    # polling attempt was unsuccessful
+                    self.logger.warning("Connection to tpm lost!")
+                    self.tpm_disconnected()
+                    self.update_component_fault(True)
+                    self._hardware_lock.release()
+                    return
+                # polling attempt succeeded
+                self.updating_attributes()
+                self._hardware_lock.release()
+            else:
+                self.logger.debug("Failed to acquire lock")
+            # wait for a polling_period
+            return
+        else:
+            self.start_connection()
+
+    def start_connection(self: TpmDriver) -> None:
+        """
+        Try to connect tile to tpm.
+
+        :return: None
+        """
+        while not (
+            (self.communication_status == CommunicationStatus.ESTABLISHED)
+            | (self._stop_polling_event.is_set())
+        ):
+            self.logger.debug("Trying to connect to tpm...")
+            timeout = 0
+            max_time = 5  # 15 seconds
+            self._is_programmed = False
+            while timeout < max_time:
+                if self._hardware_lock.acquire(timeout=0.5):
+                    self.logger.debug("Lock acquired")
+                    try:
+                        self.tile.connect()
+                    except Exception:
+                        self.logger.debug("Failed to communicate with tile")
+                    self._hardware_lock.release()
+                    self.logger.debug("Lock released")
+                else:
+                    self.logger.debug("Failed to acquire lock")
+                if self.tile.tpm is None:
+                    self._tpm_status = TpmStatus.UNCONNECTED
+                else:
+                    self.tpm_connected()
+                    return
+                time.sleep(0.5)
+                timeout = timeout + 1
+            self.logger.error(
+                f"Connection to tile failed after {timeout*3} seconds. Waiting for "
+                f"instruction..."
+            )
+            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_component_fault(True)
+            self.logger.debug("Tile disconnected from tpm.")
+            time.sleep(10.0)
+
+    def updating_attributes(self: TpmDriver) -> None:
+        """Update key hardware attributes."""
+        try:
+            if self.tile.is_programmed():
+                self.logger.debug("Updating key hardware attributes...")
+                self._fpga1_temperature = self.tile.get_fpga0_temperature()
+                self._fpga2_temperature = self.tile.get_fpga1_temperature()
+                self._board_temperature = self.tile.get_temperature()
+                self._voltage = self.tile.get_voltage()
+        except Exception:
+            self.logger.debug("Failed to update key hardware attributes...")
+
+    def tpm_connected(self: TpmDriver) -> None:
+        """Tile connected to tpm."""
+        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self.update_component_fault(False)
+        self.logger.debug("Tpm connected to tile.")
+        self._tpm_status = TpmStatus.UNPROGRAMMED
+        self._is_programmed = False
+        if self._check_programmed():
+            self._tpm_status = TpmStatus.PROGRAMMED
+            self._is_programmed = True
+        if self._is_programmed:
+            self.logger.debug("Tpm programmed.")
+
+    def tpm_disconnected(self: TpmDriver) -> None:
+        """Tile disconnected to tpm."""
         self._tpm_status = TpmStatus.UNCONNECTED
         self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-        self._is_programmed = False
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self.tile.tpm = None
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
+        while True:
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    self.tile.tpm = None
+                except Exception:
+                    self.logger.warning("TpmDriver: Tile access failed")
+                self._hardware_lock.release()
+                break
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
+                time.sleep(0.5)
+        self.logger.debug("Tile disconnected from tpm.")
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -378,7 +462,7 @@ class TpmDriver(MccsComponentManager):
 
         :param bitfile: a binary firmware blob
         """
-        download_file_command = self.ConnectToTile(target=self)
+        download_file_command = self.DownloadFirmware(target=self)
         _ = self.enqueue(download_file_command)
 
     def _download_firmware(self: TpmDriver, bitfile: str) -> bool:

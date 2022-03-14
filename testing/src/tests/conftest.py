@@ -15,18 +15,17 @@ from __future__ import annotations
 
 import functools
 import logging
-import unittest
 from typing import Any, Callable, Generator, Set, cast
 
 import _pytest
 import pytest
 import tango
+import unittest
 import yaml
 
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import (
     ClientProxyTangoHarness,
-    DeploymentContextTangoHarness,
     DevicesToLoadType,
     MccsDeviceInfo,
     MockingTangoHarness,

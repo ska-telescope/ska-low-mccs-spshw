@@ -32,6 +32,7 @@ from ska_low_mccs.testing.tango_harness import (
     StartingStateTangoHarness,
     TangoHarness,
     TestContextTangoHarness,
+    DeploymentContextTangoHarness,
 )
 
 
@@ -230,6 +231,10 @@ def tango_harness_factory(
         tango_harness: TangoHarness  # type hint only
         if testbed == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
+        elif testbed == "local":
+            tango_harness = DeploymentContextTangoHarness(
+                device_info, logger, **tango_config
+            )
         else:
             tango_harness = ClientProxyTangoHarness(device_info, logger)
 

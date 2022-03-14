@@ -98,7 +98,8 @@ nitpick_ignore = [
     ("py:exc", "PluginError"),
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "Status"),
-    ("py:exc", "yaml.YAMLError")
+    ("py:exc", "yaml.YAMLError"),
+    ("py:class", "ska_tango_base.base.task_queue_manager.QueueManager")
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

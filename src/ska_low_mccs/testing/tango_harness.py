@@ -229,6 +229,17 @@ class MccsDeviceInfo:
         """
         return dict(self._proxies)
 
+    def get_memorized_attributes(
+        self: MccsDeviceInfo, name: str
+    ) -> dict[str, list[str]]:
+        """
+        Return a map of memorized attributes for a device.
+
+        :param name: name of device
+        :return: a map of the device's memorized attributes
+        """
+        return self._devices[name]["memorized"]
+
     def as_mdtc_device_info(self: MccsDeviceInfo) -> list[MdtcInfoType]:
         """
         Return this device info in a format required by MultiDeviceTestContext.
@@ -562,6 +573,57 @@ class TestContextTangoHarness(BaseTangoHarness):
             return super().__exit__(None, None, None)
         else:
             return super().__exit__(exc_type, exception, trace)
+
+
+class DeploymentContextTangoHarness(ClientProxyTangoHarness):
+    """
+    A test harness for testing running MCCS Tango devices.
+
+    It sets the adminMode of the devices under test to the value
+    specified in the device_info, which is loaded from the configuration
+    json file.
+    """
+
+    def __init__(
+        self: DeploymentContextTangoHarness,
+        device_info: MccsDeviceInfo,
+        logger: logging.Logger,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param device_info: object that makes device info available
+        :param logger: a logger for the harness
+        :param args: additional positional arguments
+        :param kwargs: additional keyword arguments
+        """
+        super().__init__(device_info, logger, *args, **kwargs)
+        self._device_info = device_info
+        self._setup_devices()
+
+    def _setup_devices(self: DeploymentContextTangoHarness) -> None:
+        """Set the devices in a state ready for testing."""
+        for name, fqdn in self._device_info.fqdn_map.items():
+            self._write_memorized(name, fqdn)
+
+    def _write_memorized(
+        self: DeploymentContextTangoHarness, name: str, fqdn: str
+    ) -> None:
+        """
+        Write any memorized attributes defined in the configuration file to the device.
+
+        Currently this only writes adminMode.
+
+        :param name: the device name
+        :param fqdn: the device fully qualified domain name
+        """
+        memorized = self._device_info.get_memorized_attributes(name)
+        device = self.get_device(fqdn)
+        if "adminMode" in memorized:
+            [value] = memorized["adminMode"]
+            device.write_attribute("adminMode", int(value))
 
 
 class WrapperTangoHarness(TangoHarness):

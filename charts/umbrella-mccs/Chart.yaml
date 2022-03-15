@@ -11,7 +11,7 @@ dependencies:
   repository: https://artefact.skao.int/repository/helm-internal
   condition: ska-tango-base.enabled,global.sub-system.ska-tango-base.enable
 - name: ska-low-mccs
-  version: 0.9.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+  version: 0.9.1 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
   repository: file://../ska-low-mccs
 - name: ska-taranta
   version: 1.0.29

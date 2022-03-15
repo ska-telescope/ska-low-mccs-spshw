@@ -10,7 +10,7 @@ import sys
 from typing import Optional
 
 name = "ska_low_mccs"
-version = "0.9.0"
+version = "0.9.1"
 version_info = version.split(".")
 description = "A set of Low MCCS tango devices for the SKA Telescope."
 author = "Team MCCS"

@@ -1,6 +1,14 @@
 # Version History
 
-## unreleased
+## unrelease
+
+## 0.9.1
+
+* MCCS-915 Adopt poetry and update CI Pipeline
+* MCCS-493 Poetry
+* MCCS-874 Monitor hardware connection status for Tile
+* MCCS-701 add adminMode to config file
+* MCCS-736 Test hardware tile interaction using 0.12 base classes
 
 ## 0.9.0
 

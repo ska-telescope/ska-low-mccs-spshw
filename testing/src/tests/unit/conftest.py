@@ -6,13 +6,13 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains pytest-specific test harness for MCCS unit tests."""
-from typing import Callable, Optional
 import unittest
+from typing import Callable, Optional
 
 import pytest
 
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, DevicesToLoadType
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.tango_harness import DevicesToLoadType, DeviceToLoadType
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
@@ -69,7 +69,8 @@ def devices_to_load(
 
 @pytest.fixture()
 def mock_callback_factory(
-    mock_callback_called_timeout: float, mock_callback_not_called_timeout: float
+    mock_callback_called_timeout: float,
+    mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallable]:
     """
     Return a factory that returns a new mock callback each time it is called.

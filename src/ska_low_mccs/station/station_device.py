@@ -13,14 +13,13 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
+from ska_tango_base.commands import ResponseCommand, ResultCode
+from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
-from ska_tango_base.obs import SKAObsDevice
-from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode
-
-from ska_low_mccs.component import CommunicationStatus
 import ska_low_mccs.release as release
+from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station import (
     StationComponentManager,
     StationHealthModel,
@@ -234,7 +233,7 @@ class MccsStation(SKAObsDevice):
 
     def _component_power_mode_changed(
         self: MccsStation,
-        power_mode: PowerMode,
+        power_mode: PowerState,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -246,10 +245,10 @@ class MccsStation(SKAObsDevice):
         :param power_mode: the power mode of the component.
         """
         action_map = {
-            PowerMode.OFF: "component_off",
-            PowerMode.STANDBY: "component_standby",
-            PowerMode.ON: "component_on",
-            PowerMode.UNKNOWN: "component_unknown",
+            PowerState.OFF: "component_off",
+            PowerState.STANDBY: "component_standby",
+            PowerState.ON: "component_on",
+            PowerState.UNKNOWN: "component_unknown",
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
@@ -501,7 +500,10 @@ class MccsStation(SKAObsDevice):
             try:
                 result_code = component_manager.configure(station_id)
             except ValueError as value_error:
-                return (ResultCode.FAILED, f"Configure command failed: {value_error}")
+                return (
+                    ResultCode.FAILED,
+                    f"Configure command failed: {value_error}",
+                )
 
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)

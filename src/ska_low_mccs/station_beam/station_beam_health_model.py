@@ -14,7 +14,6 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["StationBeamHealthModel"]
 
 
@@ -55,7 +54,11 @@ class StationBeamHealthModel(HealthModel):
             HealthState.FAILED if self._station_fault else HealthState.OK
         )
 
-        for health in [HealthState.FAILED, HealthState.UNKNOWN, HealthState.DEGRADED]:
+        for health in [
+            HealthState.FAILED,
+            HealthState.UNKNOWN,
+            HealthState.DEGRADED,
+        ]:
             if super_health == health:
                 return health
             if self._beam_health == health:

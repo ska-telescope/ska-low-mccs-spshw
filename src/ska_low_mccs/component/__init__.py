@@ -13,9 +13,9 @@ __all__ = [
     "ControlMode",
     "DeviceComponentManager",
     "DriverSimulatorSwitchingComponentManager",
-    "ExtendedPowerMode",
+    "ExtendedPowerState",
     "HardwareClient",
-    "PoolComponentManager",
+    # "PoolComponentManager",
     "PowerSupplyProxyComponentManager",
     "PowerSupplyProxySimulator",
     "MccsComponentManager",
@@ -32,14 +32,17 @@ __all__ = [
 from .component_manager import (
     CommunicationStatus,
     ControlMode,
-    ExtendedPowerMode,
+    ExtendedPowerState,
     MccsComponentManager,
     MccsComponentManagerProtocol,
 )
 from .util import check_communicating, check_on
 from .object_component import ObjectComponent
 from .object_component_manager import ObjectComponentManager
-from .device_component_manager import DeviceComponentManager, ObsDeviceComponentManager
+from .device_component_manager import (
+    DeviceComponentManager,
+    ObsDeviceComponentManager,
+)
 
 from .switching_component_manager import (
     SwitchingComponentManager,

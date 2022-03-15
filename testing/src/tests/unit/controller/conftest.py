@@ -9,14 +9,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable, Optional
 import unittest
+from typing import Callable, Iterable, Optional
 
 import pytest
 import pytest_mock
-
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import CommunicationStatus
@@ -25,13 +24,12 @@ from ska_low_mccs.controller import (
     ControllerResourceManager,
     MccsController,
 )
-
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
     MockCallable,
+    MockChangeEventCallback,
     MockDeviceBuilder,
     MockSubarrayBuilder,
-    MockChangeEventCallback,
 )
 
 
@@ -422,7 +420,7 @@ def unique_id() -> str:
 
 @pytest.fixture()
 def mock_component_manager(
-    mocker: pytest_mock.mocker,
+    mocker: pytest_mock.mocker,  # type: ignore[valid-type]
     unique_id: str,
 ) -> unittest.mock.Mock:
     """
@@ -438,14 +436,14 @@ def mock_component_manager(
 
     :return: a mock component manager
     """
-    mock = mocker.Mock()
+    mock = mocker.Mock()  # type: ignore[attr-defined]
     mock.is_communicating = False
 
     def _start_communicating(mock: unittest.mock.Mock) -> None:
         mock.is_communicating = True
         mock._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
         mock._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
-        mock._component_power_mode_changed_callback(PowerMode.OFF)
+        mock._component_power_mode_changed_callback(PowerState.OFF)
 
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
 
@@ -480,7 +478,7 @@ def patched_controller_device_class(
             :return: a mock component manager
             """
             self._communication_status: Optional[CommunicationStatus] = None
-            self._component_power_mode: Optional[PowerMode] = None
+            self._component_power_mode: Optional[PowerState] = None
 
             mock_component_manager._communication_status_changed_callback = (
                 self._communication_status_changed

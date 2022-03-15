@@ -9,26 +9,22 @@
 from __future__ import annotations
 
 import logging
-
-from typing import Any, Callable, Optional
 import unittest.mock
+from typing import Any, Callable, Optional
 
 import pytest
 import requests
-
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import PowerState, SimulationMode
 
 from ska_low_mccs.subrack import (
+    SubrackComponentManager,
     SubrackData,
     SubrackDriver,
     SubrackSimulator,
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
-    SubrackComponentManager,
 )
-
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -69,14 +65,14 @@ def subrack_port() -> int:
 
 
 @pytest.fixture()
-def initial_power_mode() -> PowerMode:
+def initial_power_mode() -> PowerState:
     """
     Return the initial power mode of the subrack's simulated power supply.
 
     :return: the initial power mode of the subrack's simulated power
         supply.
     """
-    return PowerMode.OFF
+    return PowerState.OFF
 
 
 @pytest.fixture()
@@ -181,10 +177,9 @@ def switching_subrack_component_manager(
     )
 
 
-# TODO: pytest is partially typehinted but does not yet export monkeypatch
 @pytest.fixture()
 def subrack_driver(
-    monkeypatch: pytest.monkeypatch,  # type: ignore[name-defined]
+    monkeypatch: pytest.MonkeyPatch,
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
     subrack_ip: str,
@@ -257,8 +252,6 @@ def subrack_driver(
             :param params: requests.get parameters for which values are
                 to be returned in this response.
             """
-            self.status_code = requests.codes.ok
-
             self._json: dict[str, Any] = {}
 
             if params is not None:
@@ -337,7 +330,7 @@ def subrack_component_manager(
     component_fault_callback: MockCallable,
     component_progress_changed_callback: MockCallable,
     component_tpm_power_changed_callback: MockCallable,
-    initial_power_mode: PowerMode,
+    initial_power_mode: PowerState,
 ) -> SubrackComponentManager:
     """
     Return an subrack component manager (in simulation mode as specified).

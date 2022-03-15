@@ -8,30 +8,28 @@
 """This module implements a MCCS test harness for Tango devices."""
 from __future__ import annotations
 
+import json
+import logging
+import socket
+import unittest.mock
+from collections import defaultdict
+from types import TracebackType
+from typing import Any, Callable, Dict, Iterable, List, Optional, Type, cast
+
+import tango
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.control_model import TestMode
+from tango.test_context import MultiDeviceTestContext, get_host_ip
+from typing_extensions import TypedDict
+
+from ska_low_mccs.device_proxy import MccsDeviceProxy
+
 # Even with 'from __future__ import annotations`, we still cannot use dict, list, type,
 # etc., in Python 3.7 code in certain circumstances, such as in type aliases and type
 # definitions. We have to use Dict, List, Type, etc. See
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#future-annotations-import-pep-563
 # for details.
 # TODO: Update these when we move to a newer python version
-
-
-from collections import defaultdict
-import json
-import logging
-import socket
-from types import TracebackType
-from typing import Any, Callable, Dict, Iterable, List, Optional, Type, cast
-from typing_extensions import TypedDict
-import unittest.mock
-
-import tango
-from tango.test_context import MultiDeviceTestContext, get_host_ip
-
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.control_model import TestMode
-
-from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
 __all__ = [
@@ -290,7 +288,9 @@ class TangoHarness:
         MccsDeviceProxy.set_default_connection_factory(self.connection_factory)
 
     @property
-    def connection_factory(self: TangoHarness) -> Callable[[str], tango.DeviceProxy]:
+    def connection_factory(
+        self: TangoHarness,
+    ) -> Callable[[str], tango.DeviceProxy]:
         """
         Establish connections to devices with this factory.
 
@@ -761,7 +761,9 @@ class StartingStateTangoHarness(WrapperTangoHarness):
 
         super().__init__(harness, *args, **kwargs)
 
-    def __enter__(self: StartingStateTangoHarness) -> StartingStateTangoHarness:
+    def __enter__(
+        self: StartingStateTangoHarness,
+    ) -> StartingStateTangoHarness:
         """
         Entry method for "with" context.
 

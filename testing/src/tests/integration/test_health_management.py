@@ -8,19 +8,17 @@
 """This module contains integration tests of health management in MCCS."""
 from __future__ import annotations
 
+import unittest.mock
+from typing import Callable
+
 import pytest
 import tango
-from typing import Callable
-import unittest.mock
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
-
-from ska_low_mccs.tile import DemoTile
-
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
+from ska_low_mccs.tile import DemoTile
 
 
 @pytest.fixture()

@@ -1,254 +1,54 @@
 # GitLab CI in conjunction with GitLab Runner can use Docker Engine to test and build any application.
 # Docker, when used with GitLab CI, runs each job in a separate and isolated container using the predefined image that is set up in .gitlab-ci.yml.
 # In this case we use the latest python docker image to build and test this project.
-image: artefact.skao.int/ska-tango-images-pytango-builder:9.3.16
+
+#image: artefact.skao.int/ska-tango-images-pytango-builder:9.3.10
+image: $SKA_K8S_TOOLS_DOCKER_BUILDER_IMAGE
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
 
 # cache is used to specify a list of files and directories which should be cached between jobs. You can only use paths that are within the project workspace.
 # If cache is defined outside the scope of jobs, it means it is set globally and all jobs will use that definition
-#cache:
-#  paths:
+cache:
+  paths:
+    - build
 
-variables:
-  MINIKUBE: "false"
-  CHARTS_TO_PUBLISH: ska-low-mccs
-
-# before_script is used to define the command that should be run before all jobs, including deploy jobs, but after the restoration of artifacts.
-# This can be an array or a multi-line string.
-before_script:
-  - python3 -m pip install -r requirements-dev.txt
-  - python3 -m pip install pipdeptree
+# The YAML file defines a set of jobs with constraints stating when they should be run.
+# You can specify an unlimited number of jobs which are defined as top-level elements with an arbitrary name and always have to contain at least the script clause.
+# In this case we have only the test job which produce an artifacts (it must be placed into a directory called "public")
+# It is also specified that only the master branch will be subject of this job.
 
 stages:
   - lint
   - build
   - test
-  - integration
-  - upload_results
-  - teardown
-  - docs
-  - testdocs
-  - pages
   - publish
-  - release
+  - pages
+  - scan
 
-linting:
-  stage: lint
-  tags:
-    - k8srunner
-  script:
-    - tox -e checklint
-  artifacts:
-    paths:
-      - ./build
-
-# The YAML file defines a set of jobs with constraints stating when they should be run.
-# You can specify an unlimited number of jobs which are defined as top-level elements
-# with an arbitrary name and always have to contain at least the script clause.
-# In this case we have only the test job which produces a coverage report and the
-# unittest output (see setup.cfg), and the coverage xml report is moved to the reports
-# directory while the html output is persisted for use by the pages job.
-# TODO: possibly a candidate for refactor / renaming later on.
-test1:
-  stage: test
-  tags:
-    - k8srunner
-  script:
-    - tox -e py -- --splits 3 --group 1
-  artifacts:
-    paths:
-      - ./build
-
-test2:
-  stage: test
-  tags:
-    - k8srunner
-  script:
-    - tox -e py -- --splits 3 --group 2
-  artifacts:
-    paths:
-      - ./build
-
-test3:
-  stage: test
-  tags:
-    - k8srunner
-  script:
-    - tox -e py -- --splits 3 --group 3
-  artifacts:
-    paths:
-      - ./build
-
-list_dependencies:
-  stage: test
-  script:
-    - pipdeptree --json >> pip_deps.json
-    - pipdeptree >> pip_deps.txt
-    - dpkg -l >> system_deps.txt
-    - awk 'FNR>5 {print $2 ", " $3}' system_deps.txt >> system_deps.csv
-    - mkdir .public
-    - cp pip_deps.txt .public/
-    - cp pip_deps.json .public/
-    - cp system_deps.txt .public/
-    - cp system_deps.csv .public/
-    - mv .public public
-  artifacts:
-    paths:
-      - public
-
-build-image:
-  stage: build
-  image: $SKA_K8S_TOOLS_DEPLOY_IMAGE
-  tags:
-    - k8srunner
-  script:
-    - export IMG="$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-    - docker build --pull --tag "$IMG" .
-    - echo -n "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-    - docker push "$IMG"
-  artifacts:
-    paths:
-      - current_tag.txt
-
-# functional testing on new kubernetes runners
-functional_test:
-  stage: integration
-  image: $SKA_K8S_TOOLS_DEPLOY_IMAGE
-  tags:
-    - k8srunner
-  script:
-    # test
-    - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
-    - make k8s
-    - make install-chart
-    - make template-chart
-    - make wait
-    - make functional-test
-  artifacts:
-    paths:
-      - ./testing/results
-  environment:
-    name: test
-    kubernetes:
-      namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
-
-# Wait for report and send to Jira
-xray_report:
-  stage: upload_results
-  tags:
-    - k8srunner
-  script:
-    - 'curl -X POST -H "Content-type: application/json" --fail
-         -H "Authorization: Basic $JIRA_AUTH"
-         --data @./testing/results/cucumber.json
-         https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
-  only: [main]
-  retry: 2
-
-# functional testing teardown on new kubernetes runners
-functional_test_tear_down:
-  stage: teardown
-  image: $SKA_K8S_TOOLS_DEPLOY_IMAGE
-  tags:
-    - k8srunner
-  script:
-    - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
-    - make uninstall-chart
-    - make delete-namespace
-  environment:
-    name: test
-    kubernetes:
-      namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
-  allow_failure: true
-  when: always
-
-docs:
-  stage: docs
-  tags:
-    - k8srunner
-  image: readthedocs/build:latest
-  before_script:
-    - echo "error" > .docs_status
-    - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
-    - python3 -m pip install anybadge
-  script:
-    - python3 -m sphinx -T -E -b html -n -W --keep-going docs/source docs/build/html
-    - echo "pass" > .docs_status
-  after_script:
-    - mkdir -p build/badges
-    - anybadge --label=docs --value=$(cat .docs_status) --file=build/badges/docs.svg pass=green error=red
-  artifacts:
-    paths:
-      - ./build
-      - ./docs/build/html
-    expire_in: 7 days
-  when: always
-
-testdocs:
-  stage: testdocs
-  tags:
-    - k8srunner
-  image: readthedocs/build:latest
-  before_script:
-    - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
-  script:
-    - python3 -m sphinx -T -E -b html -n -W --keep-going testing/docs/source testing/docs/build/html
-  artifacts:
-    paths:
-      - ./testing/docs/build/html
-    expire_in: 7 days
-  when: always
-
-pages:
-  stage: pages
-  tags:
-    - k8srunner
-  script:
-    - ls -la
-    - mkdir .public
-    - cp -r ./build/htmlcov/* .public
-    - mv .public public
-  allow_failure: true
-  artifacts:
-    paths:
-      - public
-    expire_in: 30 days
-
-publish package to CAR:
-  stage: publish
-  tags:
-    - k8srunner
-  variables:
-    TWINE_USERNAME: $CAR_PYPI_USERNAME
-    TWINE_PASSWORD: $CAR_PYPI_PASSWORD
-    PACKAGE_TAG: $CI_COMMIT_SHORT_SHA
-  script:
-    - python3 -m pip install twine
-    - tox -e package # takes $PACKAGE_TAG as input
-    - twine upload --repository-url $CAR_PYPI_REPOSITORY_URL dist/*
-  only:
-    refs:
-      - tags
-    variables:
-      # Confirm tag message exists
-      - $CI_COMMIT_MESSAGE =~ /^.+$/
-      # Confirm semantic versioning of tag
-      - $CI_COMMIT_TAG =~ /^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$/
 
 include:
+  # Python packages build,lint, test and publish
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/python.gitlab-ci.yml'
+
+  # OCI
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/oci-image.gitlab-ci.yml'
+
+  # Docs pages
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/docs.gitlab-ci.yml'
+
   # Create Gitlab CI badges from CI metrics
-  # https://developer.skatelescope.org/en/latest/tools/continuousintegration.html#automated-collection-of-ci-health-metrics-as-part-of-the-ci-pipeline
   - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/post_step.yml'
+    file: 'gitlab-ci/includes/finaliser.gitlab-ci.yml'
 
-  # Ensure your .gitlab-ci.yml has "publish" stage defined!
-  - project: "ska-telescope/templates-repository"
-    file: "gitlab-ci/includes/helm_publish.yml"
-
-  # Ensure your .gitlab-ci.yml has "build" stage defined!
+  # Create a release
   - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/build_push.yml'
+    file: 'gitlab-ci/includes/release.gitlab-ci.yml'
 
-publish-chart:
-  only:
-    refs:
-      - tags
+  # Helm chart
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/helm-chart.gitlab-ci.yml'

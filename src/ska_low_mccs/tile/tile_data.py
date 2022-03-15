@@ -10,7 +10,6 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-
 __all__ = ["TileData"]
 
 

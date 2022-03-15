@@ -9,20 +9,14 @@
 from __future__ import annotations
 
 import tango
-from tango.server import attribute
-
-
 from ska_tango_base import SKATelState
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
+from tango.server import attribute
 
 import ska_low_mccs.release as release
-
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.tel_state import (
-    TelStateComponentManager,
-    TelStateHealthModel,
-)
+from ska_low_mccs.tel_state import TelStateComponentManager, TelStateHealthModel
 
 __all__ = ["MccsTelState", "main"]
 

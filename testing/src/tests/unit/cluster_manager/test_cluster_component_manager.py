@@ -9,22 +9,19 @@
 from __future__ import annotations
 
 import logging
-from typing import cast, Union
+from typing import Union, cast
 
 import pytest
 from _pytest.fixtures import SubRequest  # for type hinting
-
 from ska_tango_base.control_model import HealthState, SimulationMode
 
-from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 from ska_low_mccs.cluster_manager import (
     ClusterComponentManager,
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
-
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 class TestClusterCommon:
@@ -50,7 +47,9 @@ class TestClusterCommon:
         cluster_component_manager: ClusterComponentManager,
         request: SubRequest,
     ) -> Union[
-        ClusterSimulator, ClusterSimulatorComponentManager, ClusterComponentManager
+        ClusterSimulator,
+        ClusterSimulatorComponentManager,
+        ClusterComponentManager,
     ]:
         """
         Return the hardware under test.
@@ -481,5 +480,10 @@ class TestClusterComponentManager:
 
         cluster_component_manager._component.simulate_node_failure(1, True)
         component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            [HealthState.FAILED, HealthState.OK, HealthState.OK, HealthState.OK]
+            [
+                HealthState.FAILED,
+                HealthState.OK,
+                HealthState.OK,
+                HealthState.OK,
+            ]
         )

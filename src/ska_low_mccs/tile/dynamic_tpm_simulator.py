@@ -188,13 +188,16 @@ class DynamicTpmSimulator(BaseTpmSimulator):
             _DynamicValuesGenerator(0.05, 2.95), self._current_changed
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0), self._board_temperature_changed
+            _DynamicValuesGenerator(16.0, 47.0),
+            self._board_temperature_changed,
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0), self._fpga1_temperature_changed
+            _DynamicValuesGenerator(16.0, 47.0),
+            self._fpga1_temperature_changed,
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0), self._fpga2_temperature_changed
+            _DynamicValuesGenerator(16.0, 47.0),
+            self._fpga2_temperature_changed,
         )
         self._updater.start()
 

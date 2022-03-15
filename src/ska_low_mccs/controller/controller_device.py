@@ -10,21 +10,19 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
+import time
 from typing import List, Optional, Tuple
 
 import tango
-import time
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import ResponseCommand, ResultCode
+from ska_tango_base.control_model import HealthState, PowerState
 from tango.server import command, device_property
 
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.control_model import HealthState, PowerMode
-from ska_tango_base.commands import ResponseCommand, ResultCode
-
-from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 import ska_low_mccs.release as release
 from ska_low_mccs import MccsDeviceProxy
-
+from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 
 __all__ = ["MccsController", "main"]
 
@@ -78,7 +76,7 @@ class MccsController(SKABaseDevice):
         :return: a component manager for this device.
         """
         self._communication_status: Optional[CommunicationStatus] = None
-        self._component_power_mode: Optional[PowerMode] = None
+        self._component_power_mode: Optional[PowerState] = None
 
         return ControllerComponentManager(
             self.MccsSubarrays,
@@ -173,7 +171,10 @@ class MccsController(SKABaseDevice):
             """
             result_code = self.target.component_manager.on()
             if result_code == ResultCode.FAILED:
-                return (ResultCode.FAILED, "Controller failed to initiate On command")
+                return (
+                    ResultCode.FAILED,
+                    "Controller failed to initiate On command",
+                )
 
             def wait_until_on(
                 device: MccsDeviceProxy, timeout: float, period: float = 0.5
@@ -220,7 +221,10 @@ class MccsController(SKABaseDevice):
             """
             result_code = self.target.component_manager.off()
             if result_code == ResultCode.FAILED:
-                return (ResultCode.FAILED, "Controller failed to initiate Off command")
+                return (
+                    ResultCode.FAILED,
+                    "Controller failed to initiate Off command",
+                )
 
             def wait_until_off(
                 device: MccsDeviceProxy, timeout: float, period: float = 0.5
@@ -290,13 +294,13 @@ class MccsController(SKABaseDevice):
             self.op_state_model.perform_action("component_disconnected")
         elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
             self.op_state_model.perform_action("component_unknown")
-        elif self._component_power_mode == PowerMode.OFF:
+        elif self._component_power_mode == PowerState.OFF:
             self.op_state_model.perform_action("component_off")
-        elif self._component_power_mode == PowerMode.STANDBY:
+        elif self._component_power_mode == PowerState.STANDBY:
             self.op_state_model.perform_action("component_standby")
-        elif self._component_power_mode == PowerMode.ON:
+        elif self._component_power_mode == PowerState.ON:
             self.op_state_model.perform_action("component_on")
-        elif self._component_power_mode == PowerMode.UNKNOWN:
+        elif self._component_power_mode == PowerState.UNKNOWN:
             self.op_state_model.perform_action("component_unknown")
         else:  # self._component_power_mode is None
             pass  # wait for a power mode update
@@ -307,7 +311,7 @@ class MccsController(SKABaseDevice):
 
     def _component_power_mode_changed(
         self: MccsController,
-        power_mode: PowerMode,
+        power_mode: PowerState,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -322,10 +326,10 @@ class MccsController(SKABaseDevice):
 
         if self._communication_status == CommunicationStatus.ESTABLISHED:
             action_map = {
-                PowerMode.OFF: "component_off",
-                PowerMode.STANDBY: "component_standby",
-                PowerMode.ON: "component_on",
-                PowerMode.UNKNOWN: "component_unknown",
+                PowerState.OFF: "component_off",
+                PowerState.STANDBY: "component_standby",
+                PowerState.ON: "component_on",
+                PowerState.UNKNOWN: "component_unknown",
             }
 
             self.op_state_model.perform_action(action_map[power_mode])

@@ -11,23 +11,20 @@
 from __future__ import annotations
 
 import logging
-
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import pytest_mock
 import yaml
-
 from ska_tango_base.control_model import SimulationMode
 
+from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.pasd_bus import (
+    PasdBusComponentManager,
     PasdBusSimulator,
     PasdBusSimulatorComponentManager,
-    PasdBusComponentManager,
 )
-
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 

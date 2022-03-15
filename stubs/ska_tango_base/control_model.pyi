@@ -63,7 +63,7 @@ class LoggingLevel(enum.IntEnum):
     INFO = 4
     DEBUG = 5
 
-class PowerMode(enum.IntEnum):
+class PowerState(enum.IntEnum):
     UNKNOWN = 0
     OFF = 1
     STANDBY = 2

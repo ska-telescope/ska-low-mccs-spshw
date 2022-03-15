@@ -9,11 +9,10 @@
 from __future__ import annotations
 
 import tango
-from tango.server import attribute
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
+from tango.server import attribute
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus

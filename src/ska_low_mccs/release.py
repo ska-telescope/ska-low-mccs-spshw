@@ -9,7 +9,6 @@
 import sys
 from typing import Optional
 
-
 name = "ska_low_mccs"
 version = "0.9.0"
 version_info = version.split(".")
@@ -18,9 +17,8 @@ author = "Team MCCS"
 author_email = "malte.marquarding at csiro dot au"
 url = "https://www.skatelescope.org/"
 license = "BSD-3-Clause"  # noqa: A001
-copyright = (  # noqa: A001
-    "CSIRO and STFC Daresbury Laboratory and University of Manchester"
-)
+copyright = "CSIRO and STFC Daresbury Laboratory \
+    and University of Manchester"  # noqa: A001
 
 
 def get_release_info(clsname: Optional[str] = None) -> str:
@@ -32,9 +30,7 @@ def get_release_info(clsname: Optional[str] = None) -> str:
     :return: str
     """
     rmod = sys.modules[__name__]
-    info = ", ".join(
-        (rmod.name, rmod.version, rmod.description)  # type: ignore[attr-defined]
-    )
+    info = ", ".join((rmod.name, rmod.version, rmod.description))  # type: ignore[attr-defined]
     if clsname is None:
         return info
     return ", ".join((clsname, info))

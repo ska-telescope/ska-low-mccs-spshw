@@ -9,8 +9,8 @@
 from __future__ import annotations
 
 from typing import Hashable, Iterable, Mapping, cast
-from ska_low_mccs.resource_manager import HealthfulReadyResourceManager, ResourcePool
 
+from ska_low_mccs.resource_manager import HealthfulReadyResourceManager, ResourcePool
 
 __all__ = ["ControllerResourceManager"]
 
@@ -160,5 +160,6 @@ class ControllerResourceManager:
         :return: the resources allocated to the subarray.
         """
         return cast(
-            Mapping[str, Iterable[str]], self._resource_manager.get_allocated(subarray)
+            Mapping[str, Iterable[str]],
+            self._resource_manager.get_allocated(subarray),
         )

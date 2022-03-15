@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from typing import Iterable
+
 import pytest
 
 from ska_low_mccs.resource_manager import ResourcePool

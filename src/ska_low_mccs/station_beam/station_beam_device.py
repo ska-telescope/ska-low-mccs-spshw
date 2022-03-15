@@ -12,12 +12,10 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from tango.server import attribute, command, device_property
-
-from ska_tango_base.obs import SKAObsDevice
-
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState
+from ska_tango_base.obs import SKAObsDevice
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
@@ -247,7 +245,11 @@ class MccsStationBeam(SKAObsDevice):
         self.component_manager.logical_beam_id = logical_beam_id
 
     @attribute(
-        dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0
+        dtype="DevDouble",
+        unit="Hz",
+        standard_unit="s^-1",
+        max_value=1e37,
+        min_value=0,
     )
     def updateRate(self: MccsStationBeam) -> float:
         """

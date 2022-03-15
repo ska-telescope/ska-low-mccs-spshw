@@ -11,8 +11,7 @@ from __future__ import annotations
 import time
 
 import pytest
-from tango import DevState
-
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
@@ -20,11 +19,10 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.commands import ResultCode
+from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu import ApiuSimulator
-
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 

@@ -13,7 +13,6 @@ from typing import Callable, Optional
 
 from ska_tango_base.control_model import ObsState
 
-
 __all__ = ["SubarrayBeamObsStateModel"]
 
 

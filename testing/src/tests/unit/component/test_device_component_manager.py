@@ -14,17 +14,11 @@ import unittest.mock
 
 import pytest
 import tango
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    DeviceComponentManager,
-)
-
+from ska_low_mccs.component import CommunicationStatus, DeviceComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -107,7 +101,12 @@ class TestDeviceComponentManager:
 
     @pytest.mark.parametrize(
         ("component_manager_command", "device_command"),
-        [("on", "On"), ("standby", "Standby"), ("off", "Off"), ("reset", "Reset")],
+        [
+            ("on", "On"),
+            ("standby", "Standby"),
+            ("off", "Off"),
+            ("reset", "Reset"),
+        ],
     )
     def test_command(
         self: TestDeviceComponentManager,
@@ -127,7 +126,8 @@ class TestDeviceComponentManager:
             to be called on the device.
         """
         with pytest.raises(
-            ConnectionError, match="Communication with component is not established"
+            ConnectionError,
+            match="Communication with component is not established",
         ):
             getattr(component_manager, component_manager_command)()
         getattr(mock_proxy, device_command).assert_not_called()

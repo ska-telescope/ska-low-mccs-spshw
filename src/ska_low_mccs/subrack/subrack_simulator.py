@@ -27,14 +27,13 @@ These assumptions may need to change in future.
 
 from __future__ import annotations  # allow forward references in type hints
 
-import threading
-from typing import Any, Callable, Optional
-from time import sleep
 import os
+import threading
+from time import sleep
+from typing import Any, Callable, Optional
 
 from ska_low_mccs.component import ControlMode, ObjectComponent
 from ska_low_mccs.subrack.subrack_data import SubrackData
-
 
 __all__ = ["SubrackSimulator"]
 

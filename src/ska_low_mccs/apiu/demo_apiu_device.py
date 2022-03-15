@@ -16,11 +16,10 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import List, Optional, Tuple
 
+from ska_tango_base.commands import ResultCode
 from tango.server import attribute, command
 
 from ska_low_mccs import MccsAPIU
-from ska_tango_base.commands import ResultCode
-
 
 __all__ = ["DemoAPIU"]
 

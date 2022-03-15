@@ -9,17 +9,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest
+from typing import Callable
 
 import pytest
-
-from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
+from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
 
 from ska_low_mccs.cluster_manager import (
     ClusterComponentManager,
-    ClusterSimulatorComponentManager,
     ClusterSimulator,
+    ClusterSimulatorComponentManager,
 )
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -58,7 +57,7 @@ def cluster_simulator_component_manager(
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_power_mode_changed_callback: Callable[[PowerMode], None],
+    component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
     component_shadow_master_pool_node_health_changed_callback: Callable[
         [list[HealthState]], None
@@ -98,7 +97,7 @@ def cluster_component_manager(
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_power_mode_changed_callback: Callable[[PowerMode], None],
+    component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
     component_shadow_master_pool_node_health_changed_callback: Callable[
         [list[HealthState]], None

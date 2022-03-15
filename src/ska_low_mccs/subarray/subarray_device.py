@@ -9,14 +9,11 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import logging
 import json
+import logging
 from typing import Any, List, Optional, Tuple
 
 import tango
-from tango.server import attribute, command
-
-from ska_tango_base.subarray import SKASubarray
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import (
     ObservationCommand,
@@ -25,12 +22,13 @@ from ska_tango_base.commands import (
     StateModelCommand,
 )
 from ska_tango_base.control_model import HealthState
+from ska_tango_base.subarray import SKASubarray
 from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
+from tango.server import attribute, command
 
+import ska_low_mccs.release as release
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subarray import SubarrayComponentManager, SubarrayHealthModel
-import ska_low_mccs.release as release
-
 
 __all__ = ["MccsSubarray", "main"]
 
@@ -416,7 +414,11 @@ class MccsSubarray(SKASubarray):
                 provided, then a default module logger will be used.
             """
             super().__init__(
-                target, obs_state_model, "assign", op_state_model, logger=logger
+                target,
+                obs_state_model,
+                "assign",
+                op_state_model,
+                logger=logger,
             )
 
         def do(  # type: ignore[override]
@@ -489,7 +491,11 @@ class MccsSubarray(SKASubarray):
                 provided, then a default module logger will be used.
             """
             super().__init__(
-                target, obs_state_model, "release", op_state_model, logger=logger
+                target,
+                obs_state_model,
+                "release",
+                op_state_model,
+                logger=logger,
             )
 
         def do(  # type: ignore[override]
@@ -546,7 +552,11 @@ class MccsSubarray(SKASubarray):
                 provided, then a default module logger will be used.
             """
             super().__init__(
-                target, obs_state_model, "release", op_state_model, logger=logger
+                target,
+                obs_state_model,
+                "release",
+                op_state_model,
+                logger=logger,
             )
 
         def do(  # type: ignore[override]
@@ -599,7 +609,11 @@ class MccsSubarray(SKASubarray):
                 provided, then a default module logger will be used.
             """
             super().__init__(
-                target, obs_state_model, "configure", op_state_model, logger=logger
+                target,
+                obs_state_model,
+                "configure",
+                op_state_model,
+                logger=logger,
             )
 
         def do(  # type: ignore[override]

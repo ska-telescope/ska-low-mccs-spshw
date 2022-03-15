@@ -7,11 +7,11 @@
 # See LICENSE for more info.
 """This module contains the tests for MccsTelState."""
 from __future__ import annotations
+
 from typing import Any
 
 import pytest
 import tango
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -105,7 +105,8 @@ class TestMccsTelState:
         :param write_value: a value to write to check that it sticks
         """
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = getattr(device_under_test, attribute)
 

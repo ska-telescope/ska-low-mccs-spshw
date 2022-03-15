@@ -50,7 +50,10 @@ class TestControllerResourceManager:
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                subarray_beams=["low-mccs/subarraybeam/01", dodgy_subarray_beam],
+                subarray_beams=[
+                    "low-mccs/subarraybeam/01",
+                    dodgy_subarray_beam,
+                ],
             )
 
     def test_ready_healthy(
@@ -70,7 +73,10 @@ class TestControllerResourceManager:
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+                subarray_beams=[
+                    "low-mccs/subarraybeam/01",
+                    "low-mccs/subarraybeam/02",
+                ],
             )
 
         controller_resource_manager.set_ready("low-mccs/subarray/01", True)
@@ -82,7 +88,10 @@ class TestControllerResourceManager:
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+                subarray_beams=[
+                    "low-mccs/subarraybeam/01",
+                    "low-mccs/subarraybeam/02",
+                ],
             )
 
         controller_resource_manager.set_health(
@@ -95,7 +104,10 @@ class TestControllerResourceManager:
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
-                subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+                subarray_beams=[
+                    "low-mccs/subarraybeam/01",
+                    "low-mccs/subarraybeam/02",
+                ],
             )
 
         controller_resource_manager.set_health(
@@ -104,7 +116,10 @@ class TestControllerResourceManager:
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+            subarray_beams=[
+                "low-mccs/subarraybeam/01",
+                "low-mccs/subarraybeam/02",
+            ],
         )
 
     def test_resources_cannot_be_overallocated(
@@ -131,7 +146,10 @@ class TestControllerResourceManager:
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+            subarray_beams=[
+                "low-mccs/subarraybeam/01",
+                "low-mccs/subarraybeam/02",
+            ],
         )
 
         with pytest.raises(
@@ -172,11 +190,17 @@ class TestControllerResourceManager:
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+            subarray_beams=[
+                "low-mccs/subarraybeam/01",
+                "low-mccs/subarraybeam/02",
+            ],
             subracks=["low-mccs/subrack/01"],
         )
         controller_resource_manager.deallocate(
-            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"]
+            subarray_beams=[
+                "low-mccs/subarraybeam/01",
+                "low-mccs/subarraybeam/02",
+            ]
         )
 
         with pytest.raises(
@@ -192,14 +216,20 @@ class TestControllerResourceManager:
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/02",
-            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+            subarray_beams=[
+                "low-mccs/subarraybeam/01",
+                "low-mccs/subarraybeam/02",
+            ],
         )
 
         controller_resource_manager.deallocate_from("low-mccs/subarray/02")
 
         controller_resource_manager.allocate(
             "low-mccs/subarray/01",
-            subarray_beams=["low-mccs/subarraybeam/01", "low-mccs/subarraybeam/02"],
+            subarray_beams=[
+                "low-mccs/subarraybeam/01",
+                "low-mccs/subarraybeam/02",
+            ],
             subracks=["low-mccs/subrack/01"],
         )
 

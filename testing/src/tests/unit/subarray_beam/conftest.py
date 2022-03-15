@@ -9,17 +9,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 
-from ska_low_mccs.subarray_beam import (
-    SubarrayBeam,
-    SubarrayBeamComponentManager,
-)
-
 from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 

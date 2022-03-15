@@ -13,11 +13,9 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import Callable
 
+from ska_tango_base.control_model import HealthState, PowerState
+
 from ska_low_mccs.health import HealthModel
-from ska_tango_base.control_model import (
-    HealthState,
-    PowerMode,
-)
 
 __all__ = ["TileHealthModel"]
 
@@ -31,7 +29,8 @@ class TileHealthModel(HealthModel):
     """
 
     def __init__(
-        self: TileHealthModel, health_changed_callback: Callable[[HealthState], None]
+        self: TileHealthModel,
+        health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -40,7 +39,7 @@ class TileHealthModel(HealthModel):
             there is a change to this this health model's evaluated
             health state.
         """
-        self._power_mode = PowerMode.UNKNOWN
+        self._power_mode = PowerState.UNKNOWN
         super().__init__(health_changed_callback)
 
     def evaluate_health(self: TileHealthModel) -> HealthState:
@@ -55,11 +54,11 @@ class TileHealthModel(HealthModel):
         """
         if self._faulty:
             return HealthState.FAILED
-        if not self._communicating and self._power_mode != PowerMode.OFF:
+        if not self._communicating and self._power_mode != PowerState.OFF:
             return HealthState.UNKNOWN
         return HealthState.OK
 
-    def set_power_mode(self: TileHealthModel, power_mode: PowerMode) -> None:
+    def set_power_mode(self: TileHealthModel, power_mode: PowerState) -> None:
         """
         Update power mode.
 

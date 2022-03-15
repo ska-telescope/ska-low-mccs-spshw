@@ -7,12 +7,12 @@
 # See LICENSE for more info.
 """This module contains the tests for MccsTransientBuffer."""
 from __future__ import annotations
-from typing import Any
+
 import unittest.mock
+from typing import Any
 
 import pytest
 import pytest_mock
-
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsTransientBuffer
@@ -37,7 +37,8 @@ class TestMccsTransientBuffer:
 
     @pytest.fixture()
     def mock_component_manager(
-        self: TestMccsTransientBuffer, mocker: pytest_mock.mocker
+        self: TestMccsTransientBuffer,
+        mocker: pytest_mock.MockerFixture,
     ) -> unittest.mock.Mock:
         """
         Return a mock to be used as a component manager for the transient buffer device.
@@ -52,7 +53,8 @@ class TestMccsTransientBuffer:
 
     @pytest.fixture()
     def patched_device_class(
-        self: TestMccsTransientBuffer, mock_component_manager: unittest.mock.Mock
+        self: TestMccsTransientBuffer,
+        mock_component_manager: unittest.mock.Mock,
     ) -> type[MccsTransientBuffer]:
         """
         Return a transient buffer device that is patched with a mock component manager.
@@ -81,7 +83,8 @@ class TestMccsTransientBuffer:
 
     @pytest.fixture()
     def device_to_load(
-        self: TestMccsTransientBuffer, patched_device_class: MccsTransientBuffer
+        self: TestMccsTransientBuffer,
+        patched_device_class: MccsTransientBuffer,
     ) -> DeviceToLoadType:
         """
         Fixture that specifies the device to be loaded for testing.
@@ -124,7 +127,11 @@ class TestMccsTransientBuffer:
         ("device_attribute", "component_manager_property", "example_value"),
         [
             ("stationId", "station_id", "example_string"),
-            ("transientBufferJobId", "transient_buffer_job_id", "example_string"),
+            (
+                "transientBufferJobId",
+                "transient_buffer_job_id",
+                "example_string",
+            ),
             ("transientFrequencyWindow", "transient_frequency_window", (0.0,)),
             ("resamplingBits", "resampling_bits", 0),
             ("nStations", "n_stations", 0),
@@ -133,7 +140,7 @@ class TestMccsTransientBuffer:
     )
     def test_attributes(
         self: TestMccsTransientBuffer,
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.MockerFixture,
         device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
         device_attribute: str,
@@ -158,7 +165,11 @@ class TestMccsTransientBuffer:
             device attribute.
         """
         property_mock = mocker.PropertyMock(return_value=example_value)
-        setattr(type(mock_component_manager), component_manager_property, property_mock)
+        setattr(
+            type(mock_component_manager),
+            component_manager_property,
+            property_mock,
+        )
         property_mock.assert_not_called()
 
         _ = getattr(device_under_test, device_attribute)

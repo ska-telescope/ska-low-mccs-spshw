@@ -9,23 +9,21 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
 import unittest.mock
+from typing import Callable, Iterable
 
 import pytest
 import pytest_mock
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
-
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
     MockCallable,
-    MockDeviceBuilder,
     MockChangeEventCallback,
+    MockDeviceBuilder,
 )
 
 
@@ -311,7 +309,7 @@ def station_component_manager(
 
 
 @pytest.fixture()
-def pointing_delays(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
+def pointing_delays(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:
     """
     Return some mock pointing_delays.
 
@@ -326,7 +324,9 @@ def pointing_delays(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
 
 
 @pytest.fixture()
-def mock_component_manager(mocker: pytest_mock.mocker) -> unittest.mock.Mock:
+def mock_component_manager(
+    mocker: pytest_mock.MockerFixture,
+) -> unittest.mock.Mock:
     """
     Return a mock to be used as a component manager for the station device.
 

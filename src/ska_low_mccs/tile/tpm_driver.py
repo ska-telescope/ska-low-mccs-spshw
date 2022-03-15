@@ -16,25 +16,21 @@ case, or a NotImplementedError exception raised.
 
 from __future__ import annotations  # allow forward references in type hints
 
-import time
 import copy
 import logging
 import threading
+import time
+from typing import Any, Callable, List, Optional, cast
+
 import numpy as np
-from typing import Any, Callable, cast, List, Optional
-from pyfabil.base.definitions import LibraryError
-
-from pyfabil.base.definitions import Device
-
-from ska_tango_base.commands import ResultCode, BaseCommand
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    MccsComponentManager,
-)
-from .tpm_status import TpmStatus
-
-from pyaavs.tile_wrapper import Tile as HwTile
 from pyaavs.tile import Tile as Tile12
+from pyaavs.tile_wrapper import Tile as HwTile
+from pyfabil.base.definitions import Device, LibraryError
+from ska_tango_base.commands import BaseCommand, ResultCode
+
+from ska_low_mccs.component import CommunicationStatus, MccsComponentManager
+
+from .tpm_status import TpmStatus
 
 
 class TpmDriver(MccsComponentManager):
@@ -59,8 +55,18 @@ class TpmDriver(MccsComponentManager):
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+        0: {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        },
+        1: {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        },
     }
 
     def __init__(
@@ -135,7 +141,10 @@ class TpmDriver(MccsComponentManager):
         self.tile = cast(
             Tile12,
             HwTile(
-                ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
+                ip=self._ip,
+                port=self._port,
+                logger=logger,
+                tpm_version=tpm_version,
             ),
         )
 
@@ -317,7 +326,7 @@ class TpmDriver(MccsComponentManager):
             # The status in unknown, either because it has not been tested or
             # because it comes from an unconnected state.
             # try to determine the status. Successive tests until one fails
-            # if self.power_mode != PowerMode.ON:
+            # if self.power_mode != PowerState.ON:
             #     self._tpm_status = TpmStatus.OFF
             if self.communication_status != CommunicationStatus.ESTABLISHED:
                 self._tpm_status = TpmStatus.UNCONNECTED
@@ -856,7 +865,11 @@ class TpmDriver(MccsComponentManager):
         return reglist
 
     def read_register(
-        self: TpmDriver, register_name: str, nb_read: int, offset: int, device: int
+        self: TpmDriver,
+        register_name: str,
+        nb_read: int,
+        offset: int,
+        device: int,
     ) -> list[int]:
         """
         Read the values in a named register.
@@ -892,7 +905,11 @@ class TpmDriver(MccsComponentManager):
         return lvalue[nmin:nmax]
 
     def write_register(
-        self: TpmDriver, register_name: str, values: list[Any], offset: int, device: int
+        self: TpmDriver,
+        register_name: str,
+        values: list[Any],
+        offset: int,
+        device: int,
     ) -> None:
         """
         Read the values in a register.
@@ -1198,7 +1215,10 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def load_calibration_curve(
-        self: TpmDriver, antenna: int, beam: int, calibration_coefficients: list[int]
+        self: TpmDriver,
+        antenna: int,
+        beam: int,
+        calibration_coefficients: list[int],
     ) -> None:
         """
         Load calibration curve.

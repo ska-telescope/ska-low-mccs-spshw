@@ -9,14 +9,11 @@
 from __future__ import annotations
 
 import json
-import pytest
 import time
-from typing import Callable, Type
 import unittest
+from typing import Callable, Type
 
-from tango import DevState
-from tango.server import command
-
+import pytest
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
@@ -26,8 +23,10 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs import MccsDeviceProxy, MccsSubarray, release
+from tango import DevState
+from tango.server import command
 
+from ska_low_mccs import MccsDeviceProxy, MccsSubarray, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 

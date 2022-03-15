@@ -12,8 +12,8 @@
 from __future__ import annotations
 
 import pytest
-
 from ska_tango_base.commands import ResultCode
+
 from ska_low_mccs import MccsDeviceProxy, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness

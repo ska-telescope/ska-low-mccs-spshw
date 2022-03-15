@@ -15,22 +15,24 @@ from __future__ import annotations
 
 import functools
 import logging
+import unittest
 from typing import Any, Callable, Generator, Set, cast
+
+import _pytest
 import pytest
 import tango
-import unittest
 import yaml
 
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import (
     ClientProxyTangoHarness,
+    DeploymentContextTangoHarness,
     DevicesToLoadType,
     MccsDeviceInfo,
     MockingTangoHarness,
     StartingStateTangoHarness,
     TangoHarness,
     TestContextTangoHarness,
-    DeploymentContextTangoHarness,
 )
 
 
@@ -48,7 +50,7 @@ with open("testing/testbeds.yaml", "r") as stream:
 
 
 # TODO: pytest is partially typehinted but does not yet export Config
-def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-defined]
+def pytest_configure(config: _pytest.config.Config) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
 
@@ -59,9 +61,9 @@ def pytest_configure(config: pytest.Config) -> None:  # type: ignore[name-define
         config.addinivalue_line("markers", f"needs_{tag}")
 
 
-# TODO: pytest is partially typehinted but does not yet export ArgumentParser
+# TODO: pytest is partially typehinted but does not yet export Parser
 def pytest_addoption(
-    parser: pytest.config.ArgumentParser,  # type: ignore[name-defined]
+    parser: _pytest.config.argparsing.Parser,  # type: ignore[name-defined]
 ) -> None:
     """
     Implement the add the `--testbed` option.
@@ -82,7 +84,7 @@ def pytest_addoption(
 
 # TODO: pytest is partially typehinted but does not yet export Config
 def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]  # type: ignore[name-defined]
+    config: _pytest.config.Config, items: list[pytest.Item]  # type: ignore[name-defined]
 ) -> None:
     """
     Modify the list of tests to be run, after pytest has collected them.

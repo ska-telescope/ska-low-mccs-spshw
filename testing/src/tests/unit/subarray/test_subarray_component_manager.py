@@ -9,20 +9,16 @@
 from __future__ import annotations
 
 import json
-
 import time
-
 import unittest.mock
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import ObsState, PowerMode
+from ska_tango_base.control_model import ObsState, PowerState
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subarray import SubarrayComponentManager
-
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -147,7 +143,7 @@ class TestSubarrayComponentManager:
             subarray's resources change
         """
         subarray_component_manager.start_communicating()
-        assert subarray_component_manager.power_mode == PowerMode.ON
+        assert subarray_component_manager.power_mode == PowerState.ON
 
         assert subarray_component_manager.assigned_resources_dict == {
             "stations": list(),
@@ -170,7 +166,7 @@ class TestSubarrayComponentManager:
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
         subarray_component_manager._station_power_mode_changed(
-            station_off_fqdn, PowerMode.OFF
+            station_off_fqdn, PowerState.OFF
         )
 
         assign_completed_callback.assert_next_call()
@@ -182,7 +178,9 @@ class TestSubarrayComponentManager:
         }
 
         resources_changed_callback.assert_next_call(
-            {station_off_fqdn}, {subarray_beam_off_fqdn}, {station_beam_off_fqdn}
+            {station_off_fqdn},
+            {subarray_beam_off_fqdn},
+            {station_beam_off_fqdn},
         )
 
         # Further assign
@@ -199,7 +197,7 @@ class TestSubarrayComponentManager:
         # doesn't consider resource assignment to be complete until it has received an
         # event from each one. So let's fake that.
         subarray_component_manager._station_power_mode_changed(
-            station_off_fqdn, PowerMode.ON
+            station_off_fqdn, PowerState.ON
         )
 
         assign_completed_callback.assert_next_call()
@@ -243,7 +241,7 @@ class TestSubarrayComponentManager:
             off.
         """
         subarray_component_manager.start_communicating()
-        assert subarray_component_manager.power_mode == PowerMode.ON
+        assert subarray_component_manager.power_mode == PowerState.ON
         release_json = json.dumps({"station_beams": [station_off_fqdn]})
         with pytest.raises(
             NotImplementedError,
@@ -311,7 +309,7 @@ class TestSubarrayComponentManager:
             whether the subarray is configured changes
         """
         subarray_component_manager.start_communicating()
-        assert subarray_component_manager.power_mode == PowerMode.ON
+        assert subarray_component_manager.power_mode == PowerState.ON
 
         # can't configure when resources are OFF
         resource_spec = {
@@ -328,7 +326,7 @@ class TestSubarrayComponentManager:
         # event from each one. So let's fake that.
         time.sleep(0.1)
         subarray_component_manager._station_power_mode_changed(
-            station_off_fqdn, PowerMode.ON
+            station_off_fqdn, PowerState.ON
         )
         assign_completed_callback.assert_next_call()
 
@@ -356,7 +354,7 @@ class TestSubarrayComponentManager:
         # event from each one. So let's fake that.
         time.sleep(0.1)
         subarray_component_manager._station_power_mode_changed(
-            station_on_fqdn, PowerMode.ON
+            station_on_fqdn, PowerState.ON
         )
         assign_completed_callback.assert_next_call()
 
@@ -388,7 +386,7 @@ class TestSubarrayComponentManager:
         # event from each one. So let's fake that.
         time.sleep(0.1)
         subarray_component_manager._station_power_mode_changed(
-            station_on_fqdn, PowerMode.ON
+            station_on_fqdn, PowerState.ON
         )
         assign_completed_callback.assert_next_call()
 
@@ -421,7 +419,7 @@ class TestSubarrayComponentManager:
         # event from each one. So let's fake that.
         time.sleep(0.1)
         subarray_component_manager._station_power_mode_changed(
-            station_on_fqdn, PowerMode.ON
+            station_on_fqdn, PowerState.ON
         )
         assign_completed_callback.assert_next_call()
 
@@ -503,7 +501,7 @@ class TestSubarrayComponentManager:
             the subarray is scanning changes
         """
         subarray_component_manager.start_communicating()
-        assert subarray_component_manager.power_mode == PowerMode.ON
+        assert subarray_component_manager.power_mode == PowerState.ON
 
         resource_spec = {
             "stations": [[station_on_fqdn]],

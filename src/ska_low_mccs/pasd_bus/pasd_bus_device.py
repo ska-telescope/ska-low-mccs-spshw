@@ -10,21 +10,17 @@
 from __future__ import annotations
 
 import json
-from typing import Tuple, List, Optional
+from typing import List, Optional, Tuple
 
 import tango
-from tango.server import attribute, command
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
+from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
+from tango.server import attribute, command
 
 from ska_low_mccs import release
 from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.pasd_bus import (
-    PasdBusComponentManager,
-    PasdBusHealthModel,
-)
+from ska_low_mccs.pasd_bus import PasdBusComponentManager, PasdBusHealthModel
 
 __all__ = ["MccsPasdBus", "main"]
 
@@ -109,7 +105,10 @@ class MccsPasdBus(SKABaseDevice):
             ("TurnSmartboxOn", self.TurnSmartboxOnCommand),
             ("TurnSmartboxOff", self.TurnSmartboxOffCommand),
             ("TurnSmartboxServiceLedOn", self.TurnSmartboxServiceLedOnCommand),
-            ("TurnSmartboxServiceLedOff", self.TurnSmartboxServiceLedOffCommand),
+            (
+                "TurnSmartboxServiceLedOff",
+                self.TurnSmartboxServiceLedOffCommand,
+            ),
             ("GetAntennaInfo", self.GetAntennaInfoCommand),
             ("ResetAntennaBreaker", self.ResetAntennaBreakerCommand),
             ("TurnAntennaOn", self.TurnAntennaOnCommand),
@@ -183,7 +182,9 @@ class MccsPasdBus(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_power_mode_changed(self: MccsPasdBus, power_mode: PowerMode) -> None:
+    def _component_power_mode_changed(
+        self: MccsPasdBus, power_mode: PowerState
+    ) -> None:
         """
         Handle change in the power mode of the component.
 
@@ -194,10 +195,10 @@ class MccsPasdBus(SKABaseDevice):
         :param power_mode: the power mode of the component.
         """
         action_map = {
-            PowerMode.OFF: "component_off",
-            PowerMode.STANDBY: "component_standby",
-            PowerMode.ON: "component_on",
-            PowerMode.UNKNOWN: "component_unknown",
+            PowerState.OFF: "component_off",
+            PowerState.STANDBY: "component_standby",
+            PowerState.ON: "component_on",
+            PowerState.UNKNOWN: "component_unknown",
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
@@ -757,9 +758,7 @@ class MccsPasdBus(SKABaseDevice):
     class GetSmartboxInfoCommand(BaseCommand):
         """Class for handling the GetSmartboxInfo command."""
 
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.GetSmartboxInfoCommand, argin: int
-        ) -> dict:
+        def do(self: MccsPasdBus.GetSmartboxInfoCommand, argin: int) -> dict:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsPasdBus.GetSmartboxInfo` command.
 
@@ -934,9 +933,7 @@ class MccsPasdBus(SKABaseDevice):
     class GetAntennaInfoCommand(BaseCommand):
         """Class for handling the GetAntennaInfo command."""
 
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.GetAntennaInfoCommand, argin: int
-        ) -> dict:
+        def do(self: MccsPasdBus.GetAntennaInfoCommand, argin: int) -> dict:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsPasdBus.GetAntennaInfo` command.
 

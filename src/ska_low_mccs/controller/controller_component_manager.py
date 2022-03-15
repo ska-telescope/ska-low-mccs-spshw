@@ -12,15 +12,15 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Hashable, Optional, Iterable
+from typing import Callable, Hashable, Iterable, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode
+from ska_tango_base.control_model import HealthState, PowerState
 
 from ska_low_mccs.component import (
     CommunicationStatus,
-    MccsComponentManager,
     DeviceComponentManager,
+    MccsComponentManager,
     check_communicating,
     check_on,
 )
@@ -40,7 +40,7 @@ class _StationProxy(DeviceComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         health_changed_callback: Optional[
             Callable[[Optional[HealthState]], None]
@@ -314,7 +314,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerMode], None],
+        component_power_mode_changed_callback: Callable[[PowerState], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         station_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subarray_beam_health_changed_callback: Callable[
@@ -360,19 +360,19 @@ class ControllerComponentManager(MccsComponentManager):
         self.__communication_status_lock = threading.Lock()
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
 
-        self._station_power_modes: dict[str, PowerMode] = {}
-        self._subrack_power_modes: dict[str, PowerMode] = {}
+        self._station_power_modes: dict[str, PowerState] = {}
+        self._subrack_power_modes: dict[str, PowerState] = {}
 
         for fqdn in subarray_fqdns:
             self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
 
         for fqdn in subrack_fqdns:
             self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
-            self._subrack_power_modes[fqdn] = PowerMode.UNKNOWN
+            self._subrack_power_modes[fqdn] = PowerState.UNKNOWN
 
         for fqdn in station_fqdns:
             self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
-            self._station_power_modes[fqdn] = PowerMode.UNKNOWN
+            self._station_power_modes[fqdn] = PowerState.UNKNOWN
 
         for fqdn in subarray_beam_fqdns:
             self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
@@ -507,7 +507,9 @@ class ControllerComponentManager(MccsComponentManager):
             return
         self._evaluate_communication_status()
 
-    def _evaluate_communication_status(self: ControllerComponentManager) -> None:
+    def _evaluate_communication_status(
+        self: ControllerComponentManager,
+    ) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
@@ -530,7 +532,7 @@ class ControllerComponentManager(MccsComponentManager):
     def _subrack_power_mode_changed(
         self: ControllerComponentManager,
         fqdn: str,
-        power_mode: PowerMode,
+        power_mode: PowerState,
     ) -> None:
         with self._power_mode_lock:
             self._subrack_power_modes[fqdn] = power_mode
@@ -539,7 +541,7 @@ class ControllerComponentManager(MccsComponentManager):
     def _station_power_mode_changed(
         self: ControllerComponentManager,
         fqdn: str,
-        power_mode: PowerMode,
+        power_mode: PowerState,
     ) -> None:
         with self._power_mode_lock:
             self._station_power_modes[fqdn] = power_mode
@@ -552,10 +554,10 @@ class ControllerComponentManager(MccsComponentManager):
         # of order, which breaks tests. Therefore we need to serialise access.
         with self._power_mode_lock:
             for power_mode in [
-                PowerMode.UNKNOWN,
-                PowerMode.OFF,
-                PowerMode.STANDBY,
-                PowerMode.ON,
+                PowerState.UNKNOWN,
+                PowerState.OFF,
+                PowerState.STANDBY,
+                PowerState.ON,
             ]:
                 if (
                     power_mode in self._subrack_power_modes.values()
@@ -563,7 +565,7 @@ class ControllerComponentManager(MccsComponentManager):
                 ):
                     break
             self.logger.info(
-                "In ControllerComponentManager._evaluatePowerMode with:\n"
+                "In ControllerComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_modes}\n"
                 f"\tstations: {self._station_power_modes}\n"
                 f"\tresult: {str(power_mode)}"
@@ -619,7 +621,9 @@ class ControllerComponentManager(MccsComponentManager):
             account.
         """
         self._resource_manager.set_health(
-            "subarray_beams", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+            "subarray_beams",
+            fqdn,
+            health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
         if self._subarray_beam_health_changed_callback is not None:
             self._subarray_beam_health_changed_callback(fqdn, health)
@@ -639,7 +643,9 @@ class ControllerComponentManager(MccsComponentManager):
             account.
         """
         self._resource_manager.set_health(
-            "station_beams", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+            "station_beams",
+            fqdn,
+            health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
         if self._station_beam_health_changed_callback is not None:
             self._station_beam_health_changed_callback(fqdn, health)

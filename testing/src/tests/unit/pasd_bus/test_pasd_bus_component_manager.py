@@ -8,15 +8,15 @@
 """This module contains the tests of the PaSD bus component manager."""
 from __future__ import annotations
 
-from typing import Any, Optional, Union
 import unittest.mock
+from typing import Any, Optional, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
 
 from ska_low_mccs.pasd_bus import (
-    PasdBusSimulatorComponentManager,
     PasdBusComponentManager,
+    PasdBusSimulatorComponentManager,
 )
 
 

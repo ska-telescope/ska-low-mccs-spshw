@@ -14,7 +14,6 @@ import pytest
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station_beam import StationBeamComponentManager
-
 from ska_low_mccs.testing.mock import MockCallable
 
 

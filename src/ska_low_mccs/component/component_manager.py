@@ -12,12 +12,12 @@ import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
-from typing_extensions import Protocol
 
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode
 from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.base.task_queue_manager import QueueManager
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import PowerState
+from typing_extensions import Protocol
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
@@ -88,14 +88,14 @@ class ControlMode(enum.Enum):
     """
 
 
-class ExtendedPowerMode(enum.IntEnum):
+class ExtendedPowerState(enum.IntEnum):
     """
     Enumerated type for power mode.
 
     Used by components that rely upon a power supply, such as hardware.
     """
 
-    # TODO: This replaces ska_tango_base.control_model.PowerMode, in
+    # TODO: This replaces ska_tango_base.control_model.PowerState, in
     # order to provide the NO_SUPPLY enum value (python enums cannot be
     # extended). We should push this up to ska_tango_base. Meanwhile,
     # we're going to have to work with both enums, so we're deliberately
@@ -136,7 +136,9 @@ class MccsComponentManagerProtocol(Protocol):
     """
 
     @property
-    def communication_status(self: MccsComponentManagerProtocol) -> CommunicationStatus:
+    def communication_status(
+        self: MccsComponentManagerProtocol,
+    ) -> CommunicationStatus:
         """Return the status of communication with the component."""
         ...
 
@@ -191,7 +193,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_power_mode_changed_callback: Optional[Callable[[PowerMode], None]],
+        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
         component_fault_callback: Optional[Callable[[bool], None]],
         *args: Any,
         **kwargs: Any,
@@ -223,7 +225,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         )
 
         self._power_mode_lock = threading.RLock()
-        self._power_mode: Optional[PowerMode] = None
+        self._power_mode: Optional[PowerState] = None
         self._component_power_mode_changed_callback = (
             component_power_mode_changed_callback
         )
@@ -301,7 +303,9 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         return self.communication_status == CommunicationStatus.ESTABLISHED
 
     @property
-    def communication_status(self: MccsComponentManager) -> CommunicationStatus:
+    def communication_status(
+        self: MccsComponentManager,
+    ) -> CommunicationStatus:
         """
         Return the communication status of this component manager.
 
@@ -314,7 +318,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
 
     @threadsafe
     def update_component_power_mode(
-        self: MccsComponentManager, power_mode: Optional[PowerMode]
+        self: MccsComponentManager, power_mode: Optional[PowerState]
     ) -> None:
         """
         Update the power mode, calling callbacks as required.
@@ -335,7 +339,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
                 self._component_power_mode_changed_callback(power_mode)
 
     def component_power_mode_changed(
-        self: MccsComponentManager, power_mode: PowerMode
+        self: MccsComponentManager, power_mode: PowerState
     ) -> None:
         """
         Handle notification that the component's power mode has changed.
@@ -348,7 +352,7 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             self.update_component_power_mode(power_mode)
 
     @property
-    def power_mode(self: MccsComponentManager) -> Optional[PowerMode]:
+    def power_mode(self: MccsComponentManager) -> Optional[PowerState]:
         """
         Return the power mode of this component manager.
 

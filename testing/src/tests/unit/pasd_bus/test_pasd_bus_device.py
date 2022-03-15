@@ -9,12 +9,11 @@
 
 from __future__ import annotations
 
-from typing import Any
 import unittest.mock
+from typing import Any
 
 import pytest
 import pytest_mock
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
@@ -39,9 +38,7 @@ class TestMccsPasdBus:
     """Tests of the MCCS transient buffer device."""
 
     @pytest.fixture()
-    def mock_component_manager(
-        self: TestMccsPasdBus, mocker: pytest_mock.mocker
-    ) -> unittest.mock.Mock:
+    def mock_component_manager(self: TestMccsPasdBus, mocker: pytest_mock.mocker) -> unittest.mock.Mock:  # type: ignore[valid-type]
         """
         Return a mock to be used as a component manager for the PaSD bus device.
 
@@ -51,7 +48,7 @@ class TestMccsPasdBus:
         :return: a mock to be used as a component manager for the
             transient buffer device.
         """
-        return mocker.Mock()
+        return mocker.Mock()  # type: ignore[attr-defined]
 
     @pytest.fixture()
     def patched_device_class(
@@ -158,8 +155,16 @@ class TestMccsPasdBus:
                 "smartbox_outside_temperatures",
                 [40.0, 40.1],
             ),
-            ("smartboxPcbTemperatures", "smartbox_pcb_temperatures", [40.0, 40.1]),
-            ("smartboxServiceLedsOn", "smartbox_service_leds_on", [False, True]),
+            (
+                "smartboxPcbTemperatures",
+                "smartbox_pcb_temperatures",
+                [40.0, 40.1],
+            ),
+            (
+                "smartboxServiceLedsOn",
+                "smartbox_service_leds_on",
+                [False, True],
+            ),
             ("smartboxFndhPorts", "smartbox_fndh_ports", [12, 4, 1]),
             (
                 "smartboxDesiredPowerOnline",
@@ -203,7 +208,7 @@ class TestMccsPasdBus:
     )
     def test_readonly_attribute(
         self: TestMccsPasdBus,
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.mocker,  # type: ignore[valid-type]
         device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
         device_attribute: str,
@@ -227,8 +232,12 @@ class TestMccsPasdBus:
         :param example_value: any value of the correct type for the
             device attribute.
         """
-        property_mock = mocker.PropertyMock(return_value=example_value)
-        setattr(type(mock_component_manager), component_manager_property, property_mock)
+        property_mock = mocker.PropertyMock(return_value=example_value)  # type: ignore[attr-defined]
+        setattr(
+            type(mock_component_manager),
+            component_manager_property,
+            property_mock,
+        )
         property_mock.assert_not_called()
 
         _ = getattr(device_under_test, device_attribute)
@@ -266,7 +275,10 @@ class TestMccsPasdBus:
                 None,
                 True,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'FNDH service LED on' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'FNDH service LED on' successful"],
+                ],
             ),
             (
                 "TurnFndhServiceLedOff",
@@ -274,7 +286,10 @@ class TestMccsPasdBus:
                 None,
                 False,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'FNDH service LED off' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'FNDH service LED off' successful"],
+                ],
             ),
             (
                 "GetSmartboxInfo",
@@ -306,7 +321,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 service LED on' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'smartbox 1 service LED on' successful"],
+                ],
             ),
             (
                 "TurnSmartboxServiceLedOn",
@@ -314,7 +332,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 False,
-                [[ResultCode.FAILED], ["PaSD bus 'smartbox 1 service LED on' failed"]],
+                [
+                    [ResultCode.FAILED],
+                    ["PaSD bus 'smartbox 1 service LED on' failed"],
+                ],
             ),
             (
                 "TurnSmartboxServiceLedOn",
@@ -333,7 +354,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 service LED off' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'smartbox 1 service LED off' successful"],
+                ],
             ),
             (
                 "GetAntennaInfo",
@@ -349,7 +373,10 @@ class TestMccsPasdBus:
                 1,
                 1,
                 True,
-                [[ResultCode.OK], ["PaSD bus 'antenna 1 breaker reset' successful"]],
+                [
+                    [ResultCode.OK],
+                    ["PaSD bus 'antenna 1 breaker reset' successful"],
+                ],
             ),
             (
                 "TurnAntennaOn",
@@ -371,7 +398,7 @@ class TestMccsPasdBus:
     )
     def test_command(
         self: TestMccsPasdBus,
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.mocker,  # type: ignore[valid-type]
         device_under_test: MccsDeviceProxy,
         mock_component_manager: unittest.mock.Mock,
         device_command: str,
@@ -403,7 +430,7 @@ class TestMccsPasdBus:
         :param expected_device_command_return: the expected return value
             of the device command
         """
-        method_mock = mocker.Mock(return_value=component_manager_method_return)
+        method_mock = mocker.Mock(return_value=component_manager_method_return)  # type: ignore[attr-defined]
         setattr(mock_component_manager, component_manager_method, method_mock)
         method_mock.assert_not_called()
 

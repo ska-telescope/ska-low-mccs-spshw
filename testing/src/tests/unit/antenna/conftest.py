@@ -9,29 +9,24 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import tango
-from tango.server import command
-
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerState
+from tango.server import command
 
 from ska_low_mccs import MccsAntenna, MccsDeviceProxy
 from ska_low_mccs.antenna import AntennaComponentManager
-from ska_low_mccs.antenna.antenna_component_manager import (
-    _ApiuProxy,
-    _TileProxy,
-)
+from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
 from ska_low_mccs.component import CommunicationStatus
-
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
     MockCallable,
-    MockDeviceBuilder,
     MockChangeEventCallback,
+    MockDeviceBuilder,
 )
 
 
@@ -191,7 +186,7 @@ def antenna_component_manager(
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_power_mode_changed_callback: Callable[[PowerMode], None],
+    component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
 ) -> AntennaComponentManager:
     """
@@ -235,13 +230,13 @@ def initial_antenna_power_mode() -> int:
 
     :return: the initial power mode of the antenna.
     """
-    return PowerMode.OFF
+    return PowerState.OFF
 
 
 @pytest.fixture()
 def initial_are_antennas_on(
     apiu_antenna_id: int,
-    initial_antenna_power_mode: PowerMode,
+    initial_antenna_power_mode: PowerState,
 ) -> list[bool]:
     """
     Return whether each antenna is initially on in the APIU.
@@ -257,7 +252,7 @@ def initial_are_antennas_on(
     :return: whether each antenna is initially on in the APIU.
     """
     are_antennas_on = [False] * apiu_antenna_id
-    are_antennas_on[apiu_antenna_id - 1] = initial_antenna_power_mode == PowerMode.ON
+    are_antennas_on[apiu_antenna_id - 1] = initial_antenna_power_mode == PowerState.ON
     return are_antennas_on
 
 

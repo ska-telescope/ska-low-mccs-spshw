@@ -12,9 +12,8 @@ import logging
 from typing import Callable, Optional
 
 import tango
-
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode
+from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -24,7 +23,6 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
-
 
 __all__ = ["AntennaComponentManager"]
 
@@ -39,9 +37,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerMode], None],
+        component_power_mode_changed_callback: Callable[[PowerState], None],
         component_fault_callback: Callable[[bool], None],
-        antenna_power_mode_changed_callback: Callable[[PowerMode], None],
+        antenna_power_mode_changed_callback: Callable[[PowerState], None],
     ) -> None:
         """
         Initialise a new APIU proxy instance.
@@ -105,7 +103,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        if self.supplied_power_mode == PowerMode.ON:
+        if self.supplied_power_mode == PowerState.ON:
             return None
         return self._power_up_antenna()
 
@@ -121,7 +119,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        if self.supplied_power_mode == PowerMode.OFF:
+        if self.supplied_power_mode == PowerState.OFF:
             return None
         return self._power_down_antenna()
 
@@ -180,7 +178,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         if event_value == tango.DevState.ON and not self._antenna_change_registered:
             self._register_are_antennas_on_callback()
         elif event_value == tango.DevState.OFF:
-            self.update_supplied_power_mode(PowerMode.OFF)
+            self.update_supplied_power_mode(PowerState.OFF)
 
     def _register_are_antennas_on_callback(self: _ApiuProxy) -> None:
         assert self._proxy is not None  # for the type checker
@@ -213,7 +211,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             f"event_name is {event_name}."
         )
         self.update_supplied_power_mode(
-            PowerMode.ON if event_value[self._logical_antenna_id - 1] else PowerMode.OFF
+            PowerState.ON
+            if event_value[self._logical_antenna_id - 1]
+            else PowerState.OFF
         )
 
 
@@ -353,7 +353,7 @@ class AntennaComponentManager(MccsComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerMode], None],
+        component_power_mode_changed_callback: Callable[[PowerState], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
         """
@@ -376,8 +376,8 @@ class AntennaComponentManager(MccsComponentManager):
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
         """
-        self._apiu_power_mode = PowerMode.UNKNOWN
-        self._target_power_mode: Optional[PowerMode] = None
+        self._apiu_power_mode = PowerState.UNKNOWN
+        self._target_power_mode: Optional[PowerState] = None
 
         self._apiu_communication_status: CommunicationStatus = (
             CommunicationStatus.DISABLED
@@ -428,7 +428,8 @@ class AntennaComponentManager(MccsComponentManager):
         self._tile_proxy.stop_communicating()
 
     def _apiu_communication_status_changed(
-        self: AntennaComponentManager, communication_status: CommunicationStatus
+        self: AntennaComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
@@ -440,7 +441,8 @@ class AntennaComponentManager(MccsComponentManager):
         self._update_joint_communication_status()
 
     def _tile_communication_status_changed(
-        self: AntennaComponentManager, communication_status: CommunicationStatus
+        self: AntennaComponentManager,
+        communication_status: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the tile.
@@ -451,7 +453,9 @@ class AntennaComponentManager(MccsComponentManager):
         self._tile_communication_status = communication_status
         self._update_joint_communication_status()
 
-    def _update_joint_communication_status(self: AntennaComponentManager) -> None:
+    def _update_joint_communication_status(
+        self: AntennaComponentManager,
+    ) -> None:
         """
         Update the status of communication with the antenna.
 
@@ -472,15 +476,15 @@ class AntennaComponentManager(MccsComponentManager):
 
     def _apiu_power_mode_changed(
         self: AntennaComponentManager,
-        apiu_power_mode: PowerMode,
+        apiu_power_mode: PowerState,
     ) -> None:
         with self._power_mode_lock:
             self._apiu_power_mode = apiu_power_mode
 
-            if apiu_power_mode == PowerMode.UNKNOWN:
-                self.update_component_power_mode(PowerMode.UNKNOWN)
-            elif apiu_power_mode in [PowerMode.OFF, PowerMode.STANDBY]:
-                self.update_component_power_mode(PowerMode.OFF)
+            if apiu_power_mode == PowerState.UNKNOWN:
+                self.update_component_power_mode(PowerState.UNKNOWN)
+            elif apiu_power_mode in [PowerState.OFF, PowerState.STANDBY]:
+                self.update_component_power_mode(PowerState.OFF)
             else:
                 # power_mode is ON, wait for antenna power change
                 pass
@@ -488,7 +492,7 @@ class AntennaComponentManager(MccsComponentManager):
 
     def _antenna_power_mode_changed(
         self: AntennaComponentManager,
-        antenna_power_mode: PowerMode,
+        antenna_power_mode: PowerState,
     ) -> None:
         with self._power_mode_lock:
             self.update_component_power_mode(antenna_power_mode)
@@ -532,7 +536,7 @@ class AntennaComponentManager(MccsComponentManager):
         :return: a ResultCode, or None if there was nothing to do
         """
         with self._power_mode_lock:
-            self._target_power_mode = PowerMode.OFF
+            self._target_power_mode = PowerState.OFF
         return self._review_power()
 
     def standby(self: AntennaComponentManager) -> None:
@@ -555,7 +559,7 @@ class AntennaComponentManager(MccsComponentManager):
         :return: whether successful, or None if there was nothing to do.
         """
         with self._power_mode_lock:
-            self._target_power_mode = PowerMode.ON
+            self._target_power_mode = PowerState.ON
         return self._review_power()
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
@@ -566,18 +570,18 @@ class AntennaComponentManager(MccsComponentManager):
                 self._target_power_mode = None  # attained without any action needed
                 return None
 
-            if self._apiu_power_mode != PowerMode.ON:
+            if self._apiu_power_mode != PowerState.ON:
                 return ResultCode.QUEUED
             if (
-                self.power_mode == PowerMode.OFF
-                and self._target_power_mode == PowerMode.ON
+                self.power_mode == PowerState.OFF
+                and self._target_power_mode == PowerState.ON
             ):
                 result_code = self._apiu_proxy.power_on()
                 self._target_power_mode = None
                 return result_code
             if (
-                self.power_mode == PowerMode.ON
-                and self._target_power_mode == PowerMode.OFF
+                self.power_mode == PowerState.ON
+                and self._target_power_mode == PowerState.OFF
             ):
                 result_code = self._apiu_proxy.power_off()
                 self._target_power_mode = None

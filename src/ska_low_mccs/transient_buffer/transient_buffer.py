@@ -12,7 +12,6 @@ import logging
 
 from ska_low_mccs.component import ObjectComponent
 
-
 __all__ = ["TransientBuffer"]
 
 

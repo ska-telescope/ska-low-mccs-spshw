@@ -12,12 +12,10 @@ import time
 import unittest.mock
 
 import pytest
+from ska_tango_base.control_model import AdminMode
 from tango import DevState
 
-from ska_tango_base.control_model import AdminMode
-
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
@@ -57,7 +55,9 @@ def mock_tile() -> unittest.mock.Mock:
 
 
 @pytest.fixture()
-def initial_mocks(mock_tile: unittest.mock.Mock) -> dict[str, unittest.mock.Mock]:
+def initial_mocks(
+    mock_tile: unittest.mock.Mock,
+) -> dict[str, unittest.mock.Mock]:
     """
     Return a specification of the mock devices to be set up in the Tango test harness.
 

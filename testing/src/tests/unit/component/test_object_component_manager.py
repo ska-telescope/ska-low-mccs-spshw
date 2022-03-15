@@ -14,12 +14,8 @@ import unittest.mock
 import pytest
 import pytest_mock
 
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    ObjectComponentManager,
-)
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager
+from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 class TestObjectComponentManager:
@@ -28,7 +24,7 @@ class TestObjectComponentManager:
     @pytest.fixture()
     def component(
         self: TestObjectComponentManager,
-        mocker: pytest_mock.mocker,
+        mocker: pytest_mock.MockerFixture,
     ) -> unittest.mock.Mock:
         """
         Return a mock to use as a component object.
@@ -181,7 +177,8 @@ class TestObjectComponentManager:
         setattr(component, command, MockCallable())
 
         with pytest.raises(
-            ConnectionError, match="Communication with component is not established"
+            ConnectionError,
+            match="Communication with component is not established",
         ):
             getattr(component_manager, command)()
         getattr(component, command).assert_not_called()

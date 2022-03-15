@@ -14,7 +14,6 @@ from ska_tango_base.control_model import SimulationMode
 
 from ska_low_mccs.component import MccsComponentManagerProtocol
 
-
 __all__ = [
     "Switcher",
     "SwitchingComponentManager",

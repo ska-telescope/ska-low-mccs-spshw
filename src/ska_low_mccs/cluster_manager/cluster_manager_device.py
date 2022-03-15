@@ -18,18 +18,16 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
+from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
 from tango import DevState
 from tango.server import attribute, command
 
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerMode, SimulationMode
-
-from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
-from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus, JobConfig
-from ska_low_mccs.component import CommunicationStatus
 import ska_low_mccs.release as release
-
+from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
+from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsClusterManagerDevice", "main"]
 
@@ -162,7 +160,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
     def _component_power_mode_changed(
         self: MccsClusterManagerDevice,
-        power_mode: PowerMode,
+        power_mode: PowerState,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -174,10 +172,10 @@ class MccsClusterManagerDevice(SKABaseDevice):
         :param power_mode: the power mode of the component.
         """
         action_map = {
-            PowerMode.OFF: "component_off",
-            PowerMode.STANDBY: "component_standby",
-            PowerMode.ON: "component_on",
-            PowerMode.UNKNOWN: "component_unknown",
+            PowerState.OFF: "component_off",
+            PowerState.STANDBY: "component_standby",
+            PowerState.ON: "component_on",
+            PowerState.UNKNOWN: "component_unknown",
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
@@ -493,7 +491,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
         return self.component_manager.shadow_master_pool_node_ids
 
     @attribute(dtype=("DevState",), max_dim_x=100, label="shadowMasterPoolStatus")
-    def shadowMasterPoolStatus(self: MccsClusterManagerDevice) -> list[DevState]:
+    def shadowMasterPoolStatus(
+        self: MccsClusterManagerDevice,
+    ) -> list[DevState]:
         """
         Return the states of nodes in the shadow master pool.
 
@@ -681,7 +681,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def ClearJobStats(self: MccsClusterManagerDevice) -> DevVarLongStringArrayType:
+    def ClearJobStats(
+        self: MccsClusterManagerDevice,
+    ) -> DevVarLongStringArrayType:
         """
         Reset all job counters.
 
@@ -717,7 +719,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def PingMasterPool(self: MccsClusterManagerDevice) -> DevVarLongStringArrayType:
+    def PingMasterPool(
+        self: MccsClusterManagerDevice,
+    ) -> DevVarLongStringArrayType:
         """
         Pings all nodes in shadow master pool, to maintain status of each.
 

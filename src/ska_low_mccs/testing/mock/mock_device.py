@@ -10,15 +10,13 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import threading
-from typing import Any, Callable
 import unittest.mock
+from typing import Any, Callable
 
 import tango
-
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.testing.mock import MockCallable
-
 
 __all__ = ["MockDeviceBuilder"]
 

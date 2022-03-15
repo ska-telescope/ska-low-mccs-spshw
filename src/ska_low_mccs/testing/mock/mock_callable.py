@@ -9,11 +9,11 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import queue
-from typing import Any, Optional, Sequence, Tuple
 import unittest.mock
-from ska_tango_base.commands import ResultCode
+from typing import Any, Optional, Sequence, Tuple
 
 import tango
+from ska_tango_base.commands import ResultCode
 
 __all__ = ["MockCallable", "MockChangeEventCallback"]
 
@@ -145,7 +145,9 @@ class MockCallable:
             raise AssertionError("Callback has not been called.")
         called_mock.assert_called_once_with(*args, **kwargs)
 
-    def get_next_call(self: MockCallable) -> Tuple[Sequence[Any], Sequence[Any]]:
+    def get_next_call(
+        self: MockCallable,
+    ) -> Tuple[Sequence[Any], Sequence[Any]]:
         """
         Return the arguments of the next call to this mock callback.
 

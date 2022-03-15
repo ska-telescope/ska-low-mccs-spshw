@@ -7,10 +7,10 @@
 # See LICENSE for more info.
 """This module contains the tests for MccsStationBeam."""
 from __future__ import annotations
+
 from typing import Any
 
 import pytest
-
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy

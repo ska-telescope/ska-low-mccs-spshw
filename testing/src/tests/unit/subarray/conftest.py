@@ -9,21 +9,19 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
-
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (
     MockCallable,
-    MockDeviceBuilder,
     MockChangeEventCallback,
+    MockDeviceBuilder,
 )
 
 

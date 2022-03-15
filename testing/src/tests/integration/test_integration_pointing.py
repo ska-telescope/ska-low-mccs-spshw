@@ -9,20 +9,17 @@
 from __future__ import annotations
 
 import time
-from typing import Callable
 import unittest.mock
+from typing import Callable
 
 import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
-
 
 # some constants to refer to in the tests
 BEAM_1_ID = 1
@@ -183,10 +180,22 @@ class TestMccsIntegration:
 
         time.sleep(0.1)
 
-        stationbeam_1.pointingDelay = [BEAM_1_DELAY_AZIMUTH, BEAM_1_DELAY_ELEVATION]
-        stationbeam_2.pointingDelay = [BEAM_2_DELAY_AZIMUTH, BEAM_2_DELAY_ELEVATION]
-        stationbeam_3.pointingDelay = [BEAM_3_DELAY_AZIMUTH, BEAM_3_DELAY_ELEVATION]
-        stationbeam_4.pointingDelay = [BEAM_4_DELAY_AZIMUTH, BEAM_4_DELAY_ELEVATION]
+        stationbeam_1.pointingDelay = [
+            BEAM_1_DELAY_AZIMUTH,
+            BEAM_1_DELAY_ELEVATION,
+        ]
+        stationbeam_2.pointingDelay = [
+            BEAM_2_DELAY_AZIMUTH,
+            BEAM_2_DELAY_ELEVATION,
+        ]
+        stationbeam_3.pointingDelay = [
+            BEAM_3_DELAY_AZIMUTH,
+            BEAM_3_DELAY_ELEVATION,
+        ]
+        stationbeam_4.pointingDelay = [
+            BEAM_4_DELAY_AZIMUTH,
+            BEAM_4_DELAY_ELEVATION,
+        ]
         stationbeam_1.pointingDelayRate = [
             BEAM_1_DELAY_RATE_AZIMUTH,
             BEAM_1_DELAY_RATE_ELEVATION,

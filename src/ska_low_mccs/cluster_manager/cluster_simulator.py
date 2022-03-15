@@ -10,11 +10,11 @@ from __future__ import annotations  # allow forward references in type hints
 
 from enum import IntEnum
 from itertools import count
-from typing import Any, cast, Callable, Iterator, Optional, Tuple
+from typing import Any, Callable, Iterator, Optional, Tuple, cast
 
 from ska_tango_base.control_model import HealthState
-from ska_low_mccs.component import ObjectComponent
 
+from ska_low_mccs.component import ObjectComponent
 
 __all__ = ["ClusterSimulator", "JobConfig", "JobStatus"]
 
@@ -219,7 +219,8 @@ class ClusterSimulator(ObjectComponent):
         super().__init__()
 
     def set_fault_callback(
-        self: ClusterSimulator, fault_callback: Optional[Callable[[bool], None]]
+        self: ClusterSimulator,
+        fault_callback: Optional[Callable[[bool], None]],
     ) -> None:
         """
         Set the callback to be called when the component faults.

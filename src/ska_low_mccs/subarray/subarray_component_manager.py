@@ -13,9 +13,9 @@ import json
 import logging
 from typing import Any, Callable, Optional, Sequence
 
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, ObsState, PowerMode
 import ska_tango_base.subarray
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import HealthState, ObsState, PowerState
 
 from ska_low_mccs.component import (
     CommunicationStatus,
@@ -24,7 +24,6 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
-
 
 __all__ = ["SubarrayComponentManager"]
 
@@ -191,7 +190,7 @@ class SubarrayComponentManager(
         )
 
         self._device_communication_statuses: dict[str, CommunicationStatus] = {}
-        self._station_power_modes: dict[str, Optional[PowerMode]] = {}
+        self._station_power_modes: dict[str, Optional[PowerState]] = {}
         self._device_obs_states: dict[str, Optional[ObsState]] = {}
         self._is_assigning = False
         self._configuring_resources: set[str] = set()
@@ -226,7 +225,7 @@ class SubarrayComponentManager(
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
             with self._power_mode_lock:
-                self.update_component_power_mode(PowerMode.ON)
+                self.update_component_power_mode(PowerState.ON)
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""
@@ -517,7 +516,10 @@ class SubarrayComponentManager(
         :return: a result code
         """
         result_code = ResultCode.OK
-        for (subarray_beam_id, configuration) in subarray_beam_configuration.items():
+        for (
+            subarray_beam_id,
+            configuration,
+        ) in subarray_beam_configuration.items():
             subarray_beam_fqdn = f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
             subarray_beam_proxy = self._subarray_beams[subarray_beam_fqdn]
             proxy_result_code = subarray_beam_proxy.configure(configuration)
@@ -675,7 +677,7 @@ class SubarrayComponentManager(
     def _station_power_mode_changed(
         self: SubarrayComponentManager,
         fqdn: str,
-        power_mode: PowerMode,
+        power_mode: PowerState,
     ) -> None:
         self._station_power_modes[fqdn] = power_mode
 

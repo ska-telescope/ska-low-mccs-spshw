@@ -12,16 +12,12 @@ import json
 from typing import Any
 
 import pytest
-from tango import DevFailed
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState
+from tango import DevFailed
 
 from ska_low_mccs import MccsClusterManagerDevice, MccsDeviceProxy
-from ska_low_mccs.cluster_manager.cluster_simulator import (
-    ClusterSimulator,
-    JobStatus,
-)
+from ska_low_mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -113,12 +109,30 @@ class TestMccsClusterManagerDevice:
             ("nodesInUse", ClusterSimulator.RESOURCE_STATS["nodes_in_use"]),
             ("nodesTotal", ClusterSimulator.CONFIGURATION["nodes_total"]),
             ("masterNodeId", ClusterSimulator.CONFIGURATION["master_node_id"]),
-            ("masterCpusUsed", ClusterSimulator.RESOURCE_STATS["master_cpus_used"]),
-            ("masterCpusTotal", ClusterSimulator.CONFIGURATION["master_cpus_total"]),
-            ("masterDiskUsed", ClusterSimulator.RESOURCE_STATS["master_disk_used"]),
-            ("masterDiskTotal", ClusterSimulator.CONFIGURATION["master_disk_total"]),
-            ("masterMemUsed", ClusterSimulator.RESOURCE_STATS["master_mem_used"]),
-            ("masterMemTotal", ClusterSimulator.CONFIGURATION["master_mem_total"]),
+            (
+                "masterCpusUsed",
+                ClusterSimulator.RESOURCE_STATS["master_cpus_used"],
+            ),
+            (
+                "masterCpusTotal",
+                ClusterSimulator.CONFIGURATION["master_cpus_total"],
+            ),
+            (
+                "masterDiskUsed",
+                ClusterSimulator.RESOURCE_STATS["master_disk_used"],
+            ),
+            (
+                "masterDiskTotal",
+                ClusterSimulator.CONFIGURATION["master_disk_total"],
+            ),
+            (
+                "masterMemUsed",
+                ClusterSimulator.RESOURCE_STATS["master_mem_used"],
+            ),
+            (
+                "masterMemTotal",
+                ClusterSimulator.CONFIGURATION["master_mem_total"],
+            ),
         ],
     )
     def test_attribute_constant_values(

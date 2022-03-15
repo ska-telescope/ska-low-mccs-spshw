@@ -13,13 +13,13 @@ __all__ = ["MccsDeviceProxy"]
 
 import logging
 import threading
-from typing import Any, Callable, Optional, Type
-from typing_extensions import TypedDict
 import warnings
+from typing import Any, Callable, Optional, Type
 
 import backoff
 import tango
-from tango import DevFailed, DevState, AttrQuality
+from tango import AttrQuality, DevFailed, DevState
+from typing_extensions import TypedDict
 
 # type for the "details" dictionary that backoff calls its callbacks with
 BackoffDetailsType = TypedDict("BackoffDetailsType", {"args": list, "elapsed": float})

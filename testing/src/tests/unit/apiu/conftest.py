@@ -8,25 +8,21 @@
 """This module defined a pytest test harness for testing the MCCS APIU module."""
 from __future__ import annotations
 
-import random
-
 import logging
+import random
+import unittest.mock
 from typing import Callable
 
-import unittest.mock
-
 import pytest
-
-from ska_tango_base.control_model import PowerMode, SimulationMode
+from ska_tango_base.control_model import PowerState, SimulationMode
 
 from ska_low_mccs.apiu import (
+    ApiuComponentManager,
     ApiuSimulator,
     ApiuSimulatorComponentManager,
-    ApiuComponentManager,
     SwitchingApiuComponentManager,
 )
 from ska_low_mccs.component import CommunicationStatus
-
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
@@ -60,14 +56,14 @@ def component_antenna_power_changed_callback(
 
 
 @pytest.fixture()
-def initial_power_mode() -> PowerMode:
+def initial_power_mode() -> PowerState:
     """
     Return the initial power mode of the APIU's simulated power supply.
 
     :return: the initial power mode of the APIU's simulated power
         supply.
     """
-    return PowerMode.OFF
+    return PowerState.OFF
 
 
 @pytest.fixture()
@@ -182,7 +178,7 @@ def apiu_component_manager(
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     component_antenna_power_changed_callback: MockCallable,
-    initial_power_mode: PowerMode,
+    initial_power_mode: PowerState,
 ) -> ApiuComponentManager:
     """
     Return an APIU component manager (in simulation mode as specified).

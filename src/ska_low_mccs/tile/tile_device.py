@@ -10,23 +10,22 @@ from __future__ import annotations  # allow forward references in type hints
 
 import json
 import logging
-import numpy as np
 import os.path
 from typing import List, Optional, Tuple
 
+import numpy as np
 import tango
-from tango.server import attribute, command, device_property
-
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     HealthState,
-    PowerMode,
+    PowerState,
     SimulationMode,
     TestMode,
 )
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tile import TileComponentManager, TileHealthModel
@@ -116,8 +115,14 @@ class MccsTile(SKABaseDevice):
             ("GetArpTable", self.GetArpTableCommand),
             ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
-            ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
-            ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
+            (
+                "ConfigureStationBeamformer",
+                self.ConfigureStationBeamformerCommand,
+            ),
+            (
+                "LoadCalibrationCoefficients",
+                self.LoadCalibrationCoefficientsCommand,
+            ),
             ("LoadCalibrationCurve", self.LoadCalibrationCurveCommand),
             ("LoadBeamAngle", self.LoadBeamAngleCommand),
             ("SwitchCalibrationBank", self.SwitchCalibrationBankCommand),
@@ -128,7 +133,10 @@ class MccsTile(SKABaseDevice):
                 "ConfigureIntegratedChannelData",
                 self.ConfigureIntegratedChannelDataCommand,
             ),
-            ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
+            (
+                "ConfigureIntegratedBeamData",
+                self.ConfigureIntegratedBeamDataCommand,
+            ),
             ("StopIntegratedData", self.StopIntegratedDataCommand),
             ("SendRawData", self.SendRawDataCommand),
             ("SendChannelisedData", self.SendChannelisedDataCommand),
@@ -171,7 +179,8 @@ class MccsTile(SKABaseDevice):
             self.AntennasPerTile,
         )
         self.register_command_object(
-            "LoadAntennaTapering", self.LoadAntennaTaperingCommand(*antenna_args)
+            "LoadAntennaTapering",
+            self.LoadAntennaTaperingCommand(*antenna_args),
         )
         self.register_command_object(
             "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
@@ -306,7 +315,7 @@ class MccsTile(SKABaseDevice):
 
     def _component_power_mode_changed(
         self: MccsTile,
-        power_mode: PowerMode,
+        power_mode: PowerState,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -319,10 +328,10 @@ class MccsTile(SKABaseDevice):
         """
         self.logger.debug(f"power_mode: {power_mode}")
         action_map = {
-            PowerMode.OFF: "component_off",
-            PowerMode.STANDBY: "component_standby",
-            PowerMode.ON: "component_on",
-            PowerMode.UNKNOWN: "component_unknown",
+            PowerState.OFF: "component_off",
+            PowerState.STANDBY: "component_standby",
+            PowerState.ON: "component_on",
+            PowerState.UNKNOWN: "component_unknown",
         }
 
         self.op_state_model.perform_action(action_map[power_mode])
@@ -1034,9 +1043,7 @@ class MccsTile(SKABaseDevice):
     class ReadRegisterCommand(BaseCommand):
         """Class for handling the ReadRegister(argin) command."""
 
-        def do(  # type: ignore[override]
-            self: MccsTile.ReadRegisterCommand, argin: str
-        ) -> list[int]:
+        def do(self: MccsTile.ReadRegisterCommand, argin: str) -> list[int]:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsTile.ReadRegister` command functionality.
 
@@ -1326,7 +1333,13 @@ class MccsTile(SKABaseDevice):
                 raise ValueError(message)
 
             component_manager.configure_40g_core(
-                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+                core_id,
+                arp_table_entry,
+                src_mac,
+                src_ip,
+                src_port,
+                dst_ip,
+                dst_port,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1366,9 +1379,7 @@ class MccsTile(SKABaseDevice):
     class Get40GCoreConfigurationCommand(BaseCommand):
         """Class for handling the Get40GCoreConfiguration(argin) command."""
 
-        def do(  # type: ignore[override]
-            self: MccsTile.Get40GCoreConfigurationCommand, argin: str
-        ) -> str:
+        def do(self: MccsTile.Get40GCoreConfigurationCommand, argin: str) -> str:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
 
@@ -1765,7 +1776,8 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.LoadCalibrationCoefficientsCommand, argin: list[float]
+            self: MccsTile.LoadCalibrationCoefficientsCommand,
+            argin: list[float],
         ) -> Tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.LoadCalibrationCoefficients` commands.
@@ -2788,7 +2800,9 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
-    def ComputeCalibrationCoefficients(self: MccsTile) -> DevVarLongStringArrayType:
+    def ComputeCalibrationCoefficients(
+        self: MccsTile,
+    ) -> DevVarLongStringArrayType:
         """
         Compute the calibration coefficients.
 
@@ -3429,7 +3443,9 @@ class MccsTile(SKABaseDevice):
             component_manager.test_generator_active = active
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-        def check_allowed(self: MccsTile.ConfigureTestGeneratorCommand) -> bool:
+        def check_allowed(
+            self: MccsTile.ConfigureTestGeneratorCommand,
+        ) -> bool:
             """
             Check if command is allowed.
 

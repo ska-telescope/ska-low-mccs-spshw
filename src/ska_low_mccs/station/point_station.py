@@ -14,20 +14,17 @@ This is originally from the AAVS code.
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
-import time
-from typing import Any, Callable, List, Optional
-
-import warnings
-from datetime import datetime
-
 import multiprocessing
 import queue
+import time
+import warnings
+from datetime import datetime
+from typing import Any, Callable, List, Optional
 
 import fire
-
 import numpy as np
-from astropy import constants
-from astropy.coordinates import Angle, AltAz, SkyCoord, EarthLocation, get_sun
+from astropy.constants import c
+from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord, get_sun
 from astropy.time import TimeDelta
 from astropy.time.core import Time
 from astropy.utils.exceptions import AstropyWarning
@@ -144,13 +141,16 @@ class Pointing(object):
 
         # Get reference antenna location
         self._reference_antenna_loc = EarthLocation.from_geodetic(
-            self._longitude, self._latitude, height=self._height, ellipsoid="WGS84"
+            self._longitude,
+            self._latitude,
+            height=self._height,
+            ellipsoid="WGS84",
         )
 
         # Placeholder for delays and flag for below horizon
         self._below_horizon = False
-        self._delays: np.ndarray = None
-        self._delay_rates: np.ndarray = None
+        self._delays: np.ndarray = None  # type: ignore[assignment]
+        self._delay_rates: np.ndarray = None  # type: ignore[assignment]
 
     # -------------------------------- POINTING FUNCTIONS -------------------------------------
     def point_to_sun(self: Pointing, pointing_time: Optional[float] = None) -> None:
@@ -204,9 +204,7 @@ class Pointing(object):
             self._below_horizon = False
 
         # Compute the delays
-        self._delays = self._delays_from_altitude_azimuth(
-            altitude_angle.rad, azimuth_angle.rad
-        )
+        self._delays = self._delays_from_altitude_azimuth(altitude_angle.rad, azimuth_angle.rad)  # type: ignore[assignment]
         self._delay_rates = self._delays * 0
 
     def point_array(
@@ -276,7 +274,7 @@ class Pointing(object):
 
     def get_pointing_coefficients(
         self: Pointing, start_channel: int, nof_channels: int
-    ) -> Optional[tuple[np.complex]]:
+    ) -> Optional[tuple[np.complex]]:  # type: ignore[name-defined]
         """
         Get complex pointing coefficients from generated delays.
 
@@ -291,7 +289,7 @@ class Pointing(object):
 
         # If below horizon flat is set, return 0s
         if self._below_horizon:
-            return np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)
+            return np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)  # type: ignore[return-value, attr-defined]
 
         # Compute frequency range
         channel_bandwidth = 400e6 / 512.0
@@ -303,13 +301,13 @@ class Pointing(object):
         )
 
         # Generate coefficients
-        coefficients = np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)
+        coefficients = np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)  # type: ignore[attr-defined]
         for i in range(nof_channels):
             delays = 2.0 * np.pi * frequencies[i] * self._delays
             coefficients[:, i] = np.cos(delays) + 1j * np.sin(delays)
 
         # All done, return coefficients
-        return coefficients
+        return coefficients  # type: ignore[return-value]
 
     def _delays_from_altitude_azimuth(
         self: Pointing, altitude: float, azimuth: float
@@ -336,11 +334,14 @@ class Pointing(object):
         path_length = np.dot(scale, self._antennas.xyz.T)
 
         # Return frequency-independent geometric delays
-        return np.multiply(1.0 / constants.c.value, path_length)
+        return np.multiply(1.0 / c.value, path_length)
 
     @staticmethod
     def _ra_dec_to_alt_az(
-        right_ascension: float, declination: float, time: float, location: float
+        right_ascension: float,
+        declination: float,
+        time: float,
+        location: float,
     ) -> List[Angle]:
         """
         Calculate the altitude and azimuth coordinates of a sky object.
@@ -375,7 +376,10 @@ class Pointing(object):
         return angle
 
     def is_above_horizon(
-        self: Pointing, right_ascension: float, declination: float, pointing_time: float
+        self: Pointing,
+        right_ascension: float,
+        declination: float,
+        pointing_time: float,
     ) -> bool:
         """
         Check if the target is above the horizon, given time for the reference antenna.
@@ -604,8 +608,10 @@ class PointingDriver:  # pragma: no cover
             print("nproc must be >= 1")
             return None
 
-        job_queue: queue.Queue[Time] = multiprocessing.Queue()
-        results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
+        # job_queue: queue.Queue[Time] = multiprocessing.Queue()
+        # results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
+        job_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
+        results_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
 
         processes = [
             multiprocessing.Process(

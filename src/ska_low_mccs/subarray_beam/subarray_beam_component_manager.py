@@ -9,15 +9,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast, Optional
+from typing import Any, Callable, Optional, cast
 
-from ska_low_mccs.subarray_beam import SubarrayBeam
 from ska_low_mccs.component import (
-    check_communicating,
     CommunicationStatus,
     ObjectComponentManager,
+    check_communicating,
 )
-
+from ska_low_mccs.subarray_beam import SubarrayBeam
 
 __all__ = ["SubarrayBeamComponentManager"]
 

@@ -14,11 +14,9 @@ import json
 import types
 from typing import Any, Callable, Optional, Tuple, Type
 
+import tango
 from fire import Fire
 from fire.core import FireError
-
-import tango
-
 from ska_tango_base.commands import ResultCode
 
 

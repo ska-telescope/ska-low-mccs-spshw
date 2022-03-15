@@ -13,7 +13,6 @@ from typing import Callable
 
 from ska_tango_base.control_model import HealthState
 
-
 __all__ = ["HealthModel"]
 
 
@@ -33,7 +32,8 @@ class HealthModel:
     """
 
     def __init__(
-        self: HealthModel, health_changed_callback: Callable[[HealthState], None]
+        self: HealthModel,
+        health_changed_callback: Callable[[HealthState], None],
     ) -> None:
         """
         Initialise a new instance.

@@ -13,14 +13,18 @@ import unittest.mock
 from typing import Type
 
 import pytest
-from tango.server import command
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import SimulationMode, TestMode
+from tango.server import command
 
 from ska_low_mccs import MccsDeviceProxy, MccsTile
-from ska_low_mccs.component import ExtendedPowerMode
-
+from ska_low_mccs.component import ExtendedPowerState
+from ska_low_mccs.testing import TangoHarness
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockChangeEventCallback,
+    MockDeviceBuilder,
+)
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
@@ -28,13 +32,6 @@ from ska_low_mccs.tile import (
     StaticTpmSimulatorComponentManager,
     SwitchingTpmComponentManager,
     TileComponentManager,
-)
-
-from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
 )
 
 
@@ -81,18 +78,18 @@ def subrack_tpm_id() -> int:
 
 
 @pytest.fixture()
-def initial_tpm_power_mode() -> ExtendedPowerMode:
+def initial_tpm_power_mode() -> ExtendedPowerState:
     """
     Return the initial power mode of the TPM.
 
     :return: the initial power mode of the TPM.
     """
-    return ExtendedPowerMode.OFF
+    return ExtendedPowerState.OFF
 
 
 @pytest.fixture()
 def mock_subrack(
-    subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerMode
+    subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerState
 ) -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsSubrack device.
@@ -104,7 +101,7 @@ def mock_subrack(
     :return: a mock MccsSubrack device.
     """
     builder = MockDeviceBuilder()
-    builder.add_attribute(f"tpm{subrack_tpm_id}PowerMode", initial_tpm_power_mode)
+    builder.add_attribute(f"tpm{subrack_tpm_id}PowerState", initial_tpm_power_mode)
     builder.add_result_command("PowerOnTpm", ResultCode.OK)
     builder.add_result_command("PowerOffTpm", ResultCode.OK)
     return builder()
@@ -148,7 +145,9 @@ def mock_subrack_device_proxy(
 
 
 @pytest.fixture()
-def tile_power_mode_changed_callback(subrack_tpm_id: int) -> MockChangeEventCallback:
+def tile_power_mode_changed_callback(
+    subrack_tpm_id: int,
+) -> MockChangeEventCallback:
     """
     Return a mock callback for tile power mode change.
 
@@ -158,7 +157,7 @@ def tile_power_mode_changed_callback(subrack_tpm_id: int) -> MockChangeEventCall
         device via a change event subscription, so that it gets called
         when the tile device health state changes.
     """
-    return MockChangeEventCallback(f"tpm{subrack_tpm_id}PowerMode")
+    return MockChangeEventCallback(f"tpm{subrack_tpm_id}PowerState")
 
 
 @pytest.fixture()
@@ -425,7 +424,7 @@ def patched_tile_device_class() -> Type[MccsTile]:
             Make the tile device think it has received a state change
             event from its subrack indicating that the suback is now ON.
             """
-            self.component_manager._tpm_power_mode_changed(ExtendedPowerMode.OFF)
+            self.component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
 
         @command()
         def MockTpmNoSupply(self: PatchedTileDevice) -> None:
@@ -436,10 +435,10 @@ def patched_tile_device_class() -> Type[MccsTile]:
             event from its subrack indicating that the subrack is now
             OFF.
             """
-            self.component_manager._tpm_power_mode_changed(ExtendedPowerMode.NO_SUPPLY)
+            self.component_manager._tpm_power_mode_changed(ExtendedPowerState.NO_SUPPLY)
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
-            self.component_manager._tpm_power_mode_changed(ExtendedPowerMode.ON)
+            self.component_manager._tpm_power_mode_changed(ExtendedPowerState.ON)
 
     return PatchedTileDevice

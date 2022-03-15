@@ -14,11 +14,7 @@ from typing import Any, Callable, Union
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_low_mccs.subarray_beam import (
-    SubarrayBeam,
-    SubarrayBeamComponentManager,
-)
-
+from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 from ska_low_mccs.testing.mock import MockCallable
 
 

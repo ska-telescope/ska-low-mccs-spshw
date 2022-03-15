@@ -12,17 +12,17 @@ import json
 import unittest.mock
 
 import pytest
-
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     ControlMode,
     HealthState,
     SimulationMode,
     TestMode,
 )
+
 from ska_low_mccs import MccsDeviceProxy, MccsStation, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
 
 
 @pytest.fixture()

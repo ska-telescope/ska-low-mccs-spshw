@@ -13,7 +13,6 @@ import logging
 import pytest_mock
 
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.tango_harness import TangoHarness
 
 

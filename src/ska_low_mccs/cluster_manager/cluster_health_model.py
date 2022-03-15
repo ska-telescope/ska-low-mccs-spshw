@@ -14,7 +14,6 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["ClusterHealthModel"]
 
 
@@ -60,7 +59,8 @@ class ClusterHealthModel(HealthModel):
         return HealthState.OK
 
     def shadow_master_pool_node_health_changed(
-        self: ClusterHealthModel, shadow_master_pool_node_healths: list[HealthState]
+        self: ClusterHealthModel,
+        shadow_master_pool_node_healths: list[HealthState],
     ) -> None:
         """
         Handle a change in health of a node in the shadow master pool.

@@ -9,18 +9,16 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable
 import unittest.mock
+from typing import Any, Callable
 
 import pytest
 
 # from ska_tango_base.commands import ResultCode
 import tango
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import TangoHarness
 

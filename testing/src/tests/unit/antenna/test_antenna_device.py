@@ -8,28 +8,28 @@
 """This module contains the tests for the MccsAntenna."""
 from __future__ import annotations
 
-import pytest
 import time
 
+import pytest
 import tango
-
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
-    LoggingLevel,
     HealthState,
+    LoggingLevel,
     SimulationMode,
 )
 
 from ska_low_mccs import MccsAntenna, MccsDeviceProxy
-
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load(patched_antenna_device_class: MccsAntenna) -> DeviceToLoadType:
+def device_to_load(
+    patched_antenna_device_class: MccsAntenna,
+) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
@@ -159,7 +159,8 @@ class TestMccsAntenna:
         assert device_under_test.state() == tango.DevState.DISABLE
 
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = device_under_test.voltage
 
@@ -217,7 +218,8 @@ class TestMccsAntenna:
         assert device_under_test.state() == tango.DevState.DISABLE
 
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = device_under_test.current
 
@@ -275,7 +277,8 @@ class TestMccsAntenna:
         assert device_under_test.state() == tango.DevState.DISABLE
 
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = device_under_test.temperature
 

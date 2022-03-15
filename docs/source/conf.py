@@ -89,14 +89,6 @@ release = version
 copyright = "2020, SKA MCCS Team"
 
 # -- General configuration ------------------------------------------------
-
-# If your documentation needs a minimal Sphinx version, state it here.
-#
-# needs_sphinx = '1.0'
-
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
 nitpick_ignore = [
     ("py:class", "callable"),
     ("py:class", "optional"),
@@ -107,11 +99,16 @@ nitpick_ignore = [
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "Status"),
     ("py:exc", "yaml.YAMLError"),
-    ("py:class", "ska_tango_base.control_model.PowerMode"),
     ("py:class", "ska_tango_base.base.task_queue_manager.QueueManager")
-    # TODO: Remove once our ska_tango_base version contains the rename to PowerState
 ]
 
+# If your documentation needs a minimal Sphinx version, state it here.
+#
+# needs_sphinx = '1.0'
+
+# Add any Sphinx extension module names here, as strings. They can be
+# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
+# ones.
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.coverage",

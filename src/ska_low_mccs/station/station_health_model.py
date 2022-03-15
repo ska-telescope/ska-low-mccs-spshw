@@ -14,7 +14,6 @@ from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.health import HealthModel
 
-
 __all__ = ["StationHealthModel"]
 
 

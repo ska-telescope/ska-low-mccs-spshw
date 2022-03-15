@@ -12,15 +12,13 @@ import logging
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
-
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerMode, SimulationMode, TestMode
+from ska_tango_base.control_model import PowerState, SimulationMode, TestMode
 
 from ska_low_mccs import MccsDeviceProxy
-
 from ska_low_mccs.component import (
     CommunicationStatus,
-    ExtendedPowerMode,
+    ExtendedPowerState,
     MccsComponentManagerProtocol,
     ObjectComponentManager,
     SwitchingComponentManager,
@@ -29,14 +27,14 @@ from ska_low_mccs.component import (
 )
 from ska_low_mccs.component.component_manager import MccsComponentManager
 from ska_low_mccs.tile import (
-    TpmDriver,
     BaseTpmSimulator,
     DynamicTpmSimulator,
     StaticTpmSimulator,
+    TileTime,
+    TpmDriver,
 )
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
 from ska_low_mccs.tile.tpm_status import TpmStatus
-from ska_low_mccs.tile import TileTime
 
 __all__ = [
     "DynamicTpmSimulatorComponentManager",
@@ -470,7 +468,7 @@ class TileComponentManager(MccsComponentManager):
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerMode], None],
+        component_power_mode_changed_callback: Callable[[PowerState], None],
         component_fault_callback: Callable[[bool], None],
         _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
@@ -651,7 +649,7 @@ class TileComponentManager(MccsComponentManager):
                 ) from dev_failed
 
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerMode",
+            f"tpm{self._subrack_tpm_id}PowerState",
             self._tpm_power_mode_change_event_received,
         )
 
@@ -663,7 +661,7 @@ class TileComponentManager(MccsComponentManager):
     def _tpm_power_mode_change_event_received(
         self: TileComponentManager,
         event_name: str,
-        event_value: ExtendedPowerMode,
+        event_value: ExtendedPowerState,
         event_quality: tango.AttrQuality,
     ) -> None:
         """
@@ -677,8 +675,8 @@ class TileComponentManager(MccsComponentManager):
         :param event_value: the new attribute value
         :param event_quality: the quality of the change event
         """
-        assert event_name.lower() == f"tpm{self._subrack_tpm_id}PowerMode".lower(), (
-            f"subrack 'tpm{self._subrack_tpm_id}PowerMode' attribute changed callback "
+        assert event_name.lower() == f"tpm{self._subrack_tpm_id}PowerState".lower(), (
+            f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
         self._tpm_power_mode_changed(event_value)
@@ -710,7 +708,7 @@ class TileComponentManager(MccsComponentManager):
 
     def _tpm_power_mode_changed(
         self: TileComponentManager,
-        power_mode: ExtendedPowerMode,
+        power_mode: ExtendedPowerState,
     ) -> None:
         self._tile_orchestrator.update_tpm_power_mode(power_mode)
 
@@ -727,7 +725,7 @@ class TileComponentManager(MccsComponentManager):
         self._tile_orchestrator.update_tpm_communication_status(communication_status)
 
     def update_tpm_power_mode(
-        self: TileComponentManager, power_mode: Optional[PowerMode]
+        self: TileComponentManager, power_mode: Optional[PowerState]
     ) -> None:
         """
         Update the power mode, calling callbacks as required.
@@ -745,13 +743,13 @@ class TileComponentManager(MccsComponentManager):
             f"power mode: {self.power_mode}, communication status: {self.communication_status}"
         )
         if self.communication_status == CommunicationStatus.ESTABLISHED:
-            if power_mode == PowerMode.ON:
+            if power_mode == PowerState.ON:
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
                     self.initialise()
                 self._tile_time.set_reference_time(self.tile_reference_time)
-            if power_mode == PowerMode.STANDBY:
+            if power_mode == PowerState.STANDBY:
                 self.erase_fpga()
                 self._tile_time.set_reference_time(0)
 
@@ -807,10 +805,10 @@ class TileComponentManager(MccsComponentManager):
 
         :return: the TPM status
         """
-        if self.power_mode == PowerMode.UNKNOWN:
+        if self.power_mode == PowerState.UNKNOWN:
             self.logger.debug("power mode UNKNOWN")
             status = TpmStatus.UNKNOWN
-        elif self.power_mode != PowerMode.ON:
+        elif self.power_mode != PowerState.ON:
             status = TpmStatus.OFF
         elif self.communication_status != CommunicationStatus.ESTABLISHED:
             status = TpmStatus.UNCONNECTED

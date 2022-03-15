@@ -22,7 +22,6 @@ from ska_low_mccs.component import (
     check_on,
 )
 
-
 __all__ = ["StationBeamComponentManager"]
 
 

@@ -8,15 +8,13 @@
 """This module contains the tests for the ska_low_mccs.health module."""
 from __future__ import annotations
 
-from typing import Callable, Optional
 import unittest.mock
+from typing import Callable, Optional
 
 import pytest
-
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.cluster_manager import ClusterHealthModel
-
 from ska_low_mccs.testing.mock import MockCallable
 
 

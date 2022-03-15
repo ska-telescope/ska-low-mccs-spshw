@@ -7,11 +7,11 @@
 # See LICENSE for more info.
 """This module contains the tests for MccsSubarrayBeam."""
 from __future__ import annotations
+
 from typing import Any
 
 import pytest
 import tango
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -107,7 +107,8 @@ class TestMccsSubarrayBeam(object):
         :param write_value: a value to write to check that it sticks
         """
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = getattr(device_under_test, attribute)
 
@@ -135,7 +136,8 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         """
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = device_under_test.stationIds
 
@@ -169,7 +171,8 @@ class TestMccsSubarrayBeam(object):
         :param attribute: name of the attribute under test.
         """
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = getattr(device_under_test, attribute)
         device_under_test.adminMode = AdminMode.ONLINE
@@ -191,7 +194,8 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         """
         with pytest.raises(
-            tango.DevFailed, match="Communication with component is not established"
+            tango.DevFailed,
+            match="Communication with component is not established",
         ):
             _ = device_under_test.desiredPointing
         device_under_test.adminMode = AdminMode.ONLINE

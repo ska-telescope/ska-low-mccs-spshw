@@ -12,14 +12,9 @@ import logging
 import time
 
 import pytest
+from ska_tango_base.control_model import PowerState
 
-from ska_tango_base.control_model import PowerMode
-
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    PowerSupplyProxySimulator,
-)
-
+from ska_low_mccs.component import CommunicationStatus, PowerSupplyProxySimulator
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
@@ -146,13 +141,13 @@ class TestPowerSupplyProxySimulator:
 
     @pytest.mark.parametrize(
         ("command", "expected_supplied_power_mode"),
-        [("power_on", PowerMode.ON), ("power_off", PowerMode.OFF)],
+        [("power_on", PowerState.ON), ("power_off", PowerState.OFF)],
     )
     def test_command(
         self: TestPowerSupplyProxySimulator,
         component_manager: PowerSupplyProxySimulator,
         command: str,
-        expected_supplied_power_mode: PowerMode,
+        expected_supplied_power_mode: PowerState,
     ) -> None:
         """
         Test the component manager can execute basic commands on its component.
@@ -166,7 +161,8 @@ class TestPowerSupplyProxySimulator:
         assert component_manager.supplied_power_mode is None
 
         with pytest.raises(
-            ConnectionError, match="Communication with component is not established"
+            ConnectionError,
+            match="Communication with component is not established",
         ):
             getattr(component_manager, command)()
         time.sleep(0.1)
@@ -174,7 +170,7 @@ class TestPowerSupplyProxySimulator:
 
         component_manager.start_communicating()
         time.sleep(0.1)
-        assert component_manager.supplied_power_mode == PowerMode.OFF
+        assert component_manager.supplied_power_mode == PowerState.OFF
 
         getattr(component_manager, command)()
         time.sleep(0.1)

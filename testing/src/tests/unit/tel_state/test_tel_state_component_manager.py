@@ -13,10 +13,7 @@ from typing import Any, Union
 import pytest
 from _pytest.fixtures import SubRequest
 
-from ska_low_mccs.tel_state import (
-    TelState,
-    TelStateComponentManager,
-)
+from ska_low_mccs.tel_state import TelState, TelStateComponentManager
 
 
 class TestTelState:

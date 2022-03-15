@@ -12,7 +12,7 @@ import unittest
 
 import pytest
 import tango
-
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
@@ -20,7 +20,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.commands import ResultCode
+
 from ska_low_mccs import MccsController, MccsDeviceProxy, release
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness

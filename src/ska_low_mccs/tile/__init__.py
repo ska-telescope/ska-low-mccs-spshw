@@ -28,7 +28,7 @@ __all__ = [
     "StaticTpmSimulatorComponentManager",
     "TpmDriver",
     "demo_tile_device",
-    "plugins",
+    # "plugins",
     "TpmStatus",
 ]
 

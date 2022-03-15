@@ -11,21 +11,25 @@ from __future__ import annotations
 # import json
 from time import sleep
 
-# import pytest
-from pytest_bdd import scenario, given, parsers, then, when
 import tango
 
+# import pytest
+from pytest_bdd import given, parsers, scenario, then, when
 from ska_tango_base.control_model import AdminMode  # , HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
 
+# TODO: Previously we used a pytest_mock module_mocker here, rather than a mocker, to
+# ensure that the mocks have module scope. Did we lose this scope when we changed over
+# to a MockChangeEventCallback? Does it matter?
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 # from ska_low_mccs.testing.tango_harness import TangoHarness
 
 
 @scenario(
-    "features/controller_subarray_interactions.feature", "MCCS Turn on low telescope"
+    "features/controller_subarray_interactions.feature",
+    "MCCS Turn on low telescope",
 )
 def test_turn_on_low_telescope(
     controller: MccsDeviceProxy,

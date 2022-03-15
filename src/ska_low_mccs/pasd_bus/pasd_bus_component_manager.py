@@ -12,13 +12,14 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.control_model import SimulationMode
-from ska_low_mccs.pasd_bus.pasd_bus_simulator import PasdBusSimulator
+
 from ska_low_mccs.component import (
-    check_communicating,
     CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
+    check_communicating,
 )
+from ska_low_mccs.pasd_bus.pasd_bus_simulator import PasdBusSimulator
 
 
 class PasdBusSimulatorComponentManager(ObjectComponentManager):

@@ -35,11 +35,8 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Optional[
-            Callable[[list[bool]], None]
+        component_state_changed_callback: Callable[[bool], None],
         ] = None,
     ) -> None:
         """
@@ -196,13 +193,15 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Callable[[list[bool]], None],
+        component_state_changed_callback: Callable,
         _initial_power_mode: PowerState = PowerState.OFF,
     ) -> None:
+            SimulationMode.TRUE,
+            len(self.AntennaFQDNs),
+            self.logger,
+            self._component_communication_status_changed,
+            self._component_state_changed,
         """
         Initialise a new instance.
 
@@ -211,17 +210,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_antenna_power_changed_callback: callback to be
-            called when the power mode of an antenna changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         :param _initial_power_mode: the initial power mode of the power
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
@@ -231,27 +224,22 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             initial_simulation_mode,
             antenna_count,
             logger,
-            push_change_event,
             self._hardware_communication_status_changed,
-            self.component_fault_changed,
-            component_antenna_power_changed_callback,
+            self.component_state_changed,
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
-            push_change_event,
             self._power_supply_communication_status_changed,
-            self.component_power_mode_changed,
+            self.component_state_mode_changed,
             _initial_power_mode,
         )
         super().__init__(
             hardware_component_manager,
             power_supply_component_manager,
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_sate_changed_callback,
             None,
         )
 

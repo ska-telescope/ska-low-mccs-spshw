@@ -261,11 +261,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         hardware_component_manager: MccsComponentManagerProtocol,
         power_supply_component_manager: PowerSupplyProxyComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
-        component_progress_changed_callback: Optional[Callable[[int], None]],
+        component_state_changed_callback: Optional[Callable],
     ) -> None:
         """
         Initialise a new instance.
@@ -275,17 +272,11 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param power_supply_component_manager: the component
             manager that manages supply of power to the hardware.
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
         """
         self._target_power_mode: Optional[PowerState] = None
 
@@ -295,14 +286,10 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._power_supply_component_manager = power_supply_component_manager
         self._hardware_component_manager = hardware_component_manager
 
-        self._component_progress_changed_callback = component_progress_changed_callback
-
         super().__init__(
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(
@@ -374,8 +361,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :param progress: The progress percentage of the long-running command
         """
-        if self._component_progress_changed_callback is not None:
-            self._component_progress_changed_callback(progress)
+        if self._component_state_changed_callback is not None:
+            self._component_state_changed_callback({"progress": progress})
 
     def component_power_mode_changed(
         self: ComponentManagerWithUpstreamPowerSupply,

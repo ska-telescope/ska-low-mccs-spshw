@@ -12,7 +12,7 @@ from typing import List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import ResultCode, DeviceInitCommand, SubmittedSlowCommand
 from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
 from tango.server import attribute, command, device_property
 
@@ -76,7 +76,7 @@ class MccsAntenna(SKABaseDevice):
             self._component_fault,
         )
 
-    class InitCommand(SKABaseDevice.InitCommand):
+    class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS antenna device."""
 
         def do(  # type: ignore[override]

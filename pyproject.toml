@@ -27,7 +27,7 @@ pyyaml = "^5.4.1"
 requests = "^2.26.0"
 scipy = "^1.7.1"
 ska-ser-logging = "~0.4.1"
-ska-tango-base = "~0.12.1"
+ska-tango-base = "~0.13.0"
 transitions = "^0.8.8"
 
 [tool.poetry.dev-dependencies]

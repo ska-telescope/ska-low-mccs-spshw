@@ -22,4 +22,4 @@ RUN if [ "$USER" != "root" ] ; then \
     fi
 USER ${USER}
 
-ENTRYPOINT /home/docs/my_env/bin/sphinx-build -T -E -b html -n -W --keep-going project/${dir}/source project/${dir}/build/html
+ENTRYPOINT /home/docs/my_env/bin/sphinx-build -T -E -b html -n -W --keep-going project/${dir}/src project/${dir}/build/html

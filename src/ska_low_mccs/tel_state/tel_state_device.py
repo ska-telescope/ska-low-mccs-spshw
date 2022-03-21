@@ -15,7 +15,7 @@ from ska_tango_base.control_model import HealthState
 from tango.server import attribute
 
 import ska_low_mccs.release as release
-from ska_low_mccs.component import CommunicationStatus
+from ska_tango_base.control_model import CommunicationStatus
 from ska_low_mccs.tel_state import TelStateComponentManager, TelStateHealthModel
 
 __all__ = ["MccsTelState", "main"]

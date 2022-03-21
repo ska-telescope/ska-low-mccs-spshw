@@ -91,6 +91,7 @@ class MccsAPIU(SKABaseDevice):
             self.logger,
             self._component_communication_status_changed,
             self._component_state_changed,
+            max_workers = 1,
         )
 
     def init_command_objects(self: MccsAPIU) -> None:
@@ -110,6 +111,7 @@ class MccsAPIU(SKABaseDevice):
                     self._command_tracker,
                     self.component_manager,
                     method_name,
+                    callback=None,
                     logger=self.logger,
                 ),
             )
@@ -185,7 +187,7 @@ class MccsAPIU(SKABaseDevice):
         Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the state of the component changes.
+        the state of the component changes.self._component_state_changed_callback
 
         :param kwargs: the state change parameters.
         """
@@ -198,7 +200,7 @@ class MccsAPIU(SKABaseDevice):
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
         
-        health = kwargs.get("health"):
+        health = kwargs.get("health_state")
         if self._health_state != health:
             self._health_state = health
             self.push_change_event("healthState", health)
@@ -206,10 +208,11 @@ class MccsAPIU(SKABaseDevice):
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
+       
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        power_state = kwargs.get("power")
+        power_state = kwargs.get("power_state")
         if power_state:
             self.op_state_model.perform_action(action_map[power_state])
 
@@ -374,7 +377,7 @@ class MccsAPIU(SKABaseDevice):
 
         def __init__(
             self: MccsAPIU.IsAntennaOnCommand,
-            component_manager: ,
+            component_manager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """

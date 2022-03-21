@@ -33,7 +33,7 @@ class HealthModel:
 
     def __init__(
         self: HealthModel,
-        health_changed_callback: Callable[[HealthState], None],
+        component_state_changed_callback: Callable[[Any], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -45,8 +45,8 @@ class HealthModel:
         self._communicating = False
         self._faulty = False
         self._health_state = self.evaluate_health()
-        self._health_changed_callback = health_changed_callback
-        self._health_changed_callback(self._health_state)
+        self._component_state_changed_callback = component_state_changed_callback
+        self._component_state_changed_callback({"health_state": self._health_state})
 
     @property
     def health_state(self: HealthModel) -> HealthState:
@@ -69,7 +69,7 @@ class HealthModel:
         health_state = self.evaluate_health()
         if self._health_state != health_state:
             self._health_state = health_state
-            self._health_changed_callback(health_state)
+            self._component_state_changed_callback({"health_state": health_state})
 
     def evaluate_health(self: HealthModel) -> HealthState:
         """

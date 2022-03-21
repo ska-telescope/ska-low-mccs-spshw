@@ -12,12 +12,11 @@ import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
-
-from ska_tango_base.base import BaseComponentManager
-from ska_tango_base.base.task_queue_manager import QueueManager
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
 from typing_extensions import Protocol
+
+from ska_tango_base.base import TaskExecutorComponentManager
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
@@ -96,6 +95,7 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
             Callable[[CommunicationStatus], None]
         ],
         component_state_changed_callback: Optional[Callable],
+        max_workers: int,
         *args: Any,
         **kwargs: Any,
     ):
@@ -108,6 +108,7 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
             component manager and its component changes.
         :param component_state_changed_callback: callback to be
             called when the power mode of the component changes.
+        :param max_workers: nos of worker threads
         :param args: other positional args
         :param kwargs: other keyword args
         """
@@ -121,14 +122,13 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
 
         self._power_state_lock = threading.RLock()
         self._power_state: Optional[PowerState] = None
+        self._faulty: Optional[bool] = None
 
         self._component_state_changed_callback = (
             component_state_changed_callback
         )
 
-        self._faulty: Optional[bool] = None
-
-        super().__init__(None, *args, **kwargs)
+        super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""
@@ -145,7 +145,7 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
             return
 
         self.update_communication_status(CommunicationStatus.DISABLED)
-        self.component_state_changed(None)
+        self.update_component_state({"power_state": None, "fault": None})
 
     @threadsafe
     def update_communication_status(
@@ -193,25 +193,21 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
         """
         return self._communication_status
 
-    def component_state_changed(
-        self: MccsComponentManager, power_state: PowerState
+    def component_state_changed_callback(
+        self: MccsComponentManager, **kwargs: Any
     ) -> None:
         """
         Handle notification that the component's power mode has changed.
-
+ 
         This is a callback hook, to be passed to the managed component.
-
+ 
         :param power_state: the new power mode of the component
         """
-        # TODO merge into one call
-        with self._power_state_lock:
-            self.update_component_power_mode(power_state)
-
-        self.update_component_fault(faulty)
+        self.update_component_state(kwargs)
 
     @threadsafe
-    def update_component_power_mode(
-        self: MccsComponentManager, power_state: Optional[PowerState]
+    def update_component_state(
+        self: MccsComponentManager, **kwargs: Any
     ) -> None:
         """
         Update the power mode, calling callbacks as required.
@@ -222,31 +218,26 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
             be None, in which case the internal value is updated but no
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
-        """
-        if self._power_state != power_state:
-            self._power_state = power_state
-            if (
-                self._component_state_changed_callback is not None
-                and power_state is not None
-            ):
-                self._component_state_changed_callback({"power": power_state})
-
-    def update_component_fault(
-        self: MccsComponentManager, faulty: Optional[bool]
-    ) -> None:
-        """
-        Update the component fault status, calling callbacks as required.
-
-        This is a helper method for use by subclasses.
-
         :param faulty: whether the component has faulted. If ``False``,
             then this is a notification that the component has
             *recovered* from a fault.
         """
-        if self._faulty != faulty:
+        state = {}
+        if "power_state" in kwargs.keys():
+            power_state = kwargs.get("power_state")
+            with self._power_state_lock:
+                self._power_state = power_state
+            if power_state is not None:
+                state.update({"power_state": power_state})
+
+        if "fault" in kwargs.keys():
+            faulty = kwargs.get("fault")
             self._faulty = faulty
-            if self._component_state_changed_callback is not None and faulty is not None:
-                self._component_state_changed_callback({"fault": faulty})
+            if faulty is not None:
+                state.update({"fault": fault})
+
+        if self._component_state_changed_callback is not None:
+            self._component_state_changed_callback(state)
 
     @property
     def power_state(self: MccsComponentManager) -> Optional[PowerState]:

@@ -11,9 +11,9 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 from typing import Any, Callable, TypeVar, cast
 
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
-from ska_low_mccs.component import CommunicationStatus, MccsComponentManager
+from ska_low_mccs.component import MccsComponentManager
 
 __all__ = ["check_communicating", "check_on"]
 

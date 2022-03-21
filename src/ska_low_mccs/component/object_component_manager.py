@@ -12,10 +12,9 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     MccsComponentManager,
     ObjectComponent,
     check_communicating,

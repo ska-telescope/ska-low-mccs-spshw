@@ -11,10 +11,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
-from ska_tango_base.control_model import SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, SimulationMode
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
     check_communicating,

@@ -36,7 +36,6 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[bool], None],
-        ] = None,
     ) -> None:
         """
         Initialise a new instance.

@@ -13,12 +13,11 @@ from typing import List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
+from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand, FastCommand, ResultCode
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState, SimulationMode
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.apiu import ApiuComponentManager, ApiuHealthModel
-from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsAPIU", "main"]
 

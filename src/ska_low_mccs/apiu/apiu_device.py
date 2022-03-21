@@ -73,7 +73,7 @@ class MccsAPIU(SKABaseDevice):
     def _init_state_model(self: MccsAPIU) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = ApiuHealthModel(self.health_changed)
+        self._health_model = ApiuHealthModel(self._component_state_changed)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -98,7 +98,7 @@ class MccsAPIU(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("PowerUpAntenna", "turn_on_antenna"),
+            ("PowerUpAntenna", "turn_on_antenna"),health_changed
             ("PowerDownAntenna", "turn_off_antenna"),
             ("PowerUp", "turn_on_antennas"),
             ("PowerDown", "turn_off_antennas"),
@@ -128,7 +128,7 @@ class MccsAPIU(SKABaseDevice):
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
-                information purpose only.
+                information purpose only.health_changed
             """
             super().do()
 
@@ -180,13 +180,13 @@ class MccsAPIU(SKABaseDevice):
 
     def _component_state_changed(
         self: MccsAPIU,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """
         Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the state of the component changes.self._component_state_changed_callback
+        the state of the component changes.
 
         :param kwargs: the state change parameters.
         """
@@ -198,7 +198,7 @@ class MccsAPIU(SKABaseDevice):
         else:
             self._component_power_mode_changed(self.component_manager.power_mode)
             self._health_model.component_fault(False)
-        
+
         health = kwargs.get("health_state")
         if self._health_state != health:
             self._health_state = health
@@ -207,7 +207,6 @@ class MccsAPIU(SKABaseDevice):
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
-       
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }

@@ -13,7 +13,7 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import ResponseCommand, ResultCode, SubmittedSlowCommand
+from ska_tango_base.commands import ResponseCommand, ResultCode, SubmittedSlowCommand, DeviceInitCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
@@ -111,7 +111,7 @@ class MccsStation(SKAObsDevice):
                 ),
             )
 
-    class InitCommand(SKAObsDevice.InitCommand):
+    class InitCommand(DeviceInitCommand):
         """
         A class for :py:class:`~.MccsStation`'s Init command.
 
@@ -130,32 +130,28 @@ class MccsStation(SKAObsDevice):
                 information purpose only.
             """
             (result_code, message) = super().do()
-            device = self.target
-            device._subarray_id = 0
-            device._refLatitude = 0.0
-            device._refLongitude = 0.0
-            device._refHeight = 0.0
-            device._beam_fqdns = []
-            device._transient_buffer_fqdn = ""
-            device._delay_centre = []
-            device._calibration_coefficients = []
-            device._is_calibrated = False
-            device._calibration_job_id = 0
-            device._daq_job_id = 0
-            device._data_directory = ""
 
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
+            self._device._subarray_id = 0
+            self._device._refLatitude = 0.0
+            self._device._refLongitude = 0.0
+            self._device._refHeight = 0.0
+            self._device._beam_fqdns = []
+            self._device._transient_buffer_fqdn = ""
+            self._device._delay_centre = []
+            self._device._calibration_coefficients = []
+            self._device._is_calibrated = False
+            self._device._calibration_job_id = 0
+            self._device._daq_job_id = 0
+            self._device._data_directory = ""
 
-            device.set_change_event("beamFQDNs", True, True)
-            device.set_archive_event("beamFQDNs", True, True)
-            device.set_change_event("transientBufferFQDN", True, False)
-            device.set_archive_event("transientBufferFQDN", True, False)
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._device.set_change_event("beamFQDNs", True, True)
+            self._device.set_archive_event("beamFQDNs", True, True)
+            self._device.set_change_event("transientBufferFQDN", True, False)
+            self._device.set_archive_event("transientBufferFQDN", True, False)
+
             return (result_code, message)
 
     class OnCommand(ResponseCommand):

@@ -222,7 +222,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             communication_status_changed_callback,
             self.component_state_changed_callback,
             max_workers,
-            None,
         )
 
     @property

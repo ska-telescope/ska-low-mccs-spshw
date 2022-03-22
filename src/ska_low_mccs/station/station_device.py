@@ -229,43 +229,35 @@ class MccsStation(SKAObsDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_power_mode_changed(
-        self: MccsStation,
-        power_mode: PowerState,
-    ) -> None:
+    def component_state_changed_callback(self: MccsStation, **kwargs: Any) -> None:
         """
-        Handle change in the power mode of the component.
+        Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the power mode of the component changes. It is implemented here
+        the state of the component changes. 
+        For the power_mode parameter it is implemented here
         to drive the op_state.
-
-        :param power_mode: the power mode of the component.
+        For the health parameter it is implemented to update the health attribute
+        and push change events whenever the HealthModel's evaluated health state changes.
+        
+        :param kwargs: the component state change parameters to be set, and their new values.
         """
-        action_map = {
-            PowerState.OFF: "component_off",
-            PowerState.STANDBY: "component_standby",
-            PowerState.ON: "component_on",
-            PowerState.UNKNOWN: "component_unknown",
-        }
+        if "power_state" in kwargs.keys():
+            power_state = kwargs.get("power_state")
+            if power_state:
+                action_map = {
+                    PowerState.OFF: "component_off",
+                    PowerState.STANDBY: "component_standby",
+                    PowerState.ON: "component_on",
+                    PowerState.UNKNOWN: "component_unknown",
+                }
+                self.op_state_model.perform_action(action_map[power_state])
 
-        self.op_state_model.perform_action(action_map[power_mode])
-
-    def health_changed(self: MccsStation, health: HealthState) -> None:
-        """
-        Handle change in this device's health state.
-
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        if "health_state" in kwargs.keys():
+            health = kwargs.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
     # Reimplementation for debugging purposes
     def _update_state(self: MccsStation, state: tango.DevState) -> None:

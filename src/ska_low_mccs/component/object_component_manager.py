@@ -41,12 +41,10 @@ class ObjectComponentManager(MccsComponentManager):
         self: ObjectComponentManager,
         component: ObjectComponent,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
+        component_state_changed_callback: Optional[Callable[[Any], None]],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -74,10 +72,8 @@ class ObjectComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
             *args,
             **kwargs,
         )
@@ -95,17 +91,13 @@ class ObjectComponentManager(MccsComponentManager):
 
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
-        self._component.set_fault_callback(self.component_fault_changed)
-        self._component.set_power_mode_changed_callback(
-            self.component_power_mode_changed
-        )
+        self._component.set_component_state_callback(self.component_state_changed_callback)
 
     @threadsafe
     def stop_communicating(self: ObjectComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
         super().stop_communicating()
-        self._component.set_fault_callback(None)
-        self._component.set_power_mode_changed_callback(None)
+        self._component.set_component_state_changed_callback(None)
 
     def simulate_communication_failure(
         self: ObjectComponentManager, fail_communicate: bool

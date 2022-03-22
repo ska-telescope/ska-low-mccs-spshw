@@ -73,7 +73,7 @@ class MccsAPIU(SKABaseDevice):
     def _init_state_model(self: MccsAPIU) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = ApiuHealthModel(self._component_state_changed)
+        self._health_model = ApiuHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -89,7 +89,7 @@ class MccsAPIU(SKABaseDevice):
             len(self.AntennaFQDNs),
             self.logger,
             self._component_communication_status_changed,
-            self._component_state_changed,
+            self.component_state_changed_callback,
             max_workers = 1,
         )
 
@@ -132,18 +132,13 @@ class MccsAPIU(SKABaseDevice):
             """
             super().do()
 
-            self._are_antennas_on = None
+            self._device._are_antennas_on = None
             self.set_change_event("areAntennasOn", True, False)
 
-            self._isAlive = True
-            self._overCurrentThreshold = 0.0
-            self._overVoltageThreshold = 0.0
-            self._humidityThreshold = 0.0
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            self._health_state = self._health_model.health_state
+            self._device._isAlive = True
+            self._device._overCurrentThreshold = 0.0
+            self._device._overVoltageThreshold = 0.0
+            self._device._humidityThreshold = 0.0
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -178,10 +173,7 @@ class MccsAPIU(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_state_changed(
-        self: MccsAPIU,
-        **kwargs: Any,
-    ) -> None:
+    def component_state_changed_callback(self: MccsAPIU, **kwargs: Any) -> None:
         """
         Handle change in the state of the component.
 
@@ -191,34 +183,38 @@ class MccsAPIU(SKABaseDevice):
         :param kwargs: the state change parameters.
         """
 
-        is_fault = kwargs.get("fault")
-        if is_fault:
-            self.op_state_model.perform_action("component_fault")
-            self._health_model.component_fault(True)
-        else:
-            self._component_power_mode_changed(self.component_manager.power_mode)
-            self._health_model.component_fault(False)
-
-        health = kwargs.get("health_state")
-        if self._health_state != health:
-            self._health_state = health
-            self.push_change_event("healthState", health)
-
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        power_state = kwargs.get("power_state")
-        if power_state:
-            self.op_state_model.perform_action(action_map[power_state])
+        if "fault" in kwargs.keys():
+            is_fault = kwargs.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                self.op_state_model.perform_action(action_map[self.component_manager.power_mode])
+                self._health_model.component_fault(False)
 
-        self._are_antennas_on: list[bool]  # typehint only
-        are_antennas_on = kwargs.get("are_antennas_on")
-        if self._are_antennas_on != are_antennas_on:
-            self._are_antennas_on = list(are_antennas_on)
-            self.push_change_event("areAntennasOn", self._are_antennas_on)
+        if "health_state" in kwargs.keys():
+            health = kwargs.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
+
+        if "power_state" in kwargs.keys():
+            power_state = kwargs.get("power_state")
+            if power_state:
+                self.op_state_model.perform_action(action_map[power_state])
+
+        if "are_antennas_on" in kwargs.keys():
+            self._are_antennas_on: list[bool]  # typehint only
+            are_antennas_on = kwargs.get("are_antennas_on")
+            if self._are_antennas_on != are_antennas_on:
+                self._are_antennas_on = list(are_antennas_on)
+                self.push_change_event("areAntennasOn", self._are_antennas_on)
 
     # ----------
     # Attributes

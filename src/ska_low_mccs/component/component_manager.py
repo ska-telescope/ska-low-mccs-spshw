@@ -145,7 +145,8 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
             return
 
         self.update_communication_status(CommunicationStatus.DISABLED)
-        self.update_component_state({"power_state": None, "fault": None})
+        state = {"power_state": None, "fault": None}
+        self.update_component_state(**state)
 
     @threadsafe
     def update_communication_status(
@@ -237,7 +238,7 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
                 state.update({"fault": fault})
 
         if self._component_state_changed_callback is not None:
-            self._component_state_changed_callback(state)
+            self._component_state_changed_callback(**state)
 
     @property
     def power_state(self: MccsComponentManager) -> Optional[PowerState]:

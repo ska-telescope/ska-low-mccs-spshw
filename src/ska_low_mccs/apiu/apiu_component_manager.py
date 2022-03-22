@@ -35,7 +35,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         antenna_count: int,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[Any], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -56,20 +56,16 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             ApiuSimulator(antenna_count),
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            component_state_changed_callback,
         )
-        self._component_antenna_power_changed_callback = (
-            component_antenna_power_changed_callback
-        )
+        self._component_state_changed_callback = component_state_changed_callback
 
     def start_communicating(self: ApiuSimulatorComponentManager) -> None:
         """Establish communication with the APIU simulator."""
         super().start_communicating()
         cast(ApiuSimulator, self._component).set_antenna_power_changed_callback(
-            self._component_antenna_power_changed_callback
+            self._component_state_changed_callback
         )
 
     def stop_communicating(self: ApiuSimulatorComponentManager) -> None:
@@ -143,10 +139,8 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Callable[[list[bool]], None],
+        component_state_changed_callback: Callable[[Any], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -170,10 +164,8 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         apiu_simulator = ApiuSimulatorComponentManager(
             antenna_count,
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            component_fault_callback,
-            component_antenna_power_changed_callback,
+            component_state_changed_callback,
         )
         super().__init__(None, apiu_simulator, initial_simulation_mode)
 

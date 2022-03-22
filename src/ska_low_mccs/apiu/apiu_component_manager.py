@@ -220,7 +220,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             power_supply_component_manager,
             logger,
             communication_status_changed_callback,
-            component_state_changed_callback,
+            self.component_state_changed_callback,
             max_workers,
             None,
         )
@@ -321,38 +321,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
- 
-    def _turn_on_antenna(
-        logger: logging.Logger,
-        task_callback: Callable = None,
-        task_abort_event: Event = None,
-    ):
-        """This is a long running method
-
-        :param logger: logger
-        :type logger: logging.Logger
-        :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
-        :param task_abort_event: Check for abort, defaults to None
-        :type task_abort_event: Event, optional
-        """
-        # Indicate that the task has started
-        task_callback(status=TaskStatus.IN_PROGRESS)
-        for current_iteration in range(100):
-            # Update the task progress
-            task_callback(progress=current_iteration)
-
-            # Do something
-            time.sleep(10) # do the actual driver code here
-
-            # Periodically check that tasks have not been ABORTED
-            if task_abort_event.is_set():
-                # Indicate that the task has been aborted
-                task_callback(status=TaskStatus.ABORTED, result="This task aborted")
-                return
-
-        # Indicate that the task has completed
-        task_callback(status=TaskStatus.COMPLETED, result="This slow task has completed")
 
     def turn_on_antenna(self, antenna: int, task_callback: Optional[Callable] = None):
         """
@@ -376,7 +344,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._turn_off_antenna, args=[], 
+            self._turn_off_antenna, args=[],
             task_callback=task_callback
         )
         return task_status, response
@@ -390,7 +358,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._turn_on_antennas, args=[], 
+            self._turn_on_antennas, args=[],
             task_callback=task_callback
         )
         return task_status, response
@@ -404,7 +372,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._turn_off_antennas, args=[], 
+            self._turn_off_antennas, args=[],
             task_callback=task_callback
         )
         return task_status, response

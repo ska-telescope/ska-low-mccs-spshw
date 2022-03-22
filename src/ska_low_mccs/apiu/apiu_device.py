@@ -98,7 +98,7 @@ class MccsAPIU(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("PowerUpAntenna", "turn_on_antenna"),health_changed
+            ("PowerUpAntenna", "turn_on_antenna"),
             ("PowerDownAntenna", "turn_off_antenna"),
             ("PowerUp", "turn_on_antennas"),
             ("PowerDown", "turn_off_antennas"),

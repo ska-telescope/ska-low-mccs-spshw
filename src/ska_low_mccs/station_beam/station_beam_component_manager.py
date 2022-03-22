@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from typing import Callable, Optional, cast
+import json
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState
@@ -51,9 +52,8 @@ class StationBeamComponentManager(MccsComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        is_beam_locked_changed_callback: Callable[[bool], None],
-        station_health_changed_callback: Callable[[Optional[HealthState]], None],
-        station_fault_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[Any], None],
+        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -89,16 +89,17 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_fqdn: Optional[str] = None
         self._station_proxy: Optional[_StationProxy] = None
 
-        self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
-        self._station_health_changed_callback = station_health_changed_callback
-        self._station_fault_changed_callback = station_fault_changed_callback
+        # This may want to be changed later on but for now this is a quick fix.
+        self._is_beam_locked_changed_callback = component_state_changed_callback
+        self._station_health_changed_callback = component_state_changed_callback
+        self._station_fault_changed_callback = component_state_changed_callback
 
         super().__init__(
             logger,
             push_change_event,
             communication_status_changed_callback,
-            None,
-            None,
+            component_state_changed_callback,
+            max_workers,
         )
 
     def start_communicating(self: StationBeamComponentManager) -> None:
@@ -348,6 +349,47 @@ class StationBeamComponentManager(MccsComponentManager):
 
     def configure(
         self: StationBeamComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None
+    ) -> ResultCode:
+        """
+        Submit the `configure` slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param argin: Configuration specification dict as a json
+                string
+                {
+                "beam_id": 1,
+                "station_ids": [1,2],
+                "update_rate": 0.0,
+                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                "antenna_weights": [1.0, 1.0, 1.0],
+                "phase_centre": [0.0, 0.0],
+                }
+
+            :return: A return code and a unique command ID.
+        """
+
+        config_dict = json.loads(argin)
+
+        task_status, response = self.submit_task(
+            self._configure, args=(
+            config_dict.get("beam_id"),
+            config_dict.get("station_ids", []),
+            config_dict.get("channels", []),
+            config_dict.get("update_rate"),
+            config_dict.get("sky_coordinates", []),
+            config_dict.get("antenna_weights", []),
+            config_dict.get("phase_centre", []),
+        ), task_callback=task_callback)
+
+        return task_status, response
+
+    def _configure(
+        self: StationBeamComponentManager,
         beam_id: int,
         station_id: int,
         update_rate: float,
@@ -380,7 +422,22 @@ class StationBeamComponentManager(MccsComponentManager):
         return ResultCode.OK
 
     @check_communicating
-    def apply_pointing(self: StationBeamComponentManager) -> ResultCode:
+    def apply_pointing(self: StationBeamComponentManager, task_callback: Optional[Callable] = None) -> ResultCode:
+        """
+        Submit the apply_pointing slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+        """
+        task_status, response = self.submit_task(
+            self._apply_pointing, args=[],
+            task_callback=task_callback
+        )
+        return ([task_status], [response])
+
+    @check_communicating
+    def _apply_pointing(self: StationBeamComponentManager) -> ResultCode:
         """
         Apply the configured pointing to this station beam's station.
 

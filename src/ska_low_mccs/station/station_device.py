@@ -13,7 +13,7 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import ResponseCommand, ResultCode
+from ska_tango_base.commands import ResponseCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
@@ -96,18 +96,20 @@ class MccsStation(SKAObsDevice):
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
-        self.register_command_object(
-            "Configure",
-            self.ConfigureCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
-        )
-        self.register_command_object(
-            "ApplyPointing",
-            self.ApplyPointingCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
-        )
+        for (command_name, method_name) in [
+            ("Configure", "configure"),
+            ("ApplyPointing", "apply_pointing"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    logger=None,
+                ),
+            )
 
     class InitCommand(SKAObsDevice.InitCommand):
         """

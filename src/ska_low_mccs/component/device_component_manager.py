@@ -12,12 +12,11 @@ import logging
 from typing import Callable, Optional
 
 import tango
-from ska_tango_base.commands import BaseCommand, ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
+from ska_tango_base.commands import SlowCommand, ResultCode
+from ska_tango_base.control_model import AdminMode, CommunicationStatus,HealthState, ObsState, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
-    CommunicationStatus,
     MccsComponentManager,
     check_communicating,
 )
@@ -32,13 +31,8 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[
-            Callable[[Optional[HealthState]], None]
-        ] = None,
+        component_state_changed_callback: Optional[Callable[[Any], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -50,14 +44,9 @@ class DeviceComponentManager(MccsComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param health_changed_callback: callback to be called when the
-            health state of the device changes. The value it is called
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+            When the health state of the device changes, the value it is called
             with will normally be a HealthState, but may be None if the
             admin mode of the device indicates that the device's health
             should not be included in upstream health rollup.
@@ -69,14 +58,13 @@ class DeviceComponentManager(MccsComponentManager):
         self._health: Optional[HealthState] = None
         self._device_health_state = HealthState.UNKNOWN
         self._device_admin_mode = AdminMode.OFFLINE
-        self._health_changed_callback = health_changed_callback
+        self._component_state_changed_callback = component_state_changed_callback
 
         super().__init__(
             logger,
             push_change_event,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: DeviceComponentManager) -> None:
@@ -88,9 +76,9 @@ class DeviceComponentManager(MccsComponentManager):
         super().start_communicating()
         connect_command = self.ConnectToDevice(target=self)
         # Enqueue the connect command
-        _ = self.enqueue(connect_command)
+        #_ = self.enqueue(connect_command)
 
-    class ConnectToDeviceBase(BaseCommand):
+    class ConnectToDeviceBase(SlowCommand):
         """Base command class for connection to be enqueued."""
 
         def do(  # type: ignore[override]
@@ -160,10 +148,10 @@ class DeviceComponentManager(MccsComponentManager):
         on_command = self.DeviceProxyOnCommand(target=self)
         # Enqueue the on command.
         # This is a fire and forget command, so we don't need to keep unique ID.
-        _, result_code = self.enqueue(on_command)
+        #_, result_code = self.enqueue(on_command)
         return result_code
 
-    class DeviceProxyOnCommand(BaseCommand):
+    class DeviceProxyOnCommand(SlowCommand):
         """Base command class for the on command to be enqueued."""
 
         def do(  # type: ignore[override]
@@ -199,7 +187,7 @@ class DeviceComponentManager(MccsComponentManager):
         _, result_code = self.enqueue(off_command)
         return result_code
 
-    class DeviceProxyOffCommand(BaseCommand):
+    class DeviceProxyOffCommand(SlowCommand):
         """Base command class for the off command to be enqueued."""
 
         def do(  # type: ignore[override]

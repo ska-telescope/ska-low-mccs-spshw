@@ -17,17 +17,17 @@ import numpy as np
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
+from ska_tango_base.commands import ResultCode, FastCommand, SlowCommand
 from ska_tango_base.control_model import (
     AdminMode,
     HealthState,
     PowerState,
     SimulationMode,
     TestMode,
+    CommunicationStatus,
 )
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tile import TileComponentManager, TileHealthModel
 from ska_low_mccs.tile.tpm_status import TpmStatus
 

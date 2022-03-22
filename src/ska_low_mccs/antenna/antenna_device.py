@@ -17,7 +17,6 @@ from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
-from ska_low_mccs.component import CommunicationStatus
 
 __all__ = ["MccsAntenna", "main"]
 

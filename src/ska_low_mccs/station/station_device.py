@@ -14,12 +14,12 @@ from typing import List, Optional, Tuple
 
 import tango
 from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
 import ska_low_mccs.release as release
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import 
 from ska_low_mccs.station import (
     StationComponentManager,
     StationHealthModel,

@@ -13,12 +13,11 @@ from typing import List, Optional, Tuple
 
 import tango
 from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command
 
 from ska_low_mccs import release
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subarray_beam import (
     SubarrayBeamComponentManager,
     SubarrayBeamHealthModel,

@@ -12,116 +12,18 @@ import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
-
-from ska_tango_base.base import BaseComponentManager
-from ska_tango_base.base.task_queue_manager import QueueManager
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
 from typing_extensions import Protocol
+
+from ska_tango_base.base import TaskExecutorComponentManager
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
 __all__ = [
-    "CommunicationStatus",
-    "ControlMode",
     "MccsComponentManager",
     "MccsComponentManagerProtocol",
 ]
-
-
-class CommunicationStatus(enum.Enum):
-    """The status of a component manager's communication with its component."""
-
-    DISABLED = 1
-    """
-    The component manager is not trying to establish/maintain a channel
-    of communication with its component. For example:
-
-    * if communication with the component is connection-oriented, then
-      there is no connection, and the component manager is not trying to
-      establish a connection.
-    * if communication with the component is by event subscription, then
-      the component manager is unsubscribed from events.
-    * if communication with the component is by periodic connectionless
-      polling, then the component manager is not performing that
-      polling.
-    """
-
-    NOT_ESTABLISHED = 2
-    """
-    The component manager is trying to establish/maintain a channel of
-    communication with its component, but that channel is not currently
-    established. For example:
-
-    * if communication with the component is connection-oriented, then
-      the component manager has failed to establish/maintain the
-      connection.
-    """
-
-    ESTABLISHED = 3
-    """
-    The component manager has established a channel of communication
-    with its component. For example:
-
-    * if communication with the component is connection-oriented, then
-      the component manager has connected to its component.
-    """
-
-
-class ControlMode(enum.Enum):
-    """
-    The control modes for hardware.
-
-    Currently only MANUAL and AUTO modes are provided. In future we
-    might need to support CASCADE mode.
-    """
-
-    MANUAL = 1
-    """
-    The control element is controlled by an external operator, such as
-    a human or a TANGO device
-    """
-
-    AUTO = 2
-    """
-    The control element is controlled by an internal controller.
-    """
-
-
-class ExtendedPowerState(enum.IntEnum):
-    """
-    Enumerated type for power mode.
-
-    Used by components that rely upon a power supply, such as hardware.
-    """
-
-    # TODO: This replaces ska_tango_base.control_model.PowerState, in
-    # order to provide the NO_SUPPLY enum value (python enums cannot be
-    # extended). We should push this up to ska_tango_base. Meanwhile,
-    # we're going to have to work with both enums, so we're deliberately
-    # adopting this unwieldy name.
-
-    UNKNOWN = 0
-    """The power mode is not known."""
-
-    NO_SUPPLY = 1
-    """
-    The component is unsupplied with power and cannot be commanded on.
-
-    For example, the power mode of a TPM will be NO_SUPPLY if the
-    subrack that powers the TPM is turned off: not only is the TPM
-    off, but it cannot even be turned on (until the subrack has been
-    turned on).
-    """
-
-    OFF = 2
-    """The component is turned off but can be commanded on."""
-
-    STANDBY = 3
-    """The component is powered on and running in low-power standby mode."""
-
-    ON = 4
-    """The component is powered on and running in fully-operational mode."""
 
 
 class MccsComponentManagerProtocol(Protocol):
@@ -167,7 +69,7 @@ class MccsComponentManagerProtocol(Protocol):
         ...
 
 
-class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMeta):
+class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeCheckingMeta):
     """
     A base component manager for MCCS.
 
@@ -189,12 +91,11 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
     def __init__(
         self: MccsComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
+        component_state_changed_callback: Optional[Callable],
+        max_workers: int,
         *args: Any,
         **kwargs: Any,
     ):
@@ -202,21 +103,16 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         Initialise a new instance.
 
         :param logger: a logger for this instance to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of communications between the
             component manager and its component changes.
-        :param component_power_mode_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the power mode of the component changes.
-        :param component_fault_callback: callback to be called when the
-            fault status of the component changes.
+        :param max_workers: nos of worker threads
         :param args: other positional args
         :param kwargs: other keyword args
         """
         self.logger = logger
-        assert push_change_event
-        self._push_change_event = push_change_event
 
         self.__communication_lock = threading.Lock()
         self._communication_status = CommunicationStatus.DISABLED
@@ -224,32 +120,15 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             communication_status_changed_callback
         )
 
-        self._power_mode_lock = threading.RLock()
-        self._power_mode: Optional[PowerState] = None
-        self._component_power_mode_changed_callback = (
-            component_power_mode_changed_callback
-        )
-
+        self._power_state_lock = threading.RLock()
+        self._power_state: Optional[PowerState] = None
         self._faulty: Optional[bool] = None
-        self._component_fault_callback = component_fault_callback
 
-        super().__init__(None, *args, **kwargs)
-
-    def create_queue_manager(self: MccsComponentManager) -> QueueManager:
-        """
-        Create a QueueManager.
-
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
-
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=1,
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
+        self._component_state_changed_callback = (
+            component_state_changed_callback
         )
+
+        super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""
@@ -266,9 +145,8 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
             return
 
         self.update_communication_status(CommunicationStatus.DISABLED)
-        with self._power_mode_lock:
-            self.update_component_power_mode(None)
-        self.update_component_fault(None)
+        state = {"power_state": None, "fault": None}
+        self.update_component_state(**state)
 
     @threadsafe
     def update_communication_status(
@@ -316,78 +194,60 @@ class MccsComponentManager(BaseComponentManager, metaclass=ThreadsafeCheckingMet
         """
         return self._communication_status
 
+    def component_state_changed_callback(
+        self: MccsComponentManager, **kwargs: Any
+    ) -> None:
+        """
+        Handle notification that the component's power mode has changed.
+ 
+        This is a callback hook, to be passed to the managed component.
+ 
+        :param power_state: the new power mode of the component
+        """
+        self.update_component_state(kwargs)
+
     @threadsafe
-    def update_component_power_mode(
-        self: MccsComponentManager, power_mode: Optional[PowerState]
+    def update_component_state(
+        self: MccsComponentManager, **kwargs: Any
     ) -> None:
         """
         Update the power mode, calling callbacks as required.
 
         This is a helper method for use by subclasses.
 
-        :param power_mode: the new power mode of the component. This can
+        :param power_state: the new power mode of the component. This can
             be None, in which case the internal value is updated but no
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
+        :param faulty: whether the component has faulted. If ``False``,
+            then this is a notification that the component has
+            *recovered* from a fault.
         """
-        if self._power_mode != power_mode:
-            self._power_mode = power_mode
-            if (
-                self._component_power_mode_changed_callback is not None
-                and power_mode is not None
-            ):
-                self._component_power_mode_changed_callback(power_mode)
+        state = {}
+        if "power_state" in kwargs.keys():
+            power_state = kwargs.get("power_state")
+            with self._power_state_lock:
+                self._power_state = power_state
+            if power_state is not None:
+                state.update({"power_state": power_state})
 
-    def component_power_mode_changed(
-        self: MccsComponentManager, power_mode: PowerState
-    ) -> None:
-        """
-        Handle notification that the component's power mode has changed.
+        if "fault" in kwargs.keys():
+            faulty = kwargs.get("fault")
+            self._faulty = faulty
+            if faulty is not None:
+                state.update({"fault": fault})
 
-        This is a callback hook, to be passed to the managed component.
-
-        :param power_mode: the new power mode of the component
-        """
-        with self._power_mode_lock:
-            self.update_component_power_mode(power_mode)
+        if self._component_state_changed_callback is not None:
+            self._component_state_changed_callback(**state)
 
     @property
-    def power_mode(self: MccsComponentManager) -> Optional[PowerState]:
+    def power_state(self: MccsComponentManager) -> Optional[PowerState]:
         """
         Return the power mode of this component manager.
 
         :return: the power mode of this component manager.
         """
-        return self._power_mode
-
-    def update_component_fault(
-        self: MccsComponentManager, faulty: Optional[bool]
-    ) -> None:
-        """
-        Update the component fault status, calling callbacks as required.
-
-        This is a helper method for use by subclasses.
-
-        :param faulty: whether the component has faulted. If ``False``,
-            then this is a notification that the component has
-            *recovered* from a fault.
-        """
-        if self._faulty != faulty:
-            self._faulty = faulty
-            if self._component_fault_callback is not None and faulty is not None:
-                self._component_fault_callback(faulty)
-
-    def component_fault_changed(self: MccsComponentManager, faulty: bool) -> None:
-        """
-        Handle notification that the component's fault status has changed.
-
-        This is a callback hook, to be passed to the managed component.
-
-        :param faulty: whether the component has faulted. If ``False``,
-            then this is a notification that the component has
-            *recovered* from a fault.
-        """
-        self.update_component_fault(faulty)
+        return self._power_state
 
     @property
     def faulty(self: MccsComponentManager) -> Optional[bool]:

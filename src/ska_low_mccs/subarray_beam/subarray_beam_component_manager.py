@@ -30,8 +30,6 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        #is_beam_locked_changed_callback: Callable[[bool], None],
-        #is_configured_changed_callback: Callable[[bool], None],
         component_state_changed_callback: Callable[[Any],None],
         max_workers: Optional[int] = None,
     ) -> None:

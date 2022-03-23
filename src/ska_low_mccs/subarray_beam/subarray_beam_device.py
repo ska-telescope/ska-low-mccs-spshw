@@ -169,9 +169,9 @@ class MccsSubarrayBeam(SKAObsDevice):
             beam_locked = kwargs.get("beam_locked")
             self._health_model.is_beam_locked_changed(beam_locked)
 
-        if "configure_changed" in kwargs.keys():
-            configure_changed = kwargs.get("configure_changed")
-            self._obs_state_model.is_configure_changed(configure_changed)
+        if "configured_changed" in kwargs.keys():
+            configured_changed = kwargs.get("configured_changed")
+            self._obs_state_model.is_configured_changed(configured_changed)
 
     # ----------
     # Attributes

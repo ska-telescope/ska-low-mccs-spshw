@@ -65,7 +65,7 @@ class MccsStation(SKAObsDevice):
             self.APIUFQDN,
             self.AntennaFQDNs,
             self.TileFQDNs,
-            self.health_changed,
+            self.component_state_changed_callback,
         )
         self.set_change_event("healthState", True, False)
 
@@ -85,7 +85,7 @@ class MccsStation(SKAObsDevice):
             self.logger,
             self.push_change_event,
             self._communication_status_changed,
-            self._component_power_mode_changed,
+            self.component_state_changed_callback,
             self._health_model.apiu_health_changed,
             self._health_model.antenna_health_changed,
             self._health_model.tile_health_changed,
@@ -258,6 +258,44 @@ class MccsStation(SKAObsDevice):
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
+
+#    def _component_power_mode_changed(
+#        self: MccsStation,
+#        power_mode: PowerState,
+#    ) -> None:
+#        """
+#        Handle change in the power mode of the component.
+#
+#        This is a callback hook, called by the component manager when
+#        the power mode of the component changes. It is implemented here
+#        to drive the op_state.
+#
+#        :param power_mode: the power mode of the component.
+#        """
+#        action_map = {
+#            PowerState.OFF: "component_off",
+#            PowerState.STANDBY: "component_standby",
+#            PowerState.ON: "component_on",
+#            PowerState.UNKNOWN: "component_unknown",
+#        }
+#
+#        self.op_state_model.perform_action(action_map[power_mode])
+
+#    def health_changed(self: MccsStation, health: HealthState) -> None:
+#        """
+#        Handle change in this device's health state.
+#
+#        This is a callback hook, called whenever the HealthModel's
+#        evaluated health state changes. It is responsible for updating
+#        the tango side of things i.e. making sure the attribute is up to
+#        date, and events are pushed.
+#
+#        :param health: the new health value
+#        """
+#        if self._health_state == health:
+#            return
+#        self._health_state = health
+#        self.push_change_event("healthState", health)
 
     # Reimplementation for debugging purposes
     def _update_state(self: MccsStation, state: tango.DevState) -> None:
@@ -466,39 +504,6 @@ class MccsStation(SKAObsDevice):
     # --------
     # Commands
     # --------
-    class ConfigureCommand(ResponseCommand):
-        """Class for handling the Configure() command."""
-
-        SUCCEEDED_MESSAGE = "Configure command completed OK"
-        FAILED_MESSAGE = "Configure command failed"
-
-        def do(  # type: ignore[override]
-            self: MccsStation.ConfigureCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement Configure() command functionality.
-
-            :param argin: Configuration specification dict as a json string
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            configuration = json.loads(argin)
-            station_id = configuration.get("station_id")
-            component_manager = self.target
-            try:
-                result_code = component_manager.configure(station_id)
-            except ValueError as value_error:
-                return (
-                    ResultCode.FAILED,
-                    f"Configure command failed: {value_error}",
-                )
-
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(
         dtype_in="DevString",

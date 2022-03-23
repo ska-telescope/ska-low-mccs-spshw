@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import functools
+import json
 import logging
 import threading
 from typing import Callable, Optional, Sequence
@@ -462,11 +463,33 @@ class StationComponentManager(MccsComponentManager):
         """
         return self._is_configured
 
-    @check_communicating
-    def configure(
+    def _update_is_configured(
         self: StationComponentManager,
-        station_id: int,
-    ) -> ResultCode:
+        is_configured: bool,
+    ) -> None:
+        if self._is_configured != is_configured:
+            self._is_configured = is_configured
+            self._is_configured_changed_callback(is_configured)
+
+    def configure(self, argin: str, task_callback: Optional[Callable] = None) -> ResultCode:
+        """Submit the configure method.
+
+        This method returns immediately after it submitted
+        `self._configure` for execution.
+
+        :param argin: Configuration specification dict as a json string.
+        :param task_callback: Update task state, defaults to None
+        :type task_callback: Callable, optional
+        """
+        configuration = json.loads(argin)
+        station_id = configuration.get("station_id")
+        task_status, response = self.submit_task(
+            self._configure, station_id=station_id, task_callback=task_callback
+        )
+        return task_status, response
+
+    @check_communicating
+    def _configure(self, station_id: int, task_callback: Optional[Callable] = None) -> tuple[ResultCode, str]:
         """
         Configure the station.
 
@@ -475,21 +498,30 @@ class StationComponentManager(MccsComponentManager):
 
         :param station_id: the id of the station for which the provided
             configuration is intended.
-
+        :param task_callback: Update task state, defaults to None
         :raises ValueError: if the configuration was intended for a
             different station
-        :return: a result code
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        if station_id != self._station_id:
-            raise ValueError("Wrong station id")
+        try:
+            if station_id != self._station_id:
+                raise ValueError("Wrong station id")
+            self._update_is_configured(True)
+            result_code = ResultCode.OK
+        except ValueError as value_error:
+            # Here instead of returning the result code we will use the task_callback to report the error
+            # e.g. task_callback(status=TaskStatus.FAILED, result="This task has failed")
+            return (
+                ResultCode.FAILED,
+                f"Configure command failed: {value_error}",
+            )
 
-        self._update_is_configured(True)
-        return ResultCode.OK
-
-    def _update_is_configured(
-        self: StationComponentManager,
-        is_configured: bool,
-    ) -> None:
-        if self._is_configured != is_configured:
-            self._is_configured = is_configured
-            self._is_configured_changed_callback(is_configured)
+        # Here instead of returning the result code we will use the task_callback to report the task finishing
+        # e.g. task_callback(status=TaskStatus.FAILED, result="This task has failed")
+        # or task_callback(status=TaskStatus.COMPLETED, result="This task has completed")
+        if result_code == ResultCode.OK:
+            return (ResultCode.OK, "Configure command completed OK")
+        else:
+            return (ResultCode.FAILED, "Configure command failed")

@@ -13,8 +13,18 @@ from typing import List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand, FastCommand, ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState, SimulationMode
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SubmittedSlowCommand,
+)
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    SimulationMode,
+)
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.apiu import ApiuComponentManager, ApiuHealthModel
@@ -68,6 +78,7 @@ class MccsAPIU(SKABaseDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsAPIU) -> None:
@@ -88,9 +99,9 @@ class MccsAPIU(SKABaseDevice):
             SimulationMode.TRUE,
             len(self.AntennaFQDNs),
             self.logger,
+            self._max_workers,
             self._component_communication_status_changed,
             self.component_state_changed_callback,
-            max_workers = 1,
         )
 
     def init_command_objects(self: MccsAPIU) -> None:
@@ -130,10 +141,10 @@ class MccsAPIU(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.health_changed
             """
-            super().do()
+            #super().do()
 
             self._device._are_antennas_on = None
-            self.set_change_event("areAntennasOn", True, False)
+            self._device.set_change_event("areAntennasOn", True, False)
 
             self._device._isAlive = True
             self._device._overCurrentThreshold = 0.0
@@ -173,7 +184,7 @@ class MccsAPIU(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(self: MccsAPIU, **kwargs: Any) -> None:
+    def component_state_changed_callback(self: MccsAPIU, state_change: dict[str,Any]) -> None:
         """
         Handle change in the state of the component.
 
@@ -189,29 +200,31 @@ class MccsAPIU(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        if "fault" in kwargs.keys():
-            is_fault = kwargs.get("fault")
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
             if is_fault:
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                self.op_state_model.perform_action(action_map[self.component_manager.power_mode])
+                self.op_state_model.perform_action(
+                    action_map[self.component_manager.power_mode]
+                )
                 self._health_model.component_fault(False)
 
-        if "health_state" in kwargs.keys():
-            health = kwargs.get("health_state")
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        if "power_state" in kwargs.keys():
-            power_state = kwargs.get("power_state")
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
             if power_state:
                 self.op_state_model.perform_action(action_map[power_state])
 
-        if "are_antennas_on" in kwargs.keys():
+        if "are_antennas_on" in state_change.keys():
             self._are_antennas_on: list[bool]  # typehint only
-            are_antennas_on = kwargs.get("are_antennas_on")
+            are_antennas_on = state_change.get("are_antennas_on")
             if self._are_antennas_on != are_antennas_on:
                 self._are_antennas_on = list(are_antennas_on)
                 self.push_change_event("areAntennasOn", self._are_antennas_on)

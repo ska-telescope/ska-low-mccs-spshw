@@ -17,14 +17,14 @@ import numpy as np
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import ResultCode, FastCommand, SlowCommand
+from ska_tango_base.commands import FastCommand, ResultCode, SlowCommand
 from ska_tango_base.control_model import (
     AdminMode,
+    CommunicationStatus,
     HealthState,
     PowerState,
     SimulationMode,
     TestMode,
-    CommunicationStatus,
 )
 from tango.server import attribute, command, device_property
 

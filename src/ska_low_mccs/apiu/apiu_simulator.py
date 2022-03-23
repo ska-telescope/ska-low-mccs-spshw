@@ -106,9 +106,6 @@ class ApiuSimulator(ObjectComponent):
             simulating a fault.
         """
         self._is_faulty = initial_fault
-        self._component_state_changed_callback: Optional[
-            Callable[[Any], None]
-        ] = None
 
         self._voltage = self.DEFAULT_VOLTAGE
         self._current = self.DEFAULT_CURRENT
@@ -126,8 +123,8 @@ class ApiuSimulator(ObjectComponent):
         ]
 
     def set_fault_callback(
-        self: ApiuSimulator, fault_callback: Optional[Callable[[Any], None]]
-        ) -> None:
+        self: ApiuSimulator, fault_callback: Optional[Callable[[dict[str,Any]], None]]
+    ) -> None:
         """
         Set the callback to be called when the component faults.
 
@@ -141,8 +138,7 @@ class ApiuSimulator(ObjectComponent):
         """
         self._fault_callback = fault_callback
         if fault_callback is not None:
-            fault_callback(**{"fault": self._is_faulty})
-
+            fault_callback({"fault": self._is_faulty})
 
     @property
     def faulty(self: ApiuSimulator) -> bool:
@@ -161,8 +157,8 @@ class ApiuSimulator(ObjectComponent):
         """
         if self._is_faulty != is_faulty:
             self._is_faulty = is_faulty
-            if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback(**{"fault": is_faulty})
+            if self._fault_callback is not None:
+                self._fault_callback({"fault": is_faulty})
 
     def simulate_fault(self: ApiuSimulator, is_faulty: bool) -> None:
         """
@@ -243,7 +239,7 @@ class ApiuSimulator(ObjectComponent):
 
     def set_antenna_power_changed_callback(
         self: ApiuSimulator,
-        antenna_power_changed_callback: Optional[Callable[[list[bool]], None]],
+        antenna_power_changed_callback: Optional[Callable[[dict[str,Any]], None]],
     ) -> None:
         """
         Set the power changed callback.
@@ -269,7 +265,9 @@ class ApiuSimulator(ObjectComponent):
         This is a helper method that calls the callback if it exists.
         """
         if self._antenna_power_changed_callback is not None:
-            self._antenna_power_changed_callback(**{"are_antennas_on": self.are_antennas_on()})
+            self._antenna_power_changed_callback(
+                {"are_antennas_on": self.are_antennas_on()}
+            )
 
     @property
     def antenna_count(self: ApiuSimulator) -> int:

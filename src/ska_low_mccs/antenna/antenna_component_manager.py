@@ -337,9 +337,9 @@ class AntennaComponentManager(MccsComponentManager):
         tile_fqdn: str,
         tile_antenna_id: int,
         logger: logging.Logger,
+        max_workers: Optional[int] = None,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[Any], None],
-        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -390,9 +390,9 @@ class AntennaComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            max_workers,
         )
 
     def start_communicating(self: AntennaComponentManager) -> None:

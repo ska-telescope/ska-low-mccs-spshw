@@ -12,14 +12,17 @@ import logging
 from typing import Callable, Optional
 
 import tango
-from ska_tango_base.commands import SlowCommand, ResultCode
-from ska_tango_base.control_model import AdminMode, CommunicationStatus,HealthState, ObsState, PowerState
+from ska_tango_base.commands import ResultCode, SlowCommand
+from ska_tango_base.control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    ObsState,
+    PowerState,
+)
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import (
-    MccsComponentManager,
-    check_communicating,
-)
+from ska_low_mccs.component import MccsComponentManager, check_communicating
 
 __all__ = ["DeviceComponentManager", "ObsDeviceComponentManager"]
 
@@ -76,7 +79,7 @@ class DeviceComponentManager(MccsComponentManager):
         super().start_communicating()
         connect_command = self.ConnectToDevice(target=self)
         # Enqueue the connect command
-        #_ = self.enqueue(connect_command)
+        # _ = self.enqueue(connect_command)
 
     class ConnectToDeviceBase(SlowCommand):
         """Base command class for connection to be enqueued."""
@@ -148,7 +151,7 @@ class DeviceComponentManager(MccsComponentManager):
         on_command = self.DeviceProxyOnCommand(target=self)
         # Enqueue the on command.
         # This is a fire and forget command, so we don't need to keep unique ID.
-        #_, result_code = self.enqueue(on_command)
+        # _, result_code = self.enqueue(on_command)
         return result_code
 
     class DeviceProxyOnCommand(SlowCommand):

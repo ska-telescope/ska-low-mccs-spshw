@@ -260,9 +260,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         hardware_component_manager: MccsComponentManagerProtocol,
         power_supply_component_manager: PowerSupplyProxyComponentManager,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable],
-        max_workers: int
+        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -288,9 +288,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         super().__init__(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            max_workers,
         )
 
     def start_communicating(

@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Callable, Optional, cast
-from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 
 from ska_low_mccs.component import (
     ObjectComponentManager,
+    MccsComponentManager,
     check_communicating,
 )
 from ska_low_mccs.subarray_beam import SubarrayBeam
@@ -23,21 +25,19 @@ __all__ = ["SubarrayBeamComponentManager"]
 
 class SubarrayBeamComponentManager(ObjectComponentManager):
     """A component manager for a subarray beam."""
-
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         is_beam_locked_changed_callback: Callable[[bool], None],
         is_configured_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[Any],None],
+        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
-        :param push_change_event: method to call when the base classes
-            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -45,6 +45,9 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             when whether the beam is locked changes
         :param is_configured_changed_callback: callback to be called
             when whether this component manager is configured changes
+        :param component_state_changed_callback: callback to be called
+            when the component state changes
+        : param max_workers: no. of worker threads
         """
         self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
         self._is_configured_changed_callback = is_configured_changed_callback
@@ -52,11 +55,13 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         super().__init__(
             SubarrayBeam(logger),
             logger,
-            push_change_event,
             communication_status_changed_callback,
             None,
             None,
+            self.component_state_changed_callback,
+            max_workers,
         )
+        self._component_state_changed_callback = component_state_changed_callback
 
     __PASSTHROUGH = [
         "subarray_id",
@@ -78,10 +83,10 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """Establish communication with the subarray beam."""
         super().start_communicating()
         cast(SubarrayBeam, self._component).set_is_beam_locked_changed_callback(
-            self._is_beam_locked_changed_callback
+            self._component_state_changed_callback
         )
         cast(SubarrayBeam, self._component).set_is_configured_changed_callback(
-            self._is_configured_changed_callback
+            self._component_state_changed_callback
         )
 
     def stop_communicating(self: SubarrayBeamComponentManager) -> None:

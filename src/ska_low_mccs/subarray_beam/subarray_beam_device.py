@@ -12,10 +12,10 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState
+from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand, FastCommand, ResultCode
+from ska_tango_base.control_model import CommunicationStatus, HealthState 
 from ska_tango_base.obs import SKAObsDevice
-from tango.server import attribute, command
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs import release
 from ska_low_mccs.subarray_beam import (
@@ -51,7 +51,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubarrayBeamHealthModel(self.health_changed)
+        self._health_model = SubarrayBeamHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -64,21 +64,34 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return SubarrayBeamComponentManager(
             self.logger,
-            self.push_change_event,
             self._component_communication_status_changed,
             self._health_model.is_beam_locked_changed,
             self._obs_state_model.is_configured_changed,
+            self.component_state_changed_callback,
+            max_workers = 1,
         )
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        args = (self.component_manager, self.op_state_model, self.logger)
-        self.register_command_object("Configure", self.ConfigureCommand(*args))
-        self.register_command_object("Scan", self.ScanCommand(*args))
+        for (command_name, method_name) in [
+            ("Configure", "configure"),
+            ("Scan", "scan"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                )
+            )
 
-    class InitCommand(SKAObsDevice.InitCommand):
+    class InitCommand(DeviceInitCommand):
         """
         A class for :py:class:`~.MccsSubarrayBeam`'s Init command.
 
@@ -104,14 +117,8 @@ class MccsSubarrayBeam(SKAObsDevice):
             """
             (result_code, message) = super().do()
 
-            device = self.target
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
             return (result_code, message)
 
@@ -146,21 +153,35 @@ class MccsSubarrayBeam(SKAObsDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
+    def component_state_changed_callback(self: MccsSubarrayBeam, **kwargs: Any) -> None:
         """
-        Handle change in this device's health state.
+        Handle change in the state of the component.
 
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
+        This is a callback hook, called by the component manager when
+        the state of the component changes.
 
-        :param health: the new health value
+        :param kwargs: the state change parameters
         """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        action_map = {
+            PowerState.OFF: "component_off",
+            PowerState.STANDBY: "component_standby",
+            PowerState.ON: "component_on",
+            PowerState.UNKNOWN: "component_unknown",
+        }
+        if "fault" in kwargs.keys():
+            is_fault = kwargs.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                self.op_state_model.perform_action(action_map[self.component_manager.power_state])
+                self._health_model.component_fault(False)
+
+        if "health_state" in kwargs.keys():
+            health = kwargs.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
     # ----------
     # Attributes

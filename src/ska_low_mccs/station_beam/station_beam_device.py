@@ -12,20 +12,22 @@ import json
 from typing import List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import (ResultCode,
-                                    DeviceInitCommand,
-                                    FastCommand,
-                                    SlowCommand,
-                                    SubmittedSlowCommand)
-from ska_tango_base.control_model import HealthState, CommunicationStatus
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SlowCommand,
+    SubmittedSlowCommand,
+)
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs import release
 from ska_low_mccs.station_beam import (
-                                    StationBeamComponentManager,
-                                    StationBeamHealthModel,
-                                )
+    StationBeamComponentManager,
+    StationBeamHealthModel,
+)
 
 __all__ = ["MccsStationBeam", "main"]
 
@@ -56,7 +58,9 @@ class MccsStationBeam(SKAObsDevice):
     def _init_state_model(self: MccsStationBeam) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = StationBeamHealthModel(self.component_state_changed_callback)
+        self._health_model = StationBeamHealthModel(
+            self.component_state_changed_callback
+        )
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -118,11 +122,6 @@ class MccsStationBeam(SKAObsDevice):
             self._build_state = release.get_release_info()
             self._version_id = release.version
 
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes. (Is this done now?)
-            # self._health_state = device._health_model.health_state
-
             return (result_code, message)
 
     # ----------
@@ -132,9 +131,9 @@ class MccsStationBeam(SKAObsDevice):
         """
         Handle change in this device's state.
 
-        This is a callback hook, called whenever the state changes. 
-        It is responsible for updating the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
+        This is a callback hook, called whenever the state changes. It
+        is responsible for updating the tango side of things i.e. making
+        sure the attribute is up to date, and events are pushed.
         """
 
         if "health_state" in kwargs.keys():
@@ -154,7 +153,6 @@ class MccsStationBeam(SKAObsDevice):
         if "beam_locked" in kwargs.keys():
             beam_locked = kwargs.get("beam_locked")
             self._health_model.is_beam_locked_changed(beam_locked)
-
 
     def _communication_status_changed(
         self: MccsStationBeam,

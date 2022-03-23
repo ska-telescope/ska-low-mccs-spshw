@@ -8,9 +8,9 @@
 """This module implements component management for station beams."""
 from __future__ import annotations
 
+import json
 import logging
 from typing import Callable, Optional, cast
-import json
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState
@@ -94,12 +94,14 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_health_changed_callback = component_state_changed_callback
         self._station_fault_changed_callback = component_state_changed_callback
 
+        # Not used *yet*.
+        self._component_state_changed_callback = component_state_changed_callback
+
         super().__init__(
-            logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_state_changed_callback,
-            max_workers,
+            logger=logger,
+            communication_status_changed_callback=communication_status_changed_callback,
+            component_state_changed_callback=component_state_changed_callback,
+            max_workers=max_workers,
         )
 
     def start_communicating(self: StationBeamComponentManager) -> None:
@@ -161,11 +163,8 @@ class StationBeamComponentManager(MccsComponentManager):
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
                     self.logger,
-                    self._push_change_event,
                     self._device_communication_status_changed,
-                    None,
-                    self._station_fault_changed_callback,
-                    self._station_health_changed_callback,
+                    self._component_state_changed_callback,
                 )
                 if communicating:
                     self._station_proxy.start_communicating()
@@ -350,7 +349,7 @@ class StationBeamComponentManager(MccsComponentManager):
     def configure(
         self: StationBeamComponentManager,
         argin: str,
-        task_callback: Optional[Callable] = None
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Submit the `configure` slow task.
@@ -376,15 +375,18 @@ class StationBeamComponentManager(MccsComponentManager):
         config_dict = json.loads(argin)
 
         task_status, response = self.submit_task(
-            self._configure, args=(
-            config_dict.get("beam_id"),
-            config_dict.get("station_ids", []),
-            config_dict.get("channels", []),
-            config_dict.get("update_rate"),
-            config_dict.get("sky_coordinates", []),
-            config_dict.get("antenna_weights", []),
-            config_dict.get("phase_centre", []),
-        ), task_callback=task_callback)
+            self._configure,
+            args=(
+                config_dict.get("beam_id"),
+                config_dict.get("station_ids", []),
+                config_dict.get("channels", []),
+                config_dict.get("update_rate"),
+                config_dict.get("sky_coordinates", []),
+                config_dict.get("antenna_weights", []),
+                config_dict.get("phase_centre", []),
+            ),
+            task_callback=task_callback,
+        )
 
         return task_status, response
 
@@ -422,7 +424,9 @@ class StationBeamComponentManager(MccsComponentManager):
         return ResultCode.OK
 
     @check_communicating
-    def apply_pointing(self: StationBeamComponentManager, task_callback: Optional[Callable] = None) -> ResultCode:
+    def apply_pointing(
+        self: StationBeamComponentManager, task_callback: Optional[Callable] = None
+    ) -> ResultCode:
         """
         Submit the apply_pointing slow task.
 
@@ -431,8 +435,7 @@ class StationBeamComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._apply_pointing, args=[],
-            task_callback=task_callback
+            self._apply_pointing, args=[], task_callback=task_callback
         )
         return ([task_status], [response])
 

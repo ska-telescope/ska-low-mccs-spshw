@@ -106,6 +106,7 @@ class ApiuSimulator(ObjectComponent):
             simulating a fault.
         """
         self._is_faulty = initial_fault
+        self._component_state_changed_callback: Optional[Callable[[Any], None]] = None
 
         self._voltage = self.DEFAULT_VOLTAGE
         self._current = self.DEFAULT_CURRENT

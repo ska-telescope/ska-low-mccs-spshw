@@ -8,6 +8,7 @@
 """This module implements component management for subarray beams."""
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Callable, Optional, cast
 from ska_tango_base.commands import ResultCode
@@ -29,8 +30,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        is_beam_locked_changed_callback: Callable[[bool], None],
-        is_configured_changed_callback: Callable[[bool], None],
+        #is_beam_locked_changed_callback: Callable[[bool], None],
+        #is_configured_changed_callback: Callable[[bool], None],
         component_state_changed_callback: Callable[[Any],None],
         max_workers: Optional[int] = None,
     ) -> None:
@@ -167,3 +168,83 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """
         # This one-liner is only a method so that we can decorate it.
         setattr(self._component, name, value)
+        
+    def configure(self, task_callback: Optional[Callable] = None):
+        """
+        Submit the configure slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+        """
+
+        task_status, response = self.submit_task(
+            self._configure, args=[],
+            task_callback=task_callback         
+        )         
+        return task_status, response
+        
+    def _configue(
+            self, argin: str
+        ) -> tuple[ResultCode, str]:
+
+        SUCCEEDED_MESSAGE = "Configure command completed OK"
+
+        config_dict = json.loads(argin)
+        result_code = self.component_manager.configure(
+            config_dict.get("subarray_beam_id"),
+            config_dict.get("station_ids", []),
+            config_dict.get("update_rate"),
+            config_dict.get("channels", []),
+            config_dict.get("sky_coordinates", []),
+            config_dict.get("antenna_weights", []),
+            config_dict.get("phase_centre", []),
+        )
+        if result_code == ResultCode.OK:
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        else:
+            return (result_code, "")
+ 
+    def scan(self, task_callback: Optional[Callable] = None):
+        """
+        Submit the scan slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+        """
+
+        task_status, response = self.submit_task(
+            self._scan, args=[],
+            task_callback=task_callback         
+        )         
+        return task_status, response
+        
+    def _scan( # type: ignore[override]
+            self, argin: str
+        ) -> tuple[ResultCode, str]:
+        """
+        Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
+
+        :param argin: Scan parameters encoded in a json string
+            {
+            "scan_id": 1,
+            "scan_time": 4
+            }
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+
+        SUCCEEDED_MESSAGE = "Scan command completed OK"
+
+        kwargs = json.loads(argin)
+        result_code = self.component_manager.scan(
+            kwargs.get("scan_id"),
+            kwargs.get("scan_time"),
+        )
+        if result_code == ResultCode.OK:
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        else:
+            return (result_code, "")

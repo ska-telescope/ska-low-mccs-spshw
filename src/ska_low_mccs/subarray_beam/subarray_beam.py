@@ -60,7 +60,7 @@ class SubarrayBeam(ObjectComponent):
             called if whether this subarray beam is locked changes, or
             None to remove the callback
         """
-        self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
+        self._is_beam_locked_changed_callback = is_state_changed_callback
 
     def set_is_configured_changed_callback(
         self: SubarrayBeam,
@@ -73,7 +73,7 @@ class SubarrayBeam(ObjectComponent):
             if whether this subarray beam is configured changes, or None
             to remove the callback
         """
-        self._is_configured_changed_callback = is_configured_changed_callback
+        self._is_configured_changed_callback = is_state_changed_callback
         if self._is_configured_changed_callback is not None:
             self._is_configured_changed_callback(self._is_configured)
 

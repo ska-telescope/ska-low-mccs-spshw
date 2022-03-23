@@ -15,11 +15,11 @@ from typing import List, Optional, Tuple
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState, SimulationMode
 from tango.server import attribute, command
 
 from ska_low_mccs import release
-from ska_low_mccs.component import CommunicationStatus
+from ska_low_mccs.component import 
 from ska_low_mccs.pasd_bus import PasdBusComponentManager, PasdBusHealthModel
 
 __all__ = ["MccsPasdBus", "main"]

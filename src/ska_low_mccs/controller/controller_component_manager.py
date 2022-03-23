@@ -15,10 +15,9 @@ import threading
 from typing import Callable, Hashable, Iterable, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
     check_communicating,

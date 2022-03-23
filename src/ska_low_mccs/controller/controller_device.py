@@ -16,12 +16,11 @@ from typing import List, Optional, Tuple
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from tango.server import command, device_property
 
 import ska_low_mccs.release as release
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 
 __all__ = ["MccsController", "main"]

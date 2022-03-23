@@ -28,11 +28,9 @@ import time
 from typing import Callable, List, Optional, cast
 
 from ska_tango_base.commands import BaseCommand, ResultCode
+from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState, SimulationMode
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
-    ControlMode,
-    ExtendedPowerState,
     MccsComponentManager,
     WebHardwareClient,
 )

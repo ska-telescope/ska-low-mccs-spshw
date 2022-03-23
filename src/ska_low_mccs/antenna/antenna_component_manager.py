@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import tango
 from ska_tango_base.commands import ResultCode
@@ -34,7 +34,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerState], None],
         component_fault_callback: Callable[[bool], None],
@@ -70,7 +69,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            push_change_event,
             communication_status_changed_callback,
             component_power_mode_changed_callback,
             component_fault_callback,
@@ -238,7 +236,6 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_fault_callback: Callable[[bool], None],
     ) -> None:
@@ -248,8 +245,6 @@ class _TileProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the Tile device
         :param logical_antenna_id: this antenna's id within the Tile
         :param logger: the logger to be used by this object.
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -265,7 +260,6 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            push_change_event,
             communication_status_changed_callback,
             lambda power_mode: None,  # tile doesn't manage antenna power
             component_fault_callback,
@@ -350,10 +344,9 @@ class AntennaComponentManager(MccsComponentManager):
         tile_fqdn: str,
         tile_antenna_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[Any], None],
+        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -391,7 +384,6 @@ class AntennaComponentManager(MccsComponentManager):
             apiu_fqdn,
             apiu_antenna_id,
             logger,
-            push_change_event,
             self._apiu_communication_status_changed,
             self._apiu_power_mode_changed,
             self._apiu_component_fault_changed,
@@ -401,17 +393,15 @@ class AntennaComponentManager(MccsComponentManager):
             tile_fqdn,
             tile_antenna_id,
             logger,
-            push_change_event,
             self._tile_communication_status_changed,
             self._tile_component_fault_changed,
         )
 
         super().__init__(
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
+            max_workers,
         )
 
     def start_communicating(self: AntennaComponentManager) -> None:

@@ -8,12 +8,12 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import ResultCode, DeviceInitCommand, SubmittedSlowCommand
-from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
+from ska_tango_base.commands import ResultCode, DeviceInitCommand
+from ska_tango_base.control_model import HealthState, PowerState, SimulationMode, CommunicationStatus
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
@@ -52,7 +52,7 @@ class MccsAntenna(SKABaseDevice):
         self._health_state: Optional[
             HealthState
         ] = None  # SKABaseDevice.InitCommand.do() does this too late.
-        self._health_model = AntennaHealthModel(self.health_changed)
+        self._health_model = AntennaHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -69,10 +69,9 @@ class MccsAntenna(SKABaseDevice):
             f"low-mccs/tile/{self.TileId:04}",
             self.LogicalTileAntennaId,
             self.logger,
-            self.push_change_event,
             self._component_communication_status_changed,
-            self._component_power_mode_changed,
-            self._component_fault,
+            self._component_state_changed_callback,
+            max_workers = 1,
         )
 
     class InitCommand(DeviceInitCommand):
@@ -184,16 +183,15 @@ class MccsAntenna(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_power_mode_changed(
+    def _component_state_changed_callback(
         self: MccsAntenna,
-        power_mode: PowerState,
+        **kwargs: Any,
     ) -> None:
         """
-        Handle change in the power mode of the component.
+        Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the power mode of the component changes. It is implemented here
-        to drive the op_state.
+        the state of the component changes.
 
         :param power_mode: the power mode of the component.
         """
@@ -203,44 +201,25 @@ class MccsAntenna(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
+        if "fault" in kwargs.keys():
+            is_fault = kwargs.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                self.op_state_model.perform_action(action_map[self.component_manager.power_mode])
+                self._health_model.component_fault(False)
 
-        self.op_state_model.perform_action(action_map[power_mode])
+        if "health_state" in kwargs.keys():
+            health = kwargs.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
-    def _component_fault(
-        self: MccsAntenna,
-        is_fault: bool,
-    ) -> None:
-        """
-        Handle change in the fault status of the component.
-
-        This is a callback hook, called by the component manager when
-        the component fault status changes. It is implemented here to
-        drive the op_state.
-
-        :param is_fault: whether the component is faulting or not.
-        """
-        if is_fault:
-            self.op_state_model.perform_action("component_fault")
-            self._health_model.component_fault(True)
-        else:
-            self._component_power_mode_changed(self.component_manager.power_mode)
-            self._health_model.component_fault(False)
-
-    def health_changed(self: MccsAntenna, health: HealthState) -> None:
-        """
-        Handle change in this device's health state.
-
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        if "power_state" in kwargs.keys():
+            power_state = kwargs.get("power_state")
+            if power_state:
+                self.op_state_model.perform_action(action_map[power_state])
 
     # ----------
     # Attributes
@@ -555,7 +534,7 @@ class MccsAntenna(SKABaseDevice):
 
     def is_On_allowed(self: MccsAntenna) -> bool:
         """
-        Check if command `Off` is allowed in the current device state.
+        Check if command `On` is allowed in the current device state.
 
         :return: ``True`` if the command is allowed
         """

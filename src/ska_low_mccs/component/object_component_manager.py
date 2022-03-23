@@ -91,7 +91,9 @@ class ObjectComponentManager(MccsComponentManager):
 
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
-        self._component.set_component_state_callback(self.component_state_changed_callback)
+        self._component.set_component_state_callback(
+            self.component_state_changed_callback
+        )
 
     @threadsafe
     def stop_communicating(self: ObjectComponentManager) -> None:

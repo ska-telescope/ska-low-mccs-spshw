@@ -13,8 +13,18 @@ from typing import List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand, FastCommand, ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState, SimulationMode
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SubmittedSlowCommand,
+)
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    SimulationMode,
+)
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.apiu import ApiuComponentManager, ApiuHealthModel
@@ -90,7 +100,7 @@ class MccsAPIU(SKABaseDevice):
             self.logger,
             self._component_communication_status_changed,
             self.component_state_changed_callback,
-            max_workers = 1,
+            max_workers=1,
         )
 
     def init_command_objects(self: MccsAPIU) -> None:
@@ -195,7 +205,9 @@ class MccsAPIU(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                self.op_state_model.perform_action(action_map[self.component_manager.power_mode])
+                self.op_state_model.perform_action(
+                    action_map[self.component_manager.power_mode]
+                )
                 self._health_model.component_fault(False)
 
         if "health_state" in kwargs.keys():

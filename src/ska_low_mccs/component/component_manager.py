@@ -12,11 +12,11 @@ import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
-from typing_extensions import Protocol
 
 from ska_tango_base.base import TaskExecutorComponentManager
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
+from typing_extensions import Protocol
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
 
@@ -69,7 +69,9 @@ class MccsComponentManagerProtocol(Protocol):
         ...
 
 
-class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeCheckingMeta):
+class MccsComponentManager(
+    TaskExecutorComponentManager, metaclass=ThreadsafeCheckingMeta
+):
     """
     A base component manager for MCCS.
 
@@ -124,9 +126,7 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
         self._power_state: Optional[PowerState] = None
         self._faulty: Optional[bool] = None
 
-        self._component_state_changed_callback = (
-            component_state_changed_callback
-        )
+        self._component_state_changed_callback = component_state_changed_callback
 
         super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
 
@@ -199,17 +199,15 @@ class MccsComponentManager(TaskExecutorComponentManager, metaclass=ThreadsafeChe
     ) -> None:
         """
         Handle notification that the component's power mode has changed.
- 
+
         This is a callback hook, to be passed to the managed component.
- 
+
         :param power_state: the new power mode of the component
         """
         self.update_component_state(kwargs)
 
     @threadsafe
-    def update_component_state(
-        self: MccsComponentManager, **kwargs: Any
-    ) -> None:
+    def update_component_state(self: MccsComponentManager, **kwargs: Any) -> None:
         """
         Update the power mode, calling callbacks as required.
 

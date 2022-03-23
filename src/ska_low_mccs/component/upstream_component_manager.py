@@ -262,7 +262,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Optional[Callable],
-        max_workers: int
+        max_workers: int,
     ) -> None:
         """
         Initialise a new instance.

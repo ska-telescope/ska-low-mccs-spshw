@@ -28,12 +28,14 @@ import time
 from typing import Callable, List, Optional, cast
 
 from ska_tango_base.commands import BaseCommand, ResultCode
-from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState, SimulationMode
-
-from ska_low_mccs.component import (
-    MccsComponentManager,
-    WebHardwareClient,
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    ControlMode,
+    PowerState,
+    SimulationMode,
 )
+
+from ska_low_mccs.component import MccsComponentManager, WebHardwareClient
 from ska_low_mccs.subrack import SubrackData
 
 __all__ = ["SubrackDriver"]

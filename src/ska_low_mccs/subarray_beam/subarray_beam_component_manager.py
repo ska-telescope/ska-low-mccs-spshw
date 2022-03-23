@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any, Callable, Optional, cast
+
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 

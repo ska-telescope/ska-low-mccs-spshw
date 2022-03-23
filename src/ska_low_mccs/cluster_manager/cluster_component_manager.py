@@ -11,7 +11,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState, SimulationMode
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    SimulationMode,
+)
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
 from ska_low_mccs.component import (

@@ -41,10 +41,11 @@ class ObjectComponentManager(MccsComponentManager):
         self: ObjectComponentManager,
         component: ObjectComponent,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_state_changed_callback: Optional[Callable[[Any], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -72,10 +73,11 @@ class ObjectComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            *args,
-            **kwargs,
+#             *args,
+#             **kwargs,
         )
 
     def start_communicating(self: ObjectComponentManager) -> None:
@@ -91,7 +93,9 @@ class ObjectComponentManager(MccsComponentManager):
 
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
-        self._component.set_component_state_callback(self.component_state_changed_callback)
+        self._component.set_component_state_callback(
+            self.component_state_changed_callback
+        )
 
     @threadsafe
     def stop_communicating(self: ObjectComponentManager) -> None:

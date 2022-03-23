@@ -34,8 +34,9 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any], None],
+        component_state_changed_callback: Callable[[dict[str,Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -56,6 +57,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             ApiuSimulator(antenna_count),
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
@@ -131,6 +133,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._component, name)
 
+
 class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
     """A component manager that switches between APIU simulator and driver."""
 
@@ -139,8 +142,9 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
+        max_workers,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any], None],
+        component_state_changed_callback: Callable[[dict[str,Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -164,6 +168,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         apiu_simulator = ApiuSimulatorComponentManager(
             antenna_count,
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
@@ -172,14 +177,15 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
 
 class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an APIU (simulator or driver) and its power supply."""
+
     def __init__(
         self: ApiuComponentManager,
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any], None],
-        max_workers: Optional[int] = None,
+        component_state_changed_callback: Callable[[dict[str,Any]], None],
         _initial_power_mode: PowerState = PowerState.OFF,
     ) -> None:
         """
@@ -205,6 +211,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             initial_simulation_mode,
             antenna_count,
             logger,
+            max_workers,
             self._hardware_communication_status_changed,
             self.component_state_changed_callback,
         )
@@ -219,9 +226,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
+            max_workers,
             communication_status_changed_callback,
             self.component_state_changed_callback,
-            max_workers,
         )
 
     @property
@@ -343,8 +350,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._turn_off_antenna, args=[],
-            task_callback=task_callback
+            self._turn_off_antenna, args=[], task_callback=task_callback
         )
         return task_status, response
 
@@ -357,8 +363,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._turn_on_antennas, args=[],
-            task_callback=task_callback
+            self._turn_on_antennas, args=[], task_callback=task_callback
         )
         return task_status, response
 
@@ -371,7 +376,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._turn_off_antennas, args=[],
-            task_callback=task_callback
+            self._turn_off_antennas, args=[], task_callback=task_callback
         )
         return task_status, response

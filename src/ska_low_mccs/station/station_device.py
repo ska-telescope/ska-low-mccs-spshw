@@ -19,7 +19,6 @@ from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
 import ska_low_mccs.release as release
-from ska_low_mccs.component import 
 from ska_low_mccs.station import (
     StationComponentManager,
     StationHealthModel,

@@ -127,7 +127,9 @@ class MccsStationBeam(SKAObsDevice):
     # ----------
     # Callbacks
     # ----------
-    def component_state_changed_callback(self: MccsStationBeam, **kwargs: Any) -> None:
+    def component_state_changed_callback(
+        self: MccsStationBeam, state_change: dict[str, Any]
+    ) -> None:
         """
         Handle change in this device's state.
 
@@ -136,22 +138,22 @@ class MccsStationBeam(SKAObsDevice):
         sure the attribute is up to date, and events are pushed.
         """
 
-        if "health_state" in kwargs.keys():
-            health = kwargs.get("health_state")
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        if "station_health" in kwargs.keys():
-            station_health = kwargs.get("station_health")
+        if "station_health" in state_change.keys():
+            station_health = state_change.get("station_health")
             self._health_model.station_health_changed(station_health)
 
-        if "station_fault" in kwargs.keys():
-            station_fault = kwargs.get("station_fault")
+        if "station_fault" in state_change.keys():
+            station_fault = state_change.get("station_fault")
             self._health_model.station_fault_changed(station_fault)
 
-        if "beam_locked" in kwargs.keys():
-            beam_locked = kwargs.get("beam_locked")
+        if "beam_locked" in state_change.keys():
+            beam_locked = state_change.get("beam_locked")
             self._health_model.is_beam_locked_changed(beam_locked)
 
     def _communication_status_changed(

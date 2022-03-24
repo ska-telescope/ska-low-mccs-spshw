@@ -142,7 +142,7 @@ class MccsAPIU(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.health_changed
             """
-            #super().do()
+            # super().do()
 
             self._device._are_antennas_on = None
             self._device.set_change_event("areAntennasOn", True, False)
@@ -185,7 +185,9 @@ class MccsAPIU(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(self: MccsAPIU, state_change: dict[str,Any]) -> None:
+    def component_state_changed_callback(
+        self: MccsAPIU, state_change: dict[str, Any]
+    ) -> None:
         """
         Handle change in the state of the component.
 

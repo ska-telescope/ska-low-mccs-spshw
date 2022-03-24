@@ -22,7 +22,7 @@ class StationBeamHealthModel(HealthModel):
 
     def __init__(
         self: StationBeamHealthModel,
-        health_changed_callback: Callable[[Any], None],
+        health_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.

@@ -124,7 +124,7 @@ class ApiuSimulator(ObjectComponent):
         ]
 
     def set_fault_callback(
-        self: ApiuSimulator, fault_callback: Optional[Callable[[dict[str,Any]], None]]
+        self: ApiuSimulator, fault_callback: Optional[Callable[[dict[str, Any]], None]]
     ) -> None:
         """
         Set the callback to be called when the component faults.
@@ -240,7 +240,7 @@ class ApiuSimulator(ObjectComponent):
 
     def set_antenna_power_changed_callback(
         self: ApiuSimulator,
-        antenna_power_changed_callback: Optional[Callable[[dict[str,Any]], None]],
+        antenna_power_changed_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
         Set the power changed callback.

@@ -59,7 +59,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             communication_status_changed_callback,
             None,
             None,
-            self.component_state_changed_callback,
+            component_state_changed_callback,
             max_workers,
         )
         self._component_state_changed_callback = component_state_changed_callback

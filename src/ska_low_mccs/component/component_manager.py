@@ -123,8 +123,7 @@ class MccsComponentManager(
             communication_status_changed_callback
         )
 
-        self._power_state_lock = threading.RLock()
-        self._power_state: Optional[PowerState] = None
+        self._power_state: Optional[PowerState] = PowerState.UNKNOWN
         self._faulty: Optional[bool] = None
 
         self._component_state_changed_callback = component_state_changed_callback
@@ -225,23 +224,23 @@ class MccsComponentManager(
             then this is a notification that the component has
             *recovered* from a fault.
         """
-        print(f"222222222222222222222222222 {state_change}")
-        state = {}
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            with self._power_state_lock:
-                self._power_state = power_state
-            if power_state is not None:
-                state.update({"power_state": power_state})
-
-        if "fault" in state_change.keys():
-            faulty = state_change.get("fault")
-            self._faulty = faulty
-            if faulty is not None:
-                state.update({"fault": faulty})
+#         print(f"222222222222222222222222222 {state_change}")
+#         state = {}
+#         if "power_state" in state_change.keys():
+#             power_state = state_change.get("power_state")
+#             with self._power_state_lock:
+#                 self._power_state = power_state
+#             if power_state is not None:
+#                 state.update({"power_state": power_state})
+# 
+#         if "fault" in state_change.keys():
+#             faulty = state_change.get("fault")
+#             self._faulty = faulty
+#             if faulty is not None:
+#                 state.update({"fault": faulty})
 
         if self._component_state_changed_callback is not None:
-            self._component_state_changed_callback(state)
+            self._component_state_changed_callback(state_change)
 
     @property
     def power_state(self: MccsComponentManager) -> Optional[PowerState]:
@@ -251,6 +250,15 @@ class MccsComponentManager(
         :return: the power mode of this component manager.
         """
         return self._power_state
+
+    @power_state.setter
+    def power_state(self: MccsComponentManager, power_state: PowerState) -> None:
+        """
+        Set the power mode of this component manager.
+
+        :param power_state: the power mode for this component manager.
+        """
+        self._power_state = power_state
 
     @property
     def faulty(self: MccsComponentManager) -> Optional[bool]:

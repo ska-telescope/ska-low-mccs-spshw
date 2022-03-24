@@ -12,10 +12,8 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.control_model import CommunicationStatus
-from ska_low_mccs.component import (
-    ObjectComponentManager,
-    check_communicating,
-)
+
+from ska_low_mccs.component import ObjectComponentManager, check_communicating
 from ska_low_mccs.transient_buffer import TransientBuffer
 
 __all__ = ["TransientBufferComponentManager"]

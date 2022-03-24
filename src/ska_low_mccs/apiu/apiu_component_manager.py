@@ -213,13 +213,14 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             logger,
             max_workers,
             self._hardware_communication_status_changed,
-            self.component_state_changed_callback,
+            component_state_changed_callback,
         )
-
+        print(f"++++++++++++++++++++++++{component_state_changed_callback}")
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
+            max_workers,
             self._power_supply_communication_status_changed,
-            self.component_state_changed_callback,
+            component_state_changed_callback,
             _initial_power_mode,
         )
         super().__init__(
@@ -228,7 +229,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             logger,
             max_workers,
             communication_status_changed_callback,
-            self.component_state_changed_callback,
+            component_state_changed_callback,
         )
 
     @property

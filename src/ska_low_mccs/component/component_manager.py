@@ -97,7 +97,7 @@ class MccsComponentManager(
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
         *args: Any,
         **kwargs: Any,
     ):
@@ -129,8 +129,10 @@ class MccsComponentManager(
 
         self._component_state_changed_callback = component_state_changed_callback
 
-        #super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
-        super().__init__(logger=logger, max_workers=max_workers, 
+        # super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
+        super().__init__(
+            logger=logger,
+            max_workers=max_workers,
             communication_state_callback=communication_status_changed_callback,
             component_state_callback=component_state_changed_callback,
         )
@@ -200,7 +202,7 @@ class MccsComponentManager(
         return self._communication_status
 
     def component_state_changed_callback(
-        self: MccsComponentManager, state_change: dict[str,Any]
+        self: MccsComponentManager, state_change: dict[str, Any]
     ) -> None:
         """
         Handle notification that the component's power mode has changed.
@@ -212,7 +214,9 @@ class MccsComponentManager(
         self.update_component_state(state_change)
 
     @threadsafe
-    def update_component_state(self: MccsComponentManager, state_change: dict[str,Any]) -> None:
+    def update_component_state(
+        self: MccsComponentManager, state_change: dict[str, Any]
+    ) -> None:
         """
         Update the power mode, calling callbacks as required.
 

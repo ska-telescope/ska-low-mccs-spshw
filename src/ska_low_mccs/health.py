@@ -33,7 +33,7 @@ class HealthModel:
 
     def __init__(
         self: HealthModel,
-        component_state_changed_callback: Callable[[dict[str,Any]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.

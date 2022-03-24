@@ -11,16 +11,22 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import DeviceInitCommand, SlowCommand, SubmittedSlowCommand, FastCommand, ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState 
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SlowCommand,
+    SubmittedSlowCommand,
+)
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs import release
 from ska_low_mccs.subarray_beam import (
-SubarrayBeamComponentManager,
-SubarrayBeamHealthModel,
-SubarrayBeamObsStateModel,
+    SubarrayBeamComponentManager,
+    SubarrayBeamHealthModel,
+    SubarrayBeamObsStateModel,
 )
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
@@ -46,9 +52,13 @@ class MccsSubarrayBeam(SKAObsDevice):
 
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
-        self._obs_state_model = SubarrayBeamObsStateModel(self.component_state_changed_callback)
+        self._obs_state_model = SubarrayBeamObsStateModel(
+            self.component_state_changed_callback
+        )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubarrayBeamHealthModel(self.component_state_changed_callback)
+        self._health_model = SubarrayBeamHealthModel(
+            self.component_state_changed_callback
+        )
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -62,10 +72,10 @@ class MccsSubarrayBeam(SKAObsDevice):
         return SubarrayBeamComponentManager(
             self.logger,
             self._component_communication_status_changed,
-            #self._health_model.is_beam_locked_changed,
-            #self._obs_state_model.is_configured_changed,
+            # self._health_model.is_beam_locked_changed,
+            # self._obs_state_model.is_configured_changed,
             self.component_state_changed_callback,
-            max_workers = 1,
+            max_workers=1,
         )
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
@@ -85,7 +95,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                     method_name,
                     callback=None,
                     logger=self.logger,
-                )
+                ),
             )
 
     class InitCommand(DeviceInitCommand):

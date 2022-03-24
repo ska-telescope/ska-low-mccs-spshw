@@ -16,8 +16,8 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 
 from ska_low_mccs.component import (
-    ObjectComponentManager,
     MccsComponentManager,
+    ObjectComponentManager,
     check_communicating,
 )
 from ska_low_mccs.subarray_beam import SubarrayBeam
@@ -27,11 +27,12 @@ __all__ = ["SubarrayBeamComponentManager"]
 
 class SubarrayBeamComponentManager(ObjectComponentManager):
     """A component manager for a subarray beam."""
+
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any],None],
+        component_state_changed_callback: Callable[[Any], None],
         max_workers: Optional[int] = None,
     ) -> None:
         """
@@ -167,7 +168,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """
         # This one-liner is only a method so that we can decorate it.
         setattr(self._component, name, value)
-        
+
     def configure(self, task_callback: Optional[Callable] = None):
         """
         Submit the configure slow task.
@@ -178,14 +179,11 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """
 
         task_status, response = self.submit_task(
-            self._configure, args=[],
-            task_callback=task_callback         
-        )         
+            self._configure, args=[], task_callback=task_callback
+        )
         return task_status, response
-        
-    def _configue(
-            self, argin: str
-        ) -> tuple[ResultCode, str]:
+
+    def _configue(self, argin: str) -> tuple[ResultCode, str]:
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
@@ -203,7 +201,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
         else:
             return (result_code, "")
- 
+
     def scan(self, task_callback: Optional[Callable] = None):
         """
         Submit the scan slow task.
@@ -214,14 +212,11 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """
 
         task_status, response = self.submit_task(
-            self._scan, args=[],
-            task_callback=task_callback         
-        )         
+            self._scan, args=[], task_callback=task_callback
+        )
         return task_status, response
-        
-    def _scan( # type: ignore[override]
-            self, argin: str
-        ) -> tuple[ResultCode, str]:
+
+    def _scan(self, argin: str) -> tuple[ResultCode, str]:  # type: ignore[override]
         """
         Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
 

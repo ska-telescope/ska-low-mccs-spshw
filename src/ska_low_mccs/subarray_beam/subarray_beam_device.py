@@ -13,7 +13,6 @@ from typing import List, Optional, Tuple
 import tango
 from ska_tango_base.commands import (
     DeviceInitCommand,
-    FastCommand,
     ResultCode,
     SlowCommand,
     SubmittedSlowCommand,
@@ -71,11 +70,9 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return SubarrayBeamComponentManager(
             self.logger,
+            self._max_workers,
             self._component_communication_status_changed,
-            # self._health_model.is_beam_locked_changed,
-            # self._obs_state_model.is_configured_changed,
             self.component_state_changed_callback,
-            max_workers=1,
         )
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
@@ -160,14 +157,14 @@ class MccsSubarrayBeam(SKAObsDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(self: MccsSubarrayBeam, **kwargs: Any) -> None:
+    def component_state_changed_callback(self: MccsSubarrayBeam, dict[str,Any]) -> None:
         """
         Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param kwargs: the state change parameters
+        :param dict: the state change parameters
         """
         if "health_state" in kwargs.keys():
             health = kwargs.get("health_state")

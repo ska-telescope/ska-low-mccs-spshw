@@ -108,9 +108,8 @@ class ApiuSimulator(ObjectComponent):
         self._is_faulty = initial_fault
         self._fault_callback: Optional[Callable[[dict[str, Any]], None]] = None
         self._antenna_power_changed_callback: Optional[
-            Callable[[dict[str,Any]], None]
+            Callable[[dict[str, Any]], None]
         ] = None
-
 
         self._voltage = self.DEFAULT_VOLTAGE
         self._current = self.DEFAULT_CURRENT

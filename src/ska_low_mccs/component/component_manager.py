@@ -8,7 +8,6 @@
 """This module implements a functionality for component managers in MCCS."""
 from __future__ import annotations  # allow forward references in type hints
 
-import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
@@ -208,7 +207,7 @@ class MccsComponentManager(
 
         This is a callback hook, to be passed to the managed component.
 
-        :param power_state: the new power mode of the component
+        :param state_change: state change of the component
         """
         self.update_component_state(state_change)
 
@@ -221,28 +220,22 @@ class MccsComponentManager(
 
         This is a helper method for use by subclasses.
 
-        :param power_state: the new power mode of the component. This can
-            be None, in which case the internal value is updated but no
-            callback is called. This is useful to ensure that the
-            callback is called next time a real value is pushed.
-        :param faulty: whether the component has faulted. If ``False``,
-            then this is a notification that the component has
-            *recovered* from a fault.
+        :param state_change: state change
         """
-#         print(f"222222222222222222222222222 {state_change}")
-#         state = {}
-#         if "power_state" in state_change.keys():
-#             power_state = state_change.get("power_state")
-#             with self._power_state_lock:
-#                 self._power_state = power_state
-#             if power_state is not None:
-#                 state.update({"power_state": power_state})
-# 
-#         if "fault" in state_change.keys():
-#             faulty = state_change.get("fault")
-#             self._faulty = faulty
-#             if faulty is not None:
-#                 state.update({"fault": faulty})
+        #         print(f"222222222222222222222222222 {state_change}")
+        #         state = {}
+        #         if "power_state" in state_change.keys():
+        #             power_state = state_change.get("power_state")
+        #             with self._power_state_lock:
+        #                 self._power_state = power_state
+        #             if power_state is not None:
+        #                 state.update({"power_state": power_state})
+        #
+        #         if "fault" in state_change.keys():
+        #             faulty = state_change.get("fault")
+        #             self._faulty = faulty
+        #             if faulty is not None:
+        #                 state.update({"fault": faulty})
 
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(state_change)

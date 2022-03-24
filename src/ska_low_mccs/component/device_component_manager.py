@@ -42,8 +42,6 @@ class DeviceComponentManager(MccsComponentManager):
 
         :param fqdn: the FQDN of the device
         :param logger: the logger to be used by this object.
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -65,7 +63,6 @@ class DeviceComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
             communication_status_changed_callback,
             component_state_changed_callback,
         )

@@ -44,15 +44,12 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: no. of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_antenna_power_changed_callback: callback to be
-            called when the power mode of an antenna changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         super().__init__(
             ApiuSimulator(antenna_count),
@@ -153,17 +150,12 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
             component should start in
         :param antenna_count: number of antennas managed by this APIU
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
-        :param initial_simulation_mode: the simulation mode that the
-            component should start in
+        :param max_workers: no. of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_antenna_power_changed_callback: callback to be
-            called when the power mode of an antenna changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         apiu_simulator = ApiuSimulatorComponentManager(
             antenna_count,
@@ -335,6 +327,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         This method returns immediately after it is submitted for execution.
 
+        :param antenna: Antenna to turn on
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(

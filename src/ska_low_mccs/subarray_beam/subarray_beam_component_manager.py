@@ -13,7 +13,7 @@ import logging
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState
+from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import (
     MccsComponentManager,
@@ -31,21 +31,18 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
+        max_workers: Optional[int] = None,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[Any], None],
-        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
+        : param max_workers: no. of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param is_beam_locked_changed_callback: a callback to be called
-            when whether the beam is locked changes
-        :param is_configured_changed_callback: callback to be called
-            when whether this component manager is configured changes
         :param component_state_changed_callback: callback to be called
             when the component state changes
         : param max_workers: no. of worker threads
@@ -210,7 +207,6 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
 
         :param task_callback: Update task state, defaults to None
         """
-
         task_status, response = self.submit_task(
             self._scan, args=[], task_callback=task_callback
         )
@@ -230,7 +226,6 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             message indicating status. The message is for
             information purpose only.
         """
-
         SUCCEEDED_MESSAGE = "Scan command completed OK"
 
         kwargs = json.loads(argin)

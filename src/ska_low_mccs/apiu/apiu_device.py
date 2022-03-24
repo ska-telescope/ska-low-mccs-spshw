@@ -9,6 +9,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import logging
 import threading
 from typing import List, Optional, Tuple
 
@@ -199,7 +200,7 @@ class MccsAPIU(SKABaseDevice):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param kwargs: the state change parameters.
+        :param state_change: the state change of the component
         """
         print(f"1111111111111111111111111111111 {state_change}")
         action_map = {
@@ -232,7 +233,6 @@ class MccsAPIU(SKABaseDevice):
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
-
 
         if "are_antennas_on" in state_change.keys():
             self._are_antennas_on: list[bool]  # typehint only

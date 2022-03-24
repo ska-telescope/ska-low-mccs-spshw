@@ -107,6 +107,7 @@ class ObjectComponent:
             when the component changes.
         """
         if power_mode_changed_callback is not None:
+            print(f"5555555555 {power_mode_changed_callback}")
             power_mode_changed_callback({"power_state": PowerState.ON})
 
     def off(self: ObjectComponent) -> ResultCode | None:

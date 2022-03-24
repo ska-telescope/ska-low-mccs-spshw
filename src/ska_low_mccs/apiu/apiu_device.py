@@ -9,6 +9,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import threading
 from typing import List, Optional, Tuple
 
 import tango
@@ -95,7 +96,8 @@ class MccsAPIU(SKABaseDevice):
 
         :return: a component manager for this device.
         """
-        return ApiuComponentManager(
+        print("**********************component manager is created here")
+        x = ApiuComponentManager(
             SimulationMode.TRUE,
             len(self.AntennaFQDNs),
             self.logger,
@@ -103,6 +105,8 @@ class MccsAPIU(SKABaseDevice):
             self._component_communication_status_changed,
             self.component_state_changed_callback,
         )
+        print("**********************component manager should be created")
+        return x
 
     def init_command_objects(self: MccsAPIU) -> None:
         """Initialise the command handlers for commands supported by this device."""
@@ -143,6 +147,7 @@ class MccsAPIU(SKABaseDevice):
             """
             # super().do()
 
+            self._device._power_state_lock = threading.RLock()
             self._device._are_antennas_on = None
             self._device.set_change_event("areAntennasOn", True, False)
 
@@ -170,6 +175,7 @@ class MccsAPIU(SKABaseDevice):
         :param communication_status: the status of communications
             between the component manager and its component.
         """
+        print(f"333333333333333333333333333333333333 {communication_status}")
         action_map = {
             CommunicationStatus.DISABLED: "component_disconnected",
             CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
@@ -202,6 +208,14 @@ class MccsAPIU(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            with self._power_state_lock:
+                print(f"444444444444444444444444444 {power_state}")
+                self.component_manager.power_state = power_state
+            if power_state:
+                self.op_state_model.perform_action(action_map[power_state])
+
         if "fault" in state_change.keys():
             is_fault = state_change.get("fault")
             if is_fault:
@@ -209,7 +223,7 @@ class MccsAPIU(SKABaseDevice):
                 self._health_model.component_fault(True)
             else:
                 self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_mode]
+                    action_map[self.component_manager.power_state]
                 )
                 self._health_model.component_fault(False)
 
@@ -219,10 +233,6 @@ class MccsAPIU(SKABaseDevice):
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            if power_state:
-                self.op_state_model.perform_action(action_map[power_state])
 
         if "are_antennas_on" in state_change.keys():
             self._are_antennas_on: list[bool]  # typehint only

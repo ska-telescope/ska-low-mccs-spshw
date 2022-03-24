@@ -130,9 +130,8 @@ class MccsComponentManager(
         self._component_state_changed_callback = component_state_changed_callback
 
         #super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
-        super().__init__(logger=logger, max_workers=max_workers, 
-            communication_state_callback=communication_status_changed_callback,
-            component_state_callback=component_state_changed_callback,
+        super().__init__(logger, communication_status_changed_callback,
+            component_state_changed_callback, max_workers=max_workers
         )
 
     def start_communicating(self: MccsComponentManager) -> None:
@@ -226,6 +225,7 @@ class MccsComponentManager(
             then this is a notification that the component has
             *recovered* from a fault.
         """
+        print(f"222222222222222222222222222 {state_change}")
         state = {}
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
@@ -238,7 +238,7 @@ class MccsComponentManager(
             faulty = state_change.get("fault")
             self._faulty = faulty
             if faulty is not None:
-                state.update({"fault": fault})
+                state.update({"fault": faulty})
 
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(state)

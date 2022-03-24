@@ -93,7 +93,8 @@ class ObjectComponentManager(MccsComponentManager):
 
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
-        self._component.set_component_state_callback(
+        self._component.set_fault_callback(self.component_state_changed_callback)
+        self._component.set_power_mode_changed_callback(
             self.component_state_changed_callback
         )
 
@@ -101,7 +102,8 @@ class ObjectComponentManager(MccsComponentManager):
     def stop_communicating(self: ObjectComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
         super().stop_communicating()
-        self._component.set_component_state_changed_callback(None)
+        self._component.set_fault_callback(None)
+        self._component.set_power_mode_changed_callback(None)
 
     def simulate_communication_failure(
         self: ObjectComponentManager, fail_communicate: bool

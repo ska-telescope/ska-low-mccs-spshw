@@ -50,9 +50,8 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any], None],
+        component_state_changed_callback: Callable[[dict[str,Any]], None],
         max_workers: Optional[int] = None,
     ) -> None:
         """
@@ -97,12 +96,7 @@ class StationBeamComponentManager(MccsComponentManager):
         # Not used *yet*.
         self._component_state_changed_callback = component_state_changed_callback
 
-        super().__init__(
-            logger=logger,
-            communication_status_changed_callback=communication_status_changed_callback,
-            component_state_changed_callback=component_state_changed_callback,
-            max_workers=max_workers,
-        )
+        super().__init__(logger, max_workers, communication_status_changed_callback, component_state_changed_callback)
 
     def start_communicating(self: StationBeamComponentManager) -> None:
         """Establish communication with the component."""

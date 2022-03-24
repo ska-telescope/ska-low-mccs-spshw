@@ -11,13 +11,14 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import os.path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import FastCommand, ResultCode, SlowCommand
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, FastCommand,
+                                     SlowCommand, SubmittedSlowCommand
 from ska_tango_base.control_model import (
     AdminMode,
     CommunicationStatus,
@@ -63,12 +64,13 @@ class MccsTile(SKABaseDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self.health_changed)
+        self._health_model = TileHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -83,7 +85,7 @@ class MccsTile(SKABaseDevice):
             SimulationMode.TRUE,
             TestMode.NONE,
             self.logger,
-            self.push_change_event,
+            self._max_workers,
             self.TileId,
             self.TpmIp,
             self.TpmCpldPort,
@@ -91,8 +93,7 @@ class MccsTile(SKABaseDevice):
             self.SubrackFQDN,
             self.SubrackBay,
             self._component_communication_status_changed,
-            self._component_power_mode_changed,
-            self._component_fault,
+            self._component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -186,7 +187,7 @@ class MccsTile(SKABaseDevice):
             "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
         )
 
-    class InitCommand(SKABaseDevice.InitCommand):
+    class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS Tile device."""
 
         def do(  # type: ignore[override]
@@ -313,67 +314,42 @@ class MccsTile(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_power_mode_changed(
-        self: MccsTile,
-        power_mode: PowerState,
-    ) -> None:
+    def _component_state_changed_callback(self: MccsTile, **kwargs: Any) -> None:
         """
-        Handle change in the power mode of the component.
+        Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the power mode of the component changes. It is implemented here
-        to drive the op_state.
+        the state of the component changes.
 
-        :param power_mode: the power mode of the component.
         """
         self.logger.debug(f"power_mode: {power_mode}")
-        action_map = {
-            PowerState.OFF: "component_off",
-            PowerState.STANDBY: "component_standby",
-            PowerState.ON: "component_on",
-            PowerState.UNKNOWN: "component_unknown",
-        }
+        if "power_state" in kwargs.keys():
+            power_state = kwargs.get("power_state")
+            if power_state:
+                action_map = {
+                    PowerState.OFF: "component_off",
+                    PowerState.STANDBY: "component_standby",
+                    PowerState.ON: "component_on",
+                    PowerState.UNKNOWN: "component_unknown",
+                }
+                self.op_state_model.perform_action(action_map[power_state])
 
-        self.op_state_model.perform_action(action_map[power_mode])
-        self._health_model.set_power_mode(power_mode)
+        if "fault" in kwargs.keys():
+            is_fault = kwargs.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                self.op_state_model.perform_action(
+                    action_map[self.component_manager.power_mode])
+                self._health_model.component_fault(False)
 
-    def _component_fault(
-        self: MccsTile,
-        is_fault: bool,
-    ) -> None:
-        """
-        Handle change in the fault status of the component.
+        if "health_state" in kwargs.keys():
+            health = kwargs.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
-        This is a callback hook, called by the component manager when
-        the component fault status changes. It is implemented here to
-        drive the op_state.
-
-        :param is_fault: whether the component is faulting or not.
-        """
-        if is_fault:
-            self.op_state_model.perform_action("component_fault")
-            self._health_model.component_fault(True)
-        else:
-            power_mode = self.component_manager.power_mode
-            if power_mode is not None:
-                self._component_power_mode_changed(power_mode)
-            self._health_model.component_fault(False)
-
-    def health_changed(self: MccsTile, health: HealthState) -> None:
-        """
-        Handle change in this device's health state.
-
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
 
     # ----------
     # Attributes
@@ -1428,8 +1404,7 @@ class MccsTile(SKABaseDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> core_id = 2
         >>> arp_table_entry = 0
-        >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id,
-                                        arp_table_entry)
+        >>> argout = dp.command_inout(Get40GCoreConfiguration, core_id, arp_table_entry)
         >>> params = json.loads(argout)
         """
         handler = self.get_command_object("Get40GCoreConfiguration")
@@ -1494,10 +1469,10 @@ class MccsTile(SKABaseDevice):
 
         :example:
 
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Mode": "1G", "PayloadLength":4,DstIP="10.0.1.23"}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SetLmcDownload", jstr)
+        >> dp = tango.DeviceProxy("mccs/tile/01")
+        >> dict = {"Mode": "1G", "PayloadLength":4,DstIP="10.0.1.23"}
+        >> jstr = json.dumps(dict)
+        >> dp.command_inout("SetLmcDownload", jstr)
         """
         handler = self.get_command_object("SetLmcDownload")
         (return_code, message) = handler(argin)
@@ -1760,11 +1735,11 @@ class MccsTile(SKABaseDevice):
 
         :example:
 
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"StartChannel":1, "NumTiles":10, "IsTile":True, "isFirst":True,
-        >>>         "isLast:True}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("ConfigureStationBeamformer", jstr)
+        >> dp = tango.DeviceProxy("mccs/tile/01")
+        >> dict = {"StartChannel":1, "NumTiles":10, "IsTile":True, "isFirst":True,
+        >>         "isLast:True}
+        >> jstr = json.dumps(dict)
+        >> dp.command_inout("ConfigureStationBeamformer", jstr)
         """
         handler = self.get_command_object("ConfigureStationBeamformer")
         (return_code, message) = handler(argin)
@@ -2911,9 +2886,9 @@ class MccsTile(SKABaseDevice):
 
         :example:
 
-        >>> delays = [3.4] * n (How many & int or float : Alessio?)
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("SetTimedelays", delays)
+        >> delays = [3.4] * n (How many & int or float : Alessio?)
+        >> dp = tango.DeviceProxy("mccs/tile/01")
+        >> dp.command_inout("SetTimedelays", delays)
         """
         handler = self.get_command_object("SetTimeDelays")
         (return_code, message) = handler(argin)

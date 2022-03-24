@@ -29,15 +29,24 @@ __all__ = ["PowerSupplyProxySimulator"]
 class PowerSupplyProxyComponentManager(MccsComponentManager):
     def __init__(
         self: PowerSupplyProxyComponentManager,
-        *args: Any,
+        logger,
+        max_workers,
+        communication_state_changed_callback,
         supplied_power_state_changed_callback: Callable[[PowerState], None],
+        *args: Any,
         **kwargs: Any,
     ) -> None:
         self._supplied_power_state: Optional[PowerState] = None
         self._supplied_power_state_changed_callback = (
             supplied_power_state_changed_callback
         )
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            logger,
+            max_workers,
+            communication_state_changed_callback,
+            supplied_power_state_changed_callback,
+            *args, **kwargs
+        )
 
     def stop_communicating(self: PowerSupplyProxyComponentManager) -> None:
         """Break off communication with the component."""
@@ -173,7 +182,7 @@ class PowerSupplyProxySimulator(
     def __init__(
         self: PowerSupplyProxySimulator,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         supplied_power_state_changed_callback: Callable[[PowerState], None],
         initial_supplied_power_state: PowerState = PowerState.OFF,
@@ -195,11 +204,9 @@ class PowerSupplyProxySimulator(
         super().__init__(
             self._Component(initial_supplied_power_state),
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            None,
-            None,
-            supplied_power_state_changed_callback=supplied_power_state_changed_callback,
+            supplied_power_state_changed_callback,
         )
 
     def start_communicating(self: PowerSupplyProxySimulator) -> None:

@@ -195,7 +195,7 @@ class MccsAPIU(SKABaseDevice):
 
         :param kwargs: the state change parameters.
         """
-
+        print(f"1111111111111111111111111111111 {state_change}")
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",

@@ -34,9 +34,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
+        max_workers : int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
-        antenna_power_state_changed_callback: Callable[[PowerState], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new APIU proxy instance.
@@ -49,8 +49,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param antenna_power_state_changed_callback: callback to be
-            called when the power state of the antenna changes.
+
 
         :raises AssertionError: if parameters are out of bounds
         """
@@ -64,9 +63,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            supplied_power_state_changed_callback=antenna_power_state_changed_callback,
         )
 
     def stop_communicating(self: _ApiuProxy) -> None:
@@ -230,8 +229,9 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -254,6 +254,7 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
@@ -337,9 +338,9 @@ class AntennaComponentManager(MccsComponentManager):
         tile_fqdn: str,
         tile_antenna_id: int,
         logger: logging.Logger,
-        max_workers: Optional[int] = None,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any], None],
+        component_state_changed_callback: Callable[[dict[str,Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -375,17 +376,17 @@ class AntennaComponentManager(MccsComponentManager):
             apiu_fqdn,
             apiu_antenna_id,
             logger,
-            self._apiu_communication_status_changed,
-            self._apiu_power_state_changed,
-            self._apiu_component_fault_changed,
-            self._antenna_power_state_changed,
+            max_workers,
+            communication_status_changed_callback,
+            component_state_changed_callback,
         )
         self._tile_proxy = _TileProxy(
             tile_fqdn,
             tile_antenna_id,
             logger,
-            self._tile_communication_status_changed,
-            self._tile_component_fault_changed,
+            max_workers,
+            communication_status_changed_callback,
+            component_state_changed_callback,
         )
 
         super().__init__(

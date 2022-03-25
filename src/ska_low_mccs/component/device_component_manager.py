@@ -9,7 +9,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import tango
 from ska_tango_base.commands import ResultCode, SlowCommand
@@ -34,8 +34,9 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
+        max_workers,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable[[Any], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -65,7 +66,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )

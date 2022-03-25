@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from typing import Any, List, Optional, Tuple
 
+import threading
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import DeviceInitCommand, ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
     HealthState,
@@ -50,6 +51,7 @@ class MccsAntenna(SKABaseDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsAntenna) -> None:
@@ -74,9 +76,9 @@ class MccsAntenna(SKABaseDevice):
             f"low-mccs/tile/{self.TileId:04}",
             self.LogicalTileAntennaId,
             self.logger,
+            self._max_workers,
             self._component_communication_status_changed,
-            self._component_state_changed_callback,
-            max_workers=1,
+            self.component_state_changed_callback,            
         )
 
     class InitCommand(DeviceInitCommand):
@@ -188,7 +190,7 @@ class MccsAntenna(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_state_changed_callback(
+    def component_state_changed_callback(
         self: MccsAntenna,
         state_change: dict[str,Any]
     ) -> None:
@@ -508,7 +510,7 @@ class MccsAntenna(SKABaseDevice):
     # Commands
     # --------
 
-    class OnCommand(SKABaseDevice.OnCommand):
+    class OnCommand(SKABaseDevice):
         """
         A class for the MccsAntenna's On() command.
 

@@ -33,7 +33,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         max_workers: Optional[int] = None,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any], None],
+        component_state_changed_callback: Callable[[dict[str,Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -47,17 +47,15 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             when the component state changes
         : param max_workers: no. of worker threads
         """
-        self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
-        self._is_configured_changed_callback = is_configured_changed_callback
+        self._is_beam_locked_changed_callback = component_state_changed_callback
+        self._is_configured_changed_callback = component_state_changed_callback
 
         super().__init__(
             SubarrayBeam(logger),
             logger,
-            communication_status_changed_callback,
-            None,
-            None,
-            component_state_changed_callback,
             max_workers,
+            communication_status_changed_callback,
+            component_state_changed_callback,
         )
         self._component_state_changed_callback = component_state_changed_callback
 

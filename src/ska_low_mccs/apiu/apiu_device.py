@@ -9,8 +9,9 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import logging
 import threading
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
@@ -168,7 +169,7 @@ class MccsAPIU(SKABaseDevice):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param kwargs: the state change parameters.
+        :param state_change: dictionary of state change parameters.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -374,9 +375,11 @@ class MccsAPIU(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsAPIU.IsAntennaOnCommand) -> bool:  # type: ignore[override]
+        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
             """
             Stateless hook for device IsAntennaOn() command.
+
+            :param argin: the logical antenna id of the antenna to power up
 
             :return: True if the antenna is on.
             """
@@ -387,8 +390,7 @@ class MccsAPIU(SKABaseDevice):
         """
         Power up the antenna.
 
-        :param argin: the logical antenna id of the antenna to power
-            up
+        :param argin: the logical antenna id of the antenna to power up
 
         :return: whether the specified antenna is on or not
         """

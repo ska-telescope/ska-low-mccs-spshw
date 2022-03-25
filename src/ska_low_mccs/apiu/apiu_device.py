@@ -367,19 +367,20 @@ class MccsAPIU(SKABaseDevice):
         ) -> None:
             """
             Initialise a new instance.
-
+ 
             :param component_manager: the device to which this command belongs.
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsAPIU.IsAntennaOnCommand) -> bool:  # type: ignore[override]
+        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
             """
             Stateless hook for device IsAntennaOn() command.
 
             :return: True if the antenna is on.
             """
+            print(argin)
             return self._component_manager.is_antenna_on(argin)
 
     @command(dtype_in="DevULong", dtype_out=bool)

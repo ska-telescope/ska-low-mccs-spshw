@@ -34,6 +34,7 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Optional[Callable[[Any], None]],
     ) -> None:
@@ -65,7 +66,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )

@@ -8,14 +8,13 @@
 """This module implements a functionality for component managers in MCCS."""
 from __future__ import annotations  # allow forward references in type hints
 
-import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
 
 from ska_tango_base.base import TaskExecutorComponentManager
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 from typing_extensions import Protocol
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
@@ -206,7 +205,7 @@ class MccsComponentManager(
 
         This is a callback hook, to be passed to the managed component.
 
-        :param power_state: the new power mode of the component
+        :param state_change: the new state of the component
         """
         self.update_component_state(state_change)
 
@@ -219,13 +218,7 @@ class MccsComponentManager(
 
         This is a helper method for use by subclasses.
 
-        :param power_state: the new power mode of the component. This can
-            be None, in which case the internal value is updated but no
-            callback is called. This is useful to ensure that the
-            callback is called next time a real value is pushed.
-        :param faulty: whether the component has faulted. If ``False``,
-            then this is a notification that the component has
-            *recovered* from a fault.
+        :param state_change: pass thru.
         """
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(state_change)

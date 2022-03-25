@@ -128,7 +128,7 @@ class PowerSupplyProxySimulator(
             """
             Set the supplied power mode changed callback.
 
-            :param supplied_power_state_changed_callback: the callback to be
+            :param component_state_changed_callback: the callback to be
                 called when the power mode changes.
             """
             self._supplied_power_state_changed_callback = (
@@ -196,12 +196,11 @@ class PowerSupplyProxySimulator(
         Initialise a new instance.
 
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: nos of worker threads for async commands
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param supplied_power_state_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the supplied power mode changes
         :param initial_supplied_power_state: the initial supplied power
             mode of the simulated component
@@ -284,6 +283,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param power_supply_component_manager: the component
             manager that manages supply of power to the hardware.
         :param logger: a logger for this object to use
+        :param max_workers: nos of worker threads for async commands
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

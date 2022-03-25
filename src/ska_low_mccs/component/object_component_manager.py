@@ -45,7 +45,7 @@ class ObjectComponentManager(MccsComponentManager):
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -76,8 +76,6 @@ class ObjectComponentManager(MccsComponentManager):
             max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-#             *args,
-#             **kwargs,
         )
 
     def start_communicating(self: ObjectComponentManager) -> None:

@@ -9,7 +9,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import tango
 from ska_tango_base.commands import ResultCode, SlowCommand

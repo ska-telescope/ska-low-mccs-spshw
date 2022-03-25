@@ -29,27 +29,24 @@ __all__ = ["PowerSupplyProxySimulator"]
 class PowerSupplyProxyComponentManager(MccsComponentManager):
     def __init__(
         self: PowerSupplyProxyComponentManager,
-        component: Callable,
+        component: ObjectComponent,
         logger: logging.Logger,
         max_workers: int,
-        communication_state_changed_callback,
-        component_state_changed_callback: Callable[[dict[str,Any]], None],
-#         *args: Any,
-#         **kwargs: Any,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         self._supplied_power_state: Optional[PowerState] = None
-        print(f"1234567 {max_workers}")
-        print(f"0000000 {communication_state_changed_callback}")
-        self._supplied_power_state_changed_callback = (
-            component_state_changed_callback
-        )
-        print(f"9999999 {component_state_changed_callback}")
+        self._supplied_power_state_changed_callback = component_state_changed_callback
         super().__init__(
+            component,
             logger,
             max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
-#            *args, **kwargs
+            *args,
+            **kwargs,
         )
 
     def stop_communicating(self: PowerSupplyProxyComponentManager) -> None:
@@ -81,8 +78,7 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         if self._supplied_power_state != supplied_power_state:
             self._supplied_power_state = supplied_power_state
             if self._supplied_power_state is not None:
-                print(f"6666666666666666 {self._supplied_power_state_changed_callback}")
-                self._supplied_power_state_changed_callback({"power_state": self._supplied_power_state})
+                self._supplied_power_state_changed_callback(self._supplied_power_state)
 
 
 class PowerSupplyProxySimulator(
@@ -120,13 +116,13 @@ class PowerSupplyProxySimulator(
             """
             self._supplied_power_state = initial_supplied_power_state
             self._supplied_power_state_changed_callback: Optional[
-                Callable[[dict[str,Any]], None]
+                Callable[[dict[str, Any]], None]
             ] = None
 
         def set_supplied_power_state_changed_callback(
             self: PowerSupplyProxySimulator._Component,
             component_state_changed_callback: Optional[
-                Callable[[dict[str,Any]], None]
+                Callable[[dict[str, Any]], None]
             ],
         ) -> None:
             """
@@ -139,8 +135,9 @@ class PowerSupplyProxySimulator(
                 component_state_changed_callback
             )
             if self._supplied_power_state_changed_callback is not None:
-                print(f"77777777 {self._supplied_power_state_changed_callback}")
-                self._supplied_power_state_changed_callback({"power_state": self._supplied_power_state})
+                self._supplied_power_state_changed_callback(
+                    {"power_state": self._supplied_power_state}
+                )
 
         def power_off(
             self: PowerSupplyProxySimulator._Component,
@@ -183,8 +180,9 @@ class PowerSupplyProxySimulator(
             if self._supplied_power_state != supplied_power_state:
                 self._supplied_power_state = supplied_power_state
                 if self._supplied_power_state_changed_callback is not None:
-                    print(f"8888888 {self._supplied_power_state_changed_callback}")
-                    self._supplied_power_state_changed_callback({"power_state": supplied_power_state})
+                    self._supplied_power_state_changed_callback(
+                        {"power_state": supplied_power_state}
+                    )
 
     def __init__(
         self: PowerSupplyProxySimulator,
@@ -276,7 +274,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
         Initialise a new instance.

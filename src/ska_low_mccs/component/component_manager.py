@@ -97,7 +97,7 @@ class MccsComponentManager(
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
         *args: Any,
         **kwargs: Any,
     ):
@@ -127,10 +127,11 @@ class MccsComponentManager(
         self._faulty: Optional[bool] = None
 
         self._component_state_changed_callback = component_state_changed_callback
-
-        #super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
-        super().__init__(logger, communication_status_changed_callback,
-            component_state_changed_callback, max_workers=max_workers
+        super().__init__(
+            logger,
+            communication_status_changed_callback,
+            component_state_changed_callback,
+            max_workers=max_workers,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:
@@ -198,7 +199,7 @@ class MccsComponentManager(
         return self._communication_status
 
     def component_state_changed_callback(
-        self: MccsComponentManager, state_change: dict[str,Any]
+        self: MccsComponentManager, state_change: dict[str, Any]
     ) -> None:
         """
         Handle notification that the component's power mode has changed.
@@ -210,7 +211,9 @@ class MccsComponentManager(
         self.update_component_state(state_change)
 
     @threadsafe
-    def update_component_state(self: MccsComponentManager, state_change: dict[str,Any]) -> None:
+    def update_component_state(
+        self: MccsComponentManager, state_change: dict[str, Any]
+    ) -> None:
         """
         Update the power mode, calling callbacks as required.
 
@@ -224,21 +227,6 @@ class MccsComponentManager(
             then this is a notification that the component has
             *recovered* from a fault.
         """
-#         print(f"222222222222222222222222222 {state_change}")
-#         state = {}
-#         if "power_state" in state_change.keys():
-#             power_state = state_change.get("power_state")
-#             with self._power_state_lock:
-#                 self._power_state = power_state
-#             if power_state is not None:
-#                 state.update({"power_state": power_state})
-# 
-#         if "fault" in state_change.keys():
-#             faulty = state_change.get("fault")
-#             self._faulty = faulty
-#             if faulty is not None:
-#                 state.update({"fault": faulty})
-
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(state_change)
 

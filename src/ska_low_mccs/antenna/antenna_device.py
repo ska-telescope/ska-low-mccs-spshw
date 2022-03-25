@@ -96,29 +96,29 @@ class MccsAntenna(SKABaseDevice):
             """
             super().do()
 
-            device = self.target
+            self._device._power_state_lock = threading.RLock()
 
-            device._antennaId = 0
-            device._gain = 0.0
-            device._rms = 0.0
-            device._xPolarisationFaulty = False
-            device._yPolarisationFaulty = False
-            device._xDisplacement = 0.0
-            device._yDisplacement = 0.0
-            device._zDisplacement = 0.0
-            device._timestampOfLastSpectrum = ""
-            device._logicalAntennaId = 0
-            device._xPolarisationScalingFactor = [0]
-            device._yPolarisationScalingFactor = [0]
-            device._calibrationCoefficient = [0.0]
-            device._pointingCoefficient = [0.0]
-            device._spectrumX = [0.0]
-            device._spectrumY = [0.0]
-            device._position = [0.0]
-            device._delays = [0.0]
-            device._delayRates = [0.0]
-            device._bandpassCoefficient = [0.0]
-            device._first = True
+            self._device._antennaId = 0
+            self._device._gain = 0.0
+            self._device._rms = 0.0
+            self._device._xPolarisationFaulty = False
+            self._device._yPolarisationFaulty = False
+            self._device._xDisplacement = 0.0
+            self._device._yDisplacement = 0.0
+            self._device._zDisplacement = 0.0
+            self._device._timestampOfLastSpectrum = ""
+            self._device._logicalAntennaId = 0
+            self._device._xPolarisationScalingFactor = [0]
+            self._device._yPolarisationScalingFactor = [0]
+            self._device._calibrationCoefficient = [0.0]
+            self._device._pointingCoefficient = [0.0]
+            self._device._spectrumX = [0.0]
+            self._device._spectrumY = [0.0]
+            self._device._position = [0.0]
+            self._device._delays = [0.0]
+            self._device._delayRates = [0.0]
+            self._device._bandpassCoefficient = [0.0]
+            self._device._first = True
 
             event_names = [
                 "voltage",
@@ -133,7 +133,7 @@ class MccsAntenna(SKABaseDevice):
             # The health model updates our health, but then the base class super().do()
             # overwrites it with OK, so we need to update this again.
             # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._device._health_state = device._health_model.health_state
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -190,7 +190,7 @@ class MccsAntenna(SKABaseDevice):
 
     def _component_state_changed_callback(
         self: MccsAntenna,
-        **kwargs: Any,
+        state_change: dict[str,Any]
     ) -> None:
         """
         Handle change in the state of the component.
@@ -206,8 +206,8 @@ class MccsAntenna(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        if "fault" in kwargs.keys():
-            is_fault = kwargs.get("fault")
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
             if is_fault:
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
@@ -217,14 +217,16 @@ class MccsAntenna(SKABaseDevice):
                 )
                 self._health_model.component_fault(False)
 
-        if "health_state" in kwargs.keys():
-            health = kwargs.get("health_state")
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        if "power_state" in kwargs.keys():
-            power_state = kwargs.get("power_state")
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            with self._power_state_lock:
+                self.component_manager.power_state = power_state
             if power_state:
                 self.op_state_model.perform_action(action_map[power_state])
 

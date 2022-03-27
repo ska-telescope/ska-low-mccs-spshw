@@ -96,7 +96,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            super().do()
+            #super().do()
 
             self._device._power_state_lock = threading.RLock()
 
@@ -129,13 +129,13 @@ class MccsAntenna(SKABaseDevice):
                 "yPolarisationFaulty",
             ]
             for name in event_names:
-                device.set_change_event(name, True, True)
-                device.set_archive_event(name, True, True)
+                self._device.set_change_event(name, True, True)
+                self._device.set_archive_event(name, True, True)
 
             # The health model updates our health, but then the base class super().do()
             # overwrites it with OK, so we need to update this again.
             # TODO: This needs to be fixed in the base classes.
-            self._device._health_state = device._health_model.health_state
+            self._device._health_state = self._device._health_model.health_state
 
             return (ResultCode.OK, "Init command completed OK")
 

@@ -117,12 +117,10 @@ class MccsStationBeam(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            (result_code, message) = super().do()
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
-            self._build_state = release.get_release_info()
-            self._version_id = release.version
-
-            return (result_code, message)
+            return (ResultCode.OK, "Initialisation complete")
 
     # ----------
     # Callbacks

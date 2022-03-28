@@ -38,7 +38,7 @@ class HealthModel:
         """
         Initialise a new instance.
 
-        :param health_changed_callback: callback to be called whenever
+        :param component_state_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
         """

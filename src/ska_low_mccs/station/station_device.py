@@ -527,32 +527,6 @@ class MccsStation(SKAObsDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class ApplyPointingCommand(ResponseCommand):
-        """Class for handling the ApplyPointing(argin) command."""
-
-        SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
-        FAILED_MESSAGE = "ApplyPointing command failed: ValueError in Tile"
-
-        def do(  # type: ignore[override]
-            self: MccsStation.ApplyPointingCommand, argin: list[float]
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement ApplyPointing command functionality.
-
-            :param argin: an array containing a beam index and antenna
-                delays
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.apply_pointing(argin)
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
-
     @command(
         dtype_in="DevVarDoubleArray",
         dtype_out="DevVarLongStringArray",

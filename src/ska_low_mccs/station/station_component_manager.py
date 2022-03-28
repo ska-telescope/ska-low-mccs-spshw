@@ -152,6 +152,7 @@ class StationComponentManager(MccsComponentManager):
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         is_configured_changed_callback: Callable[[bool], None],
+        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -430,12 +431,33 @@ class StationComponentManager(MccsComponentManager):
                     return ResultCode.FAILED
             return ResultCode.QUEUED
 
-    @check_communicating
-    @check_on
     def apply_pointing(
         self: StationComponentManager,
         delays: list[float],
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
+        """Submit the apply_pointing method.
+
+        This method returns immediately after it submitted
+        `self._apply_pointing` for execution.
+
+        :param delays: an array containing a beam index and antenna
+            delays
+        :param task_callback: Update task state, defaults to None
+        :type task_callback: Callable, optional
+        """
+        task_status, response = self.submit_task(
+            self._apply_pointing, delays=delays, task_callback=task_callback
+        )
+        return task_status, response
+
+    @check_communicating
+    @check_on
+    def _apply_pointing(
+        self: StationComponentManager,
+        delays: list[float],
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[ResultCode, str]:
         """
         Apply the pointing configuration by setting the delays on each tile.
 
@@ -471,7 +493,7 @@ class StationComponentManager(MccsComponentManager):
             self._is_configured = is_configured
             self._is_configured_changed_callback(is_configured)
 
-    def configure(self, argin: str, task_callback: Optional[Callable] = None) -> ResultCode:
+    def configure(self, argin: str, task_callback: Optional[Callable] = None) -> tuple[ResultCode, str]:
         """Submit the configure method.
 
         This method returns immediately after it submitted

@@ -121,6 +121,9 @@ class MccsAntenna(SKABaseDevice):
             self._device._delayRates = [0.0]
             self._device._bandpassCoefficient = [0.0]
             self._device._first = True
+            self._device._altitude = 0.0
+            self._device._fieldNodeLatitude = 0.0
+            self._device._fieldNodeLongitude = 0.0
 
             event_names = [
                 "voltage",
@@ -357,7 +360,7 @@ class MccsAntenna(SKABaseDevice):
 
         :return: the Latitude of field node centre
         """
-        return self._fieldNodeLongitude
+        return self._fieldNodeLatitude
 
     @attribute(dtype="float", label="altitude", unit="meters")
     def altitude(self: MccsAntenna) -> float:

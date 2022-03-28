@@ -8,14 +8,13 @@
 """This module implements a functionality for component managers in MCCS."""
 from __future__ import annotations  # allow forward references in type hints
 
-import enum
 import logging
 import threading
 from typing import Any, Callable, Optional
 
 from ska_tango_base.base import TaskExecutorComponentManager
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 from typing_extensions import Protocol
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
@@ -97,7 +96,7 @@ class MccsComponentManager(
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
         *args: Any,
         **kwargs: Any,
     ):
@@ -123,15 +122,15 @@ class MccsComponentManager(
             communication_status_changed_callback
         )
 
-        self._power_state_lock = threading.RLock()
-        self._power_state: Optional[PowerState] = None
+        self._power_state: Optional[PowerState] = PowerState.UNKNOWN
         self._faulty: Optional[bool] = None
 
         self._component_state_changed_callback = component_state_changed_callback
-
-        #super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
-        super().__init__(logger, communication_status_changed_callback,
-            component_state_changed_callback, max_workers=max_workers
+        super().__init__(
+            logger,
+            communication_status_changed_callback,
+            component_state_changed_callback,
+            max_workers=max_workers,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:
@@ -199,49 +198,30 @@ class MccsComponentManager(
         return self._communication_status
 
     def component_state_changed_callback(
-        self: MccsComponentManager, state_change: dict[str,Any]
+        self: MccsComponentManager, state_change: dict[str, Any]
     ) -> None:
         """
         Handle notification that the component's power mode has changed.
 
         This is a callback hook, to be passed to the managed component.
 
-        :param power_state: the new power mode of the component
+        :param state_change: the new state of the component
         """
         self.update_component_state(state_change)
 
     @threadsafe
-    def update_component_state(self: MccsComponentManager, state_change: dict[str,Any]) -> None:
+    def update_component_state(
+        self: MccsComponentManager, state_change: dict[str, Any]
+    ) -> None:
         """
         Update the power mode, calling callbacks as required.
 
         This is a helper method for use by subclasses.
 
-        :param power_state: the new power mode of the component. This can
-            be None, in which case the internal value is updated but no
-            callback is called. This is useful to ensure that the
-            callback is called next time a real value is pushed.
-        :param faulty: whether the component has faulted. If ``False``,
-            then this is a notification that the component has
-            *recovered* from a fault.
+        :param state_change: pass thru.
         """
-        print(f"222222222222222222222222222 {state_change}")
-        state = {}
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            with self._power_state_lock:
-                self._power_state = power_state
-            if power_state is not None:
-                state.update({"power_state": power_state})
-
-        if "fault" in state_change.keys():
-            faulty = state_change.get("fault")
-            self._faulty = faulty
-            if faulty is not None:
-                state.update({"fault": faulty})
-
         if self._component_state_changed_callback is not None:
-            self._component_state_changed_callback(state)
+            self._component_state_changed_callback(state_change)
 
     @property
     def power_state(self: MccsComponentManager) -> Optional[PowerState]:
@@ -251,6 +231,15 @@ class MccsComponentManager(
         :return: the power mode of this component manager.
         """
         return self._power_state
+
+    @power_state.setter
+    def power_state(self: MccsComponentManager, power_state: PowerState) -> None:
+        """
+        Set the power mode of this component manager.
+
+        :param power_state: the power mode for this component manager.
+        """
+        self._power_state = power_state
 
     @property
     def faulty(self: MccsComponentManager) -> Optional[bool]:

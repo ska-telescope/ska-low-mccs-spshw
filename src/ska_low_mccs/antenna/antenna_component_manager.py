@@ -34,7 +34,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
-        max_workers : int,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -44,6 +44,8 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         :param fqdn: the FQDN of the APIU
         :param logical_antenna_id: this antenna's id within the APIU
         :param logger: the logger to be used by this object.
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -239,6 +241,8 @@ class _TileProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the Tile device
         :param logical_antenna_id: this antenna's id within the Tile
         :param logger: the logger to be used by this object.
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -340,7 +344,7 @@ class AntennaComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str,Any]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -352,13 +356,13 @@ class AntennaComponentManager(MccsComponentManager):
             antenna's tile.
         :param tile_antenna_id: the id of the antenna in the tile.
         :param logger: a logger for this object to use
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
         """
         self._apiu_power_state = PowerState.UNKNOWN
         self._target_power_state: Optional[PowerState] = None

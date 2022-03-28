@@ -8,9 +8,9 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
+import threading
 from typing import Any, List, Optional, Tuple
 
-import threading
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, ResultCode
@@ -78,7 +78,7 @@ class MccsAntenna(SKABaseDevice):
             self.logger,
             self._max_workers,
             self._component_communication_status_changed,
-            self.component_state_changed_callback,            
+            self.component_state_changed_callback,
         )
 
     class InitCommand(DeviceInitCommand):
@@ -96,7 +96,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            #super().do()
+            # super().do()
 
             self._device._power_state_lock = threading.RLock()
 
@@ -191,8 +191,7 @@ class MccsAntenna(SKABaseDevice):
         )
 
     def component_state_changed_callback(
-        self: MccsAntenna,
-        state_change: dict[str,Any]
+        self: MccsAntenna, state_change: dict[str, Any]
     ) -> None:
         """
         Handle change in the state of the component.
@@ -200,7 +199,8 @@ class MccsAntenna(SKABaseDevice):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param power_mode: the power mode of the component.
+        :param state_change: a dict containing the state change(s)
+            of the component.
         """
         action_map = {
             PowerState.OFF: "component_off",

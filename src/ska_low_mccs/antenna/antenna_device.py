@@ -96,8 +96,6 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # super().do()
-
             self._device._power_state_lock = threading.RLock()
 
             self._device._antennaId = 0
@@ -142,25 +140,6 @@ class MccsAntenna(SKABaseDevice):
 
             return (ResultCode.OK, "Init command completed OK")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
-    )
-    def Reset(self: MccsAntenna) -> DevVarLongStringArrayType:
-        """
-        Reset the device from the FAULT state.
-
-        To modify behaviour for this command, modify the do() method of
-        the command class.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        # TODO Call Reset directly - DON'T USE LRC - for now.
-        handler = self.get_command_object("Reset")
-        (result_code, message) = handler()
-        return ([result_code], [message])
 
     # --------------
     # Callback hooks
@@ -512,40 +491,6 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
-
-    class OnCommand(SKABaseDevice):
-        """
-        A class for the MccsAntenna's On() command.
-
-        This class overrides the SKABaseDevice OnCommand to allow for an
-        eventual consistency semantics. For example it is okay to call
-        On() before the APIU is on; this device will happily wait for
-        the APIU to come on, then tell it to turn on its Antenna. This
-        change of semantics requires an override because the
-        SKABaseDevice OnCommand only allows On() to be run when in OFF
-        state.
-        """
-
-        def do(  # type: ignore[override]
-            self: MccsAntenna.OnCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for On() command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            # It's fine to complete this long-running command here
-            # (returning ResultCode.OK), even though the component manager
-            # may not actually be finished turning everything on.
-            # The completion of the original On command to MccsController
-            # is waiting for the various power mode callbacks to be received
-            # rather than completion of the various long-running commands.
-            _ = self.target.on()
-            message = "Antenna On command completed OK"
-            return (ResultCode.OK, message)
-
     def is_On_allowed(self: MccsAntenna) -> bool:
         """
         Check if command `On` is allowed in the current device state.

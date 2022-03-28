@@ -8,6 +8,7 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations  # allow forward references in type hints
 
+import threading
 import json
 import logging
 import os.path
@@ -17,8 +18,7 @@ import numpy as np
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import DeviceInitCommand, ResultCode, FastCommand,
-                                     SlowCommand, SubmittedSlowCommand
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, FastCommand, SlowCommand, SubmittedSlowCommand
 from ska_tango_base.control_model import (
     AdminMode,
     CommunicationStatus,
@@ -93,7 +93,7 @@ class MccsTile(SKABaseDevice):
             self.SubrackFQDN,
             self.SubrackBay,
             self._component_communication_status_changed,
-            self._component_state_changed_callback,
+            self.component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -173,6 +173,20 @@ class MccsTile(SKABaseDevice):
                 ),
             )
 
+            # self.register_command_object(
+            #     command_name,
+            #     SubmittedSlowCommand(
+            #         command_name,
+            #         self._command_tracker,
+            #         self.component_manager,
+            #         method_name,
+            #         callback=None,
+            #         logger=self.logger,
+            #     )
+            # )
+
+
+
         antenna_args = (
             self.component_manager,
             self.op_state_model,
@@ -200,7 +214,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            (result_code, message) = super().do()
+            self._device._power_state_lock = threading.RLock()
             device = self.target
             device._health_state = HealthState.UNKNOWN
 
@@ -212,11 +226,11 @@ class MccsTile(SKABaseDevice):
             # The health model updates our health, but then the base class super().do()
             # overwrites it with OK, so we need to update this again.
             # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._device._health_state = device._health_model.health_state
 
             return (ResultCode.OK, "Init command completed OK")
 
-    class OnCommand(ResponseCommand):
+    class OnCommand(SKABaseDevice):
         """
         A class for the MccsTile's On() command.
 
@@ -314,17 +328,18 @@ class MccsTile(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_state_changed_callback(self: MccsTile, **kwargs: Any) -> None:
+    def component_state_changed_callback(self: MccsTile, state_change: dict[str,Any]) -> None:
         """
         Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
+        :param state_change: the state change of the component
         """
         self.logger.debug(f"power_mode: {power_mode}")
-        if "power_state" in kwargs.keys():
-            power_state = kwargs.get("power_state")
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
             if power_state:
                 action_map = {
                     PowerState.OFF: "component_off",
@@ -334,8 +349,8 @@ class MccsTile(SKABaseDevice):
                 }
                 self.op_state_model.perform_action(action_map[power_state])
 
-        if "fault" in kwargs.keys():
-            is_fault = kwargs.get("fault")
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
             if is_fault:
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
@@ -344,8 +359,8 @@ class MccsTile(SKABaseDevice):
                     action_map[self.component_manager.power_mode])
                 self._health_model.component_fault(False)
 
-        if "health_state" in kwargs.keys():
-            health = kwargs.get("health_state")
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)

@@ -60,7 +60,8 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         tpm_simulator: BaseTpmSimulator,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
+
     ) -> None:
         """
         Initialise a new instance.
@@ -235,7 +236,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         self: StaticTpmSimulatorComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -264,7 +265,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         self: DynamicTpmSimulatorComponentManager,
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -306,7 +307,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         tpm_cpld_port: int,
         tpm_version: str,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -445,7 +446,7 @@ class TileComponentManager(MccsComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        max_workers: Optional[int] = None,
+        max_workers : int,
         tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
@@ -453,7 +454,7 @@ class TileComponentManager(MccsComponentManager):
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[Any], None],
+        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
         _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """
@@ -520,7 +521,8 @@ class TileComponentManager(MccsComponentManager):
             max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-        )
+            )
+
 
     def start_communicating(self: TileComponentManager) -> None:
         """Establish communication with the tpm and the upstream power supply."""

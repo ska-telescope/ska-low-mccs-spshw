@@ -12,7 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 import copy
 import logging
 import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from typing_extensions import Final
 
@@ -100,7 +100,7 @@ class BaseTpmSimulator(ObjectComponent):
         :param logger: a logger for this simulator to use
         """
         self.logger = logger
-
+        self._component_state_changed_callback: Optional[Callable[[Any], None]] = None
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False

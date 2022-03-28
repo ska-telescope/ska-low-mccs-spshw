@@ -23,7 +23,7 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
-from ska_low_mccs.executor import TaskStatus
+from ska_tango_base.executor import TaskStatus
 
 __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 
@@ -320,13 +320,13 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
 
-    def turn_on_antenna(
+    def power_up_antenna(
         self: ApiuComponentManager,
         antenna: int,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
-        Submit the turn_on_antenna slow task.
+        Submit the power up task.
 
         This method returns immediately after it is submitted for execution.
 
@@ -335,12 +335,16 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
+        import pdb
+        pdb.set_trace()
         task_status, unique_id = self.submit_task(
             self._turn_on_antenna, args=[antenna], task_callback=task_callback
         )
+        print(task_status, unique_id)
         return task_status, unique_id
 
-    def turn_off_antenna(
+
+    def power_down_antenna(
         self: ApiuComponentManager,
         antenna: int,
         task_callback: Optional[Callable] = None,
@@ -358,9 +362,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_status, unique_id = self.submit_task(
             self._turn_off_antenna, args=[], task_callback=task_callback
         )
+        print(task_status, unique_id)
         return task_status, unique_id
 
-    def turn_on_antennas(
+    def power_up(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
@@ -377,7 +382,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
         return task_status, unique_id
 
-    def turn_off_antennas(
+    def power_down(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
@@ -393,3 +398,32 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self._turn_off_antennas, args=[], task_callback=task_callback
         )
         return task_status, unique_id
+
+    def _turn_on_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        logger: logging.Logger,
+        task_callback: Callable = None,
+        task_abort_event: Event = None,
+    ):
+        """This is a long running method
+
+        :param logger: logger
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        print("dummy turn on", antenna)
+        # Indicate that the task has started
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
+        # Do something
+        time.sleep(20)
+
+        # Periodically check that tasks have not been ABORTED
+        if task_abort_event.is_set():
+        # Indicate that the task has been aborted
+            task_callback(status=TaskStatus.ABORTED, result="The antenna on task aborted")
+            return
+
+        # Indicate that the task has completed
+        task_callback(status=TaskStatus.COMPLETED, result="The antenna on task has completed")

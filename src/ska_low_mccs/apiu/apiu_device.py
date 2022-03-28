@@ -87,10 +87,10 @@ class MccsAPIU(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("PowerUpAntenna", "turn_on_antenna"),
-            ("PowerDownAntenna", "turn_off_antenna"),
-            ("PowerUp", "turn_on_antennas"),
-            ("PowerDown", "turn_off_antennas"),
+            ("PowerUpAntenna", "power_up_antenna"),
+            ("PowerDownAntenna", "power_down_antenna"),
+            ("PowerUp", "power_up"),
+            ("PowerDown", "power_down"),
         ]:
             self.register_command_object(
                 command_name,
@@ -414,6 +414,7 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUpAntenna")
+        print("handler", handler)
         result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 

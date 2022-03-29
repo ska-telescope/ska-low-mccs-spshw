@@ -23,6 +23,7 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
+from ska_low_mccs.executor import TaskStatus
 
 __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 
@@ -41,15 +42,14 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         """
         Initialise a new instance.
 
-        :param antenna_count: the number of antennas managed by this
-            APIU
+        :param antenna_count: the number of antennas managed by this APIU
         :param logger: a logger for this object to use
-        :param max_workers: no. of worker threads
+        :param max_workers: Nos of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
-            component state changes
+            component state changes.
         """
         super().__init__(
             ApiuSimulator(antenna_count),
@@ -150,7 +150,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
             component should start in
         :param antenna_count: number of antennas managed by this APIU
         :param logger: a logger for this object to use
-        :param max_workers: no. of worker threads
+        :param max_workers: Nos. of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -188,12 +188,12 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
+        :param max_workers: nos. of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param max_workers: nos. of worker threads
         :param _initial_power_mode: the initial power mode of the power
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
@@ -207,7 +207,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self._hardware_communication_status_changed,
             component_state_changed_callback,
         )
-        print(f"++++++++++++++++++++++++{component_state_changed_callback}")
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
             max_workers,
@@ -321,55 +320,76 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
 
-    def turn_on_antenna(self, antenna: int, task_callback: Optional[Callable] = None):
+    def turn_on_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_on_antenna slow task.
 
         This method returns immediately after it is submitted for execution.
 
-        :param antenna: Antenna to turn on
+        :param antenna: the antenna to turn on
         :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, response = self.submit_task(
+        task_status, unique_id = self.submit_task(
             self._turn_on_antenna, args=[antenna], task_callback=task_callback
         )
-        return task_status, response
+        return task_status, unique_id
 
-    def turn_off_antenna(self, task_callback: Optional[Callable] = None):
+    def turn_off_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_off_antenna slow task.
 
         This method returns immediately after it is submitted for execution.
 
+        :param antenna: the antenna to turn off
         :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, response = self.submit_task(
+        task_status, unique_id = self.submit_task(
             self._turn_off_antenna, args=[], task_callback=task_callback
         )
-        return task_status, response
+        return task_status, unique_id
 
-    def turn_on_antennas(self, task_callback: Optional[Callable] = None):
+    def turn_on_antennas(
+        self: ApiuComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_on_antennas slow task.
 
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, response = self.submit_task(
+        task_status, unique_id = self.submit_task(
             self._turn_on_antennas, args=[], task_callback=task_callback
         )
-        return task_status, response
+        return task_status, unique_id
 
-    def turn_off_antennas(self, task_callback: Optional[Callable] = None):
+    def turn_off_antennas(
+        self: ApiuComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_off_antennas slow task.
 
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, response = self.submit_task(
+        task_status, unique_id = self.submit_task(
             self._turn_off_antennas, args=[], task_callback=task_callback
         )
-        return task_status, response
+        return task_status, unique_id

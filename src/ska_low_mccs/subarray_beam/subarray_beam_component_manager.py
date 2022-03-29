@@ -178,7 +178,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         )
         return task_status, response
 
-    def _configue(self, argin: str) -> tuple[ResultCode, str]:
+    def _configue(self, argin: str) -> tuple[ResultCode, str]: # type: ignore[override]
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 

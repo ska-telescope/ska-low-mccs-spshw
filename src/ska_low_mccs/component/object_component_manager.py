@@ -12,7 +12,7 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import (
     MccsComponentManager,
@@ -55,7 +55,7 @@ class ObjectComponentManager(MccsComponentManager):
         :param component: the commponent object to be managed by this
             component manager
         :param logger: a logger for this object to use
-        :param max_workers: no. of worker threads to use
+        :param max_workers: nos of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -73,8 +73,6 @@ class ObjectComponentManager(MccsComponentManager):
             max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            #             *args,
-            #             **kwargs,
         )
 
     def start_communicating(self: ObjectComponentManager) -> None:

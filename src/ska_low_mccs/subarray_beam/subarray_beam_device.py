@@ -157,7 +157,9 @@ class MccsSubarrayBeam(SKAObsDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(self: MccsSubarrayBeam, dict[str,Any]) -> None:
+    def component_state_changed_callback(
+        self: MccsSubarrayBeam, state_change: dict[str, Any]
+    ) -> None:
         """
         Handle change in the state of the component.
 

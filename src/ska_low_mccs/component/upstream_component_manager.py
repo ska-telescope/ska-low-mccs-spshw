@@ -29,25 +29,24 @@ __all__ = ["PowerSupplyProxySimulator"]
 class PowerSupplyProxyComponentManager(MccsComponentManager):
     def __init__(
         self: PowerSupplyProxyComponentManager,
-        component: Callable,
+        component: ObjectComponent,
         logger: logging.Logger,
         max_workers: int,
-        communication_state_changed_callback,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        #         *args: Any,
-        #         **kwargs: Any,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         self._supplied_power_state: Optional[PowerState] = None
-        print(f"1234567 {max_workers}")
-        print(f"0000000 {communication_state_changed_callback}")
         self._supplied_power_state_changed_callback = component_state_changed_callback
-        print(f"9999999 {component_state_changed_callback}")
         super().__init__(
+            component,
             logger,
             max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
-            #            *args, **kwargs
+            *args,
+            **kwargs,
         )
 
     def stop_communicating(self: PowerSupplyProxyComponentManager) -> None:
@@ -79,10 +78,7 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         if self._supplied_power_state != supplied_power_state:
             self._supplied_power_state = supplied_power_state
             if self._supplied_power_state is not None:
-                print(f"6666666666666666 {self._supplied_power_state_changed_callback}")
-                self._supplied_power_state_changed_callback(
-                    {"power_state": self._supplied_power_state}
-                )
+                self._supplied_power_state_changed_callback(self._supplied_power_state)
 
 
 class PowerSupplyProxySimulator(
@@ -139,7 +135,6 @@ class PowerSupplyProxySimulator(
                 component_state_changed_callback
             )
             if self._supplied_power_state_changed_callback is not None:
-                print(f"77777777 {self._supplied_power_state_changed_callback}")
                 self._supplied_power_state_changed_callback(
                     {"power_state": self._supplied_power_state}
                 )
@@ -185,7 +180,6 @@ class PowerSupplyProxySimulator(
             if self._supplied_power_state != supplied_power_state:
                 self._supplied_power_state = supplied_power_state
                 if self._supplied_power_state_changed_callback is not None:
-                    print(f"8888888 {self._supplied_power_state_changed_callback}")
                     self._supplied_power_state_changed_callback(
                         {"power_state": supplied_power_state}
                     )
@@ -202,7 +196,7 @@ class PowerSupplyProxySimulator(
         Initialise a new instance.
 
         :param logger: a logger for this object to use
-        :param max_workers: no. of worker threads
+        :param max_workers: nos of worker threads for async commands
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -289,7 +283,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param power_supply_component_manager: the component
             manager that manages supply of power to the hardware.
         :param logger: a logger for this object to use
-        :param max_workers: no. of worker threads
+        :param max_workers: nos of worker threads for async commands
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

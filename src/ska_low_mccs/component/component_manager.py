@@ -14,7 +14,7 @@ from typing import Any, Callable, Optional
 
 from ska_tango_base.base import TaskExecutorComponentManager
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 from typing_extensions import Protocol
 
 from ska_low_mccs.utils import ThreadsafeCheckingMeta, threadsafe
@@ -126,12 +126,10 @@ class MccsComponentManager(
         self._faulty: Optional[bool] = None
 
         self._component_state_changed_callback = component_state_changed_callback
-
-        # super().__init__(*args, max_workers=max_workers, logger=logger, **kwargs)
         super().__init__(
-            logger=logger,
-            communication_state_callback=communication_status_changed_callback,
-            component_state_callback=component_state_changed_callback,
+            logger,
+            communication_status_changed_callback,
+            component_state_changed_callback,
             max_workers=max_workers,
         )
 
@@ -206,8 +204,7 @@ class MccsComponentManager(
         Handle notification that the component's power mode has changed.
 
         This is a callback hook, to be passed to the managed component.
-
-        :param state_change: state change of the component
+        :param state_change: the new state of the component
         """
         self.update_component_state(state_change)
 
@@ -219,24 +216,8 @@ class MccsComponentManager(
         Update the power mode, calling callbacks as required.
 
         This is a helper method for use by subclasses.
-
-        :param state_change: state change
+        :param state_change: pass thru.
         """
-        #         print(f"222222222222222222222222222 {state_change}")
-        #         state = {}
-        #         if "power_state" in state_change.keys():
-        #             power_state = state_change.get("power_state")
-        #             with self._power_state_lock:
-        #                 self._power_state = power_state
-        #             if power_state is not None:
-        #                 state.update({"power_state": power_state})
-        #
-        #         if "fault" in state_change.keys():
-        #             faulty = state_change.get("fault")
-        #             self._faulty = faulty
-        #             if faulty is not None:
-        #                 state.update({"fault": faulty})
-
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(state_change)
 

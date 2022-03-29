@@ -302,6 +302,7 @@ class ApiuSimulator(ObjectComponent):
 
         :return: whether the antenna is on
         """
+        print(antenna_id)
         return self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON
 
     @check_antenna_id

@@ -22,6 +22,7 @@ from ska_tango_base.control_model import (
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
+    ExtendedPowerState,
     MccsComponentManagerProtocol,
     ObjectComponentManager,
     SwitchingComponentManager,
@@ -29,6 +30,7 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.component.component_manager import MccsComponentManager
+from ska_low_mccs.executor import TaskStatus
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
@@ -59,9 +61,9 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         self: _TpmSimulatorComponentManager,
         tpm_simulator: BaseTpmSimulator,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
-
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -69,19 +71,22 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         :param tpm_simulator: the TPM simulator component managed by
             this component manager
         :param logger: a logger for this object to use
+        :param max_workers: Nos of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             tpm_simulator,
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
             None,
         )
+        self._component_state_changed_callback = component_state_changed_callback
 
     __PASSTHROUGH = [
         "adc_rms",
@@ -235,27 +240,32 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: StaticTpmSimulatorComponentManager,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param max_workers: Nos of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             StaticTpmSimulator(
                 logger,
             ),
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
+
+        self._component_state_changed_callback = component_state_changed_callback
 
 
 class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
@@ -264,24 +274,27 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: DynamicTpmSimulatorComponentManager,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: a logger for this object to use
+        :param max_workers: Nos of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             DynamicTpmSimulator(
                 logger,
             ),
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
@@ -302,12 +315,13 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
+        max_workers,
         tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -321,14 +335,16 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :param max_workers: Nos. of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         tpm_driver = TpmDriver(
             logger,
+            max_workers,
             tile_id,
             tpm_ip,
             tpm_cpld_port,
@@ -339,12 +355,14 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
 
         dynamic_tpm_simulator_component_manager = DynamicTpmSimulatorComponentManager(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
 
         static_tpm_simulator_component_manager = StaticTpmSimulatorComponentManager(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
@@ -446,7 +464,7 @@ class TileComponentManager(MccsComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        max_workers : int,
+        max_workers: int,
         tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
@@ -454,7 +472,7 @@ class TileComponentManager(MccsComponentManager):
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """
@@ -465,6 +483,7 @@ class TileComponentManager(MccsComponentManager):
         :param initial_test_mode: the test mode that the component
             should start in
         :param logger: a logger for this object to use
+        :param max_workers: nos. of worker threads
         :param tile_id: the unique ID for the tile
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
@@ -475,6 +494,8 @@ class TileComponentManager(MccsComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         :param _tpm_component_manager: a tpm component manager to use
             instead of creating one. This is provided for testing
             purposes only.
@@ -493,12 +514,13 @@ class TileComponentManager(MccsComponentManager):
                 initial_simulation_mode,
                 initial_test_mode,
                 logger,
+                max_workers,
                 tile_id,
                 tpm_ip,
                 tpm_cpld_port,
                 tpm_version,
                 self._tpm_communication_status_changed,
-                self.component_fault_changed,
+                component_state_changed_callback,
             )
         )
 
@@ -521,8 +543,7 @@ class TileComponentManager(MccsComponentManager):
             max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            )
-
+        )
 
     def start_communicating(self: TileComponentManager) -> None:
         """Establish communication with the tpm and the upstream power supply."""
@@ -983,3 +1004,139 @@ class TileComponentManager(MccsComponentManager):
         """
         # This one-liner is only a method so that we can decorate it.
         setattr(self._tpm_component_manager, name, value)
+
+    def initialise(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the initialise slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._initialise, task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def download_firmware(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the download_firmware slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param argin: can either be the design name returned from
+            :py:meth:`.GetFirmwareAvailable` command, or a path to a
+            file
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._download_firmware, args=[argin], task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def arp_table(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the arp_table slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._arp_table, task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def start_acquisition(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the start_acquisition slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param argin: json dictionary with optional keywords:
+        * StartTime - (int) start time
+        * Delay - (int) delay start
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._start_acquisition, args=[argin], task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def cpld_flash_write(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the cpld_flash_write slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param argin: is the path to a file containing the required CPLD firmware
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._cpld_flash_write, args=[argin], task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def post_synchronisation(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the post_synchronisation slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._post_synchronisation, task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def sync_fpgas(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the sync_fpgas slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._sync_fpgas, task_callback=task_callback
+        )
+        return task_status, unique_id

@@ -8,17 +8,21 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations  # allow forward references in type hints
 
-import threading
 import json
 import logging
-import os.path
+import threading
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import DeviceInitCommand, ResultCode, FastCommand, SlowCommand, SubmittedSlowCommand
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SubmittedSlowCommand,
+)
 from ska_tango_base.control_model import (
     AdminMode,
     CommunicationStatus,
@@ -65,6 +69,7 @@ class MccsTile(SKABaseDevice):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
+        self._power_state_lock = threading.RLock()
         super().init_device()
 
     def _init_state_model(self: MccsTile) -> None:
@@ -101,10 +106,7 @@ class MccsTile(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, command_object) in [
-            ("Initialise", self.InitialiseCommand),
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
-            ("DownloadFirmware", self.DownloadFirmwareCommand),
-            ("ProgramCPLD", self.ProgramCPLDCommand),
             ("GetRegisterList", self.GetRegisterListCommand),
             ("ReadRegister", self.ReadRegisterCommand),
             ("WriteRegister", self.WriteRegisterCommand),
@@ -113,7 +115,6 @@ class MccsTile(SKABaseDevice):
             ("Configure40GCore", self.Configure40GCoreCommand),
             ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
-            ("GetArpTable", self.GetArpTableCommand),
             ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             (
@@ -151,7 +152,6 @@ class MccsTile(SKABaseDevice):
                 "ComputeCalibrationCoefficients",
                 self.ComputeCalibrationCoefficientsCommand,
             ),
-            ("StartAcquisition", self.StartAcquisitionCommand),
             ("SetTimeDelays", self.SetTimeDelaysCommand),
             ("SetCspRounding", self.SetCspRoundingCommand),
             ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
@@ -161,31 +161,34 @@ class MccsTile(SKABaseDevice):
                 self.SendChannelisedDataNarrowbandCommand,
             ),
             ("TweakTransceivers", self.TweakTransceiversCommand),
-            ("PostSynchronisation", self.PostSynchronisationCommand),
-            ("SyncFpgas", self.SyncFpgasCommand),
             ("CalculateDelay", self.CalculateDelayCommand),
             ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
         ]:
             self.register_command_object(
                 command_name,
-                command_object(
-                    self.component_manager, self.op_state_model, self.logger
-                ),
+                command_object(self.component_manager, self.logger),
             )
 
-            # self.register_command_object(
-            #     command_name,
-            #     SubmittedSlowCommand(
-            #         command_name,
-            #         self._command_tracker,
-            #         self.component_manager,
-            #         method_name,
-            #         callback=None,
-            #         logger=self.logger,
-            #     )
-            # )
-
-
+        for (command_name, method_name) in [
+            ("Initialise", "initialise"),
+            ("DownloadFirmware", "download_firmware"),
+            ("GetArpTable", "arp_table"),
+            ("StartAcquisition", "start_acquisition"),
+            ("ProgramCPLD", "cpld_flash_write"),
+            ("PostSynchronisation", "post_synchronisation"),
+            ("SyncFpgas", "sync_fpgas"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
+            )
 
         antenna_args = (
             self.component_manager,
@@ -214,19 +217,12 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._device._power_state_lock = threading.RLock()
-            device = self.target
-            device._health_state = HealthState.UNKNOWN
+            self._device._health_state = HealthState.UNKNOWN
 
-            device._csp_destination_ip = ""
-            device._csp_destination_mac = ""
-            device._csp_destination_port = 0
-            device._antenna_ids = []
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            self._device._health_state = device._health_model.health_state
+            self._device._csp_destination_ip = ""
+            self._device._csp_destination_mac = ""
+            self._device._csp_destination_port = 0
+            self._device._antenna_ids = []
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -309,9 +305,9 @@ class MccsTile(SKABaseDevice):
         # }
 
         admin_mode = self.admin_mode_model.admin_mode
-        power_mode = self.component_manager.power_mode
+        power_state = self.component_manager.power_state
         self.logger.debug(
-            f"communication_status: {communication_status}, adminMode: {admin_mode}, powerMode: {power_mode}"
+            f"communication_status: {communication_status}, adminMode: {admin_mode}, powerMode: {power_state}"
         )
         action = action_map[communication_status]
         # if communication_status == CommunicationStatus.ESTABLISHED:
@@ -322,13 +318,15 @@ class MccsTile(SKABaseDevice):
         if (communication_status == CommunicationStatus.ESTABLISHED) and (
             admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
         ):
-            self._component_power_mode_changed(power_mode)
+            self._component_power_state_changed(power_state)
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(self: MccsTile, state_change: dict[str,Any]) -> None:
+    def component_state_changed_callback(
+        self: MccsTile, state_change: dict[str, Any]
+    ) -> None:
         """
         Handle change in the state of the component.
 
@@ -337,17 +335,17 @@ class MccsTile(SKABaseDevice):
 
         :param state_change: the state change of the component
         """
-        self.logger.debug(f"power_mode: {power_mode}")
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            if power_state:
-                action_map = {
-                    PowerState.OFF: "component_off",
-                    PowerState.STANDBY: "component_standby",
-                    PowerState.ON: "component_on",
-                    PowerState.UNKNOWN: "component_unknown",
-                }
-                self.op_state_model.perform_action(action_map[power_state])
+        action_map = {
+            PowerState.OFF: "component_off",
+            PowerState.STANDBY: "component_standby",
+            PowerState.ON: "component_on",
+            PowerState.UNKNOWN: "component_unknown",
+        }
+        with self._power_state_lock:
+            if "power_state" in state_change.keys():
+                power_state = state_change.get("power_state")
+                if power_state:
+                    self.op_state_model.perform_action(action_map[power_state])
 
         if "fault" in state_change.keys():
             is_fault = state_change.get("fault")
@@ -356,7 +354,8 @@ class MccsTile(SKABaseDevice):
                 self._health_model.component_fault(True)
             else:
                 self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_mode])
+                    action_map[self.component_manager.power_state]
+                )
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
@@ -364,7 +363,6 @@ class MccsTile(SKABaseDevice):
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
-
 
     # ----------
     # Attributes
@@ -822,25 +820,6 @@ class MccsTile(SKABaseDevice):
     # # Commands
     # # --------
 
-    class InitialiseCommand(ResponseCommand):
-        """Class for handling the Initialise() command."""
-
-        SUCCEEDED_MESSAGE = "Initialise command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.InitialiseCommand,
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.Initialise` command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            component_manager.initialise()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_out="DevVarLongStringArray")
     def Initialise(self: MccsTile) -> DevVarLongStringArrayType:
         """
@@ -861,11 +840,25 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("Initialise")
         """
         handler = self.get_command_object("Initialise")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
-    class GetFirmwareAvailableCommand(BaseCommand):
+    class GetFirmwareAvailableCommand(FastCommand):
         """Class for handling the GetFirmwareAvailable() command."""
+
+        def __init__(
+            self: MccsTile.GetFirmwareAvailableCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new GetFirmwareAvailableCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(  # type: ignore[override]
             self: MccsTile.GetFirmwareAvailableCommand,
@@ -875,8 +868,7 @@ class MccsTile(SKABaseDevice):
 
             :return: json encoded string containing list of dictionaries
             """
-            component_manager = self.target
-            return json.dumps(component_manager.firmware_available)
+            return json.dumps(self._component_manager.firmware_available)
 
     @command(dtype_out="DevString")
     def GetFirmwareAvailable(self: MccsTile) -> str:
@@ -906,31 +898,6 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("GetFirmwareAvailable")
         return handler()
 
-    class DownloadFirmwareCommand(ResponseCommand):
-        """Class for handling the DownloadFirmware(argin) command."""
-
-        SUCCEEDED_MESSAGE = "DownloadFirmware command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.DownloadFirmwareCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.DownloadFirmware` command functionality.
-
-            :param argin: path to the bitfile to be downloaded
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            bitfile = argin
-            if os.path.isfile(bitfile):
-                component_manager.download_firmware(bitfile)
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, f"{bitfile} doesn't exist")
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def DownloadFirmware(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
@@ -953,31 +920,8 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("DownloadFirmware", "/tmp/firmware/bitfile")
         """
         handler = self.get_command_object("DownloadFirmware")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class ProgramCPLDCommand(ResponseCommand):
-        """Class for handling the ProgramCPLD(argin) command."""
-
-        SUCCEEDED_MESSAGE = "ProgramCPLD command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.ProgramCPLDCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ProgramCPLD` command functionality.
-
-            :param argin: path to the bitfile to be loaded
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            bitfile = argin
-            component_manager.logger.info("Downloading bitstream to CPLD FLASH")
-            component_manager.cpld_flash_write(bitfile)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        (return_code, unique_id) = handler(argin)
+        return ([return_code], [unique_id])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ProgramCPLD(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -999,11 +943,25 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("ProgramCPLD", "/tmp/firmware/bitfile")
         """
         handler = self.get_command_object("ProgramCPLD")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        (return_code, unique_id) = handler(argin)
+        return ([return_code], [unique_id])
 
-    class GetRegisterListCommand(BaseCommand):
+    class GetRegisterListCommand(FastCommand):
         """Class for handling the GetRegisterList() command."""
+
+        def __init__(
+            self: MccsTile.GetRegisterListCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new GetRegisterListCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(  # type: ignore[override]
             self: MccsTile.GetRegisterListCommand,
@@ -1013,8 +971,8 @@ class MccsTile(SKABaseDevice):
 
             :return:a list of firmware & cpld registers
             """
-            component_manager = self.target
-            return component_manager.register_list
+
+            return self._component_manager.register_list
 
     @command(dtype_out="DevVarStringArray")
     def GetRegisterList(self: MccsTile) -> list[str]:
@@ -1031,8 +989,22 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("GetRegisterList")
         return handler()
 
-    class ReadRegisterCommand(BaseCommand):
+    class ReadRegisterCommand(FastCommand):
         """Class for handling the ReadRegister(argin) command."""
+
+        def __init__(
+            self: MccsTile.ReadRegisterCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new ReadRegisterCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(self: MccsTile.ReadRegisterCommand, argin: str) -> list[int]:  # type: ignore[override]
             """
@@ -1048,27 +1020,28 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            component_manager = self.target
 
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
-                component_manager.logger.error("RegisterName is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "RegisterName is a mandatory parameter"
+                )
                 raise ValueError("RegisterName is a mandatory parameter")
             nb_read = params.get("NbRead", None)
             if nb_read is None:
-                component_manager.logger.error("NbRead is a mandatory parameter")
+                self._component_manager.logger.error("NbRead is a mandatory parameter")
                 raise ValueError("NbRead is a mandatory parameter")
             offset = params.get("Offset", None)
             if offset is None:
-                component_manager.logger.error("Offset is a mandatory parameter")
+                self._component_manager.logger.error("Offset is a mandatory parameter")
                 raise ValueError("Offset is a mandatory parameter")
             device = params.get("Device", None)
             if device is None:
-                component_manager.logger.error("Device is a mandatory parameter")
+                self._component_manager.logger.error("Device is a mandatory parameter")
                 raise ValueError("Device is a mandatory parameter")
 
-            return component_manager.read_register(name, nb_read, offset, device)
+            return self._component_manager.read_register(name, nb_read, offset, device)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongArray")
     def ReadRegister(self: MccsTile, argin: str) -> list[int]:
@@ -1095,10 +1068,22 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("ReadRegister")
         return handler(argin)
 
-    class WriteRegisterCommand(ResponseCommand):
+    class WriteRegisterCommand(FastCommand):
         """Class for handling the WriteRegister(argin) command."""
 
-        SUCCEEDED_MESSAGE = "WriteRegister command completed OK"
+        def __init__(
+            self: MccsTile.WriteRegisterCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new WriteRegisterCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(  # type: ignore[override]
             self: MccsTile.WriteRegisterCommand, argin: str
@@ -1119,28 +1104,28 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            component_manager = self.target
 
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
-                component_manager.logger.error("RegisterName is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "RegisterName is a mandatory parameter"
+                )
                 raise ValueError("RegisterName is a mandatory parameter")
             values = params.get("Values", None)
             if values is None:
-                component_manager.logger.error("Values is a mandatory parameter")
+                self._component_manager.logger.error("Values is a mandatory parameter")
                 raise ValueError("Values is a mandatory parameter")
             offset = params.get("Offset", None)
             if offset is None:
-                component_manager.logger.error("Offset is a mandatory parameter")
+                self._component_manager.logger.error("Offset is a mandatory parameter")
                 raise ValueError("Offset is a mandatory parameter")
             device = params.get("Device", None)
             if device is None:
-                component_manager.logger.error("Device is a mandatory parameter")
+                self._component_manager.logger.error("Device is a mandatory parameter")
                 raise ValueError("Device is a mandatory parameter")
 
-            component_manager.write_register(name, values, offset, device)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.write_register(name, values, offset, device)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def WriteRegister(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -1170,8 +1155,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class ReadAddressCommand(BaseCommand):
+    class ReadAddressCommand(FastCommand):
         """Class for handling the ReadAddress(argin) command."""
+
+        def __init__(
+            self: MccsTile.ReadAddressCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new ReadAddressCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(  # type: ignore[override]
             self: MccsTile.ReadAddressCommand, argin: list[int]
@@ -1187,14 +1186,13 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument has the wrong length
                 or structure
             """
-            component_manager = self.target
 
             if len(argin) < 2:
-                component_manager.logger.error("Two parameters are required")
+                self._component_manager.logger.error("Two parameters are required")
                 raise ValueError("Two parameters are required")
             address = argin[0]
             nvalues = argin[1]
-            return component_manager.read_address(address, nvalues)
+            return self._component_manager.read_address(address, nvalues)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarULongArray")
     def ReadAddress(self: MccsTile, argin: list[int]) -> list[int]:
@@ -1214,8 +1212,22 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("ReadAddress")
         return handler(argin)
 
-    class WriteAddressCommand(ResponseCommand):
+    class WriteAddressCommand(FastCommand):
         """Class for handling the WriteAddress(argin) command."""
+
+        def __init__(
+            self: MccsTile.WriteAddressCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new WriteAddressCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "WriteAddress command completed OK"
 
@@ -1234,13 +1246,12 @@ class MccsTile(SKABaseDevice):
 
             :raises ValueError: if the argin has the wrong length/structure
             """
-            component_manager = self.target
             if len(argin) < 2:
-                component_manager.logger.error(
+                self._component_manager.logger.error(
                     "A minimum of two parameters are required"
                 )
                 raise ValueError("A minium of two parameters are required")
-            component_manager.write_address(argin[0], argin[1:])
+            self._component_manager.write_address(argin[0], argin[1:])
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarULongArray", dtype_out="DevVarLongStringArray")
@@ -1266,8 +1277,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class Configure40GCoreCommand(ResponseCommand):
+    class Configure40GCoreCommand(FastCommand):
         """Class for handling the Configure40GCore(argin) command."""
+
+        def __init__(
+            self: MccsTile.Configure40GCoreCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new Configure40GCoreCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "Configure40GCore command completed OK"
 
@@ -1289,41 +1314,40 @@ class MccsTile(SKABaseDevice):
                 against a schema
             """
             params = json.loads(argin)
-            component_manager = self.target
 
             core_id = params.get("CoreID", None)
             if core_id is None:
                 message = "CoreID is a mandatory parameter."
-                component_manager.logger.error(message)
+                self._component_manager.logger.error(message)
                 raise ValueError(message)
             arp_table_entry = params.get("ArpTableEntry", None)
             if arp_table_entry is None:
                 message = "ArpTableEntry is a mandatory parameter."
-                component_manager.logger.error(message)
+                self._component_manager.logger.error(message)
                 raise ValueError(message)
             src_mac = params.get("SrcMac", None)
             if src_mac is None:
                 message = "SrcMac is a mandatory parameter."
-                component_manager.logger.error(message)
+                self._component_manager.logger.error(message)
                 raise ValueError(message)
             src_ip = params.get("SrcIP", None)
             src_port = params.get("SrcPort", None)
             if src_port is None:
                 message = "SrcPort is a mandatory parameter."
-                component_manager.logger.error(message)
+                self._component_manager.logger.error(message)
                 raise ValueError(message)
             dst_ip = params.get("DstIP", None)
             if dst_ip is None:
                 message = "DstIP is a mandatory parameter."
-                component_manager.logger.error(message)
+                self._component_manager.logger.error(message)
                 raise ValueError(message)
             dst_port = params.get("DstPort", None)
             if dst_port is None:
                 message = "DstPort is a mandatory parameter."
-                component_manager.logger.error(message)
+                self._component_manager.logger.error(message)
                 raise ValueError(message)
 
-            component_manager.configure_40g_core(
+            self._component_manager.configure_40g_core(
                 core_id,
                 arp_table_entry,
                 src_mac,
@@ -1367,8 +1391,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class Get40GCoreConfigurationCommand(BaseCommand):
+    class Get40GCoreConfigurationCommand(FastCommand):
         """Class for handling the Get40GCoreConfiguration(argin) command."""
+
+        def __init__(
+            self: MccsTile.Get40GCoreConfigurationCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new Get40GCoreConfigurationCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(self: MccsTile.Get40GCoreConfigurationCommand, argin: str) -> str:  # type: ignore[override]
             """
@@ -1384,8 +1422,9 @@ class MccsTile(SKABaseDevice):
             core_id = params.get("CoreID", None)
             arp_table_entry = params.get("ArpTableEntry", 0)
 
-            component_manager = self.target
-            item = component_manager.get_40g_configuration(core_id, arp_table_entry)
+            item = self._component_manager.get_40g_configuration(
+                core_id, arp_table_entry
+            )
             if item is not None:
                 item_new = {
                     "CoreID": item.get("core_id", None),
@@ -1425,8 +1464,22 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("Get40GCoreConfiguration")
         return handler(argin)
 
-    class SetLmcDownloadCommand(ResponseCommand):
+    class SetLmcDownloadCommand(FastCommand):
         """Class for handling the SetLmcDownload(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetLmcDownloadCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SetLmcDownloadCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
 
@@ -1447,11 +1500,10 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            component_manager = self.target
             params = json.loads(argin)
             mode = params.get("Mode", None)
             if mode is None:
-                component_manager.logger.error("Mode is a mandatory parameter")
+                self._component_manager.logger.error("Mode is a mandatory parameter")
                 raise ValueError("Mode is a mandatory parameter")
             payload_length = params.get("PayloadLength", 1024)
             dst_ip = params.get("DstIP", None)
@@ -1459,7 +1511,7 @@ class MccsTile(SKABaseDevice):
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
 
-            component_manager.set_lmc_download(
+            self._component_manager.set_lmc_download(
                 mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1493,18 +1545,6 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class GetArpTableCommand(BaseCommand):
-        """Class for handling the GetArpTable() command."""
-
-        def do(self: MccsTile.GetArpTableCommand) -> str:  # type: ignore[override]
-            """
-            Implement :py:meth:`.MccsTile.GetArpTable` command functionality.
-
-            :return: a JSON-encoded dictionary of coreId and populated arpID table
-            """
-            component_manager = self.target
-            return json.dumps(component_manager.arp_table)
-
     @command(dtype_out="DevString")
     def GetArpTable(self: MccsTile) -> str:
         """
@@ -1529,8 +1569,22 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("GetArpTable")
         return handler()
 
-    class SetChanneliserTruncationCommand(ResponseCommand):
+    class SetChanneliserTruncationCommand(FastCommand):
         """Class for handling the SetChanneliserTruncation(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetChanneliserTruncationCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SetChanneliserTruncationCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SetChanneliserTruncation command completed OK"
 
@@ -1549,16 +1603,16 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            component_manager = self.target
+
             if len(argin) < 3:
-                component_manager.logger.error("Insufficient values supplied")
+                self._component_manager.logger.error("Insufficient values supplied")
                 raise ValueError("Insufficient values supplied")
             nb_chan = argin[0]
             nb_freq = argin[1]
             arr = np.array(argin[2:])
             np.reshape(arr, (nb_chan, nb_freq))
 
-            component_manager.set_channeliser_truncation(arr)
+            self._component_manager.set_channeliser_truncation(arr)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
@@ -1592,8 +1646,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SetBeamFormerRegionsCommand(ResponseCommand):
+    class SetBeamFormerRegionsCommand(FastCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetBeamFormerRegionsCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SetBeamFormerRegionsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SetBeamFormerRegions command completed OK"
 
@@ -1612,15 +1680,19 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            component_manager = self.target
+
             if len(argin) < 5:
-                component_manager.logger.error("Insufficient parameters specified")
+                self._component_manager.logger.error(
+                    "Insufficient parameters specified"
+                )
                 raise ValueError("Insufficient parameters specified")
             if len(argin) > (48 * 5):
-                component_manager.logger.error("Too many regions specified")
+                self._component_manager.logger.error("Too many regions specified")
                 raise ValueError("Too many regions specified")
             if len(argin) % 5 != 0:
-                component_manager.logger.error("Incomplete specification of region")
+                self._component_manager.logger.error(
+                    "Incomplete specification of region"
+                )
                 raise ValueError("Incomplete specification of region")
             regions = []
             total_chan = 0
@@ -1628,29 +1700,31 @@ class MccsTile(SKABaseDevice):
                 region = argin[i : i + 5]  # noqa: E203
                 start_channel = region[0]
                 if start_channel % 2 != 0:
-                    component_manager.logger.error(
+                    self._component_manager.logger.error(
                         "Start channel in region must be even"
                     )
                     raise ValueError("Start channel in region must be even")
                 nchannels = region[1]
                 if nchannels % 8 != 0:
-                    component_manager.logger.error(
+                    self._component_manager.logger.error(
                         "Nos. of channels in region must be multiple of 8"
                     )
                     raise ValueError("Nos. of channels in region must be multiple of 8")
                 beam_index = region[2]
                 if beam_index < 0 or beam_index > 47:
-                    component_manager.logger.error(
+                    self._component_manager.logger.error(
                         "Beam_index is out side of range 0-47"
                     )
                     raise ValueError("Beam_index is out side of range 0-47")
                 total_chan += nchannels
                 if total_chan > 384:
-                    component_manager.logger.error("Too many channels specified > 384")
+                    self._component_manager.logger.error(
+                        "Too many channels specified > 384"
+                    )
                     raise ValueError("Too many channels specified > 384")
                 regions.append(region)
 
-            component_manager.set_beamformer_regions(regions)
+            self._component_manager.set_beamformer_regions(regions)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
@@ -1686,8 +1760,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class ConfigureStationBeamformerCommand(ResponseCommand):
+    class ConfigureStationBeamformerCommand(FastCommand):
         """Class for handling the ConfigureStationBeamformer(argin) command."""
+
+        def __init__(
+            self: MccsTile.ConfigureStationBeamformerCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new ConfigureStationBeamformerCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "LoadCalibrationCoefficients command completed OK"
 
@@ -1706,26 +1794,30 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            component_manager = self.target
+
             params = json.loads(argin)
             start_channel = params.get("StartChannel", None)
             if start_channel is None:
-                component_manager.logger.error("StartChannel is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "StartChannel is a mandatory parameter"
+                )
                 raise ValueError("StartChannel is a mandatory parameter")
             ntiles = params.get("NumTiles", None)
             if ntiles is None:
-                component_manager.logger.error("NumTiles is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "NumTiles is a mandatory parameter"
+                )
                 raise ValueError("NumTiles is a mandatory parameter")
             is_first = params.get("IsFirst", None)
             if is_first is None:
-                component_manager.logger.error("IsFirst is a mandatory parameter")
+                self._component_manager.logger.error("IsFirst is a mandatory parameter")
                 raise ValueError("IsFirst is a mandatory parameter")
             is_last = params.get("IsLast", None)
             if is_last is None:
-                component_manager.logger.error("IsLast is a mandatory parameter")
+                self._component_manager.logger.error("IsLast is a mandatory parameter")
                 raise ValueError("IsLast is a mandatory parameter")
 
-            component_manager.initialise_beamformer(
+            self._component_manager.initialise_beamformer(
                 start_channel, ntiles, is_first, is_last
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1760,8 +1852,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class LoadCalibrationCoefficientsCommand(ResponseCommand):
+    class LoadCalibrationCoefficientsCommand(FastCommand):
         """Class for handling the LoadCalibrationCoefficients(argin) command."""
+
+        def __init__(
+            self: MccsTile.LoadCalibrationCoefficientsCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new LoadCalibrationCoefficientsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
@@ -1781,12 +1887,14 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            component_manager = self.target
+
             if len(argin) < 9:
-                component_manager.logger.error("Insufficient calibration coefficients")
+                self._component_manager.logger.error(
+                    "Insufficient calibration coefficients"
+                )
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[1:]) % 8 != 0:
-                component_manager.logger.error(
+                self._component_manager.logger.error(
                     "Incomplete specification of coefficient"
                 )
                 raise ValueError("Incomplete specification of coefficient")
@@ -1801,7 +1909,7 @@ class MccsTile(SKABaseDevice):
                 for i in range(1, len(argin), 8)
             ]
 
-            component_manager.load_calibration_coefficients(
+            self._component_manager.load_calibration_coefficients(
                 antenna, calibration_coefficients
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1856,8 +1964,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class LoadCalibrationCurveCommand(ResponseCommand):
+    class LoadCalibrationCurveCommand(FastCommand):
         """Class for handling the LoadCalibrationCurve(argin) command."""
+
+        def __init__(
+            self: MccsTile.LoadCalibrationCurveCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new LoadCalibrationCurveCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "LoadCalibrationCurve command completed OK"
 
@@ -1876,12 +1998,14 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            component_manager = self.target
+
             if len(argin) < 10:
-                component_manager.logger.error("Insufficient calibration coefficients")
+                self._component_manager.logger.error(
+                    "Insufficient calibration coefficients"
+                )
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[2:]) % 8 != 0:
-                component_manager.logger.error(
+                self._component_manager.logger.error(
                     "Incomplete specification of coefficient"
                 )
                 raise ValueError("Incomplete specification of coefficient")
@@ -1897,7 +2021,7 @@ class MccsTile(SKABaseDevice):
                 for i in range(2, len(argin), 8)
             ]
 
-            component_manager.load_calibration_curve(
+            self._component_manager.load_calibration_curve(
                 antenna, beam, calibration_coefficients
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1957,8 +2081,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class LoadBeamAngleCommand(ResponseCommand):
+    class LoadBeamAngleCommand(FastCommand):
         """Class for handling the LoadBeamAngle(argin) command."""
+
+        def __init__(
+            self: MccsTile.LoadBeamAngleCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new LoadBeamAngleCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "LoadBeamAngle command completed OK"
 
@@ -1974,8 +2112,8 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            component_manager = self.target
-            component_manager.load_beam_angle(argin)
+
+            self._component_manager.load_beam_angle(argin)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
@@ -2005,7 +2143,7 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class LoadAntennaTaperingCommand(ResponseCommand):
+    class LoadAntennaTaperingCommand(FastCommand):
         """Class for handling the LoadAntennaTapering(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadAntennaTapering command completed OK"
@@ -2048,9 +2186,9 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            component_manager = self.target
+
             if len(argin) < self._antennas_per_tile + 1:
-                component_manager.logger.error(
+                self._component_manager.logger.error(
                     f"Insufficient coefficients should be {self._antennas_per_tile+1}"
                 )
                 raise ValueError(
@@ -2059,11 +2197,13 @@ class MccsTile(SKABaseDevice):
 
             beam = int(argin[0])
             if beam < 0 or beam > 47:
-                component_manager.logger.error("Beam index should be in range 0 to 47")
+                self._component_manager.logger.error(
+                    "Beam index should be in range 0 to 47"
+                )
                 raise ValueError("Beam index should be in range 0 to 47")
 
             tapering = argin[1:]
-            component_manager.load_antenna_tapering(beam, tapering)
+            self._component_manager.load_antenna_tapering(beam, tapering)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
@@ -2094,8 +2234,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SwitchCalibrationBankCommand(ResponseCommand):
+    class SwitchCalibrationBankCommand(FastCommand):
         """Class for handling the SwitchCalibrationBank(argin) command."""
+
+        def __init__(
+            self: MccsTile.SwitchCalibrationBankCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SwitchCalibrationBankCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SwitchCalibrationBank command completed OK"
 
@@ -2112,8 +2266,8 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             """
             switch_time = argin
-            component_manager = self.target
-            component_manager.switch_calibration_bank(switch_time)
+
+            self._component_manager.switch_calibration_bank(switch_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
@@ -2136,7 +2290,7 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SetPointingDelayCommand(ResponseCommand):
+    class SetPointingDelayCommand(FastCommand):
         """Class for handling the SetPointingDelay(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetPointingDelay command completed OK"
@@ -2180,19 +2334,19 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            component_manager = self.target
+
             if len(argin) != self._antennas_per_tile * 2 + 1:
-                component_manager.logger.error("Insufficient parameters")
+                self._component_manager.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
             if beam_index < 0 or beam_index > 7:
-                component_manager.logger.error("Invalid beam index")
+                self._component_manager.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
             for i in range(self._antennas_per_tile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
 
-            component_manager.set_pointing_delay(delay_array, beam_index)
+            self._component_manager.set_pointing_delay(delay_array, beam_index)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
@@ -2216,8 +2370,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class LoadPointingDelayCommand(ResponseCommand):
+    class LoadPointingDelayCommand(FastCommand):
         """Class for handling the LoadPointingDelay(argin) command."""
+
+        def __init__(
+            self: MccsTile.LoadPointingDelayCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new LoadPointingDelayCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "LoadPointingDelay command completed OK"
 
@@ -2234,8 +2402,8 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             """
             load_time = argin
-            component_manager = self.target
-            component_manager.load_pointing_delay(load_time)
+
+            self._component_manager.load_pointing_delay(load_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
@@ -2258,8 +2426,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class StartBeamformerCommand(ResponseCommand):
+    class StartBeamformerCommand(FastCommand):
         """Class for handling the StartBeamformer(argin) command."""
+
+        def __init__(
+            self: MccsTile.StartBeamformerCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new StartBeamformerCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "StartBeamformer command completed OK"
 
@@ -2276,12 +2458,11 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            component_manager = self.target
 
             params = json.loads(argin)
             start_time = params.get("StartTime", 0)
             duration = params.get("Duration", -1)
-            component_manager.start_beamformer(start_time, duration)
+            self._component_manager.start_beamformer(start_time, duration)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -2310,8 +2491,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class StopBeamformerCommand(ResponseCommand):
+    class StopBeamformerCommand(FastCommand):
         """Class for handling the StopBeamformer() command."""
+
+        def __init__(
+            self: MccsTile.StopBeamformerCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new StopBeamformerCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "StopBeamformer command completed OK"
 
@@ -2325,8 +2520,8 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            component_manager = self.target
-            component_manager.stop_beamformer()
+
+            self._component_manager.stop_beamformer()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
@@ -2347,8 +2542,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class ConfigureIntegratedChannelDataCommand(ResponseCommand):
+    class ConfigureIntegratedChannelDataCommand(FastCommand):
         """Class for handling the ConfigureIntegratedChannelData(argin) command."""
+
+        def __init__(
+            self: MccsTile.ConfigureIntegratedChannelDataCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new ConfigureIntegratedChannelDataCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
 
@@ -2370,8 +2579,7 @@ class MccsTile(SKABaseDevice):
             first_channel = params.get("FirstChannel", 0)
             last_channel = params.get("LastChannel", 511)
 
-            component_manager = self.target
-            component_manager.configure_integrated_channel_data(
+            self._component_manager.configure_integrated_channel_data(
                 integration_time,
                 first_channel,
                 last_channel,
@@ -2407,8 +2615,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class ConfigureIntegratedBeamDataCommand(ResponseCommand):
+    class ConfigureIntegratedBeamDataCommand(FastCommand):
         """Class for handling the ConfigureIntegratedBeamData(argin) command."""
+
+        def __init__(
+            self: MccsTile.ConfigureIntegratedBeamDataCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new ConfigureIntegratedBeamDataCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
 
@@ -2430,8 +2652,7 @@ class MccsTile(SKABaseDevice):
             first_channel = params.get("FirstChannel", 0)
             last_channel = params.get("LastChannel", 191)
 
-            component_manager = self.target
-            component_manager.configure_integrated_beam_data(
+            self._component_manager.configure_integrated_beam_data(
                 integration_time,
                 first_channel,
                 last_channel,
@@ -2467,8 +2688,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class StopIntegratedDataCommand(ResponseCommand):
+    class StopIntegratedDataCommand(FastCommand):
         """Class for handling the StopIntegratedData command."""
+
+        def __init__(
+            self: MccsTile.StopIntegratedDataCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new StopIntegratedDataCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "StopIntegratedData command completed OK"
 
@@ -2482,8 +2717,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            component_manager = self.target
-            component_manager.stop_integrated_data()
+            self._component_manager.stop_integrated_data()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
@@ -2499,8 +2733,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class SendRawDataCommand(ResponseCommand):
+    class SendRawDataCommand(FastCommand):
         """Class for handling the SendRawData(argin) command."""
+
+        def __init__(
+            self: MccsTile.SendRawDataCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SendRawDataCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SendRawData command completed OK"
 
@@ -2521,8 +2769,7 @@ class MccsTile(SKABaseDevice):
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
-            component_manager = self.target
-            component_manager.send_raw_data(sync, timestamp, seconds)
+            self._component_manager.send_raw_data(sync, timestamp, seconds)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -2551,8 +2798,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SendChannelisedDataCommand(ResponseCommand):
+    class SendChannelisedDataCommand(FastCommand):
         """Class for handling the SendChannelisedData(argin) command."""
+
+        def __init__(
+            self: MccsTile.SendChannelisedDataCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SendChannelisedDataCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SendChannelisedData command completed OK"
 
@@ -2575,8 +2836,7 @@ class MccsTile(SKABaseDevice):
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
-            component_manager = self.target
-            component_manager.send_channelised_data(
+            self._component_manager.send_channelised_data(
                 number_of_samples,
                 first_channel,
                 last_channel,
@@ -2613,8 +2873,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SendChannelisedDataContinuousCommand(ResponseCommand):
+    class SendChannelisedDataContinuousCommand(FastCommand):
         """Class for handling the SendChannelisedDataContinuous(argin) command."""
+
+        def __init__(
+            self: MccsTile.SendChannelisedDataContinuousCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SendChannelisedDataContinuousCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataContinuous command completed OK"
 
@@ -2635,18 +2909,20 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            component_manager = self.target
+
             params = json.loads(argin)
             channel_id = params.get("ChannelID")
             if channel_id is None:
-                component_manager.logger.error("ChannelID is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "ChannelID is a mandatory parameter"
+                )
                 raise ValueError("ChannelID is a mandatory parameter")
             number_of_samples = params.get("NSamples", 128)
             wait_seconds = params.get("WaitSeconds", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
-            component_manager.send_channelised_data_continuous(
+            self._component_manager.send_channelised_data_continuous(
                 channel_id, number_of_samples, wait_seconds, timestamp, seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -2683,8 +2959,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SendBeamDataCommand(ResponseCommand):
+    class SendBeamDataCommand(FastCommand):
         """Class for handling the SendBeamData(argin) command."""
+
+        def __init__(
+            self: MccsTile.SendBeamDataCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SendBeamDataCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SendBeamData command completed OK"
 
@@ -2704,8 +2994,7 @@ class MccsTile(SKABaseDevice):
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
-            component_manager = self.target
-            component_manager.send_beam_data(timestamp, seconds)
+            self._component_manager.send_beam_data(timestamp, seconds)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -2733,8 +3022,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class StopDataTransmissionCommand(ResponseCommand):
+    class StopDataTransmissionCommand(FastCommand):
         """Class for handling the StopDataTransmission() command."""
+
+        def __init__(
+            self: MccsTile.StopDataTransmissionCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new StopDataTransmissionCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "StopDataTransmission command completed OK"
 
@@ -2748,8 +3051,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            component_manager = self.target
-            component_manager.stop_data_transmission()
+            self._component_manager.stop_data_transmission()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
@@ -2770,8 +3072,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class ComputeCalibrationCoefficientsCommand(ResponseCommand):
+    class ComputeCalibrationCoefficientsCommand(FastCommand):
         """Class for handling the ComputeCalibrationCoefficients() command."""
+
+        def __init__(
+            self: MccsTile.ComputeCalibrationCoefficientsCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new ComputeCalibrationCoefficientsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "ComputeCalibrationCoefficients command completed OK"
 
@@ -2785,8 +3101,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            component_manager = self.target
-            component_manager.compute_calibration_coefficients()
+            self._component_manager.compute_calibration_coefficients()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
@@ -2813,31 +3128,6 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class StartAcquisitionCommand(ResponseCommand):
-        """Class for handling the StartAcquisition(argin) command."""
-
-        SUCCEEDED_MESSAGE = "StartAcquisition command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.StartAcquisitionCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StartAcquisition` command functionality.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            params = json.loads(argin)
-            start_time = params.get("StartTime", None)
-            delay = params.get("Delay", 2)
-
-            component_manager = self.target
-            component_manager.start_acquisition(start_time, delay)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartAcquisition(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
@@ -2860,11 +3150,25 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("StartAcquisition", jstr)
         """
         handler = self.get_command_object("StartAcquisition")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        (return_code, unique_id) = handler(argin)
+        return ([return_code], [unique_id])
 
-    class SetTimeDelaysCommand(ResponseCommand):
+    class SetTimeDelaysCommand(FastCommand):
         """Class for handling the SetTimeDelays(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetTimeDelaysCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SetTimeDelaysCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SetTimeDelays command completed OK"
 
@@ -2881,8 +3185,8 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             """
             delays = argin
-            component_manager = self.target
-            component_manager.set_time_delays(delays)
+
+            self._component_manager.set_time_delays(delays)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
@@ -2909,8 +3213,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SetCspRoundingCommand(ResponseCommand):
+    class SetCspRoundingCommand(FastCommand):
         """Class for handling the SetCspRounding(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetCspRoundingCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SetCspRoundingCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SetCspRounding command completed OK"
 
@@ -2927,8 +3245,8 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             """
             rounding = argin
-            component_manager = self.target
-            component_manager.set_csp_rounding(rounding)
+
+            self._component_manager.set_csp_rounding(rounding)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevDouble", dtype_out="DevVarLongStringArray")
@@ -2951,8 +3269,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SetLmcIntegratedDownloadCommand(ResponseCommand):
+    class SetLmcIntegratedDownloadCommand(FastCommand):
         """Class for handling the SetLmcIntegratedDownload(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetLmcIntegratedDownloadCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SetLmcIntegratedDownloadCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
 
@@ -2973,11 +3305,11 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            component_manager = self.target
+
             params = json.loads(argin)
             mode = params.get("Mode", None)
             if mode is None:
-                component_manager.logger.error("Mode is a mandatory parameter")
+                self._component_manager.logger.error("Mode is a mandatory parameter")
                 raise ValueError("Mode is a mandatory parameter")
             channel_payload_length = params.get("ChannelPayloadLength", 2)
             beam_payload_length = params.get("BeamPayloadLength", 2)
@@ -2986,7 +3318,7 @@ class MccsTile(SKABaseDevice):
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
 
-            component_manager.set_lmc_integrated_download(
+            self._component_manager.set_lmc_integrated_download(
                 mode,
                 channel_payload_length,
                 beam_payload_length,
@@ -3030,8 +3362,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SendRawDataSynchronisedCommand(ResponseCommand):
+    class SendRawDataSynchronisedCommand(FastCommand):
         """Class for handling the SendRawDataSynchronised(argin) command."""
+
+        def __init__(
+            self: MccsTile.SendRawDataSynchronisedCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SendRawDataSynchronisedCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SendRawDataSynchronised command completed OK"
 
@@ -3051,8 +3397,7 @@ class MccsTile(SKABaseDevice):
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.1)
 
-            component_manager = self.target
-            component_manager.send_raw_data(
+            self._component_manager.send_raw_data(
                 sync=True, timestamp=timestamp, seconds=seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -3084,8 +3429,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SendChannelisedDataNarrowbandCommand(ResponseCommand):
+    class SendChannelisedDataNarrowbandCommand(FastCommand):
         """Class for handling the SendChannelisedDataNarrowband(argin) command."""
+
+        def __init__(
+            self: MccsTile.SendChannelisedDataNarrowbandCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SendChannelisedDataNarrowbandCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataNarrowband command completed OK"
 
@@ -3106,21 +3465,25 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            component_manager = self.target
+
             params = json.loads(argin)
             frequency = params.get("Frequency", None)
             if frequency is None:
-                component_manager.logger.error("Frequency is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "Frequency is a mandatory parameter"
+                )
                 raise ValueError("Frequency is a mandatory parameter")
             round_bits = params.get("RoundBits", None)
             if round_bits is None:
-                component_manager.logger.error("RoundBits is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "RoundBits is a mandatory parameter"
+                )
                 raise ValueError("RoundBits is a mandatory parameter")
             number_of_samples = params.get("NSamples", 128)
             wait_seconds = params.get("WaitSeconds", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            component_manager.send_channelised_data_narrowband(
+            self._component_manager.send_channelised_data_narrowband(
                 frequency,
                 round_bits,
                 number_of_samples,
@@ -3169,8 +3532,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class TweakTransceiversCommand(ResponseCommand):
+    class TweakTransceiversCommand(FastCommand):
         """Class for handling the TweakTransceivers() command."""
+
+        def __init__(
+            self: MccsTile.TweakTransceiversCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new TweakTransceiversCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "TweakTransceivers command completed OK"
 
@@ -3184,8 +3561,8 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            component_manager = self.target
-            component_manager.tweak_transceivers()
+
+            self._component_manager.tweak_transceivers()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
@@ -3206,25 +3583,6 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class PostSynchronisationCommand(ResponseCommand):
-        """Class for handling the PostSynchronisation() command."""
-
-        SUCCEEDED_MESSAGE = "PostSynchronisation command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.PostSynchronisationCommand,
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.PostSynchronisation` command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            component_manager.post_synchronisation()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_out="DevVarLongStringArray")
     def PostSynchronisation(self: MccsTile) -> DevVarLongStringArrayType:
         """
@@ -3240,27 +3598,8 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("PostSynchronisation")
         """
         handler = self.get_command_object("PostSynchronisation")
-        (return_code, message) = handler()
-        return ([return_code], [message])
-
-    class SyncFpgasCommand(ResponseCommand):
-        """Class for handling the SyncFpgas() command."""
-
-        SUCCEEDED_MESSAGE = "SyncFpgas command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SyncFpgasCommand,
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SyncFpgas` command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            component_manager.sync_fpgas()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
     def SyncFpgas(self: MccsTile) -> DevVarLongStringArrayType:
@@ -3277,11 +3616,25 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("SyncFpgas")
         """
         handler = self.get_command_object("SyncFpgas")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
-    class CalculateDelayCommand(ResponseCommand):
+    class CalculateDelayCommand(FastCommand):
         """Class for handling the CalculateDelay(argin) command."""
+
+        def __init__(
+            self: MccsTile.CalculateDelayCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new CalculateDelayCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "CalculateDelay command completed OK"
 
@@ -3303,26 +3656,32 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            component_manager = self.target
+
             params = json.loads(argin)
             current_delay = params.get("CurrentDelay", None)
             if current_delay is None:
-                component_manager.logger.error("CurrentDelay is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "CurrentDelay is a mandatory parameter"
+                )
                 raise ValueError("CurrentDelay is a mandatory parameter")
             current_tc = params.get("CurrentTC", None)
             if current_tc is None:
-                component_manager.logger.error("CurrentTC is a mandatory parameter")
+                self._component_manager.logger.error(
+                    "CurrentTC is a mandatory parameter"
+                )
                 raise ValueError("CurrentTC is a mandatory parameter")
             ref_lo = params.get("RefLo", None)
             if ref_lo is None:
-                component_manager.logger.error("RefLo is a mandatory parameter")
+                self._component_manager.logger.error("RefLo is a mandatory parameter")
                 raise ValueError("RefLo is a mandatory parameter")
             ref_hi = params.get("RefHi", None)
             if ref_hi is None:
-                component_manager.logger.error("RefHi is a mandatory parameter")
+                self._component_manager.logger.error("RefHi is a mandatory parameter")
                 raise ValueError("RefHi is a mandatory parameter")
 
-            component_manager.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
+            self._component_manager.calculate_delay(
+                current_delay, current_tc, ref_lo, ref_hi
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -3352,8 +3711,22 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class ConfigureTestGeneratorCommand(BaseCommand):
+    class ConfigureTestGeneratorCommand(FastCommand):
         """Class for handling the ConfigureTestGenerator(argin) command."""
+
+        def __init__(
+            self: MccsTile.ConfigureTestGeneratorCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new ConfigureTestGeneratorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
 
@@ -3373,7 +3746,6 @@ class MccsTile(SKABaseDevice):
                    message indicating status. The message is for
                    information purpose only.
             """
-            component_manager = self.target
 
             params = json.loads(argin)
             active = False
@@ -3410,7 +3782,7 @@ class MccsTile(SKABaseDevice):
                 pulse_code = 7
                 amplitude_pulse = 0.0
 
-            component_manager.configure_test_generator(
+            self._component_manager.configure_test_generator(
                 frequency0,
                 amplitude0,
                 frequency1,
@@ -3429,8 +3801,8 @@ class MccsTile(SKABaseDevice):
             else:
                 for channel in chans:
                     inputs = inputs | (1 << channel)
-            component_manager.test_generator_input_select(inputs)
-            component_manager.test_generator_active = active
+            self._component_manager.test_generator_input_select(inputs)
+            self._component_manager.test_generator_active = active
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(

@@ -32,19 +32,19 @@ __all__ = [
     "TpmStatus",
 ]
 
-from .tile_data import TileData
-from .time_util import TileTime
-from .tpm_status import TpmStatus
 from .base_tpm_simulator import BaseTpmSimulator
+from .demo_tile_device import DemoTile
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator
-from .tpm_driver import TpmDriver
 from .tile_component_manager import (
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulatorComponentManager,
     SwitchingTpmComponentManager,
     TileComponentManager,
 )
-from .tile_health_model import TileHealthModel
+from .tile_data import TileData
 from .tile_device import MccsTile
-from .demo_tile_device import DemoTile
+from .tile_health_model import TileHealthModel
+from .time_util import TileTime
+from .tpm_driver import TpmDriver
+from .tpm_status import TpmStatus

@@ -133,13 +133,7 @@ class MccsAntenna(SKABaseDevice):
                 self._device.set_change_event(name, True, True)
                 self._device.set_archive_event(name, True, True)
 
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            self._device._health_state = self._device._health_model.health_state
-
             return (ResultCode.OK, "Init command completed OK")
-
 
     # --------------
     # Callback hooks
@@ -197,7 +191,7 @@ class MccsAntenna(SKABaseDevice):
                 self._health_model.component_fault(True)
             else:
                 self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_mode]
+                    action_map[self.component_manager.power_state]
                 )
                 self._health_model.component_fault(False)
 

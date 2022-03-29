@@ -9,11 +9,13 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Callable, Optional
 
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     DeviceComponentManager,
@@ -467,9 +469,9 @@ class AntennaComponentManager(MccsComponentManager):
             self._apiu_power_state = apiu_power_state
 
             if apiu_power_state == PowerState.UNKNOWN:
-                self.update_component_power_state(PowerState.UNKNOWN)
+                self.update_component_state({"power_state": PowerState.UNKNOWN})
             elif apiu_power_state in [PowerState.OFF, PowerState.STANDBY]:
-                self.update_component_power_state(PowerState.OFF)
+                self.update_component_state({"power_state": PowerState.OFF})
             else:
                 # power_state is ON, wait for antenna power change
                 pass
@@ -479,8 +481,7 @@ class AntennaComponentManager(MccsComponentManager):
         self: AntennaComponentManager,
         antenna_power_state: PowerState,
     ) -> None:
-        with self._power_state_lock:
-            self.update_component_power_state(antenna_power_state)
+        self.update_component_state({"power_state": antenna_power_state})
         self._review_power()
 
     def _apiu_component_fault_changed(
@@ -493,8 +494,8 @@ class AntennaComponentManager(MccsComponentManager):
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_apiu = faulty
-        self.update_component_fault(
-            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
+        self.update_component_state(
+            {"fault": self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile}
         )
 
     def _tile_component_fault_changed(
@@ -507,8 +508,8 @@ class AntennaComponentManager(MccsComponentManager):
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_tile = faulty
-        self.update_component_fault(
-            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
+        self.update_component_state(
+            {"fault": self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile}
         )
 
     # @check_communicating
@@ -538,7 +539,8 @@ class AntennaComponentManager(MccsComponentManager):
 
     # @check_communicating
     def on(self, task_callback: Callable = None):
-        """Submit the on slow task.
+        """
+        Submit the on slow task.
 
         This method returns immediately after it submitted
         `self._on` for execution.
@@ -551,17 +553,15 @@ class AntennaComponentManager(MccsComponentManager):
         return task_status, response
 
     def _on(
-        self: AntennaComponentManager, 
+        self: AntennaComponentManager,
         logger: logging.Logger,
         task_callback: Callable = None,
-        task_abort_event: Event = None,
     ) -> None:
         """
         Turn the antenna on.
 
         :param logger: logger
         :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
 
         :return: whether successful, or None if there was nothing to do.
         """
@@ -569,11 +569,12 @@ class AntennaComponentManager(MccsComponentManager):
         task_callback(status=TaskStatus.IN_PROGRESS)
         with self._power_state_lock:
             self._target_power_state = PowerState.ON
-        #self._review_power()
+        # self._review_power()
         time.sleep(10)
         # Indicate that the task has completed
-        task_callback(status=TaskStatus.COMPLETED, result="This slow task has completed")
-
+        task_callback(
+            status=TaskStatus.COMPLETED, result="This slow task has completed"
+        )
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
         with self._power_state_lock:

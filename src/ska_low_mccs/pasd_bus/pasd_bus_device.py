@@ -9,19 +9,12 @@
 
 from __future__ import annotations
 
-import json
-import logging
 import threading
 from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    ResultCode,
-    SlowCommand,
-    SubmittedSlowCommand,
-)
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import (
     CommunicationStatus,
     HealthState,
@@ -92,7 +85,7 @@ class MccsPasdBus(SKABaseDevice):
             ("GetFndhInfo", "get_fndh_info"),
             ("TurnFndhServiceLedOn", "turn_fndh_service_led_on"),
             ("TurnFndhServiceLedOff", "turn_fndh_service_led_off"),
-            ("GetSmartboxInfo", "get_smartbox_info_command"),
+            ("GetSmartboxInfo", "get_smartbox_info"),
             ("TurnSmartboxOn", "turn_smartbox_on"),
             ("TurnSmartboxOff", "turn_smartbox_off"),
             ("TurnSmartboxServiceLedOn", "turn_smartbox_service_led_on"),
@@ -135,7 +128,6 @@ class MccsPasdBus(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-
             self._build_state = release.get_release_info()
             self._version_id = release.version
 
@@ -181,7 +173,7 @@ class MccsPasdBus(SKABaseDevice):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param kwargs: the state change parameters.
+        :param state_change: the state change parameter.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -614,23 +606,8 @@ class MccsPasdBus(SKABaseDevice):
     # ----------
     # Commands
     # ----------
-    class ReloadDatabaseCommand(SlowCommand):
-        """Class for handling the ReloadDatabase command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.ReloadDatabaseCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsPasdBus.ReloadDatabase` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.reload_database(argin)
-
     @command(dtype_out="DevVarLongStringArray")
-    def ReloadDatabase(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def ReloadDatabase(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Reload PaSD configuration from the configuration database.
 
@@ -641,19 +618,8 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class GetFndhInfoCommand(SlowCommand):
-        """Class for handling the GetFndhInfo command."""
-
-        def do(self: MccsPasdBus.GetFndhInfoCommand, argin: int) -> dict:  # type: ignore[override]
-            """
-            Implement :py:meth:`.MccsPasdBus.GetFndhInfo` command.
-
-            :return: A dictionary containing information about the FNDH.
-            """
-            return self._component_manager.get_fndh_info(argin)
-
     @command(dtype_out=str)
-    def GetFndhInfo(self: MccsPasdBus, argin: int) -> str:
+    def GetFndhInfo(self: MccsPasdBus) -> str:
         """
         Return information about the FNDH.
 
@@ -664,26 +630,8 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnFndhServiceLedOnCommand(SlowCommand):
-        """The command class for the TurnFndhServiceLedOn command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnFndhServiceLedOnCommand,
-            argin: int,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnFndhServiceLedOn command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.set_fndh_service_led_on(argin)
-
     @command(dtype_out="DevVarLongStringArray")
-    def TurnFndhServiceLedOn(
-        self: MccsPasdBus, argin: int
-    ) -> DevVarLongStringArrayType:
+    def TurnFndhServiceLedOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn on an FNDH's blue service LED.
 
@@ -694,25 +642,8 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnFndhServiceLedOffCommand(SlowCommand):
-        """The command class for the TurnFndhServiceLedOff command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnFndhServiceLedOffCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnFndhServiceLedOff command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.set_fndh_service_led_on(argin)
-
     @command(dtype_out="DevVarLongStringArray")
-    def TurnFndhServiceLedOff(
-        self: MccsPasdBus, argin: int
-    ) -> DevVarLongStringArrayType:
+    def TurnFndhServiceLedOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn off an FNDH's blue service LED.
 
@@ -723,26 +654,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class GetSmartboxInfoCommand(SlowCommand):
-        """Class for handling the GetSmartboxInfo command."""
-
-        def do(self: MccsPasdBus.GetSmartboxInfoCommand, argin: int) -> dict:  # type: ignore[override]
-            """
-            Implement :py:meth:`.MccsPasdBus.GetSmartboxInfo` command.
-
-            :param argin: the smartbox id
-
-            :return: A dictionary containing information about the
-                smartbox.
-            """
-            return self._component_manager.get_smartbox_info(argin)
-
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetSmartboxInfo(self: MccsPasdBus, argin: int) -> str:
+    def GetSmartboxInfo(self: MccsPasdBus) -> str:
         """
         Return information about a smartbox.
-
-        :param argin: the smartbox id
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -751,30 +666,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnSmartboxOnCommand(SlowCommand):
-        """The command class for the TurnSmartboxOn command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnSmartboxOnCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnSmartboxOn command functionality.
-
-            :param argin: the logical id of the smartbox that is to be
-                turned off
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.turn_smartbox_on(argin)
-
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def TurnSmartboxOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox.
-
-        :param argin: id of the smartbox to be turned on
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -783,30 +678,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnSmartboxOffCommand(SlowCommand):
-        """The command class for the TurnSmartboxOff command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnSmartboxOffCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnSmartboxOff command functionality.
-
-            :param argin: the logical id of the smartbox that is to be
-                turned off
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.turn_smartbox_off(argin)
-
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def TurnSmartboxOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox.
-
-        :param argin: id of the smartbox to be turned off
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -815,33 +690,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnSmartboxServiceLedOnCommand(SlowCommand):
-        """The command class for the TurnSmartboxServiceLedOn command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnSmartboxServiceLedOnCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnSmartboxServiceLedOn command functionality.
-
-            :param argin: the logical id of the smartbox whose blue
-                service LED is to be turned on
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.turn_smartbox_service_led_on(argin)
-
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOn(
-        self: MccsPasdBus, argin: int
-    ) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox's blue service LED.
-
-        :param argin: id of the smartbox whose blue service LED is to be
-            turned on
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -850,33 +702,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnSmartboxServiceLedOffCommand(SlowCommand):
-        """The command class for the TurnSmartboxServiceLedOff command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnSmartboxServiceLedOffCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnSmartboxServiceLedOff command functionality.
-
-            :param argin: the logical id of the smartbox whose blue
-                service LED is to be turned off
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.turn_smartbox_service_led_off(argin)
-
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOff(
-        self: MccsPasdBus, argin: int
-    ) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox's blue service LED.
-
-        :param argin: id of the smartbox whose blue service LED is to be
-            turned off
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -885,26 +714,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class GetAntennaInfoCommand(SlowCommand):
-        """Class for handling the GetAntennaInfo command."""
-
-        def do(self: MccsPasdBus.GetAntennaInfoCommand, argin: int) -> dict:  # type: ignore[override]
-            """
-            Implement :py:meth:`.MccsPasdBus.GetAntennaInfo` command.
-
-            :param argin: the antenna id
-
-            :return: A dictionary containing information about the
-                antenna.
-            """
-            return self._component_manager.get_antenna_info(argin)
-
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetAntennaInfo(self: MccsPasdBus, argin: int) -> str:
+    def GetAntennaInfo(self: MccsPasdBus) -> str:
         """
         Return information about relationship of an antenna to other PaSD components.
-
-        :param argin: the antenna id
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -913,31 +726,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class ResetAntennaBreakerCommand(SlowCommand):
-        """The command class for the ResetAntennaBreaker command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.ResetAntennaBreakerCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement ResetAntennaBreaker command functionality.
-
-            :param argin: the logical id of the antenna whose breaker is
-                to be reset
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.reset_antenna_breaker(argin)
-
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def ResetAntennaBreaker(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def ResetAntennaBreaker(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Reset a tripped antenna breaker.
-
-        :param argin: id of the antenna for which a breaker trip is to
-            be reset
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -946,30 +738,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnAntennaOnCommand(SlowCommand):
-        """The command class for the TurnAntennaOn command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnAntennaOnCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnAntennaOn command functionality.
-
-            :param argin: the logical id of the antenna that is to be
-                turned off
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.turn_antenna_on(argin)
-
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnAntennaOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def TurnAntennaOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn on an antenna.
-
-        :param argin: id of the antenna to be turned on
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
@@ -978,30 +750,10 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    class TurnAntennaOffCommand(SlowCommand):
-        """The command class for the TurnAntennaOff command."""
-
-        def do(  # type: ignore[override]
-            self: MccsPasdBus.TurnAntennaOffCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement TurnAntennaOff command functionality.
-
-            :param argin: the logical id of the antenna that is to be
-                turned off
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.turn_antenna_off(argin)
-
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnAntennaOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
+    def TurnAntennaOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
         """
         Turn off an antenna.
-
-        :param argin: id of the antenna to be turned off
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.

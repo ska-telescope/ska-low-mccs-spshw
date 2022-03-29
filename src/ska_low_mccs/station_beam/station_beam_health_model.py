@@ -8,7 +8,7 @@
 """An implementation of a health model for station beams."""
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from ska_tango_base.control_model import HealthState
 

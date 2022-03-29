@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import json
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.commands import (
@@ -134,8 +134,9 @@ class MccsStationBeam(SKAObsDevice):
         This is a callback hook, called whenever the state changes. It
         is responsible for updating the tango side of things i.e. making
         sure the attribute is up to date, and events are pushed.
-        """
 
+        :param state_change: A dictionary containing the name of the state that changed and its new value.
+        """
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:

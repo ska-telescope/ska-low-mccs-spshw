@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Callable, Optional, cast
+from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import ResultCode, TaskStatus
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 
 from ska_low_mccs.component import (
@@ -59,17 +59,12 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :param beam_id: the beam id of this station beam
         :param logger: the logger to be used by this object.
-        :param push_change_event: method to call when the base classes
-            want to send an event
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param is_beam_locked_changed_callback: a callback to be called
-            when whether the beam is locked changes
-        :param station_health_changed_callback: a callback to be called
-            when the health of this station beam's station changes.
-        :param station_fault_changed_callback: a callback to be called
-            when the fault state of this station beam's station changes.
+        :param component_state_changed_callback: a callback to be called
+            whenever the state of the station beam changes.
+        :param max_workers: Maximum number of workers in the worker pool. Defaults to None.
         """
         self._subarray_id = 0
         self._beam_id = beam_id
@@ -368,9 +363,8 @@ class StationBeamComponentManager(MccsComponentManager):
                 "phase_centre": [0.0, 0.0],
                 }
 
-            :return: A return code and a unique command ID.
+        :return: A return code and a unique command ID.
         """
-
         config_dict = json.loads(argin)
 
         task_status, response = self.submit_task(
@@ -398,6 +392,7 @@ class StationBeamComponentManager(MccsComponentManager):
         desired_pointing: list[float],
         antenna_weights: list[float],
         phase_centre: list[float],
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Configure this station beam for scanning.
@@ -409,9 +404,12 @@ class StationBeamComponentManager(MccsComponentManager):
         :param desired_pointing: sky coordinates for this beam to point at
         :param antenna_weights: weights to use for the antennas
         :param phase_centre: the phase centre
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
         self._beam_id = beam_id
         self._station_id = station_id
         self._channels = list(list(i) for i in channels)  # deep copy
@@ -420,6 +418,9 @@ class StationBeamComponentManager(MccsComponentManager):
         self._antenna_weights = list(antenna_weights)
         self._phase_centre = list(phase_centre)
         # TODO: forward relevant configuration to participating stations
+
+        task_callback(status=TaskStatus.COMPLETED, result="Configure has completed.")
+
         return ResultCode.OK
 
     @check_communicating
@@ -432,6 +433,8 @@ class StationBeamComponentManager(MccsComponentManager):
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+
+        :return: Task status and response message
         """
         task_status, response = self.submit_task(
             self._apply_pointing, args=[], task_callback=task_callback
@@ -439,12 +442,18 @@ class StationBeamComponentManager(MccsComponentManager):
         return ([task_status], [response])
 
     @check_communicating
-    def _apply_pointing(self: StationBeamComponentManager) -> ResultCode:
+    def _apply_pointing(
+        self: StationBeamComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> ResultCode:
         """
         Apply the configured pointing to this station beam's station.
 
+        :param task_callback: Update task state, defaults to None
         :return: a result code
         """
+        task_callback(TaskStatus.IN_PROGRESS)
+
         zipped_delays_and_rates = [
             item
             for pair in zip(self.pointing_delay, self.pointing_delay_rate + [0])
@@ -455,4 +464,7 @@ class StationBeamComponentManager(MccsComponentManager):
         ] + zipped_delays_and_rates
 
         assert self._station_proxy is not None
+
+        task_callback(TaskStatus.COMPLETED, result="Apply pointing has completed.")
+
         return self._station_proxy.apply_pointing(station_pointing_args)

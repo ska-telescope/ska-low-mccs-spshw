@@ -11,9 +11,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
-from ska_tango_base.control_model import CommunicationStatus, SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.component import (
+    CommunicationStatus,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
     check_communicating,
@@ -27,9 +28,9 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
     def __init__(
         self: PasdBusSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _simulator: Optional[PasdBusSimulator] = None,
         # TODO callbacks for changes to antenna power, smartbox power, etc
     ) -> None:
@@ -42,8 +43,8 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         :param _simulator: for testing only, we can provide a simulator
             rather than letting the component manager create one.
         """
@@ -55,10 +56,10 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         super().__init__(
             pasd_bus_simulator,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
+            component_state_changed_callback,
             None,
-            component_fault_callback,
         )
 
     def __getattr__(
@@ -162,9 +163,9 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         self: PasdBusComponentManager,
         initial_simulation_mode: SimulationMode,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[bool], None],
         _simulator_component_manager: Optional[PasdBusSimulatorComponentManager] = None,
     ) -> None:
         """
@@ -180,8 +181,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         :param _simulator_component_manager: for testing only, we can
             provide a pre-created component manager for the simulator,
             rather than letting this component manager create one.
@@ -190,9 +191,9 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
             _simulator_component_manager
             or PasdBusSimulatorComponentManager(
                 logger,
-                push_change_event,
+                max_workers,
                 communication_status_changed_callback,
-                component_fault_callback,
+                component_state_changed_callback,
             )
         )
         super().__init__(None, pasd_bus_simulator, initial_simulation_mode)

@@ -18,6 +18,7 @@ from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
+    CommunicationStatus,
     HealthState,
     PowerState,
     SimulationMode,
@@ -25,7 +26,6 @@ from ska_tango_base.control_model import (
 )
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
     SubrackData,

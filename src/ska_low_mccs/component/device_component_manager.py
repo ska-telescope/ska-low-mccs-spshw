@@ -9,18 +9,20 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import tango
-from ska_tango_base.commands import BaseCommand, ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
+from ska_tango_base.commands import ResultCode, SlowCommand
+from ska_tango_base.control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    ObsState,
+    PowerState,
+)
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    MccsComponentManager,
-    check_communicating,
-)
+from ska_low_mccs.component import MccsComponentManager, check_communicating
 
 __all__ = ["DeviceComponentManager", "ObsDeviceComponentManager"]
 
@@ -32,32 +34,22 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[
-            Callable[[Optional[HealthState]], None]
-        ] = None,
+        component_state_changed_callback: Optional[Callable[[Any], None]],
     ) -> None:
         """
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
         :param logger: the logger to be used by this object.
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: Nos of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param health_changed_callback: callback to be called when the
-            health state of the device changes. The value it is called
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+            When the health state of the device changes, the value it is called
             with will normally be a HealthState, but may be None if the
             admin mode of the device indicates that the device's health
             should not be included in upstream health rollup.
@@ -69,14 +61,13 @@ class DeviceComponentManager(MccsComponentManager):
         self._health: Optional[HealthState] = None
         self._device_health_state = HealthState.UNKNOWN
         self._device_admin_mode = AdminMode.OFFLINE
-        self._health_changed_callback = health_changed_callback
+        self._component_state_changed_callback = component_state_changed_callback
 
         super().__init__(
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: DeviceComponentManager) -> None:
@@ -86,11 +77,11 @@ class DeviceComponentManager(MccsComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-        connect_command = self.ConnectToDevice(target=self)
+        # connect_command = self.ConnectToDevice()
         # Enqueue the connect command
-        _ = self.enqueue(connect_command)
+        # _ = self.enqueue(connect_command)
 
-    class ConnectToDeviceBase(BaseCommand):
+    class ConnectToDeviceBase(SlowCommand):
         """Base command class for connection to be enqueued."""
 
         def do(  # type: ignore[override]
@@ -106,29 +97,26 @@ class DeviceComponentManager(MccsComponentManager):
                 communication with the channel fails.
             :return: a result code and message
             """
-            target = self.target
-            target._proxy = MccsDeviceProxy(target._fqdn, target._logger, connect=False)
+            self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
             try:
-                target._proxy.connect()
+                self._proxy.connect()
             except tango.DevFailed as dev_failed:
-                target._proxy = None
+                self._proxy = None
                 raise ConnectionError(
-                    f"Could not connect to '{target._fqdn}'"
+                    f"Could not connect to '{self._fqdn}'"
                 ) from dev_failed
 
-            target.update_communication_status(CommunicationStatus.ESTABLISHED)
-            target._proxy.add_change_event_callback(
-                "state", target._device_state_changed
-            )
+            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self._proxy.add_change_event_callback("state", self._device_state_changed)
 
-            if target._health_changed_callback is not None:
-                target._proxy.add_change_event_callback(
-                    "healthState", target._device_health_state_changed
+            if self._health_changed_callback is not None:
+                self._proxy.add_change_event_callback(
+                    "healthState", self._device_health_state_changed
                 )
-                target._proxy.add_change_event_callback(
-                    "adminMode", target._device_admin_mode_changed
+                self._proxy.add_change_event_callback(
+                    "adminMode", self._device_admin_mode_changed
                 )
-            return ResultCode.OK, f"Connected to '{target._fqdn}'"
+            return ResultCode.OK, f"Connected to '{self._fqdn}'"
 
     class ConnectToDevice(ConnectToDeviceBase):
         """
@@ -157,13 +145,13 @@ class DeviceComponentManager(MccsComponentManager):
         """
         if self.power_mode == PowerState.ON:
             return None  # already on
-        on_command = self.DeviceProxyOnCommand(target=self)
+        # on_command = self.DeviceProxyOnCommand()
         # Enqueue the on command.
         # This is a fire and forget command, so we don't need to keep unique ID.
-        _, result_code = self.enqueue(on_command)
-        return result_code
+        # _, result_code = self.enqueue(on_command)
+        # return result_code
 
-    class DeviceProxyOnCommand(BaseCommand):
+    class DeviceProxyOnCommand(SlowCommand):
         """Base command class for the on command to be enqueued."""
 
         def do(  # type: ignore[override]
@@ -175,8 +163,8 @@ class DeviceComponentManager(MccsComponentManager):
             :return: a result code.
             """
             try:
-                assert self.target._proxy is not None  # for the type checker
-                ([result_code], _) = self.target._proxy.On()  # Fire and forget
+                assert self._proxy is not None  # for the type checker
+                ([result_code], _) = self._proxy.On()  # Fire and forget
             except TypeError as type_error:
                 self.target._logger.fatal(
                     f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
@@ -193,13 +181,13 @@ class DeviceComponentManager(MccsComponentManager):
         """
         if self.power_mode == PowerState.OFF:
             return None  # already off
-        off_command = self.DeviceProxyOffCommand(target=self)
+        # off_command = self.DeviceProxyOffCommand(target=self)
         # Enqueue the off command.
         # This is a fire and forget command, so we don't need to keep unique ID.
-        _, result_code = self.enqueue(off_command)
-        return result_code
+        # _, result_code = self.enqueue(off_command)
+        # return result_code
 
-    class DeviceProxyOffCommand(BaseCommand):
+    class DeviceProxyOffCommand(SlowCommand):
         """Base command class for the off command to be enqueued."""
 
         def do(  # type: ignore[override]
@@ -211,13 +199,13 @@ class DeviceComponentManager(MccsComponentManager):
             :return: a result code.
             """
             try:
-                assert self.target._proxy is not None  # for the type checker
+                assert self._proxy is not None  # for the type checker
                 (
                     [result_code],
                     _,
-                ) = self.target._proxy.Off()  # Fire and forget
+                ) = self._proxy.Off()  # Fire and forget
             except TypeError as type_error:
-                self.target._logger.fatal(
+                self._logger.fatal(
                     f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
                 )
                 result_code = ResultCode.FAILED

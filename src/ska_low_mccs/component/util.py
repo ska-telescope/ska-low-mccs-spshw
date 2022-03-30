@@ -11,9 +11,9 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 from typing import Any, Callable, TypeVar, cast
 
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
-from ska_low_mccs.component import CommunicationStatus, MccsComponentManager
+from ska_low_mccs.component import MccsComponentManager
 
 __all__ = ["check_communicating", "check_on"]
 
@@ -111,7 +111,7 @@ def check_on(func: Wrapped) -> Wrapped:
             not been established.
         :return: whatever the wrapped function returns
         """
-        if component_manager.power_mode != PowerState.ON:
+        if component_manager.power_state != PowerState.ON:
             raise ConnectionError(
                 f"Cannot execute {type(component_manager).__name__}.{func.__name__}. "
                 "Component is not turned on."

@@ -13,12 +13,15 @@ from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState, SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    PowerState,
+    SimulationMode,
+    TestMode,
+)
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
-    CommunicationStatus,
-    ExtendedPowerState,
     MccsComponentManagerProtocol,
     ObjectComponentManager,
     SwitchingComponentManager,

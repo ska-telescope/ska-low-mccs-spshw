@@ -21,13 +21,12 @@ from ska_tango_base.commands import (
     ResultCode,
     StateModelCommand,
 )
-from ska_tango_base.control_model import HealthState
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.subarray import SKASubarray
 from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 from tango.server import attribute, command
 
 import ska_low_mccs.release as release
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subarray import SubarrayComponentManager, SubarrayHealthModel
 
 __all__ = ["MccsSubarray", "main"]

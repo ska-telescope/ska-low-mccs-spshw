@@ -11,11 +11,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, cast
 
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    ObjectComponentManager,
-    check_communicating,
-)
+from ska_tango_base.control_model import CommunicationStatus
+
+from ska_low_mccs.component import ObjectComponentManager, check_communicating
 from ska_low_mccs.subarray_beam import SubarrayBeam
 
 __all__ = ["SubarrayBeamComponentManager"]

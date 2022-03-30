@@ -16,9 +16,7 @@ from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
 
 import yaml
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
-
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 
 @enum.unique

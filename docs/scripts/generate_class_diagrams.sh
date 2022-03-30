@@ -3,7 +3,7 @@
 # >docker pull think/plantuml
 
 SOURCE_CODE_DIR=../../src/ska_low_mccs
-DOCS_SOURCE_DIR=../source/api
+DOCS_SOURCE_DIR=../src/api
 
 FILES="antenna/antenna_device.py \
        apiu/apiu_device.py \

@@ -12,10 +12,9 @@ import logging
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     MccsComponentManager,
     MccsComponentManagerProtocol,
     ObjectComponent,
@@ -30,23 +29,33 @@ __all__ = ["PowerSupplyProxySimulator"]
 class PowerSupplyProxyComponentManager(MccsComponentManager):
     def __init__(
         self: PowerSupplyProxyComponentManager,
+        component: ObjectComponent,
+        logger: logging.Logger,
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         *args: Any,
-        supplied_power_mode_changed_callback: Callable[[PowerState], None],
         **kwargs: Any,
     ) -> None:
-        self._supplied_power_mode: Optional[PowerState] = None
-        self._supplied_power_mode_changed_callback = (
-            supplied_power_mode_changed_callback
+        self._supplied_power_state: Optional[PowerState] = None
+        self._supplied_power_state_changed_callback = component_state_changed_callback
+        super().__init__(
+            component,
+            logger,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+            *args,
+            **kwargs,
         )
-        super().__init__(*args, **kwargs)
 
     def stop_communicating(self: PowerSupplyProxyComponentManager) -> None:
         """Break off communication with the component."""
         super().stop_communicating()
-        self._supplied_power_mode = None
+        self._supplied_power_state = None
 
     @property
-    def supplied_power_mode(
+    def supplied_power_state(
         self: PowerSupplyProxyComponentManager,
     ) -> Optional[PowerState]:
         """
@@ -54,7 +63,7 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
 
         :return: the power mode of the APIU.
         """
-        return self._supplied_power_mode
+        return self._supplied_power_state
 
     def power_off(self: PowerSupplyProxyComponentManager) -> ResultCode | None:
         raise NotImplementedError("PowerSupplyComponentManager is abstract")
@@ -62,14 +71,14 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
     def power_on(self: PowerSupplyProxyComponentManager) -> ResultCode | None:
         raise NotImplementedError("PowerSupplyComponentManager is abstract")
 
-    def update_supplied_power_mode(
+    def update_supplied_power_state(
         self: PowerSupplyProxyComponentManager,
-        supplied_power_mode: Optional[PowerState],
+        supplied_power_state: Optional[PowerState],
     ) -> None:
-        if self._supplied_power_mode != supplied_power_mode:
-            self._supplied_power_mode = supplied_power_mode
-            if self._supplied_power_mode is not None:
-                self._supplied_power_mode_changed_callback(self._supplied_power_mode)
+        if self._supplied_power_state != supplied_power_state:
+            self._supplied_power_state = supplied_power_state
+            if self._supplied_power_state is not None:
+                self._supplied_power_state_changed_callback(self._supplied_power_state)
 
 
 class PowerSupplyProxySimulator(
@@ -97,36 +106,38 @@ class PowerSupplyProxySimulator(
 
         def __init__(
             self: PowerSupplyProxySimulator._Component,
-            initial_supplied_power_mode: PowerState,
+            initial_supplied_power_state: PowerState,
         ) -> None:
             """
             Initialise a new instance.
 
-            :param initial_supplied_power_mode: initial supplied power mode of this
+            :param initial_supplied_power_state: initial supplied power mode of this
                 power supply proxy simulator
             """
-            self._supplied_power_mode = initial_supplied_power_mode
-            self._supplied_power_mode_changed_callback: Optional[
-                Callable[[PowerState], None]
+            self._supplied_power_state = initial_supplied_power_state
+            self._supplied_power_state_changed_callback: Optional[
+                Callable[[dict[str, Any]], None]
             ] = None
 
-        def set_supplied_power_mode_changed_callback(
+        def set_supplied_power_state_changed_callback(
             self: PowerSupplyProxySimulator._Component,
-            supplied_power_mode_changed_callback: Optional[
-                Callable[[PowerState], None]
+            component_state_changed_callback: Optional[
+                Callable[[dict[str, Any]], None]
             ],
         ) -> None:
             """
             Set the supplied power mode changed callback.
 
-            :param supplied_power_mode_changed_callback: the callback to be
+            :param component_state_changed_callback: the callback to be
                 called when the power mode changes.
             """
-            self._supplied_power_mode_changed_callback = (
-                supplied_power_mode_changed_callback
+            self._supplied_power_state_changed_callback = (
+                component_state_changed_callback
             )
-            if supplied_power_mode_changed_callback is not None:
-                supplied_power_mode_changed_callback(self._supplied_power_mode)
+            if self._supplied_power_state_changed_callback is not None:
+                self._supplied_power_state_changed_callback(
+                    {"power_state": self._supplied_power_state}
+                )
 
         def power_off(
             self: PowerSupplyProxySimulator._Component,
@@ -136,10 +147,10 @@ class PowerSupplyProxySimulator(
 
             :return: a result code, or None if there was nothing to do.
             """
-            if self._supplied_power_mode == PowerState.OFF:
+            if self._supplied_power_state == PowerState.OFF:
                 return None
 
-            self._update_supplied_power_mode(PowerState.OFF)
+            self._update_supplied_power_state(PowerState.OFF)
             return ResultCode.OK
 
         def power_on(
@@ -150,57 +161,56 @@ class PowerSupplyProxySimulator(
 
             :return: a result code, or None if there was nothing to do.
             """
-            if self._supplied_power_mode == PowerState.ON:
+            if self._supplied_power_state == PowerState.ON:
                 return None
 
-            self._update_supplied_power_mode(PowerState.ON)
+            self._update_supplied_power_state(PowerState.ON)
             return ResultCode.OK
 
-        def _update_supplied_power_mode(
+        def _update_supplied_power_state(
             self: PowerSupplyProxySimulator._Component,
-            supplied_power_mode: PowerState,
+            supplied_power_state: PowerState,
         ) -> None:
             """
             Update the supplied power mode, ensuring callbacks are called.
 
-            :param supplied_power_mode: the new supplied power mode of
+            :param supplied_power_state: the new supplied power mode of
                 the downstream device.
             """
-            if self._supplied_power_mode != supplied_power_mode:
-                self._supplied_power_mode = supplied_power_mode
-                if self._supplied_power_mode_changed_callback is not None:
-                    self._supplied_power_mode_changed_callback(supplied_power_mode)
+            if self._supplied_power_state != supplied_power_state:
+                self._supplied_power_state = supplied_power_state
+                if self._supplied_power_state_changed_callback is not None:
+                    self._supplied_power_state_changed_callback(
+                        {"power_state": supplied_power_state}
+                    )
 
     def __init__(
         self: PowerSupplyProxySimulator,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        supplied_power_mode_changed_callback: Callable[[PowerState], None],
-        initial_supplied_power_mode: PowerState = PowerState.OFF,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        initial_supplied_power_state: PowerState = PowerState.OFF,
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: nos of worker threads for async commands
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param supplied_power_mode_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the supplied power mode changes
-        :param initial_supplied_power_mode: the initial supplied power
+        :param initial_supplied_power_state: the initial supplied power
             mode of the simulated component
         """
         super().__init__(
-            self._Component(initial_supplied_power_mode),
+            self._Component(initial_supplied_power_state),
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            None,
-            None,
-            supplied_power_mode_changed_callback=supplied_power_mode_changed_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: PowerSupplyProxySimulator) -> None:
@@ -208,15 +218,15 @@ class PowerSupplyProxySimulator(
         super().start_communicating()
         cast(
             PowerSupplyProxySimulator._Component, self._component
-        ).set_supplied_power_mode_changed_callback(self._supplied_power_mode_changed)
+        ).set_supplied_power_state_changed_callback(self._supplied_power_state_changed)
 
     def stop_communicating(self: PowerSupplyProxySimulator) -> None:
         """Cease monitoring the component, and break off all communication with it."""
         super().stop_communicating()
         cast(
             PowerSupplyProxySimulator._Component, self._component
-        ).set_supplied_power_mode_changed_callback(None)
-        self.update_supplied_power_mode(None)
+        ).set_supplied_power_state_changed_callback(None)
+        self.update_supplied_power_state(None)
 
     @check_communicating
     def power_off(self: PowerSupplyProxySimulator) -> ResultCode | None:
@@ -236,11 +246,11 @@ class PowerSupplyProxySimulator(
         """
         return cast(PowerSupplyProxySimulator._Component, self._component).power_on()
 
-    def _supplied_power_mode_changed(
+    def _supplied_power_state_changed(
         self: PowerSupplyProxySimulator,
-        supplied_power_mode: PowerState,
+        supplied_power_state: PowerState,
     ) -> None:
-        self.update_supplied_power_mode(supplied_power_mode)
+        self.update_supplied_power_state(supplied_power_state)
 
 
 class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
@@ -261,11 +271,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         hardware_component_manager: MccsComponentManagerProtocol,
         power_supply_component_manager: PowerSupplyProxyComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
-        component_progress_changed_callback: Optional[Callable[[int], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -275,19 +283,14 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         :param power_supply_component_manager: the component
             manager that manages supply of power to the hardware.
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: nos of worker threads for async commands
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
         """
-        self._target_power_mode: Optional[PowerState] = None
+        self._target_power_state: Optional[PowerState] = None
 
         self._power_supply_communication_status = CommunicationStatus.DISABLED
         self._hardware_communication_status = CommunicationStatus.DISABLED
@@ -295,14 +298,11 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._power_supply_component_manager = power_supply_component_manager
         self._hardware_component_manager = hardware_component_manager
 
-        self._component_progress_changed_callback = component_progress_changed_callback
-
         super().__init__(
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(
@@ -374,21 +374,21 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :param progress: The progress percentage of the long-running command
         """
-        if self._component_progress_changed_callback is not None:
-            self._component_progress_changed_callback(progress)
+        if self._component_state_changed_callback is not None:
+            self._component_state_changed_callback({"progress": progress})
 
-    def component_power_mode_changed(
+    def component_power_state_changed(
         self: ComponentManagerWithUpstreamPowerSupply,
-        power_mode: PowerState,
+        power_state: PowerState,
     ) -> None:
         """
-        Handle a change in power mode of the hardware.
+        Handle a change in power state of the hardware.
 
-        :param power_mode: the power mode of the hardware
+        :param power_state: the power state of the hardware
         """
-        if power_mode == PowerState.OFF:
+        if power_state == PowerState.OFF:
             self._hardware_component_manager.stop_communicating()
-        elif power_mode == PowerState.ON:
+        elif power_state == PowerState.ON:
             # TODO: if the hardware component manager is synchronous, we get a state
             # wobble here.
             # Ideally we would go from OFF to ON. It is acceptable / inevitable that we
@@ -399,7 +399,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             # managers. Even when they are do-nothing placeholders, they should still
             # behave asynchronously.
             self._hardware_component_manager.start_communicating()
-        super().component_power_mode_changed(power_mode)
+        super().component_state_changed_callback({"power_state": power_state})
         self._review_power()
 
     @check_communicating
@@ -411,8 +411,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        with self._power_mode_lock:
-            self._target_power_mode = PowerState.OFF
+        with self._power_state_lock:
+            self._target_power_state = PowerState.OFF
         return self._review_power()
 
     @check_communicating
@@ -422,8 +422,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        with self._power_mode_lock:
-            self._target_power_mode = PowerState.ON
+        with self._power_state_lock:
+            self._target_power_state = PowerState.ON
         rc = self._review_power()
         return rc
 
@@ -431,24 +431,24 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
     def _review_power(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> ResultCode | None:
-        with self._power_mode_lock:
-            if self._target_power_mode is None:
+        with self._power_state_lock:
+            if self._target_power_state is None:
                 return None
-            if self.power_mode == self._target_power_mode:
-                self._target_power_mode = None  # attained without any action needed
+            if self.power_state == self._target_power_state:
+                self._target_power_state = None  # attained without any action needed
                 return None
             if (
-                self.power_mode == PowerState.OFF
-                and self._target_power_mode == PowerState.ON
+                self.power_state == PowerState.OFF
+                and self._target_power_state == PowerState.ON
             ):
                 result_code = self._power_supply_component_manager.power_on()
-                self._target_power_mode = None
+                self._target_power_state = None
                 return result_code
             if (
-                self.power_mode == PowerState.ON
-                and self._target_power_mode == PowerState.OFF
+                self.power_state == PowerState.ON
+                and self._target_power_state == PowerState.OFF
             ):
                 result_code = self._power_supply_component_manager.power_off()
-                self._target_power_mode = None
+                self._target_power_state = None
                 return result_code
             return ResultCode.QUEUED

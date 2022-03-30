@@ -15,10 +15,9 @@ from typing import Callable, Optional, Sequence
 
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
     check_communicating,

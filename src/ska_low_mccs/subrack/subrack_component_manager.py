@@ -13,10 +13,9 @@ from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.base.task_queue_manager import QueueManager
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState, SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
     ExtendedPowerState,
     ObjectComponentManager,

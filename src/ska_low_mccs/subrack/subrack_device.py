@@ -261,15 +261,15 @@ class MccsSubrack(SKABaseDevice):
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        with self._tpm_power_states_lock:
             if "tpm_power_states" in state_change.keys():
                 tpm_power_states = state_change.get("tpm_power_states")
-                for i in range(SubrackData.TPM_BAY_COUNT):
-                    if self._tpm_power_states[i] != tpm_power_states[i]:
-                        self._tpm_power_states[i] = tpm_power_states[i]
-                        self.push_change_event(
-                            f"tpm{i+1}PowerState", tpm_power_states[i]
-                        )
+                with self._tpm_power_states_lock:
+                    for i in range(SubrackData.TPM_BAY_COUNT):
+                        if self._tpm_power_states[i] != tpm_power_states[i]:
+                            self._tpm_power_states[i] = tpm_power_states[i]
+                            self.push_change_event(
+                                f"tpm{i+1}PowerState", tpm_power_states[i]
+                            )
 
     # ----------
     # Attributes

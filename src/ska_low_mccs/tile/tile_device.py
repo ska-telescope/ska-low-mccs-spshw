@@ -971,7 +971,6 @@ class MccsTile(SKABaseDevice):
 
             :return:a list of firmware & cpld registers
             """
-
             return self._component_manager.register_list
 
     @command(dtype_out="DevVarStringArray")
@@ -1020,7 +1019,6 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
@@ -1104,7 +1102,6 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
@@ -1186,7 +1183,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument has the wrong length
                 or structure
             """
-
             if len(argin) < 2:
                 self._component_manager.logger.error("Two parameters are required")
                 raise ValueError("Two parameters are required")
@@ -1603,7 +1599,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-
             if len(argin) < 3:
                 self._component_manager.logger.error("Insufficient values supplied")
                 raise ValueError("Insufficient values supplied")
@@ -1680,7 +1675,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-
             if len(argin) < 5:
                 self._component_manager.logger.error(
                     "Insufficient parameters specified"
@@ -1794,7 +1788,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-
             params = json.loads(argin)
             start_channel = params.get("StartChannel", None)
             if start_channel is None:
@@ -1887,7 +1880,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-
             if len(argin) < 9:
                 self._component_manager.logger.error(
                     "Insufficient calibration coefficients"
@@ -1998,7 +1990,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-
             if len(argin) < 10:
                 self._component_manager.logger.error(
                     "Insufficient calibration coefficients"
@@ -2112,7 +2103,6 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-
             self._component_manager.load_beam_angle(argin)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2186,7 +2176,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-
             if len(argin) < self._antennas_per_tile + 1:
                 self._component_manager.logger.error(
                     f"Insufficient coefficients should be {self._antennas_per_tile+1}"
@@ -2334,7 +2323,6 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-
             if len(argin) != self._antennas_per_tile * 2 + 1:
                 self._component_manager.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
@@ -2458,7 +2446,6 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-
             params = json.loads(argin)
             start_time = params.get("StartTime", 0)
             duration = params.get("Duration", -1)
@@ -2520,7 +2507,6 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-
             self._component_manager.stop_beamformer()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2909,7 +2895,6 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-
             params = json.loads(argin)
             channel_id = params.get("ChannelID")
             if channel_id is None:
@@ -3305,7 +3290,6 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-
             params = json.loads(argin)
             mode = params.get("Mode", None)
             if mode is None:
@@ -3465,7 +3449,6 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-
             params = json.loads(argin)
             frequency = params.get("Frequency", None)
             if frequency is None:
@@ -3561,7 +3544,6 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-
             self._component_manager.tweak_transceivers()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -3656,7 +3638,6 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-
             params = json.loads(argin)
             current_delay = params.get("CurrentDelay", None)
             if current_delay is None:
@@ -3746,7 +3727,6 @@ class MccsTile(SKABaseDevice):
                    message indicating status. The message is for
                    information purpose only.
             """
-
             params = json.loads(argin)
             active = False
             set_time = params.get("SetTime", 0)

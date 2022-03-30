@@ -19,6 +19,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
@@ -29,7 +30,6 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.component.component_manager import MccsComponentManager
-from ska_tango_base.executor import TaskStatus
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
@@ -701,7 +701,7 @@ class TileComponentManager(MccsComponentManager):
         self: TileComponentManager,
         power_state: PowerState,
     ) -> None:
-        self._tile_orchestrator.update_tpm_power_state(power_state)
+        self._tile_orchestrator.update_tpm_power_mode(power_state)
 
     def _tpm_communication_status_changed(
         self: TileComponentManager,
@@ -1056,13 +1056,12 @@ class TileComponentManager(MccsComponentManager):
         """
         Submit the start_acquisition slow task.
 
-        This method returns immediately after it is submitted for execution.
+        :param argin: json dictionary with optional keywords
 
-        :param argin: json dictionary with optional keywords:
         * StartTime - (int) start time
         * Delay - (int) delay start
-        :param task_callback: Update task state, defaults to None
 
+        :param task_callback: Update task state, defaults to None
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(

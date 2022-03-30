@@ -26,7 +26,7 @@ import numpy as np
 from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_tango_base.commands import FastCommand, ResultCode, SlowCommand
+from ska_tango_base.commands import ResultCode, SlowCommand
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import MccsComponentManager
@@ -445,7 +445,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("Lock released")
         return self._is_programmed
 
-    class DownloadFirmware(BaseCommand):
+    class DownloadFirmware(SlowCommand):
         """Long running command for Download firmware."""
 
         def do(  # type: ignore[override]
@@ -522,7 +522,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
-    class Initialise(BaseCommand):
+    class Initialise(SlowCommand):
         """Long running command for Tile initialisation."""
 
         def do(  # type: ignore[override]

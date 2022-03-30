@@ -159,12 +159,12 @@ class SubrackSimulator(ObjectComponent):
         self._tpm_supply_fault = [0] * self._bay_count
 
         self._are_tpms_on_changed_callback: Optional[
-            Callable[[list[bool]], None]
+            Callable[[dict[str, Any]], None]
         ] = None
 
     def set_are_tpms_on_changed_callback(
         self: SubrackSimulator,
-        are_tpms_on_changed_callback: Optional[Callable[[list[bool]], None]] = None,
+        are_tpms_on_changed_callback: Optional[Callable[[dict[str, Any]], None]] = None,
     ) -> None:
         """
         Set the callback to be called when the power mode of a TPM changes.

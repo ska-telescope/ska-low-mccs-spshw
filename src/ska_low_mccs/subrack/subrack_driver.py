@@ -25,16 +25,21 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import time
-from typing import Callable, List, Optional, cast
+from typing import Any, Callable, List, Optional, cast
 
-from ska_tango_base.commands import BaseCommand, ResultCode
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SlowCommand,
+    SubmittedSlowCommand,
+)
 from ska_tango_base.control_model import (
     CommunicationStatus,
     ControlMode,
     PowerState,
     SimulationMode,
 )
-
 from ska_low_mccs.component import MccsComponentManager, WebHardwareClient
 from ska_low_mccs.subrack import SubrackData
 
@@ -70,42 +75,32 @@ class SubrackDriver(MccsComponentManager):
     def __init__(
         self: SubrackDriver,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_worker: int,
         ip: str,
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Callable[
-            [list[ExtendedPowerState]], None
-        ],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         tpm_present: Optional[list[bool]] = None,
     ) -> None:
         """
         Initialise a new instance and tries to connect to the given IP and port.
 
         :param logger: a logger for this driver to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
+        :param max_workers: Nos. of worker threads for async commands.
         :param ip: IP address for hardware tile
         :param port: IP address for hardware control
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of one of the TPMs in the subrack
-            changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         :param tpm_present: List of TPMs which are expected to be
             present in the subrack. Usually from Tango database.
         """
         self.logger = logger
         self._ip = ip
         self._port = port
-
+        max_workers = 1
         self._backplane_temperatures = self.DEFAULT_BACKPLANE_TEMPERATURES
         self._board_temperatures = self.DEFAULT_BOARD_TEMPERATURES
         self._board_current = self.DEFAULT_BOARD_CURRENT
@@ -118,22 +113,19 @@ class SubrackDriver(MccsComponentManager):
             self._tpm_present = self.DEFAULT_TPM_PRESENT
         else:
             self._tpm_present = tpm_present
-        self._tpm_power_modes = [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_count = self.DEFAULT_TPM_COUNT
         self._bay_count = self.DEFAULT_TPM_COUNT
 
         self._client = WebHardwareClient(self._ip, self._port)
 
-        self._component_tpm_power_changed_callback = (
-            component_tpm_power_changed_callback
-        )
-        self._component_progress_changed_callback = component_progress_changed_callback
+        self._component_state_changed_callback = component_state_changed_callback
+
         super().__init__(
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            component_state_changed_callback,
+            max_workers=max_workers,
         )
 
     def start_communicating(self: SubrackDriver) -> None:
@@ -142,7 +134,7 @@ class SubrackDriver(MccsComponentManager):
         connect_command = self.ConnectToSubrack(target=self)
         _ = self.enqueue(connect_command)
 
-    class ConnectToSubrack(BaseCommand):
+    class ConnectToSubrack(SlowCommand):
         """Connect to subrack command class."""
 
         def do(  # type: ignore[override]
@@ -156,18 +148,17 @@ class SubrackDriver(MccsComponentManager):
 
             :return: a result code and message
             """
-            target = self.target
-            connected = target._client.connect()
-            target_connection = f"{target._ip}:{str(target._port)}"
+            connected = self._client.connect()
+            target_connection = f"{self._ip}:{str(self._port)}"
             if connected:
-                target.update_communication_status(CommunicationStatus.ESTABLISHED)
+                self.update_communication_status(CommunicationStatus.ESTABLISHED)
                 message = f"Connected to {target_connection}"
-                target.logger.info(message)
+                self.logger.info(message)
                 return ResultCode.OK, message
 
-            target.logger.error("status:ERROR")
+            self.logger.error("status:ERROR")
             message = f"Failed to connect to {target_connection}"
-            target.logger.info(message)
+            self.logger.info(message)
             return ResultCode.FAILED, message
 
     def stop_communicating(self: SubrackDriver) -> None:
@@ -440,7 +431,7 @@ class SubrackDriver(MccsComponentManager):
         return self._tpm_supply_fault
 
     @property
-    def tpm_power_modes(self: SubrackDriver) -> list[ExtendedPowerState]:
+    def tpm_power_modes(self: SubrackDriver) -> list[PowerState]:
         """
         Return whether each TPM is powered or not.
 
@@ -452,7 +443,7 @@ class SubrackDriver(MccsComponentManager):
         if response["status"] == "OK":
             are_tpms_on = cast(List[bool], response["value"])
             self._tpm_power_modes = [
-                ExtendedPowerState.ON if is_tpm_on else ExtendedPowerState.OFF
+                PowerState.ON if is_tpm_on else PowerState.OFF
                 for is_tpm_on in are_tpms_on
             ]
         return self._tpm_power_modes
@@ -468,7 +459,7 @@ class SubrackDriver(MccsComponentManager):
             is off
         """
         self._check_tpm_id(logical_tpm_id)
-        return self.tpm_power_modes[logical_tpm_id - 1] == ExtendedPowerState.ON
+        return self.tpm_power_modes[logical_tpm_id - 1] == PowerState.ON
 
     def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """

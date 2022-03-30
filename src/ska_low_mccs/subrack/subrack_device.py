@@ -91,7 +91,7 @@ class MccsSubrack(SKABaseDevice):
         """
         # InitCommand.do() would do this too late
         self._tpm_power_modes_lock = threading.Lock()
-        self._tpm_power_modes = [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
         return SubrackComponentManager(
             SimulationMode.TRUE,
@@ -487,10 +487,10 @@ class MccsSubrack(SKABaseDevice):
         return self.component_manager.tpm_count
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 1 power mode",
     )
-    def tpm1PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm1PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 1.
 
@@ -499,10 +499,10 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[0]
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 2 power mode",
     )
-    def tpm2PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm2PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 2.
 
@@ -511,10 +511,10 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[1]
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 3 power mode",
     )
-    def tpm3PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm3PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 3.
 
@@ -523,10 +523,10 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[2]
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 4 power mode",
     )
-    def tpm4PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm4PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 4.
 
@@ -535,10 +535,10 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[3]
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 5 power mode",
     )
-    def tpm5PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm5PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 5.
 
@@ -547,10 +547,10 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[4]
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 6 power mode",
     )
-    def tpm6PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm6PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 6.
 
@@ -559,10 +559,10 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[5]
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 7 power mode",
     )
-    def tpm7PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm7PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 7.
 
@@ -571,10 +571,10 @@ class MccsSubrack(SKABaseDevice):
         return self._tpm_power_modes[6]
 
     @attribute(
-        dtype=ExtendedPowerState,
+        dtype=PowerState,
         label="TPM bay 8 power mode",
     )
-    def tpm8PowerState(self: MccsSubrack) -> ExtendedPowerState:
+    def tpm8PowerState(self: MccsSubrack) -> PowerState:
         """
         Return the power mode of TPM bay 8.
 

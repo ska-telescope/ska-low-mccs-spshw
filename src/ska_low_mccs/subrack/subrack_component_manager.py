@@ -61,11 +61,10 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             logger,
             max_workers,
             communication_status_changed_callback,
-            communication_status_changed_callback,
             component_state_changed_callback,
         )
         self._component_state_changed_callback = component_state_changed_callback
-        self._tpm_power_modes = [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
     def start_communicating(
         self: BaseSubrackSimulatorComponentManager,
@@ -76,10 +75,10 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
 
         super().start_communicating()
         cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(
-            self._are_tpms_on_changed
+            self._component_state_changed_callback
         )
         cast(SubrackSimulator, self._component).set_progress_changed_callback(
-            self._component_progress_changed_callback
+            self._component_state_changed_callback
         )
 
     def stop_communicating(self: BaseSubrackSimulatorComponentManager) -> None:
@@ -95,7 +94,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self: BaseSubrackSimulatorComponentManager, are_tpms_on: list[bool]
     ) -> None:
         tpm_power_modes = [
-            ExtendedPowerState.ON if is_tpm_on else ExtendedPowerState.OFF
+            PowerState.ON if is_tpm_on else PowerState.OFF
             for is_tpm_on in are_tpms_on
         ]
         # if self._tpm_power_modes == tpm_power_modes:
@@ -107,7 +106,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
     @property
     def tpm_power_modes(
         self: BaseSubrackSimulatorComponentManager,
-    ) -> list[ExtendedPowerState]:
+    ) -> list[PowerState]:
         """
         Return the power modes of the TPMs.
 
@@ -375,7 +374,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             we start connecting to the real upstream power supply
             device.
         """
-        self._tpm_power_modes = [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_power_changed_callback = tpm_power_changed_callback
         self._tpm_power_changed_callback(self._tpm_power_modes)
 
@@ -409,7 +408,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @property
     def tpm_power_modes(
         self: SubrackComponentManager,
-    ) -> list[ExtendedPowerState]:
+    ) -> list[PowerState]:
         """
         Return the power modes of the TPMs.
 
@@ -419,7 +418,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def _tpm_power_changed(
         self: SubrackComponentManager,
-        tpm_power_modes: list[ExtendedPowerState],
+        tpm_power_modes: list[PowerState],
     ) -> None:
         """
         Handle change in TPM power.
@@ -434,7 +433,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def _update_tpm_power_modes(
         self: SubrackComponentManager,
-        tpm_power_modes: list[ExtendedPowerState],
+        tpm_power_modes: list[PowerState],
     ) -> None:
         """
         Update the power modes of the TPMs, ensuring that the callback is called.
@@ -466,7 +465,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         super()._power_supply_communication_status_changed(communication_status)
         if communication_status == CommunicationStatus.DISABLED:
             self._update_tpm_power_modes(
-                [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
 
     def component_power_mode_changed(
@@ -479,11 +478,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         if power_mode == PowerState.UNKNOWN:
             self._update_tpm_power_modes(
-                [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
         elif power_mode == PowerState.OFF:
             self._update_tpm_power_modes(
-                [ExtendedPowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+                [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
             )
 
         super().component_power_mode_changed(power_mode)

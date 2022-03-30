@@ -147,11 +147,11 @@ class StationComponentManager(MccsComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[CommunicationStatus], None],
         component_power_mode_changed_callback: Callable[[PowerState], None],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        is_configured_changed_callback: Callable[[bool], None],
         max_workers: Optional[int] = None,
     ) -> None:
         """
@@ -185,7 +185,7 @@ class StationComponentManager(MccsComponentManager):
 
         self._is_configured = False
         self._on_called = False
-        self._is_configured_changed_callback = is_configured_changed_callback
+        self.component_state_changed_callback = component_state_changed_callback
 
         self._communication_status_lock = threading.Lock()
         self._communication_statuses = {
@@ -304,7 +304,7 @@ class StationComponentManager(MccsComponentManager):
         super().update_communication_status(communication_status)
 
         if communication_status == CommunicationStatus.ESTABLISHED:
-            self._is_configured_changed_callback(self._is_configured)
+            self.component_state_changed_callback({"is_configured": self.is_configured})
 
     @threadsafe
     def _antenna_power_mode_changed(
@@ -491,7 +491,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured
-            self._is_configured_changed_callback(is_configured)
+            self.component_state_changed_callback({"is_configured": is_configured})
 
     def configure(self, argin: str, task_callback: Optional[Callable] = None) -> tuple[ResultCode, str]:
         """Submit the configure method.

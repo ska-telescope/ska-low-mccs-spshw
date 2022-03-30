@@ -89,7 +89,6 @@ class MccsStation(SKAObsDevice):
             self._health_model.apiu_health_changed,
             self._health_model.antenna_health_changed,
             self._health_model.tile_health_changed,
-            self._obs_state_model.is_configured_changed,
         )
 
     def init_command_objects(self: MccsStation) -> None:
@@ -258,6 +257,10 @@ class MccsStation(SKAObsDevice):
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
+
+        if "is_configured" in kwargs.keys():
+            is_configured = kwargs.get("is_configured")
+            self._obs_state_model.is_configured_changed(is_configured)
 
 #    def _component_power_mode_changed(
 #        self: MccsStation,

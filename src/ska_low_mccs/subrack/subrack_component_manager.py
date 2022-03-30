@@ -11,19 +11,19 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.base.task_queue_manager import QueueManager
+# from ska_tango_base.base.task_queue_manager import QueueManager
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.component import (
     ComponentManagerWithUpstreamPowerSupply,
-    ExtendedPowerState,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
     SwitchingComponentManager,
     check_communicating,
     check_on,
 )
+from ska_tango_base import TaskStatus
 from ska_low_mccs.subrack import SubrackData, SubrackDriver, SubrackSimulator
 
 __all__ = [
@@ -40,46 +40,32 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self: BaseSubrackSimulatorComponentManager,
         subrack_simulator: SubrackSimulator,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Callable[
-            [list[ExtendedPowerState]], None
-        ],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param subrack_simulator: a subrack simulator object to use
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
+        :param max_workers: Nos of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of an tpm changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             subrack_simulator,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            communication_status_changed_callback,
+            component_state_changed_callback,
         )
+        self._component_state_changed_callback = component_state_changed_callback
         self._tpm_power_modes = [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-        self._component_tpm_power_changed_callback = (
-            component_tpm_power_changed_callback
-        )
-        self._component_tpm_power_changed_callback(self._tpm_power_modes)
-
-        self._component_progress_changed_callback = component_progress_changed_callback
 
     def start_communicating(
         self: BaseSubrackSimulatorComponentManager,
@@ -182,10 +168,6 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
-            "turn_off_tpm",
-            "turn_on_tpm",
-            "turn_on_tpms",
-            "turn_off_tpms",
             "check_tpm_power_modes",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
@@ -231,40 +213,30 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
     def __init__(
         self: SubrackSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Callable[
-            [list[ExtendedPowerState]], None
-        ],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
+        :param max_workers: Nos of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of an tpm changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             SubrackSimulator(),
             logger,
-            push_change_event,
+            logger,
+            max_workers,
             communication_status_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
-            component_tpm_power_changed_callback,
+            component_state_changed_callback,
         )
-
+        self._component_state_changed_callback = component_state_changed_callback
 
 class SwitchingSubrackComponentManager(SwitchingComponentManager):
     """A component manager that switches between subrack simulator(x2) and a driver."""
@@ -273,15 +245,11 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         self: SwitchingSubrackComponentManager,
         initial_simulation_mode: SimulationMode,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[int], None],
-        component_tpm_power_changed_callback: Callable[
-            [list[ExtendedPowerState]], None
-        ],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -289,39 +257,30 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
         :param initial_simulation_mode: the simulation mode that the
             component should start in
+        :param max_workers: Nos. of worker threads for async commands.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of an tpm changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         subrack_driver = SubrackDriver(
             logger,
-            push_change_event,
+            max_workers,
             subrack_ip,
             subrack_port,
             communication_status_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
-            component_tpm_power_changed_callback,
+            component_state_changed_callback,
         )
         subrack_simulator = SubrackSimulatorComponentManager(
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
-            component_tpm_power_changed_callback,
+            component_state_changed_callback,
         )
         super().__init__(
             {
@@ -370,34 +329,31 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
 class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an subrack (simulator or driver) and its power supply."""
 
-    def create_queue_manager(self: SubrackComponentManager) -> QueueManager:
-        """
-        Create a QueueManager.
+    # def create_queue_manager(self: SubrackComponentManager) -> QueueManager:
+    #     """
+    #     Create a QueueManager.
 
-        Overwrite the creation of the queue manger specifying the
-        required max queue size and number of workers.
+    #     Overwrite the creation of the queue manger specifying the
+    #     required max queue size and number of workers.
 
-        :return: The queue manager.
-        """
-        return QueueManager(
-            max_queue_size=8,  # 8 PowerOnTpm commands
-            num_workers=1,
-            logger=self.logger,
-            push_change_event=self._push_change_event,
-        )
+    #     :return: The queue manager.
+    #     """
+    #     return QueueManager(
+    #         max_queue_size=8,  # 8 PowerOnTpm commands
+    #         num_workers=1,
+    #         logger=self.logger,
+    #         push_change_event=self._push_change_event,
+    #     )
 
     def __init__(
         self: SubrackComponentManager,
         initial_simulation_mode: SimulationMode,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         subrack_ip: str,
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Callable[[bool], None],
-        component_progress_changed_callback: Callable[[int], None],
-        tpm_power_changed_callback: Callable[[list[ExtendedPowerState]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _initial_power_mode: PowerState = PowerState.OFF,
     ) -> None:
         """
@@ -406,21 +362,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
+        :param max_workers: nos. of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_progress_changed_callback: callback to be called when the
-            component command progress values changes
-        :param tpm_power_changed_callback: callback to be called when
-            the power mode of an tpm changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         :param _initial_power_mode: the initial power mode of the power
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
@@ -433,31 +382,28 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
             logger,
-            push_change_event,
+            max_workers,
             subrack_ip,
             subrack_port,
             self._hardware_communication_status_changed,
-            self.component_fault_changed,
-            self.component_progress_changed,
+            component_state_changed_callback,
             self._tpm_power_changed,
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
-            push_change_event,
+            max_workers,
             self._power_supply_communication_status_changed,
-            self.component_power_mode_changed,
+            component_state_changed_callback,       
             _initial_power_mode,
         )
         super().__init__(
             hardware_component_manager,
             power_supply_component_manager,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
-            component_progress_changed_callback,
+            component_state_changed_callback,
         )
 
     @property
@@ -671,9 +617,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
-            "turn_on_tpm",
-            "turn_on_tpms",
-            "turn_off_tpms",
             "check_tpm_power_modes",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
@@ -712,3 +655,60 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
+
+    def turn_on_tpm(
+        self: SubrackComponentManager,
+        tpm_id: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the turn_on_tpm slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param tpm_id: the tpm to turn on
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._turn_on_tpm, args=[tpm_id], task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def turn_on_tpms(
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the turn_on_tpms slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._turn_on_tpm, task_callback=task_callback
+        )
+        return task_status, unique_id
+
+    def turn_off_tpms(
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the turn_off_tpms slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        task_status, unique_id = self.submit_task(
+            self._turn_on_tpm, task_callback=task_callback
+        )
+        return task_status, unique_id
+

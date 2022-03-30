@@ -10,12 +10,18 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
+import logging
 import threading
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import ResponseCommand, ResultCode
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SubmittedSlowCommand,
+)
 from ska_tango_base.control_model import (
     AdminMode,
     CommunicationStatus,
@@ -36,29 +42,6 @@ __all__ = ["MccsSubrack", "main"]
 
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
-
-
-def create_return(success: Optional[bool], action: str) -> tuple[ResultCode, str]:
-    """
-    Create a tuple containing the ResultCode and status message.
-
-    :param success: whether execution of the action was successful. This
-        may be None, in which case the action was not performed due to
-        redundancy (i.e. it was already done).
-    :param action: Informal description of the action that the command
-        performs, for use in constructing a message
-
-    :return: A tuple containing a return code and a string
-        message indicating status. The message is for
-        information purpose only.
-    """
-    if success is None:
-        return (ResultCode.OK, f"Subrack {action} is redundant")
-    elif success:
-        return (ResultCode.OK, f"Subrack {action} successful")
-    else:
-        return (ResultCode.FAILED, f"Subrack {action} failed")
-
 
 class MccsSubrack(SKABaseDevice):
     """
@@ -88,12 +71,14 @@ class MccsSubrack(SKABaseDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
+        self._power_state_lock = threading.RLock()
         super().init_device()
 
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubrackHealthModel(self.health_changed)
+        self._health_model = SubrackHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -111,25 +96,35 @@ class MccsSubrack(SKABaseDevice):
         return SubrackComponentManager(
             SimulationMode.TRUE,
             self.logger,
-            self.push_change_event,
+            self._max_workers,
             self.SubrackIp,
             self.SubrackPort,
             self._component_communication_status_changed,
-            self._component_power_mode_changed,
-            self._component_fault,
-            self._component_progress_changed,
-            self._tpm_power_modes_changed,
+            self.component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsSubrack) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
+        for (command_name, method_name) in [
+            ("PowerOnTpm", 'turn_on_tpm'),
+            ("PowerOffTpm", 'turn_off_tpm'),
+            ("PowerUpTpms", 'turn_on_tpms'),
+            ("PowerDownTpms", 'turn_off_tpms'),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
+            )
         for (command_name, command_object) in [
-            ("PowerOnTpm", self.PowerOnTpmCommand),
-            ("PowerOffTpm", self.PowerOffTpmCommand),
-            ("PowerUpTpms", self.PowerUpTpmsCommand),
-            ("PowerDownTpms", self.PowerDownTpmsCommand),
             ("SetSubrackFanSpeed", self.SetSubrackFanSpeedCommand),
             ("SetSubrackFanMode", self.SetSubrackFanModeCommand),
             ("SetPowerSupplyFanSpeed", self.SetPowerSupplyFanSpeedCommand),
@@ -137,11 +132,11 @@ class MccsSubrack(SKABaseDevice):
             self.register_command_object(
                 command_name,
                 command_object(
-                    self.component_manager, self.op_state_model, self.logger
+                    self.component_manager, self.logger
                 ),
             )
 
-    class InitCommand(SKABaseDevice.InitCommand):
+    class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS Subrack device."""
 
         def do(  # type: ignore[override]
@@ -154,17 +149,9 @@ class MccsSubrack(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            super().do()
-
-            device = self.target
 
             for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
-                device.set_change_event(f"tpm{tpm_number}PowerState", True, False)
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+                self._device.set_change_event(f"tpm{tpm_number}PowerState", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -236,18 +223,16 @@ class MccsSubrack(SKABaseDevice):
             self.logger.debug("Checking tpm power modes")
             self.component_manager.check_tpm_power_modes()
 
-    def _component_power_mode_changed(
-        self: MccsSubrack,
-        power_mode: PowerState,
+    def component_state_changed_callback(
+        self: MccsSubrack, state_change: dict[str, Any]
     ) -> None:
         """
-        Handle change in the power mode of the component.
+        Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the power mode of the component changes. It is implemented here
-        to drive the op_state.
+        the state of the component changes.
 
-        :param power_mode: the power mode of the component.
+        :param state_change: dictionary of state change parameters.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -255,77 +240,31 @@ class MccsSubrack(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        if power_mode is None:
-            return
-        self.op_state_model.perform_action(action_map[power_mode])
-        if (power_mode == PowerState.ON) and self._health_model._communicating:
-            self.logger.debug("Checking tpm power modes")
-            self.component_manager.check_tpm_power_modes()
 
-    def _component_fault(
-        self: MccsSubrack,
-        is_fault: bool,
-    ) -> None:
-        """
-        Handle change in the fault status of the component.
+        with self._power_state_lock:
+            if "power_state" in state_change.keys():
+                power_state = state_change.get("power_state")
+                self.component_manager.power_state = power_state
+                if power_state:
+                    self.op_state_model.perform_action(action_map[power_state])
 
-        This is a callback hook, called by the component manager when
-        the component fault status changes. It is implemented here to
-        drive the op_state.
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                self.op_state_model.perform_action(
+                    action_map[self.component_manager.power_state]
+                )
+                self._health_model.component_fault(False)
 
-        :param is_fault: whether the component is faulting or not.
-        """
-        if is_fault:
-            self.op_state_model.perform_action("component_fault")
-            self._health_model.component_fault(True)
-        else:
-            self._component_power_mode_changed(self.component_manager.power_mode)
-            self._health_model.component_fault(False)
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
-    def _component_progress_changed(self: MccsSubrack, progress: int) -> None:
-        """
-        Handle change in the progress of a long-running command.
-
-        This is a callback hook, called by the component manager when
-        the component progress value changes.
-
-        :param progress: the process percentage of a long-running command.
-        """
-        self._progress = progress
-        self.logger.debug(f"Subrack progress value = {progress}")
-        # TODO: Link the progress update to an attribute to be exposed to the real world...
-
-    def health_changed(self: MccsSubrack, health: HealthState) -> None:
-        """
-        Handle change in this device's health state.
-
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
-
-    # ----------
-    # Callbacks
-    # ----------
-    def _tpm_power_modes_changed(
-        self: MccsSubrack, tpm_power_modes: list[ExtendedPowerState]
-    ) -> None:
-        """
-        Update the power mode of a specified TPM.
-
-        This is a callback provided to the component manager. The
-        component manager will call it whenever the power mode of any of
-        its TPMs changes.
-
-        :param tpm_power_modes: the power modes of the TPMs
-        """
         self.logger.debug(
             "TPM power modes changed: old"
             + str(self._tpm_power_modes)
@@ -334,10 +273,12 @@ class MccsSubrack(SKABaseDevice):
         )
 
         with self._tpm_power_modes_lock:
-            for i in range(SubrackData.TPM_BAY_COUNT):
-                if self._tpm_power_modes[i] != tpm_power_modes[i]:
-                    self._tpm_power_modes[i] = tpm_power_modes[i]
-                    self.push_change_event(f"tpm{i+1}PowerState", tpm_power_modes[i])
+            if "tpm_power_modes" in state_change.keys():
+                tpm_power_modes = state_change.get("tpm_power_modes")
+                for i in range(SubrackData.TPM_BAY_COUNT):
+                    if self._tpm_power_modes[i] != tpm_power_modes[i]:
+                        self._tpm_power_modes[i] = tpm_power_modes[i]
+                        self.push_change_event(f"tpm{i+1}PowerState", tpm_power_modes[i])
 
     # ----------
     # Attributes
@@ -682,47 +623,6 @@ class MccsSubrack(SKABaseDevice):
     # --------
     # Commands
     # --------
-    class PowerOnTpmCommand(ResponseCommand):
-        """
-        The command class for the PowerOnTpm command.
-
-        Power on an individual TPM, specified by the TPM ID (range 1-8)
-        """
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.PowerOnTpmCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement PowerOnTpm command functionality.
-
-            :param argin: the logical TPM id of the TPM to power
-                up
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            success = component_manager.turn_on_tpm(argin)
-            return create_return(success, f"TPM {argin} power-on")
-
-        def is_allowed(self: MccsSubrack.PowerOnTpmCommand) -> bool:
-            """
-            Whether this command is allowed to run.
-
-            :returns: whether this command is allowed to run
-            """
-            return self.target.power_mode in [PowerState.OFF, PowerState.ON]
-
-    def is_PowerOnTpm_allowed(self: MccsSubrack) -> bool:
-        """
-        Whether the ``PowerOnTpm()`` command is allowed to be run in the current state.
-
-        :returns: whether the ``PowerOnTpm()`` command is allowed to be run in the
-            current state
-        """
-        handler = self.get_command_object("PowerOnTpm")
-        return handler.is_allowed()
 
     @command(
         dtype_in="DevULong",
@@ -746,43 +646,6 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = self.component_manager.enqueue(handler, argin)
         return ([return_code], [unique_id])
 
-    class PowerOffTpmCommand(ResponseCommand):
-        """The command class for the PowerOffTpm command."""
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.PowerOffTpmCommand, argin: int
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement PowerOffTpm command functionality.
-
-            :param argin: the logical id of the TPM to power
-                down
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            success = component_manager.turn_off_tpm(argin)
-            return create_return(success, f"TPM {argin} power-off")
-
-        def is_allowed(self: MccsSubrack.PowerOffTpmCommand) -> bool:
-            """
-            Whether this command is allowed to run.
-
-            :returns: whether this command is allowed to run
-            """
-            return self.target.power_mode in [PowerState.OFF, PowerState.ON]
-
-    def is_PowerOffTpm_allowed(self: MccsSubrack) -> bool:
-        """
-        Whether the ``PowerOffTpm()`` command is allowed to be run in the current state.
-
-        :returns: whether the ``PowerOffTpm()`` command is allowed to be run in the
-            current state
-        """
-        handler = self.get_command_object("PowerOffTpm")
-        return handler.is_allowed()
 
     @command(
         dtype_in="DevULong",
@@ -806,41 +669,6 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = self.component_manager.enqueue(handler, argin)
         return ([return_code], [unique_id])
 
-    class PowerUpTpmsCommand(ResponseCommand):
-        """The command class for the PowerUpTpms command."""
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.PowerUpTpmsCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement PowerUpTpms command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            success = component_manager.turn_on_tpms()
-            return create_return(success, "TPMs power-up")
-
-        def is_allowed(self: MccsSubrack.PowerUpTpmsCommand) -> bool:
-            """
-            Whether this command is allowed to run.
-
-            :returns: whether this command is allowed to run
-            """
-            return self.target.power_mode in [PowerState.OFF, PowerState.ON]
-
-    def is_PowerUpTpms_allowed(self: MccsSubrack) -> bool:
-        """
-        Whether the ``PowerUpTpm()`` command is allowed to be run in the current state.
-
-        :returns: whether the ``PowerUpTpms()`` command is allowed to be run in the
-            current state
-        """
-        handler = self.get_command_object("PowerUpTpms")
-        return handler.is_allowed()
-
     @command(
         dtype_out="DevVarLongStringArray",
     )
@@ -860,40 +688,6 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = self.component_manager.enqueue(handler)
         return ([return_code], [unique_id])
 
-    class PowerDownTpmsCommand(ResponseCommand):
-        """The command class for the PowerDownTpms command."""
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.PowerDownTpmsCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement PowerDownTpms command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            success = component_manager.turn_off_tpms()
-            return create_return(success, "TPM power-down")
-
-        def is_allowed(self: MccsSubrack.PowerDownTpmsCommand) -> bool:
-            """
-            Whether this command is allowed to run.
-
-            :returns: whether this command is allowed to run
-            """
-            return self.target.power_mode in [PowerState.OFF, PowerState.ON]
-
-    def is_PowerDownTpms_allowed(self: MccsSubrack) -> bool:
-        """
-        Check if ``PowerDownTpms()`` command is allowed to be run in the current state.
-
-        :returns: whether the ``PowerDownTpms()`` command is allowed to be run in the
-            current state
-        """
-        handler = self.get_command_object("PowerDownTpms")
-        return handler.is_allowed()
 
     @command(dtype_out="DevVarLongStringArray")
     def PowerDownTpms(self: MccsSubrack) -> DevVarLongStringArrayType:
@@ -912,14 +706,25 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = self.component_manager.enqueue(handler)
         return ([return_code], [unique_id])
 
-    class SetSubrackFanSpeedCommand(ResponseCommand):
+    class SetSubrackFanSpeedCommand(FastCommand):
         """
         Class for handling the SetSubrackFanSpeed() command.
 
         This command set the backplane fan speed.
         """
+        def __init__(
+            self: MccsSubrack.SetSubrackFanSpeedCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new instance.
 
-        SUCCEEDED_MESSAGE = "SetSubrackFanSpeed command completed OK"
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(  # type: ignore[override]
             self: MccsSubrack.SetSubrackFanSpeedCommand, argin: str
@@ -934,19 +739,17 @@ class MccsSubrack(SKABaseDevice):
 
             :raises ValueError: if the JSON input lacks mandatory parameters
             """
-            component_manager = self.target
 
             params = json.loads(argin)
             fan_id = params.get("FanID", None)
             speed_percent = params.get("SpeedPWN%", None)
             if fan_id or speed_percent is None:
-                component_manager.logger.error(
+                self._component_manager.logger.error(
                     "fan_ID and fan speed are mandatory parameters"
                 )
                 raise ValueError("fan_ID and fan speed are mandatory parameters")
 
-            success = component_manager.set_subrack_fan_speed(fan_id, speed_percent)
-            return create_return(success, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.set_subrack_fan_speed(fan_id, speed_percent)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetSubrackFanSpeed(self: MccsSubrack, argin: str) -> DevVarLongStringArrayType:
@@ -966,17 +769,28 @@ class MccsSubrack(SKABaseDevice):
                 status. The message is for information purpose only.
         """
         handler = self.get_command_object("SetSubrackFanSpeed")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        (return_code, unique_id) = handler(argin)
+        return ([return_code], [unique_id])
 
-    class SetSubrackFanModeCommand(ResponseCommand):
+    class SetSubrackFanModeCommand(FastCommand):
         """
         Class for handling the SetSubrackFanMode() command.
 
         This command can set the selected fan to manual or auto mode.
         """
+        def __init__(
+            self: MccsSubrack.SetSubrackFanModeCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new instance.
 
-        SUCCEEDED_MESSAGE = "SetSubrackFanMode command completed OK"
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(  # type: ignore[override]
             self: MccsSubrack.SetSubrackFanModeCommand, argin: str
@@ -992,18 +806,16 @@ class MccsSubrack(SKABaseDevice):
 
             :raises ValueError: if the JSON input lacks of mandatory parameters
             """
-            component_manager = self.target
             params = json.loads(argin)
             fan_id = params.get("fan_id", None)
             mode = params.get("mode", None)
             if fan_id or mode is None:
-                component_manager.logger.error(
+                self._component_manager.logger.error(
                     "Fan_id and mode are mandatory parameters"
                 )
                 raise ValueError("Fan_id and mode are mandatory parameter")
-
-            success = component_manager.set_subrack_fan_modes(fan_id, mode)
-            return create_return(success, self.SUCCEEDED_MESSAGE)
+       
+            return self._component_manager.set_subrack_fan_modes(fan_id, mode)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetSubrackFanMode(self: MccsSubrack, argin: str) -> DevVarLongStringArrayType:
@@ -1023,17 +835,29 @@ class MccsSubrack(SKABaseDevice):
                 information purpose only.
         """
         handler = self.get_command_object("SetSubrackFanMode")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        (return_code, unique_id) = handler(argin)
+        return ([return_code], [unique_id])
 
-    class SetPowerSupplyFanSpeedCommand(ResponseCommand):
+    class SetPowerSupplyFanSpeedCommand(FastCommand):
         """
         Class for handling the SetPowerSupplyFanSpeed command.
 
         This command set the selected power supply fan speed.
         """
 
-        SUCCEEDED_MESSAGE = "SetPowerSupplyFanSpeed command completed OK"
+        def __init__(
+            self: MccsSubrack.SetPowerSupplyFanSpeedCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
         def do(  # type: ignore[override]
             self: MccsSubrack.SetPowerSupplyFanSpeedCommand, argin: str
@@ -1049,23 +873,20 @@ class MccsSubrack(SKABaseDevice):
 
             :raises ValueError: if the JSON input lacks of mandatory parameters
             """
-            component_manager = self.target
-
+        
             params = json.loads(argin)
             power_supply_fan_id = params.get("power_supply_fan_id", None)
             speed_percent = params.get("speed_%", None)
             if power_supply_fan_id or speed_percent is None:
-                component_manager.logger.error(
+                self._component_manager.logger.error(
                     "power_supply_fan_id and speed_percent are mandatory " "parameters"
                 )
                 raise ValueError(
                     "power_supply_fan_id and speed_percent are mandatory " "parameters"
                 )
 
-            success = component_manager.set_power_supply_fan_speed(
-                power_supply_fan_id, speed_percent
-            )
-            return create_return(success, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.set_power_supply_fan_speed(
+                power_supply_fan_id, speed_percent)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetPowerSupplyFanSpeed(
@@ -1084,18 +905,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("SetPowerSupplyFanSpeed")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    def _update_health_state(self: MccsSubrack, health_state: HealthState) -> None:
-        """
-        Update and push a change event for the healthState attribute.
-
-        :param health_state: The new health state
-        """
-        self.push_change_event("healthState", health_state)
-        self._health_state = health_state
-        self.logger.info("health state = " + str(health_state))
+        (return_code, unique_id) = handler(argin)
+        return ([return_code], [unique_id])
 
 
 # ----------

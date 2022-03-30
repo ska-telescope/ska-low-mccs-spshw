@@ -22,7 +22,6 @@ from ska_tango_base.control_model import (
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
-    ExtendedPowerState,
     MccsComponentManagerProtocol,
     ObjectComponentManager,
     SwitchingComponentManager,
@@ -30,7 +29,7 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.component.component_manager import MccsComponentManager
-from ska_low_mccs.executor import TaskStatus
+from ska_tango_base.executor import TaskStatus
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
@@ -653,7 +652,7 @@ class TileComponentManager(MccsComponentManager):
     def _tpm_power_state_change_event_received(
         self: TileComponentManager,
         event_name: str,
-        event_value: ExtendedPowerState,
+        event_value: PowerState,
         event_quality: tango.AttrQuality,
     ) -> None:
         """
@@ -700,7 +699,7 @@ class TileComponentManager(MccsComponentManager):
 
     def _tpm_power_state_changed(
         self: TileComponentManager,
-        power_state: ExtendedPowerState,
+        power_state: PowerState,
     ) -> None:
         self._tile_orchestrator.update_tpm_power_state(power_state)
 

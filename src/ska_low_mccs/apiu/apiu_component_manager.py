@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -249,22 +250,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             SwitchingApiuComponentManager, self._hardware_component_manager
         ).simulation_mode = mode
 
-#     def off(self: ApiuComponentManager, task_callback: Callable = None) -> ResultCode | None:
-#         """
-#         Tell the APIU simulator to turn off.
-# 
-#         This is implemented in the super-class to tell the upstream
-#         power supply proxy to turn the APIU hardware off. Here we
-#         overrule it so that, should the APIU hardware be turned on
-#         again, the antennas will be turned off.
-# 
-#         :return: a result code, or None if there was nothing to do.
-#         """
-#         cast(
-#             SwitchingApiuComponentManager, self._hardware_component_manager
-#         ).turn_off_antennas()
-#         return super().off()
-
     def __getattr__(
         self: ApiuComponentManager,
         name: str,
@@ -328,6 +313,47 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
 
+    def Off(
+        self: ApiuComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the off slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+-        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a response message
+        """
+        return self.submit_task(
+            self._off, task_callback=task_callback)
+
+    def _off(self: ApiuComponentManager, task_callback: Callable = None, task_abort_event: threading.Event = None) -> None:
+        """
+        Tell the APIU simulator to turn off.
+ 
+        This is implemented in the super-class to tell the upstream
+        power supply proxy to turn the APIU hardware off. Here we
+        overrule it so that, should the APIU hardware be turned on
+        again, the antennas will be turned off.
+ 
+        """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingApiuComponentManager, self._hardware_component_manager
+            ).turn_off_antennas()
+            # super().off()
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+        
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+            return
+
+        task_callback(status=TaskStatus.COMPLETED, result="Off command has completed")
+
     def power_up_antenna(
         self: ApiuComponentManager,
         antenna: int,
@@ -346,7 +372,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return self.submit_task(
             self._turn_on_antenna, args=[antenna], task_callback=task_callback
         )
-
 
     def power_down_antenna(
         self: ApiuComponentManager,

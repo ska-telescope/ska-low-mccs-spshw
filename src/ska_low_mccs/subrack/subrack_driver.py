@@ -102,7 +102,7 @@ class SubrackDriver(MccsComponentManager):
             self._tpm_present = self.DEFAULT_TPM_PRESENT
         else:
             self._tpm_present = tpm_present
-        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_count = self.DEFAULT_TPM_COUNT
         self._bay_count = self.DEFAULT_TPM_COUNT
 
@@ -156,7 +156,7 @@ class SubrackDriver(MccsComponentManager):
         self._client.disconnect()
         self.logger.info("Disconnected")
 
-    def check_tpm_power_modes(self: SubrackDriver) -> None:
+    def check_tpm_power_states(self: SubrackDriver) -> None:
         """
         Check the status of the TPM power.
 
@@ -173,10 +173,10 @@ class SubrackDriver(MccsComponentManager):
         This is a helper method that calls the callback if it exists. As
         a side effect, it reads and updates the hardware power mode.
         """
-        tpm_power_modes = str(self.tpm_power_modes)
-        self.logger.debug("TPM power changed: " + tpm_power_modes)
+        tpm_power_states = str(self.tpm_power_states)
+        self.logger.debug("TPM power changed: " + tpm_power_states)
         if self._component_tpm_power_changed_callback is not None:
-            self._component_tpm_power_changed_callback(self.tpm_power_modes)
+            self._component_tpm_power_changed_callback(self.tpm_power_states)
 
     @property
     def backplane_temperatures(self: SubrackDriver) -> list[float]:
@@ -420,7 +420,7 @@ class SubrackDriver(MccsComponentManager):
         return self._tpm_supply_fault
 
     @property
-    def tpm_power_modes(self: SubrackDriver) -> list[PowerState]:
+    def tpm_power_states(self: SubrackDriver) -> list[PowerState]:
         """
         Return whether each TPM is powered or not.
 
@@ -431,11 +431,11 @@ class SubrackDriver(MccsComponentManager):
         response = self._client.get_attribute("tpm_on_off")
         if response["status"] == "OK":
             are_tpms_on = cast(List[bool], response["value"])
-            self._tpm_power_modes = [
+            self._tpm_power_states = [
                 PowerState.ON if is_tpm_on else PowerState.OFF
                 for is_tpm_on in are_tpms_on
             ]
-        return self._tpm_power_modes
+        return self._tpm_power_states
 
     def is_tpm_on(self: SubrackDriver, logical_tpm_id: int) -> Optional[bool]:
         """
@@ -448,7 +448,7 @@ class SubrackDriver(MccsComponentManager):
             is off
         """
         self._check_tpm_id(logical_tpm_id)
-        return self.tpm_power_modes[logical_tpm_id - 1] == PowerState.ON
+        return self.tpm_power_states[logical_tpm_id - 1] == PowerState.ON
 
     def turn_off_tpm(self: SubrackDriver, logical_tpm_id: int) -> bool:
         """

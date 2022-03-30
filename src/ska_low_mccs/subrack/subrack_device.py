@@ -73,7 +73,6 @@ class MccsSubrack(SKABaseDevice):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
-        self._power_state_lock = threading.RLock()
         super().init_device()
 
     def _init_state_model(self: MccsSubrack) -> None:
@@ -91,8 +90,8 @@ class MccsSubrack(SKABaseDevice):
         :return: a component manager for this device.
         """
         # InitCommand.do() would do this too late
-        self._tpm_power_modes_lock = threading.Lock()
-        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_states_lock = threading.Lock()
+        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
         return SubrackComponentManager(
             SimulationMode.TRUE,
@@ -218,8 +217,8 @@ class MccsSubrack(SKABaseDevice):
             f"Power mode: {power_status}, Communicating: {self._health_model._communicating}"
         )
         if (power_status == PowerState.ON) and self._health_model._communicating:
-            self.logger.debug("Checking tpm power modes")
-            self.component_manager.check_tpm_power_modes()
+            self.logger.debug("Checking tpm power states")
+            self.component_manager.check_tpm_power_states()
 
     def component_state_changed_callback(
         self: MccsSubrack, state_change: dict[str, Any]
@@ -239,12 +238,11 @@ class MccsSubrack(SKABaseDevice):
             PowerState.UNKNOWN: "component_unknown",
         }
 
-        with self._power_state_lock:
-            if "power_state" in state_change.keys():
-                power_state = state_change.get("power_state")
-                self.component_manager.power_state = power_state
-                if power_state:
-                    self.op_state_model.perform_action(action_map[power_state])
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            self.component_manager.set_power_state(power_state)
+            if power_state:
+                self.op_state_model.perform_action(action_map[power_state])
 
         if "fault" in state_change.keys():
             is_fault = state_change.get("fault")
@@ -263,14 +261,14 @@ class MccsSubrack(SKABaseDevice):
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        with self._tpm_power_modes_lock:
-            if "tpm_power_modes" in state_change.keys():
-                tpm_power_modes = state_change.get("tpm_power_modes")
+        with self._tpm_power_states_lock:
+            if "tpm_power_states" in state_change.keys():
+                tpm_power_states = state_change.get("tpm_power_states")
                 for i in range(SubrackData.TPM_BAY_COUNT):
-                    if self._tpm_power_modes[i] != tpm_power_modes[i]:
-                        self._tpm_power_modes[i] = tpm_power_modes[i]
+                    if self._tpm_power_states[i] != tpm_power_states[i]:
+                        self._tpm_power_states[i] = tpm_power_states[i]
                         self.push_change_event(
-                            f"tpm{i+1}PowerState", tpm_power_modes[i]
+                            f"tpm{i+1}PowerState", tpm_power_states[i]
                         )
 
     # ----------
@@ -489,7 +487,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 1.
         """
-        return self._tpm_power_modes[0]
+        return self._tpm_power_states[0]
 
     @attribute(
         dtype=PowerState,
@@ -501,7 +499,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 2.
         """
-        return self._tpm_power_modes[1]
+        return self._tpm_power_states[1]
 
     @attribute(
         dtype=PowerState,
@@ -513,7 +511,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 3.
         """
-        return self._tpm_power_modes[2]
+        return self._tpm_power_states[2]
 
     @attribute(
         dtype=PowerState,
@@ -525,7 +523,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 4.
         """
-        return self._tpm_power_modes[3]
+        return self._tpm_power_states[3]
 
     @attribute(
         dtype=PowerState,
@@ -537,7 +535,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 5.
         """
-        return self._tpm_power_modes[4]
+        return self._tpm_power_states[4]
 
     @attribute(
         dtype=PowerState,
@@ -549,7 +547,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 6.
         """
-        return self._tpm_power_modes[5]
+        return self._tpm_power_states[5]
 
     @attribute(
         dtype=PowerState,
@@ -561,7 +559,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 7.
         """
-        return self._tpm_power_modes[6]
+        return self._tpm_power_states[6]
 
     @attribute(
         dtype=PowerState,
@@ -573,7 +571,7 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the power mode of TPM bay 8.
         """
-        return self._tpm_power_modes[7]
+        return self._tpm_power_states[7]
 
     @attribute(dtype=("DevFloat",), max_dim_x=3, label="power supply fan speed")
     def powerSupplyFanSpeeds(self: MccsSubrack) -> tuple[float]:

@@ -11,10 +11,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base import TaskStatus
-
 # from ska_tango_base.base.task_queue_manager import QueueManager
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import ResultCode, TaskStatus
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.component import (
@@ -65,7 +63,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             component_state_changed_callback,
         )
         self._component_state_changed_callback = component_state_changed_callback
-        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
     def start_communicating(
         self: BaseSubrackSimulatorComponentManager,
@@ -94,25 +92,25 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
     def _are_tpms_on_changed(
         self: BaseSubrackSimulatorComponentManager, are_tpms_on: list[bool]
     ) -> None:
-        tpm_power_modes = [
+        tpm_power_states = [
             PowerState.ON if is_tpm_on else PowerState.OFF for is_tpm_on in are_tpms_on
         ]
-        # if self._tpm_power_modes == tpm_power_modes:
+        # if self._tpm_power_states == tpm_power_states:
         #     return
         # Report anyway. Let upper levels decide if information is redundant
-        self._tpm_power_modes = tpm_power_modes
-        self._component_tpm_power_changed_callback(tpm_power_modes)
+        self._tpm_power_states = tpm_power_states
+        self._component_tpm_power_changed_callback(tpm_power_states)
 
     @property
-    def tpm_power_modes(
+    def tpm_power_states(
         self: BaseSubrackSimulatorComponentManager,
     ) -> list[PowerState]:
         """
-        Return the power modes of the TPMs.
+        Return the power states of the TPMs.
 
-        :return: the power modes of each TPM.
+        :return: the power states of each TPM.
         """
-        return list(self._tpm_power_modes)
+        return list(self._tpm_power_states)
 
     def __getattr__(
         self: BaseSubrackSimulatorComponentManager,
@@ -167,7 +165,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
-            "check_tpm_power_modes",
+            "check_tpm_power_states",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
             "set_power_supply_fan_speed",
@@ -375,9 +373,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             we start connecting to the real upstream power supply
             device.
         """
-        self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_power_changed_callback = component_state_changed_callback
-        self._tpm_power_changed_callback(self._tpm_power_modes)
+        self._tpm_power_changed_callback(self._tpm_power_states)
 
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
@@ -407,19 +405,19 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
     @property
-    def tpm_power_modes(
+    def tpm_power_states(
         self: SubrackComponentManager,
     ) -> list[PowerState]:
         """
-        Return the power modes of the TPMs.
+        Return the power states of the TPMs.
 
-        :return: the power modes of each TPM.
+        :return: the power states of each TPM.
         """
-        return list(self._tpm_power_modes)
+        return list(self._tpm_power_states)
 
     def _tpm_power_changed(
         self: SubrackComponentManager,
-        tpm_power_modes: list[PowerState],
+        tpm_power_states: list[PowerState],
     ) -> None:
         """
         Handle change in TPM power.
@@ -428,30 +426,30 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         component manager, to be called whenever the power mode of any
         TPM changes.
 
-        :param tpm_power_modes: the power modes of all TPMs
+        :param tpm_power_states: the power states of all TPMs
         """
-        self._update_tpm_power_modes(tpm_power_modes)
+        self._update_tpm_power_states(tpm_power_states)
 
-    def _update_tpm_power_modes(
+    def _update_tpm_power_states(
         self: SubrackComponentManager,
-        tpm_power_modes: list[PowerState],
+        tpm_power_states: list[PowerState],
     ) -> None:
         """
-        Update the power modes of the TPMs, ensuring that the callback is called.
+        Update the power states of the TPMs, ensuring that the callback is called.
 
         This is a helper method, responsible for updating this component
-        manager's record of the TPM power modes, and ensuring that the
+        manager's record of the TPM power states, and ensuring that the
         callback is called as required.
 
-        :param tpm_power_modes: the power mode of each TPM
+        :param tpm_power_states: the power mode of each TPM
         """
         #
-        # Here can safely check fo redundancy, as extended power modes
+        # Here can safely check fo redundancy, as extended power states
         # (NO_SUPPLY, UNKNOWN) have already been included in the attribute
-        if self._tpm_power_modes == tpm_power_modes:
+        if self._tpm_power_states == tpm_power_states:
             return
-        self._tpm_power_modes = list(tpm_power_modes)
-        self._tpm_power_changed_callback(tpm_power_modes)
+        self._tpm_power_states = list(tpm_power_states)
+        self._tpm_power_changed_callback(tpm_power_states)
 
     def _power_supply_communication_status_changed(
         self: SubrackComponentManager,
@@ -465,7 +463,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         super()._power_supply_communication_status_changed(communication_status)
         if communication_status == CommunicationStatus.DISABLED:
-            self._update_tpm_power_modes(
+            self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
 
@@ -478,11 +476,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param power_mode: the power mode of the hardware
         """
         if power_mode == PowerState.UNKNOWN:
-            self._update_tpm_power_modes(
+            self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
         elif power_mode == PowerState.OFF:
-            self._update_tpm_power_modes(
+            self._update_tpm_power_states(
                 [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
             )
 
@@ -617,7 +615,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
-            "check_tpm_power_modes",
+            "check_tpm_power_states",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
             "set_power_supply_fan_speed",
@@ -656,6 +654,15 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
 
+    def set_power_state(self: SubrackComponentManager, power_state: PowerState) -> None:
+        """
+        Set the power state of the subrack.
+
+        :param power_state: The desired power state
+        """
+        with self._power_state_lock:
+            self.power_state = power_state
+
     def turn_on_tpm(
         self: SubrackComponentManager,
         tpm_id: int,
@@ -670,7 +677,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
 
         :return: A tuple containing a task status and a unique id string to identify the command
-        """
+        """        
         task_status, unique_id = self.submit_task(
             self._turn_on_tpm, args=[tpm_id], task_callback=task_callback
         )

@@ -60,7 +60,7 @@ class SubarrayBeam(ObjectComponent):
             called if whether this subarray beam is locked changes, or
             None to remove the callback
         """
-        self._is_beam_locked_changed_callback = is_state_changed_callback
+        self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
 
     def set_is_configured_changed_callback(
         self: SubarrayBeam,
@@ -73,9 +73,9 @@ class SubarrayBeam(ObjectComponent):
             if whether this subarray beam is configured changes, or None
             to remove the callback
         """
-        self._is_configured_changed_callback = is_state_changed_callback
+        self._is_configured_changed_callback = is_configured_changed_callback
         if self._is_configured_changed_callback is not None:
-            self._is_configured_changed_callback(self._is_configured)
+            self._is_configured_changed_callback({"configured_changed": self._is_configured})
 
     @property
     def subarray_id(self: SubarrayBeam) -> int:
@@ -159,7 +159,7 @@ class SubarrayBeam(ObjectComponent):
         if self._is_beam_locked != value:
             self._is_beam_locked = value
             if self._is_beam_locked_changed_callback is not None:
-                self._is_beam_locked_changed_callback(value)
+                self._is_beam_locked_changed_callback({"beam_locked": value})
 
     @property
     def channels(self: SubarrayBeam) -> list[list[int]]:
@@ -250,7 +250,7 @@ class SubarrayBeam(ObjectComponent):
         if self._is_configured != is_configured:
             self._is_configured = is_configured
             if self._is_configured_changed_callback is not None:
-                self._is_configured_changed_callback(is_configured)
+                self._is_configured_changed_callback({"configured_changed": is_configured})
 
     def scan(
         self: SubarrayBeam,

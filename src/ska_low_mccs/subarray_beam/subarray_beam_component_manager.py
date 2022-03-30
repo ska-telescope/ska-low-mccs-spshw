@@ -31,7 +31,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
-        max_workers: Optional[int] = None,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str,Any]], None],
     ) -> None:
@@ -164,7 +164,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         setattr(self._component, name, value)
 
-    def configure(self, task_callback: Optional[Callable] = None):
+    def configure(self: SubarrayBeamComponentManager, argin: str, task_callback: Optional[Callable] = None):
         """
         Submit the configure slow task.
 
@@ -172,30 +172,40 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
 
         :param task_callback: Update task state, defaults to None
         """
-
-        task_status, response = self.submit_task(
-            self._configure, args=[], task_callback=task_callback
-        )
-        return task_status, response
-
-    def _configue(self, argin: str) -> tuple[ResultCode, str]: # type: ignore[override]
-
-        SUCCEEDED_MESSAGE = "Configure command completed OK"
-
         config_dict = json.loads(argin)
-        result_code = self.component_manager.configure(
-            config_dict.get("subarray_beam_id"),
-            config_dict.get("station_ids", []),
-            config_dict.get("update_rate"),
-            config_dict.get("channels", []),
-            config_dict.get("sky_coordinates", []),
-            config_dict.get("antenna_weights", []),
-            config_dict.get("phase_centre", []),
+ 
+        return self.submit_task(
+            self._configure, args=[
+                config_dict.get("subarray_beam_id"),
+                config_dict.get("station_ids", []),
+                config_dict.get("update_rate"),
+                config_dict.get("channels", []),
+                config_dict.get("sky_coordinates", []),
+                config_dict.get("antenna_weights", []),
+                config_dict.get("phase_centre", []),
+            ], task_callback=task_callback
         )
-        if result_code == ResultCode.OK:
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-        else:
-            return (result_code, "")
+
+    def _configure(self, subarray_beam_id,
+                               station_ids,
+                               update_rate,
+                               channels,
+                               sky_coordinates,
+                               antenna_weights,
+                               phase_centre,
+        task_callback: Callable = None,
+        task_abort_event:threading.Event = None) -> None:
+
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
+        # TODO Ben add config stuff here
+        task_abort_event.wait(20) # for testing purposes only
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+            return
+
+        task_callback(status=TaskStatus.COMPLETED, result="Configure command completed OK")
 
     def scan(self, task_callback: Optional[Callable] = None):
         """
@@ -206,7 +216,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         :param task_callback: Update task state, defaults to None
         """
         task_status, response = self.submit_task(
-            self._scan, args=[], task_callback=task_callback
+            self._scan, task_callback=task_callback
         )
         return task_status, response
 

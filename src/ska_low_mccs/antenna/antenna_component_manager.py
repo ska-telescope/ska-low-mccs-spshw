@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from typing import Any, Callable, Optional
 
@@ -366,6 +367,7 @@ class AntennaComponentManager(MccsComponentManager):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
+        self._power_state_lock = threading.RLock()
         self._apiu_power_state = PowerState.UNKNOWN
         self._target_power_state: Optional[PowerState] = None
 
@@ -546,11 +548,11 @@ class AntennaComponentManager(MccsComponentManager):
         `self._on` for execution.
 
         :param task_callback: Update task state, defaults to None
+
+        :returns: task status
         """
-        task_status, response = self.submit_task(
-            self._on, args=[], task_callback=task_callback
-        )
-        return task_status, response
+        task_status = self.submit_task(self._on, args=[], task_callback=task_callback)
+        return task_status
 
     def _on(
         self: AntennaComponentManager,
@@ -563,7 +565,7 @@ class AntennaComponentManager(MccsComponentManager):
         :param logger: logger
         :param task_callback: Update task state, defaults to None
 
-        :return: whether successful, or None if there was nothing to do.
+        :returns: whether successful, or None if there was nothing to do.
         """
         # Indicate that the task has started
         task_callback(status=TaskStatus.IN_PROGRESS)
@@ -575,6 +577,7 @@ class AntennaComponentManager(MccsComponentManager):
         task_callback(
             status=TaskStatus.COMPLETED, result="This slow task has completed"
         )
+        return ResultCode.OK
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
         with self._power_state_lock:
@@ -614,6 +617,15 @@ class AntennaComponentManager(MccsComponentManager):
             APIU device.
         """
         raise NotImplementedError("Antenna cannot be reset.")
+
+    def set_power_state(self: AntennaComponentManager, power_state: PowerState) -> None:
+        """
+        Set the power state of the antenna.
+
+        :param power_state: The desired power state
+        """
+        with self._power_state_lock:
+            self.power_state = power_state
 
     @property
     def current(self: AntennaComponentManager) -> float:

@@ -8,7 +8,6 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-import threading
 from typing import Any, List, Optional, Tuple
 
 import tango
@@ -20,7 +19,7 @@ from ska_tango_base.control_model import (
     PowerState,
     SimulationMode,
 )
-from tango.server import attribute, command, device_property
+from tango.server import attribute, device_property
 
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
 
@@ -96,8 +95,6 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._device._power_state_lock = threading.RLock()
-
             self._device._antennaId = 0
             self._device._gain = 0.0
             self._device._rms = 0.0
@@ -203,8 +200,7 @@ class MccsAntenna(SKABaseDevice):
 
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
-            with self._power_state_lock:
-                self.component_manager.power_state = power_state
+            self.component_manager.set_power_state(power_state)
             if power_state:
                 self.op_state_model.perform_action(action_map[power_state])
 

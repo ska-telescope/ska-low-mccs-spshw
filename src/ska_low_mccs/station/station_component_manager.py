@@ -25,6 +25,7 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.utils import threadsafe
+from test import device
 
 __all__ = ["StationComponentManager"]
 
@@ -202,9 +203,11 @@ class StationComponentManager(MccsComponentManager):
             logger,
             push_change_event,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
-            self._apiu_power_mode_changed,
-            None,
-            apiu_health_changed_callback,
+            functools.partial(
+                self.component_state_changed_callback,
+                device="apiu",
+                power_state_changed_callback=self._apiu_power_mode_changed,
+            )
         )
         self._antenna_proxies = [
             DeviceComponentManager(

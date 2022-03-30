@@ -228,7 +228,12 @@ class MccsStation(SKAObsDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(self: MccsStation, **kwargs: Any) -> None:
+    def component_state_changed_callback(
+        self: MccsStation,
+        device: Optional[str] = None,
+        power_state_changed_callback: Optional[Callable] = None,
+        **kwargs: Any,
+        ) -> None:
         """
         Handle change in the state of the component.
 
@@ -241,64 +246,70 @@ class MccsStation(SKAObsDevice):
         
         :param kwargs: the component state change parameters to be set, and their new values.
         """
+        if device is None:
+            health_state_changed_callback = self.health_changed
+        elif device == "apiu":
+            health_state_changed_callback = self._health_model.apiu_health_changed
+        elif device == "antenna":
+            health_state_changed_callback = self._health_model.antenna_health_changed
+        elif device == "tile":
+            health_state_changed_callback = self._health_model.tile_health_changed
+        else:
+            raise ValueError(f"unknown device '{device}'")
+
+        if power_state_changed_callback is None:
+            power_state_changed_callback = self._component_power_mode_changed
+
         if "power_state" in kwargs.keys():
             power_state = kwargs.get("power_state")
             if power_state:
-                action_map = {
-                    PowerState.OFF: "component_off",
-                    PowerState.STANDBY: "component_standby",
-                    PowerState.ON: "component_on",
-                    PowerState.UNKNOWN: "component_unknown",
-                }
-                self.op_state_model.perform_action(action_map[power_state])
+                power_state_changed_callback(power_state)
 
         if "health_state" in kwargs.keys():
             health = kwargs.get("health_state")
-            if self._health_state != health:
-                self._health_state = health
-                self.push_change_event("healthState", health)
+            health_state_changed_callback(health)
 
         if "is_configured" in kwargs.keys():
             is_configured = kwargs.get("is_configured")
             self._obs_state_model.is_configured_changed(is_configured)
 
-#    def _component_power_mode_changed(
-#        self: MccsStation,
-#        power_mode: PowerState,
-#    ) -> None:
-#        """
-#        Handle change in the power mode of the component.
-#
-#        This is a callback hook, called by the component manager when
-#        the power mode of the component changes. It is implemented here
-#        to drive the op_state.
-#
-#        :param power_mode: the power mode of the component.
-#        """
-#        action_map = {
-#            PowerState.OFF: "component_off",
-#            PowerState.STANDBY: "component_standby",
-#            PowerState.ON: "component_on",
-#            PowerState.UNKNOWN: "component_unknown",
-#        }
-#
-#        self.op_state_model.perform_action(action_map[power_mode])
+    def _component_power_mode_changed(
+        self: MccsStation,
+        power_mode: PowerState,
+    ) -> None:
+        """
+        Handle change in the power mode of the component.
 
-#    def health_changed(self: MccsStation, health: HealthState) -> None:
-#        """
-#        Handle change in this device's health state.
-#
-#        This is a callback hook, called whenever the HealthModel's
-#        evaluated health state changes. It is responsible for updating
-#        the tango side of things i.e. making sure the attribute is up to
-#        date, and events are pushed.
-#
-#        :param health: the new health value
-#        """
-#        if self._health_state == health:
-#            return
-#        self._health_state = health
-#        self.push_change_event("healthState", health)
+        This is a callback hook, called by the component manager when
+        the power mode of the component changes. It is implemented here
+        to drive the op_state.
+
+        :param power_mode: the power mode of the component.
+        """
+        action_map = {
+            PowerState.OFF: "component_off",
+            PowerState.STANDBY: "component_standby",
+            PowerState.ON: "component_on",
+            PowerState.UNKNOWN: "component_unknown",
+        }
+
+        self.op_state_model.perform_action(action_map[power_mode])
+
+    def health_changed(self: MccsStation, health: HealthState) -> None:
+        """
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :param health: the new health value
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     # Reimplementation for debugging purposes
     def _update_state(self: MccsStation, state: tango.DevState) -> None:

@@ -72,7 +72,6 @@ def setup(app):
     Initialise app.
     """
     app.add_css_file("css/custom.css")
-    app.add_js_file("js/gitlab.js")
 
 
 # -- Project information -----------------------------------------------------
@@ -180,10 +179,6 @@ html_context = {
     "favicon": "img/favicon.ico",
     "logo": "img/logo.jpg",
     "theme_logo_only": True,
-    "gitlab_user": "ska-telescope",  # Username
-    "gitlab_repo": "ska-low-mccs",  # Repo name
-    "gitlab_version": "master",  # Version
-    "conf_py_path": "/docs/source/",  # Path in the checkout to the docs root
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

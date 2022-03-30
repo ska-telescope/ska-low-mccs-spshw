@@ -11,6 +11,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, cast
 
+from ska_tango_base import TaskStatus
+
 # from ska_tango_base.base.task_queue_manager import QueueManager
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
@@ -23,7 +25,6 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
-from ska_tango_base import TaskStatus
 from ska_low_mccs.subrack import SubrackData, SubrackDriver, SubrackSimulator
 
 __all__ = [
@@ -94,8 +95,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self: BaseSubrackSimulatorComponentManager, are_tpms_on: list[bool]
     ) -> None:
         tpm_power_modes = [
-            PowerState.ON if is_tpm_on else PowerState.OFF
-            for is_tpm_on in are_tpms_on
+            PowerState.ON if is_tpm_on else PowerState.OFF for is_tpm_on in are_tpms_on
         ]
         # if self._tpm_power_modes == tpm_power_modes:
         #     return
@@ -237,6 +237,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         )
         self._component_state_changed_callback = component_state_changed_callback
 
+
 class SwitchingSubrackComponentManager(SwitchingComponentManager):
     """A component manager that switches between subrack simulator(x2) and a driver."""
 
@@ -375,7 +376,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             device.
         """
         self._tpm_power_modes = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-        self._tpm_power_changed_callback = tpm_power_changed_callback
+        self._tpm_power_changed_callback = component_state_changed_callback
         self._tpm_power_changed_callback(self._tpm_power_modes)
 
         hardware_component_manager = SwitchingSubrackComponentManager(
@@ -393,7 +394,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             logger,
             max_workers,
             self._power_supply_communication_status_changed,
-            component_state_changed_callback,       
+            component_state_changed_callback,
             _initial_power_mode,
         )
         super().__init__(
@@ -710,4 +711,3 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self._turn_on_tpm, task_callback=task_callback
         )
         return task_status, unique_id
-

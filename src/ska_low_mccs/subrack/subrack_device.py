@@ -43,6 +43,7 @@ __all__ = ["MccsSubrack", "main"]
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
+
 class MccsSubrack(SKABaseDevice):
     """
     An implementation of MCCS Subrack device.
@@ -108,10 +109,10 @@ class MccsSubrack(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("PowerOnTpm", 'turn_on_tpm'),
-            ("PowerOffTpm", 'turn_off_tpm'),
-            ("PowerUpTpms", 'turn_on_tpms'),
-            ("PowerDownTpms", 'turn_off_tpms'),
+            ("PowerOnTpm", "turn_on_tpm"),
+            ("PowerOffTpm", "turn_off_tpm"),
+            ("PowerUpTpms", "turn_on_tpms"),
+            ("PowerDownTpms", "turn_off_tpms"),
         ]:
             self.register_command_object(
                 command_name,
@@ -131,9 +132,7 @@ class MccsSubrack(SKABaseDevice):
         ]:
             self.register_command_object(
                 command_name,
-                command_object(
-                    self.component_manager, self.logger
-                ),
+                command_object(self.component_manager, self.logger),
             )
 
     class InitCommand(DeviceInitCommand):
@@ -149,7 +148,6 @@ class MccsSubrack(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-
             for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
                 self._device.set_change_event(f"tpm{tpm_number}PowerState", True, False)
 
@@ -265,20 +263,15 @@ class MccsSubrack(SKABaseDevice):
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        self.logger.debug(
-            "TPM power modes changed: old"
-            + str(self._tpm_power_modes)
-            + "new: "
-            + str(tpm_power_modes)
-        )
-
         with self._tpm_power_modes_lock:
             if "tpm_power_modes" in state_change.keys():
                 tpm_power_modes = state_change.get("tpm_power_modes")
                 for i in range(SubrackData.TPM_BAY_COUNT):
                     if self._tpm_power_modes[i] != tpm_power_modes[i]:
                         self._tpm_power_modes[i] = tpm_power_modes[i]
-                        self.push_change_event(f"tpm{i+1}PowerState", tpm_power_modes[i])
+                        self.push_change_event(
+                            f"tpm{i+1}PowerState", tpm_power_modes[i]
+                        )
 
     # ----------
     # Attributes
@@ -646,7 +639,6 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = self.component_manager.enqueue(handler, argin)
         return ([return_code], [unique_id])
 
-
     @command(
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
@@ -688,7 +680,6 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = self.component_manager.enqueue(handler)
         return ([return_code], [unique_id])
 
-
     @command(dtype_out="DevVarLongStringArray")
     def PowerDownTpms(self: MccsSubrack) -> DevVarLongStringArrayType:
         """
@@ -712,6 +703,7 @@ class MccsSubrack(SKABaseDevice):
 
         This command set the backplane fan speed.
         """
+
         def __init__(
             self: MccsSubrack.SetSubrackFanSpeedCommand,
             component_manager,
@@ -739,7 +731,6 @@ class MccsSubrack(SKABaseDevice):
 
             :raises ValueError: if the JSON input lacks mandatory parameters
             """
-
             params = json.loads(argin)
             fan_id = params.get("FanID", None)
             speed_percent = params.get("SpeedPWN%", None)
@@ -778,6 +769,7 @@ class MccsSubrack(SKABaseDevice):
 
         This command can set the selected fan to manual or auto mode.
         """
+
         def __init__(
             self: MccsSubrack.SetSubrackFanModeCommand,
             component_manager,
@@ -814,7 +806,7 @@ class MccsSubrack(SKABaseDevice):
                     "Fan_id and mode are mandatory parameters"
                 )
                 raise ValueError("Fan_id and mode are mandatory parameter")
-       
+
             return self._component_manager.set_subrack_fan_modes(fan_id, mode)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -873,7 +865,6 @@ class MccsSubrack(SKABaseDevice):
 
             :raises ValueError: if the JSON input lacks of mandatory parameters
             """
-        
             params = json.loads(argin)
             power_supply_fan_id = params.get("power_supply_fan_id", None)
             speed_percent = params.get("speed_%", None)
@@ -886,7 +877,8 @@ class MccsSubrack(SKABaseDevice):
                 )
 
             return self._component_manager.set_power_supply_fan_speed(
-                power_supply_fan_id, speed_percent)
+                power_supply_fan_id, speed_percent
+            )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetPowerSupplyFanSpeed(

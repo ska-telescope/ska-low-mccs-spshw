@@ -27,19 +27,9 @@ import logging
 import time
 from typing import Any, Callable, List, Optional, cast
 
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    FastCommand,
-    ResultCode,
-    SlowCommand,
-    SubmittedSlowCommand,
-)
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    ControlMode,
-    PowerState,
-    SimulationMode,
-)
+from ska_tango_base.commands import ResultCode, SlowCommand
+from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
+
 from ska_low_mccs.component import MccsComponentManager, WebHardwareClient
 from ska_low_mccs.subrack import SubrackData
 
@@ -75,7 +65,7 @@ class SubrackDriver(MccsComponentManager):
     def __init__(
         self: SubrackDriver,
         logger: logging.Logger,
-        max_worker: int,
+        max_workers: int,
         ip: str,
         port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
@@ -100,7 +90,6 @@ class SubrackDriver(MccsComponentManager):
         self.logger = logger
         self._ip = ip
         self._port = port
-        max_workers = 1
         self._backplane_temperatures = self.DEFAULT_BACKPLANE_TEMPERATURES
         self._board_temperatures = self.DEFAULT_BOARD_TEMPERATURES
         self._board_current = self.DEFAULT_BOARD_CURRENT

@@ -75,7 +75,9 @@ class SubarrayBeam(ObjectComponent):
         """
         self._is_configured_changed_callback = is_configured_changed_callback
         if self._is_configured_changed_callback is not None:
-            self._is_configured_changed_callback({"configured_changed": self._is_configured})
+            self._is_configured_changed_callback(
+                {"configured_changed": self._is_configured}
+            )
 
     @property
     def subarray_id(self: SubarrayBeam) -> int:
@@ -250,7 +252,9 @@ class SubarrayBeam(ObjectComponent):
         if self._is_configured != is_configured:
             self._is_configured = is_configured
             if self._is_configured_changed_callback is not None:
-                self._is_configured_changed_callback({"configured_changed": is_configured})
+                self._is_configured_changed_callback(
+                    {"configured_changed": is_configured}
+                )
 
     def scan(
         self: SubarrayBeam,

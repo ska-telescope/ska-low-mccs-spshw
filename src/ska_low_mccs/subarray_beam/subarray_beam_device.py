@@ -8,24 +8,18 @@
 """This module implements the MCCS subarray beam device."""
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    ResultCode,
-    SlowCommand,
-    SubmittedSlowCommand,
-)
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
-from tango.server import attribute, command, device_property
+from tango.server import attribute, command
 
 from ska_low_mccs import release
 from ska_low_mccs.subarray_beam import (
     SubarrayBeamComponentManager,
     SubarrayBeamHealthModel,
-    SubarrayBeamObsStateModel,
 )
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
@@ -47,15 +41,15 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
-        self._max_workers = 1,
+        self._max_workers = (1,)
         super().init_device()
 
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
-#         self._obs_state_model = SubarrayBeamObsStateModel(
-#             self.logger,
-#             self.component_state_changed_callback
-#         )
+        #         self._obs_state_model = SubarrayBeamObsStateModel(
+        #             self.logger,
+        #             self.component_state_changed_callback
+        #         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubarrayBeamHealthModel(
             self.component_state_changed_callback
@@ -166,7 +160,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param dict: the state change parameters
+        :param state_change: the state change dict
         """
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
@@ -178,13 +172,13 @@ class MccsSubarrayBeam(SKAObsDevice):
             beam_locked = state_change.get("beam_locked")
             self._health_model.is_beam_locked_changed(beam_locked)
 
-#         if "configured_changed" in state_change.keys():
-#             configured_changed = state_change.get("configured_changed")
-#             self._obs_state_model.is_configured_changed(configured_changed)
+    #         if "configured_changed" in state_change.keys():
+    #             configured_changed = state_change.get("configured_changed")
+    #             self._obs_state_model.is_configured_changed(configured_changed)
 
-#         if "obs_state" in state_change.keys():
-#             configured_changed = state_change.get("obs_state")
-#             self._obs_state_model.obs_state = configured_changed
+    #         if "obs_state" in state_change.keys():
+    #             configured_changed = state_change.get("obs_state")
+    #             self._obs_state_model.obs_state = configured_changed
 
     # ----------
     # Attributes

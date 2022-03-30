@@ -540,7 +540,7 @@ class AntennaComponentManager(MccsComponentManager):
         raise NotImplementedError("Antenna has no standby state.")
 
     # @check_communicating
-    def on(self, task_callback: Callable = None):
+    def on(self: AntennaComponentManager, task_callback: Callable = None):
         """
         Submit the on slow task.
 
@@ -551,13 +551,12 @@ class AntennaComponentManager(MccsComponentManager):
 
         :returns: task status
         """
-        task_status = self.submit_task(self._on, args=[], task_callback=task_callback)
-        return task_status
+        return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
         self: AntennaComponentManager,
-        logger: logging.Logger,
-        task_callback: Callable = None,
+         task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
     ) -> None:
         """
         Turn the antenna on.
@@ -569,10 +568,14 @@ class AntennaComponentManager(MccsComponentManager):
         """
         # Indicate that the task has started
         task_callback(status=TaskStatus.IN_PROGRESS)
-        with self._power_state_lock:
-            self._target_power_state = PowerState.ON
-        # self._review_power()
-        time.sleep(10)
+        try:
+            with self._power_state_lock:
+                self._target_power_state = PowerState.ON
+            # self._review_power()
+            task_abort_event.wait(20) # this line for testing only
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            
         # Indicate that the task has completed
         task_callback(
             status=TaskStatus.COMPLETED, result="This slow task has completed"

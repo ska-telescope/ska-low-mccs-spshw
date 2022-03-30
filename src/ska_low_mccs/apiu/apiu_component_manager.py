@@ -111,11 +111,15 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
             "simulate_humidity",
             "simulate_temperature",
             "simulate_voltage",
+            "turn_off_antenna",
+            "turn_on_antenna",
+            "turn_off_antennas",
+            "turn_on_antennas",
         ]:
             return self._get_from_component(name)
         return default_value
 
-    @check_communicating
+    #@check_communicating
     def _get_from_component(
         self: ApiuSimulatorComponentManager,
         name: str,
@@ -245,21 +249,21 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             SwitchingApiuComponentManager, self._hardware_component_manager
         ).simulation_mode = mode
 
-    def off(self: ApiuComponentManager) -> ResultCode | None:
-        """
-        Tell the APIU simulator to turn off.
-
-        This is implemented in the super-class to tell the upstream
-        power supply proxy to turn the APIU hardware off. Here we
-        overrule it so that, should the APIU hardware be turned on
-        again, the antennas will be turned off.
-
-        :return: a result code, or None if there was nothing to do.
-        """
-        cast(
-            SwitchingApiuComponentManager, self._hardware_component_manager
-        ).turn_off_antennas()
-        return super().off()
+#     def off(self: ApiuComponentManager, task_callback: Callable = None) -> ResultCode | None:
+#         """
+#         Tell the APIU simulator to turn off.
+# 
+#         This is implemented in the super-class to tell the upstream
+#         power supply proxy to turn the APIU hardware off. Here we
+#         overrule it so that, should the APIU hardware be turned on
+#         again, the antennas will be turned off.
+# 
+#         :return: a result code, or None if there was nothing to do.
+#         """
+#         cast(
+#             SwitchingApiuComponentManager, self._hardware_component_manager
+#         ).turn_off_antennas()
+#         return super().off()
 
     def __getattr__(
         self: ApiuComponentManager,
@@ -300,6 +304,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "simulate_humidity",
             "simulate_temperature",
             "simulate_voltage",
+            "turn_off_antenna",
+            "turn_on_antenna",
+            "turn_off_antennas",
+            "turn_on_antennas",
         ]:
             return self._get_from_hardware(name)
         return default_value
@@ -326,7 +334,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
-        Submit the power up task.
+        Submit the turn_on_antenna slow task.
 
         This method returns immediately after it is submitted for execution.
 
@@ -335,13 +343,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        import pdb
-        pdb.set_trace()
-        task_status, unique_id = self.submit_task(
+        return self.submit_task(
             self._turn_on_antenna, args=[antenna], task_callback=task_callback
         )
-        print(task_status, unique_id)
-        return task_status, unique_id
 
 
     def power_down_antenna(
@@ -359,11 +363,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._turn_off_antenna, args=[], task_callback=task_callback
+        return self.submit_task(
+            self._turn_off_antenna, args=[antenna], task_callback=task_callback
         )
-        print(task_status, unique_id)
-        return task_status, unique_id
 
     def power_up(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None
@@ -377,10 +379,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._turn_on_antennas, args=[], task_callback=task_callback
+        return self.submit_task(
+            self._turn_on_antennas, task_callback=task_callback
         )
-        return task_status, unique_id
 
     def power_down(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None
@@ -394,17 +395,15 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._turn_off_antennas, args=[], task_callback=task_callback
+        return self.submit_task(
+            self._turn_off_antennas, task_callback=task_callback
         )
-        return task_status, unique_id
 
     def _turn_on_antenna(
         self: ApiuComponentManager,
         antenna: int,
-        logger: logging.Logger,
         task_callback: Callable = None,
-        task_abort_event: Event = None,
+        task_abort_event: threading.Event = None,
     ):
         """This is a long running method
 
@@ -413,17 +412,92 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_abort_event: Check for abort, defaults to None
         """
         print("dummy turn on", antenna)
-        # Indicate that the task has started
+        print(self._hardware_component_manager)
         task_callback(status=TaskStatus.IN_PROGRESS)
-
-        # Do something
-        time.sleep(20)
-
-        # Periodically check that tasks have not been ABORTED
-        if task_abort_event.is_set():
-        # Indicate that the task has been aborted
-            task_callback(status=TaskStatus.ABORTED, result="The antenna on task aborted")
+        try:
+            print(f"the antenna is : {antenna}")
+            self._hardware_component_manager.turn_on_antenna(antenna)
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
             return
 
-        # Indicate that the task has completed
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="The antenna on task aborted")
+            print("on aborted")
+            return
+
         task_callback(status=TaskStatus.COMPLETED, result="The antenna on task has completed")
+        print("on completed ")
+
+    def _turn_off_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ):
+        """This is a long running method
+
+        :param logger: logger
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        print("dummy turn off", antenna)
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        self._hardware_component_manager.turn_off_antenna(antenna)
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="The antenna off task aborted")
+            print("off aborted")
+            return
+
+        task_callback(status=TaskStatus.COMPLETED, result="The antenna off task has completed")
+        print("off completed ")
+
+    def _turn_on_antennas(
+        self: ApiuComponentManager,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ):
+        """This is a long running method
+
+        :param logger: logger
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        print("dummy turn on all")
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self._hardware_component_manager.turn_on_antennas()
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="The antenna all on task aborted")
+            print("on aborted")
+            return
+
+        task_callback(status=TaskStatus.COMPLETED, result="The antenna all on task has completed")
+        print("on completed ")
+
+    def _turn_off_antennas(
+        self: ApiuComponentManager,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ):
+        """This is a long running method
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        print("dummy turn off all")
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        self._hardware_component_manager.turn_off_antennas()
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="The antenna all off task aborted")
+            print("off aborted")
+            return
+
+        task_callback(status=TaskStatus.COMPLETED, result="The antenna all off task has completed")
+        print("off completed ")

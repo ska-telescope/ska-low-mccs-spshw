@@ -12,7 +12,7 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import (
     MccsComponentManager,
@@ -41,10 +41,11 @@ class ObjectComponentManager(MccsComponentManager):
         self: ObjectComponentManager,
         component: ObjectComponent,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_state_changed_callback: Optional[Callable[[Any], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -54,15 +55,13 @@ class ObjectComponentManager(MccsComponentManager):
         :param component: the commponent object to be managed by this
             component manager
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: nos of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+
         :param args: further positional arguments
         :param kwargs: further keyword arguments
         """
@@ -72,10 +71,9 @@ class ObjectComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            *args,
-            **kwargs,
         )
 
     def start_communicating(self: ObjectComponentManager) -> None:
@@ -91,13 +89,17 @@ class ObjectComponentManager(MccsComponentManager):
 
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
-        self._component.set_component_state_callback(self.component_state_changed_callback)
+        self._component.set_fault_callback(self.component_state_changed_callback)
+        self._component.set_power_mode_changed_callback(
+            self.component_state_changed_callback
+        )
 
     @threadsafe
     def stop_communicating(self: ObjectComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
         super().stop_communicating()
-        self._component.set_component_state_changed_callback(None)
+        self._component.set_fault_callback(None)
+        self._component.set_power_mode_changed_callback(None)
 
     def simulate_communication_failure(
         self: ObjectComponentManager, fail_communicate: bool

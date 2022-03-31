@@ -111,7 +111,7 @@ def check_on(func: Wrapped) -> Wrapped:
             not been established.
         :return: whatever the wrapped function returns
         """
-        if component_manager.power_mode != PowerState.ON:
+        if component_manager.power_state != PowerState.ON:
             raise ConnectionError(
                 f"Cannot execute {type(component_manager).__name__}.{func.__name__}. "
                 "Component is not turned on."

@@ -9,12 +9,24 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import List, Optional, Tuple
+import logging
+import threading
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand, FastCommand, ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState, SimulationMode
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SubmittedSlowCommand,
+)
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    SimulationMode,
+)
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.apiu import ApiuComponentManager, ApiuHealthModel
@@ -22,31 +34,6 @@ from ska_low_mccs.apiu import ApiuComponentManager, ApiuHealthModel
 __all__ = ["MccsAPIU", "main"]
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
-
-
-def create_return(success: Optional[bool], action: str) -> tuple[ResultCode, str]:
-    """
-    Create a tuple with ResultCode and string message.
-
-    Helper function to package up a boolean result into a
-    (:py:class:`~ska_tango_base.commands.ResultCode`, message) tuple.
-
-    :param success: whether execution of the action was successful. This
-        may be None, in which case the action was not performed due to
-        redundancy (i.e. it was already done).
-    :param action: Informal description of the action that the command
-        performs, for use in constructing a message
-
-    :return: A tuple containing a return code and a string
-        message indicating status. The message is for
-        information purpose only.
-    """
-    if success is None:
-        return (ResultCode.OK, f"APIU {action} is redundant")
-    elif success in [True, ResultCode.OK]:
-        return (ResultCode.OK, f"APIU {action} successful")
-    else:
-        return (ResultCode.FAILED, f"APIU {action} failed")
 
 
 class MccsAPIU(SKABaseDevice):
@@ -68,6 +55,8 @@ class MccsAPIU(SKABaseDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
+        self._power_state_lock = threading.RLock()
         super().init_device()
 
     def _init_state_model(self: MccsAPIU) -> None:
@@ -88,9 +77,9 @@ class MccsAPIU(SKABaseDevice):
             SimulationMode.TRUE,
             len(self.AntennaFQDNs),
             self.logger,
+            self._max_workers,
             self._component_communication_status_changed,
             self.component_state_changed_callback,
-            max_workers = 1,
         )
 
     def init_command_objects(self: MccsAPIU) -> None:
@@ -98,10 +87,10 @@ class MccsAPIU(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("PowerUpAntenna", "turn_on_antenna"),
-            ("PowerDownAntenna", "turn_off_antenna"),
-            ("PowerUp", "turn_on_antennas"),
-            ("PowerDown", "turn_off_antennas"),
+            ("PowerUpAntenna", "power_up_antenna"),
+            ("PowerDownAntenna", "power_down_antenna"),
+            ("PowerUp", "power_up"),
+            ("PowerDown", "power_down"),
         ]:
             self.register_command_object(
                 command_name,
@@ -130,10 +119,8 @@ class MccsAPIU(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.health_changed
             """
-            super().do()
-
             self._device._are_antennas_on = None
-            self.set_change_event("areAntennasOn", True, False)
+            self._device.set_change_event("areAntennasOn", True, False)
 
             self._device._isAlive = True
             self._device._overCurrentThreshold = 0.0
@@ -173,45 +160,50 @@ class MccsAPIU(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(self: MccsAPIU, **kwargs: Any) -> None:
+    def component_state_changed_callback(
+        self: MccsAPIU, state_change: dict[str, Any]
+    ) -> None:
         """
         Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param kwargs: the state change parameters.
+        :param state_change: dictionary of state change parameters.
         """
-
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        if "fault" in kwargs.keys():
-            is_fault = kwargs.get("fault")
+        with self._power_state_lock:
+            if "power_state" in state_change.keys():
+                power_state = state_change.get("power_state")
+                self.component_manager.power_state = power_state
+                if power_state:
+                    self.op_state_model.perform_action(action_map[power_state])
+
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
             if is_fault:
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                self.op_state_model.perform_action(action_map[self.component_manager.power_mode])
+                self.op_state_model.perform_action(
+                    action_map[self.component_manager.power_state]
+                )
                 self._health_model.component_fault(False)
 
-        if "health_state" in kwargs.keys():
-            health = kwargs.get("health_state")
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        if "power_state" in kwargs.keys():
-            power_state = kwargs.get("power_state")
-            if power_state:
-                self.op_state_model.perform_action(action_map[power_state])
-
-        if "are_antennas_on" in kwargs.keys():
+        if "are_antennas_on" in state_change.keys():
             self._are_antennas_on: list[bool]  # typehint only
-            are_antennas_on = kwargs.get("are_antennas_on")
+            are_antennas_on = state_change.get("are_antennas_on")
             if self._are_antennas_on != are_antennas_on:
                 self._are_antennas_on = list(are_antennas_on)
                 self.push_change_event("areAntennasOn", self._are_antennas_on)
@@ -383,9 +375,11 @@ class MccsAPIU(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsAPIU.IsAntennaOnCommand) -> bool:  # type: ignore[override]
+        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
             """
             Stateless hook for device IsAntennaOn() command.
+
+            :param argin: the logical antenna id of the antenna to power up
 
             :return: True if the antenna is on.
             """
@@ -396,8 +390,7 @@ class MccsAPIU(SKABaseDevice):
         """
         Power up the antenna.
 
-        :param argin: the logical antenna id of the antenna to power
-            up
+        :param argin: the logical antenna id of the antenna to power up
 
         :return: whether the specified antenna is on or not
         """
@@ -408,7 +401,6 @@ class MccsAPIU(SKABaseDevice):
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
     )
-    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
     def PowerUpAntenna(self: MccsAPIU, argin: int) -> DevVarLongStringArrayType:
         """
         Power up the antenna.
@@ -421,8 +413,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUpAntenna")
-        result_code, unique_id = handler(argin)
-        return ([result_code], [unique_id])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     @command(
         dtype_in="DevULong",
@@ -440,8 +432,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerDownAntenna")
-        result_code, unique_id = handler(argin)
-        return ([result_code], [unique_id])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -455,8 +447,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUp")
-        result_code, unique_id = handler()
-        return ([result_code], [unique_id])
+        result_code, message = handler()
+        return ([result_code], [message])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -470,8 +462,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerDown")
-        result_code, unique_id = handler()
-        return ([result_code], [unique_id])
+        result_code, message = handler()
+        return ([result_code], [message])
 
 
 # ----------

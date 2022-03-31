@@ -9,8 +9,9 @@
 
 from __future__ import annotations
 
+import functools
 import json
-from typing import List, Optional, Tuple
+from typing import Any, List, Callable, Optional, Tuple
 
 import tango
 from ska_tango_base.commands import ResponseCommand, ResultCode, SubmittedSlowCommand, DeviceInitCommand
@@ -230,10 +231,10 @@ class MccsStation(SKAObsDevice):
 
     def component_state_changed_callback(
         self: MccsStation,
-        device: Optional[str] = None,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
         power_state_changed_callback: Optional[Callable] = None,
-        **kwargs: Any,
-        ) -> None:
+    ) -> None:
         """
         Handle change in the state of the component.
 
@@ -246,31 +247,31 @@ class MccsStation(SKAObsDevice):
         
         :param kwargs: the component state change parameters to be set, and their new values.
         """
-        if device is None:
+        if fqdn is None:
             health_state_changed_callback = self.health_changed
-        elif device == "apiu":
+        elif "apiu" in fqdn:
             health_state_changed_callback = self._health_model.apiu_health_changed
-        elif device == "antenna":
-            health_state_changed_callback = self._health_model.antenna_health_changed
-        elif device == "tile":
-            health_state_changed_callback = self._health_model.tile_health_changed
+        elif "antenna" in fqdn:
+            health_state_changed_callback = functools.partial(self._health_model.antenna_health_changed, fqdn)
+        elif "tile" in fqdn:
+            health_state_changed_callback = functools.partial(self._health_model.tile_health_changed, fqdn)
         else:
-            raise ValueError(f"unknown device '{device}'")
+            raise ValueError(f"unknown fqdn '{fqdn}', should belong to antenna, tile or apiu")
 
         if power_state_changed_callback is None:
             power_state_changed_callback = self._component_power_mode_changed
 
-        if "power_state" in kwargs.keys():
-            power_state = kwargs.get("power_state")
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
             if power_state:
                 power_state_changed_callback(power_state)
 
-        if "health_state" in kwargs.keys():
-            health = kwargs.get("health_state")
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
             health_state_changed_callback(health)
 
-        if "is_configured" in kwargs.keys():
-            is_configured = kwargs.get("is_configured")
+        if "is_configured" in state_change.keys():
+            is_configured = state_change.get("is_configured")
             self._obs_state_model.is_configured_changed(is_configured)
 
     def _component_power_mode_changed(

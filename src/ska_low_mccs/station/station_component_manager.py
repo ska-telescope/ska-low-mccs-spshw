@@ -205,9 +205,9 @@ class StationComponentManager(MccsComponentManager):
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
             functools.partial(
                 self.component_state_changed_callback,
-                device="apiu",
-                power_state_changed_callback=self._apiu_power_mode_changed,
-            )
+                fqdn=apiu_fqdn,
+                power_state_changed_callback=self._apiu_power_mode_changed
+            ),
         )
         self._antenna_proxies = [
             DeviceComponentManager(
@@ -217,9 +217,11 @@ class StationComponentManager(MccsComponentManager):
                 functools.partial(
                     self._device_communication_status_changed, antenna_fqdn
                 ),
-                functools.partial(self._antenna_power_mode_changed, antenna_fqdn),
-                None,
-                functools.partial(antenna_health_changed_callback, antenna_fqdn),
+                functools.partial(
+                    self.component_state_changed_callback,
+                    fqdn=antenna_fqdn,
+                    power_state_changed_callback=functools.partial(self._antenna_power_mode_changed, antenna_fqdn)
+                ),
             )
             for antenna_fqdn in antenna_fqdns
         ]
@@ -231,9 +233,11 @@ class StationComponentManager(MccsComponentManager):
                 logger,
                 push_change_event,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
-                functools.partial(self._tile_power_mode_changed, tile_fqdn),
-                None,
-                functools.partial(tile_health_changed_callback, tile_fqdn),
+                functools.partial(
+                    self.component_state_changed_callback,
+                    fqdn=tile_fqdn,
+                    power_state_changed_callback=functools.partial(self._tile_power_mode_changed, tile_fqdn)
+                ),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         ]

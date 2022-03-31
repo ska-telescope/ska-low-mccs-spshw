@@ -54,6 +54,7 @@ class MccsStation(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsStation) -> None:
@@ -84,12 +85,9 @@ class MccsStation(SKAObsDevice):
             self.AntennaFQDNs,
             self.TileFQDNs,
             self.logger,
-            self.push_change_event,
+            self._max_workers,
             self._communication_status_changed,
             self.component_state_changed_callback,
-            self._health_model.apiu_health_changed,
-            self._health_model.antenna_health_changed,
-            self._health_model.tile_health_changed,
         )
 
     def init_command_objects(self: MccsStation) -> None:

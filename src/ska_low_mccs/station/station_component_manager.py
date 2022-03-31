@@ -39,13 +39,9 @@ class _TileProxy(DeviceComponentManager):
         station_id: int,
         logical_tile_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_state_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[
-            Callable[[Optional[HealthState]], None]
-        ] = None,
+        component_state_changed_callback: Callable[[PowerState], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -77,11 +73,9 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_state_changed_callback,
-            component_fault_callback,
-            health_changed_callback,
+            component_state_changed_callback,
         )
 
     class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
@@ -146,14 +140,9 @@ class StationComponentManager(MccsComponentManager):
         antenna_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_state_changed_callback: Callable[[PowerState], None],
-        apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
-        antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -201,7 +190,7 @@ class StationComponentManager(MccsComponentManager):
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
             logger,
-            push_change_event,
+            max_workers,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
             functools.partial(
                 self.component_state_changed_callback,
@@ -213,7 +202,7 @@ class StationComponentManager(MccsComponentManager):
             DeviceComponentManager(
                 antenna_fqdn,
                 logger,
-                push_change_event,
+                max_workers,
                 functools.partial(
                     self._device_communication_status_changed, antenna_fqdn
                 ),
@@ -231,7 +220,7 @@ class StationComponentManager(MccsComponentManager):
                 station_id,
                 logical_tile_id,
                 logger,
-                push_change_event,
+                max_workers,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
                 functools.partial(
                     self.component_state_changed_callback,
@@ -244,10 +233,8 @@ class StationComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
             communication_status_changed_callback,
-            component_power_state_changed_callback,
-            None,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: StationComponentManager) -> None:

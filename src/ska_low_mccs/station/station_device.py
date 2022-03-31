@@ -147,7 +147,7 @@ class MccsStation(SKAObsDevice):
             self._device.set_change_event("transientBufferFQDN", True, False)
             self._device.set_archive_event("transientBufferFQDN", True, False)
 
-            return (result_code, message)
+            return (ResultCode.OK, "Initialisation complete")
 
 #     class OnCommand(ResponseCommand):
 #         """

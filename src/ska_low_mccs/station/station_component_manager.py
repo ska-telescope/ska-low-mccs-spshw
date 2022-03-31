@@ -233,6 +233,7 @@ class StationComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )

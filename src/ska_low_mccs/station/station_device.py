@@ -14,13 +14,12 @@ import json
 from typing import Any, List, Callable, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import ResponseCommand, ResultCode, SubmittedSlowCommand, DeviceInitCommand
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand, DeviceInitCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
 import ska_low_mccs.release as release
-from ska_low_mccs.component import 
 from ska_low_mccs.station import (
     StationComponentManager,
     StationHealthModel,
@@ -127,8 +126,6 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            (result_code, message) = super().do()
-
             self._device._subarray_id = 0
             self._device._refLatitude = 0.0
             self._device._refLongitude = 0.0
@@ -152,35 +149,35 @@ class MccsStation(SKAObsDevice):
 
             return (result_code, message)
 
-    class OnCommand(ResponseCommand):
-        """
-        A class for the MccsStation's On() command.
-
-        This class overrides the SKABaseDevice OnCommand to allow for an
-        eventual consistency semantics. This requires an override
-        because the SKABaseDevice OnCommand only allows On() to be run
-        when in OFF state.
-        """
-
-        def do(  # type: ignore[override]
-            self: MccsStation.OnCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for Off() command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            # It's fine to complete this long-running command here
-            # (returning ResultCode.OK), even though the component manager
-            # may not actually be finished turning everything on.
-            # The completion of the original On command to MccsController
-            # is waiting for the various power mode callbacks to be received
-            # rather than completion of the various long-running commands.
-            _ = self.target.on()
-            message = "Station On command completed OK"
-            return (ResultCode.OK, message)
+#     class OnCommand(ResponseCommand):
+#         """
+#         A class for the MccsStation's On() command.
+# 
+#         This class overrides the SKABaseDevice OnCommand to allow for an
+#         eventual consistency semantics. This requires an override
+#         because the SKABaseDevice OnCommand only allows On() to be run
+#         when in OFF state.
+#         """
+# 
+#         def do(  # type: ignore[override]
+#             self: MccsStation.OnCommand,
+#         ) -> tuple[ResultCode, str]:
+#             """
+#             Stateless hook for Off() command functionality.
+# 
+#             :return: A tuple containing a return code and a string
+#                 message indicating status. The message is for
+#                 information purpose only.
+#             """
+#             # It's fine to complete this long-running command here
+#             # (returning ResultCode.OK), even though the component manager
+#             # may not actually be finished turning everything on.
+#             # The completion of the original On command to MccsController
+#             # is waiting for the various power mode callbacks to be received
+#             # rather than completion of the various long-running commands.
+#             _ = self.target.on()
+#             message = "Station On command completed OK"
+#             return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsStation) -> bool:
         """

@@ -175,8 +175,8 @@ class SubrackDriver(MccsComponentManager):
         """
         tpm_power_states = str(self.tpm_power_states)
         self.logger.debug("TPM power changed: " + tpm_power_states)
-        if self._component_tpm_power_changed_callback is not None:
-            self._component_tpm_power_changed_callback(self.tpm_power_states)
+        if self._component_state_changed_callback is not None:
+            self._component_state_changed_callback(self.tpm_power_states)
 
     @property
     def backplane_temperatures(self: SubrackDriver) -> list[float]:

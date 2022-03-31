@@ -99,7 +99,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         #     return
         # Report anyway. Let upper levels decide if information is redundant
         self._tpm_power_states = tpm_power_states
-        self._component_tpm_power_changed_callback(tpm_power_states)
+        self._component_state_changed_callback(tpm_power_states)
 
     @property
     def tpm_power_states(
@@ -233,7 +233,6 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
             communication_status_changed_callback,
             component_state_changed_callback,
         )
-        self._component_state_changed_callback = component_state_changed_callback
 
 
 class SwitchingSubrackComponentManager(SwitchingComponentManager):
@@ -352,7 +351,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         subrack_port: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        _initial_power_mode: PowerState = PowerState.OFF,
+        _initial_power_state: PowerState = PowerState.OFF,
     ) -> None:
         """
         Initialise a new instance.
@@ -368,7 +367,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param _initial_power_mode: the initial power mode of the power
+        :param _initial_power_state: the initial power mode of the power
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
             device.
@@ -376,6 +375,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_power_changed_callback = component_state_changed_callback
         self._tpm_power_changed_callback(self._tpm_power_states)
+        self._component_state_changed_callback = component_state_changed_callback
 
         hardware_component_manager = SwitchingSubrackComponentManager(
             initial_simulation_mode,
@@ -385,7 +385,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             subrack_port,
             self._hardware_communication_status_changed,
             component_state_changed_callback,
-            self._tpm_power_changed,
+            # self._tpm_power_changed,
         )
 
         power_supply_component_manager = PowerSupplyProxySimulator(
@@ -393,7 +393,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             max_workers,
             self._power_supply_communication_status_changed,
             component_state_changed_callback,
-            _initial_power_mode,
+            _initial_power_state,
         )
         super().__init__(
             hardware_component_manager,
@@ -467,24 +467,24 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
 
-    def component_power_mode_changed(
-        self: SubrackComponentManager, power_mode: PowerState
-    ) -> None:
-        """
-        Handle a change in power mode of the hardware.
+    # def component_power_mode_changed(
+    #     self: SubrackComponentManager, power_mode: PowerState
+    # ) -> None:
+    #     """
+    #     Handle a change in power mode of the hardware.
 
-        :param power_mode: the power mode of the hardware
-        """
-        if power_mode == PowerState.UNKNOWN:
-            self._update_tpm_power_states(
-                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-            )
-        elif power_mode == PowerState.OFF:
-            self._update_tpm_power_states(
-                [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
-            )
+    #     :param power_mode: the power mode of the hardware
+    #     """
+    #     if power_mode == PowerState.UNKNOWN:
+    #         self._update_tpm_power_states(
+    #             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+    #         )
+    #     elif power_mode == PowerState.OFF:
+    #         self._update_tpm_power_states(
+    #             [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+    #         )
 
-        super().component_power_mode_changed(power_mode)
+    #     super().component_power_mode_changed(power_mode)
 
     @property
     def simulation_mode(self: SubrackComponentManager) -> SimulationMode:
@@ -552,9 +552,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             (when on, we can turn the TPM off, when off, there's nothing
             to do here.)
         """
-        if self.power_mode == PowerState.OFF:
+        if self.power_state == PowerState.OFF:
             return None
-        elif self.power_mode == PowerState.ON:
+        elif self.power_state == PowerState.ON:
             return cast(
                 SwitchingSubrackComponentManager,
                 self._hardware_component_manager,

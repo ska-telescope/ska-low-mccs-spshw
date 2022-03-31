@@ -189,7 +189,7 @@ class MccsSubrack(SKABaseDevice):
             self.op_state_model.perform_action(action)
         else:
             power_supply_status = (
-                self.component_manager._power_supply_component_manager.supplied_power_mode
+                self.component_manager._power_supply_component_manager.supplied_power_state
             )
             if (
                 self.admin_mode_model.admin_mode
@@ -212,7 +212,7 @@ class MccsSubrack(SKABaseDevice):
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
         )
-        power_status = self.component_manager.power_mode
+        power_status = self.component_manager.power_state
         self.logger.debug(
             f"Power mode: {power_status}, Communicating: {self._health_model._communicating}"
         )
@@ -270,6 +270,46 @@ class MccsSubrack(SKABaseDevice):
                             self.push_change_event(
                                 f"tpm{i+1}PowerState", tpm_power_states[i]
                             )
+
+    # def _component_progress_changed(self: MccsSubrack, progress: int) -> None:
+    #     """
+    #     Handle change in the progress of a long-running command.
+
+    #     This is a callback hook, called by the component manager when
+    #     the component progress value changes.
+
+    #     :param progress: the process percentage of a long-running command.
+    #     """
+    #     self._progress = progress
+    #     self.logger.debug(f"Subrack progress value = {progress}")
+    #     # TODO: Link the progress update to an attribute to be exposed to the real world...
+    # ----------
+    # Callbacks
+    # ----------
+    # def _tpm_power_modes_changed(
+    #     self: MccsSubrack, tpm_power_modes: list[ExtendedPowerState]
+    # ) -> None:
+    #     """
+    #     Update the power mode of a specified TPM.
+
+    #     This is a callback provided to the component manager. The
+    #     component manager will call it whenever the power mode of any of
+    #     its TPMs changes.
+
+    #     :param tpm_power_modes: the power modes of the TPMs
+    #     """
+    #     self.logger.debug(
+    #         "TPM power modes changed: old"
+    #         + str(self._tpm_power_modes)
+    #         + "new: "
+    #         + str(tpm_power_modes)
+    #     )
+
+    #     with self._tpm_power_modes_lock:
+    #         for i in range(SubrackData.TPM_BAY_COUNT):
+    #             if self._tpm_power_modes[i] != tpm_power_modes[i]:
+    #                 self._tpm_power_modes[i] = tpm_power_modes[i]
+    #                 self.push_change_event(f"tpm{i+1}PowerState", tpm_power_modes[i])
 
     # ----------
     # Attributes
@@ -614,7 +654,47 @@ class MccsSubrack(SKABaseDevice):
     # --------
     # Commands
     # --------
+    # class PowerOnTpmCommand(ResponseCommand):
+    #     """
+    #     The command class for the PowerOnTpm command.
 
+    #     Power on an individual TPM, specified by the TPM ID (range 1-8)
+    #     """
+
+    #     def do(  # type: ignore[override]
+    #         self: MccsSubrack.PowerOnTpmCommand, argin: int
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Implement PowerOnTpm command functionality.
+
+    #         :param argin: the logical TPM id of the TPM to power
+    #             up
+
+    #         :return: A tuple containing a return code and a string
+    #             message indicating status. The message is for
+    #             information purpose only.
+    #         """
+    #         component_manager = self.target
+    #         success = component_manager.turn_on_tpm(argin)
+    #         return create_return(success, f"TPM {argin} power-on")
+
+    #     def is_allowed(self: MccsSubrack.PowerOnTpmCommand) -> bool:
+    #         """
+    #         Whether this command is allowed to run.
+
+    #         :returns: whether this command is allowed to run
+    #         """
+    #         return self.target.power_mode in [PowerState.OFF, PowerState.ON]
+
+    # def is_PowerOnTpm_allowed(self: MccsSubrack) -> bool:
+    #     """
+    #     Whether the ``PowerOnTpm()`` command is allowed to be run in the current state.
+
+    #     :returns: whether the ``PowerOnTpm()`` command is allowed to be run in the
+    #         current state
+    #     """
+    #     handler = self.get_command_object("PowerOnTpm")
+    #     return handler.is_allowed()
     @command(
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
@@ -636,6 +716,44 @@ class MccsSubrack(SKABaseDevice):
         handler = self.get_command_object("PowerOnTpm")
         unique_id, return_code = self.component_manager.enqueue(handler, argin)
         return ([return_code], [unique_id])
+
+    # class PowerOffTpmCommand(ResponseCommand):
+    #     """The command class for the PowerOffTpm command."""
+
+    #     def do(  # type: ignore[override]
+    #         self: MccsSubrack.PowerOffTpmCommand, argin: int
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Implement PowerOffTpm command functionality.
+
+    #         :param argin: the logical id of the TPM to power
+    #             down
+
+    #         :return: A tuple containing a return code and a string
+    #             message indicating status. The message is for
+    #             information purpose only.
+    #         """
+    #         component_manager = self.target
+    #         success = component_manager.turn_off_tpm(argin)
+    #         return create_return(success, f"TPM {argin} power-off")
+
+    #     def is_allowed(self: MccsSubrack.PowerOffTpmCommand) -> bool:
+    #         """
+    #         Whether this command is allowed to run.
+
+    #         :returns: whether this command is allowed to run
+    #         """
+    #         return self.target.power_mode in [PowerState.OFF, PowerState.ON]
+
+    # def is_PowerOffTpm_allowed(self: MccsSubrack) -> bool:
+    #     """
+    #     Whether the ``PowerOffTpm()`` command is allowed to be run in the current state.
+
+    #     :returns: whether the ``PowerOffTpm()`` command is allowed to be run in the
+    #         current state
+    #     """
+    #     handler = self.get_command_object("PowerOffTpm")
+    #     return handler.is_allowed()
 
     @command(
         dtype_in="DevULong",
@@ -659,6 +777,41 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = self.component_manager.enqueue(handler, argin)
         return ([return_code], [unique_id])
 
+    # class PowerUpTpmsCommand(ResponseCommand):
+    #     """The command class for the PowerUpTpms command."""
+
+    #     def do(  # type: ignore[override]
+    #         self: MccsSubrack.PowerUpTpmsCommand,
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Implement PowerUpTpms command functionality.
+
+    #         :return: A tuple containing a return code and a string
+    #             message indicating status. The message is for
+    #             information purpose only.
+    #         """
+    #         component_manager = self.target
+    #         success = component_manager.turn_on_tpms()
+    #         return create_return(success, "TPMs power-up")
+
+    #     def is_allowed(self: MccsSubrack.PowerUpTpmsCommand) -> bool:
+    #         """
+    #         Whether this command is allowed to run.
+
+    #         :returns: whether this command is allowed to run
+    #         """
+    #         return self.target.power_mode in [PowerState.OFF, PowerState.ON]
+
+    # def is_PowerUpTpms_allowed(self: MccsSubrack) -> bool:
+    #     """
+    #     Whether the ``PowerUpTpm()`` command is allowed to be run in the current state.
+
+    #     :returns: whether the ``PowerUpTpms()`` command is allowed to be run in the
+    #         current state
+    #     """
+    #     handler = self.get_command_object("PowerUpTpms")
+    #     return handler.is_allowed()
+
     @command(
         dtype_out="DevVarLongStringArray",
     )
@@ -677,6 +830,41 @@ class MccsSubrack(SKABaseDevice):
         handler = self.get_command_object("PowerUpTpms")
         unique_id, return_code = self.component_manager.enqueue(handler)
         return ([return_code], [unique_id])
+
+    # class PowerDownTpmsCommand(ResponseCommand):
+    #     """The command class for the PowerDownTpms command."""
+
+    #     def do(  # type: ignore[override]
+    #         self: MccsSubrack.PowerDownTpmsCommand,
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Implement PowerDownTpms command functionality.
+
+    #         :return: A tuple containing a return code and a string
+    #             message indicating status. The message is for
+    #             information purpose only.
+    #         """
+    #         component_manager = self.target
+    #         success = component_manager.turn_off_tpms()
+    #         return create_return(success, "TPM power-down")
+
+    #     def is_allowed(self: MccsSubrack.PowerDownTpmsCommand) -> bool:
+    #         """
+    #         Whether this command is allowed to run.
+
+    #         :returns: whether this command is allowed to run
+    #         """
+    #         return self.target.power_mode in [PowerState.OFF, PowerState.ON]
+
+    # def is_PowerDownTpms_allowed(self: MccsSubrack) -> bool:
+    #     """
+    #     Check if ``PowerDownTpms()`` command is allowed to be run in the current state.
+
+    #     :returns: whether the ``PowerDownTpms()`` command is allowed to be run in the
+    #         current state
+    #     """
+    #     handler = self.get_command_object("PowerDownTpms")
+    #     return handler.is_allowed()
 
     @command(dtype_out="DevVarLongStringArray")
     def PowerDownTpms(self: MccsSubrack) -> DevVarLongStringArrayType:

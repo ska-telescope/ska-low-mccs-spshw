@@ -240,7 +240,7 @@ class MccsStation(SKAObsDevice):
 
         This is a callback hook, called by the component manager when
         the state of the component changes. 
-        For the power_mode parameter it is implemented here
+        For the power_state parameter it is implemented here
         to drive the op_state.
         For the health parameter it is implemented to update the health attribute
         and push change events whenever the HealthModel's evaluated health state changes.
@@ -259,7 +259,7 @@ class MccsStation(SKAObsDevice):
             raise ValueError(f"unknown fqdn '{fqdn}', should belong to antenna, tile or apiu")
 
         if power_state_changed_callback is None:
-            power_state_changed_callback = self._component_power_mode_changed
+            power_state_changed_callback = self._component_power_state_changed
 
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
@@ -274,9 +274,9 @@ class MccsStation(SKAObsDevice):
             is_configured = state_change.get("is_configured")
             self._obs_state_model.is_configured_changed(is_configured)
 
-    def _component_power_mode_changed(
+    def _component_power_state_changed(
         self: MccsStation,
-        power_mode: PowerState,
+        power_state: PowerState,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -285,7 +285,7 @@ class MccsStation(SKAObsDevice):
         the power mode of the component changes. It is implemented here
         to drive the op_state.
 
-        :param power_mode: the power mode of the component.
+        :param power_state: the power mode of the component.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -294,7 +294,7 @@ class MccsStation(SKAObsDevice):
             PowerState.UNKNOWN: "component_unknown",
         }
 
-        self.op_state_model.perform_action(action_map[power_mode])
+        self.op_state_model.perform_action(action_map[power_state])
 
     def health_changed(self: MccsStation, health: HealthState) -> None:
         """

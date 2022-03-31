@@ -41,7 +41,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
+        component_power_state_changed_callback: Callable[[PowerState], None],
         component_fault_callback: Optional[Callable[[bool], None]],
         health_changed_callback: Optional[
             Callable[[Optional[HealthState]], None]
@@ -60,7 +60,7 @@ class _TileProxy(DeviceComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
+        :param component_power_state_changed_callback: callback to be
             called when the component power mode changes
         :param component_fault_callback: callback to be called when the
             component faults (or stops faulting)
@@ -79,7 +79,7 @@ class _TileProxy(DeviceComponentManager):
             logger,
             push_change_event,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
+            component_power_state_changed_callback,
             component_fault_callback,
             health_changed_callback,
         )
@@ -149,7 +149,7 @@ class StationComponentManager(MccsComponentManager):
         push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
+        component_power_state_changed_callback: Callable[[PowerState], None],
         apiu_health_changed_callback: Callable[[Optional[HealthState]], None],
         antenna_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -171,7 +171,7 @@ class StationComponentManager(MccsComponentManager):
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
+        :param component_power_state_changed_callback: callback to be
             called when the component power mode changes
         :param apiu_health_changed_callback: callback to be called when
             the health of this station's APIU changes
@@ -194,9 +194,9 @@ class StationComponentManager(MccsComponentManager):
             for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
         }
 
-        self._apiu_power_mode = PowerState.UNKNOWN
-        self._antenna_power_modes = {fqdn: PowerState.UNKNOWN for fqdn in antenna_fqdns}
-        self._tile_power_modes = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
+        self._apiu_power_state = PowerState.UNKNOWN
+        self._antenna_power_states = {fqdn: PowerState.UNKNOWN for fqdn in antenna_fqdns}
+        self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
 
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
@@ -206,7 +206,7 @@ class StationComponentManager(MccsComponentManager):
             functools.partial(
                 self.component_state_changed_callback,
                 fqdn=apiu_fqdn,
-                power_state_changed_callback=self._apiu_power_mode_changed
+                power_state_changed_callback=self._apiu_power_state_changed
             ),
         )
         self._antenna_proxies = [
@@ -220,7 +220,7 @@ class StationComponentManager(MccsComponentManager):
                 functools.partial(
                     self.component_state_changed_callback,
                     fqdn=antenna_fqdn,
-                    power_state_changed_callback=functools.partial(self._antenna_power_mode_changed, antenna_fqdn)
+                    power_state_changed_callback=functools.partial(self._antenna_power_state_changed, antenna_fqdn)
                 ),
             )
             for antenna_fqdn in antenna_fqdns
@@ -236,7 +236,7 @@ class StationComponentManager(MccsComponentManager):
                 functools.partial(
                     self.component_state_changed_callback,
                     fqdn=tile_fqdn,
-                    power_state_changed_callback=functools.partial(self._tile_power_mode_changed, tile_fqdn)
+                    power_state_changed_callback=functools.partial(self._tile_power_state_changed, tile_fqdn)
                 ),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
@@ -246,7 +246,7 @@ class StationComponentManager(MccsComponentManager):
             logger,
             push_change_event,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
+            component_power_state_changed_callback,
             None,
         )
 
@@ -314,61 +314,61 @@ class StationComponentManager(MccsComponentManager):
             self.component_state_changed_callback({"is_configured": self.is_configured})
 
     @threadsafe
-    def _antenna_power_mode_changed(
+    def _antenna_power_state_changed(
         self: StationComponentManager,
         fqdn: str,
-        power_mode: PowerState,
+        power_state: PowerState,
     ) -> None:
-        with self._power_mode_lock:
-            self._antenna_power_modes[fqdn] = power_mode
-        self._evaluate_power_mode()
+        with self._power_state_lock:
+            self._antenna_power_states[fqdn] = power_state
+        self._evaluate_power_state()
 
     @threadsafe
-    def _tile_power_mode_changed(
+    def _tile_power_state_changed(
         self: StationComponentManager,
         fqdn: str,
-        power_mode: PowerState,
+        power_state: PowerState,
     ) -> None:
-        with self._power_mode_lock:
-            self._tile_power_modes[fqdn] = power_mode
-        self._evaluate_power_mode()
+        with self._power_state_lock:
+            self._tile_power_states[fqdn] = power_state
+        self._evaluate_power_state()
 
     @threadsafe
-    def _apiu_power_mode_changed(
+    def _apiu_power_state_changed(
         self: StationComponentManager,
-        power_mode: PowerState,
+        power_state: PowerState,
     ) -> None:
-        with self._power_mode_lock:
-            self._apiu_power_mode = power_mode
-        self._evaluate_power_mode()
-        if power_mode is PowerState.ON and self._on_called:
+        with self._power_state_lock:
+            self._apiu_power_state = power_state
+        self._evaluate_power_state()
+        if power_state is PowerState.ON and self._on_called:
             self._on_called = False
             _ = self._turn_on_tiles_and_antennas()
 
-    def _evaluate_power_mode(
+    def _evaluate_power_state(
         self: StationComponentManager,
     ) -> None:
-        with self._power_mode_lock:
-            power_modes = (
-                [self._apiu_power_mode]
-                + list(self._antenna_power_modes.values())
-                + list(self._tile_power_modes.values())
+        with self._power_state_lock:
+            power_states = (
+                [self._apiu_power_state]
+                + list(self._antenna_power_states.values())
+                + list(self._tile_power_states.values())
             )
-            if all(power_mode == PowerState.ON for power_mode in power_modes):
-                evaluated_power_mode = PowerState.ON
-            elif all(power_mode == PowerState.OFF for power_mode in power_modes):
-                evaluated_power_mode = PowerState.OFF
+            if all(power_state == PowerState.ON for power_state in power_states):
+                evaluated_power_state = PowerState.ON
+            elif all(power_state == PowerState.OFF for power_state in power_states):
+                evaluated_power_state = PowerState.OFF
             else:
-                evaluated_power_mode = PowerState.UNKNOWN
+                evaluated_power_state = PowerState.UNKNOWN
 
             self.logger.info(
                 "In StationComponentManager._evaluatePowerState with:\n"
-                f"\tapiu: {self._apiu_power_mode}\n"
-                f"\tantennas: {self._antenna_power_modes}\n"
-                f"\tiles: {self._tile_power_modes}\n"
-                f"\tresult: {str(evaluated_power_mode)}"
+                f"\tapiu: {self._apiu_power_state}\n"
+                f"\tantennas: {self._antenna_power_states}\n"
+                f"\tiles: {self._tile_power_states}\n"
+                f"\tresult: {str(evaluated_power_state)}"
             )
-            self.update_component_power_mode(evaluated_power_mode)
+            self.update_component_power_state(evaluated_power_state)
 
     @check_communicating
     def off(
@@ -401,7 +401,7 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        if self._apiu_power_mode == PowerState.ON:
+        if self._apiu_power_state == PowerState.ON:
             return self._turn_on_tiles_and_antennas()
         self._on_called = True
         result_code = self._apiu_proxy.on()
@@ -418,10 +418,10 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        with self._power_mode_lock:
+        with self._power_state_lock:
             if not all(
-                power_mode == PowerState.ON
-                for power_mode in self._tile_power_modes.values()
+                power_state == PowerState.ON
+                for power_state in self._tile_power_states.values()
             ):
                 results = []
                 for proxy in self._tile_proxies:
@@ -430,8 +430,8 @@ class StationComponentManager(MccsComponentManager):
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
             if not all(
-                power_mode == PowerState.ON
-                for power_mode in self._antenna_power_modes.values()
+                power_state == PowerState.ON
+                for power_state in self._antenna_power_states.values()
             ):
                 results = [proxy.on() for proxy in self._antenna_proxies]
                 if ResultCode.FAILED in results:

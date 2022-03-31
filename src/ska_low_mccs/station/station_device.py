@@ -228,7 +228,6 @@ class MccsStation(SKAObsDevice):
         self: MccsStation,
         state_change: dict[str, Any],
         fqdn: Optional[str] = None,
-        power_state_changed_callback: Optional[Callable] = None,
     ) -> None:
         """
         Handle change in the state of the component.
@@ -244,17 +243,20 @@ class MccsStation(SKAObsDevice):
         """
         if fqdn is None:
             health_state_changed_callback = self.health_changed
-        elif "apiu" in fqdn:
-            health_state_changed_callback = self._health_model.apiu_health_changed
-        elif "antenna" in fqdn:
-            health_state_changed_callback = functools.partial(self._health_model.antenna_health_changed, fqdn)
-        elif "tile" in fqdn:
-            health_state_changed_callback = functools.partial(self._health_model.tile_health_changed, fqdn)
-        else:
-            raise ValueError(f"unknown fqdn '{fqdn}', should belong to antenna, tile or apiu")
-
-        if power_state_changed_callback is None:
             power_state_changed_callback = self._component_power_state_changed
+        else:
+            device_family = fqdn.split("/")[1]
+            if device_family == "apiu":
+                health_state_changed_callback = self._health_model.apiu_health_changed
+                power_state_changed_callback = self.component_manager._apiu_mode_changed
+            elif device_family == "antenna":
+                health_state_changed_callback = functools.partial(self._health_model.antenna_health_changed, fqdn)
+                power_state_changed_callback = functools.partial(self.component_manager._antenna_power_mode_changed, fqdn)
+            elif device_family == "tile":
+                health_state_changed_callback = functools.partial(self._health_model.tile_health_changed, fqdn)
+                power_state_changed_callback = functools.partial(self.component_manager._tile_power_mode_changed, fqdn)
+            else:
+                raise ValueError(f"unknown fqdn '{fqdn}', should belong to antenna, tile or apiu")
 
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")

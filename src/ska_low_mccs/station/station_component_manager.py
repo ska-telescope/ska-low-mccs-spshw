@@ -26,6 +26,7 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.utils import threadsafe
+from test import device
 
 __all__ = ["StationComponentManager"]
 
@@ -192,25 +193,15 @@ class StationComponentManager(MccsComponentManager):
             logger,
             max_workers,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
-            functools.partial(
-                self.component_state_changed_callback,
-                fqdn=apiu_fqdn,
-                power_state_changed_callback=self._apiu_power_state_changed
-            ),
+            functools.partial(self.component_state_changed_callback, fqdn=apiu_fqdn),
         )
         self._antenna_proxies = [
             DeviceComponentManager(
                 antenna_fqdn,
                 logger,
                 max_workers,
-                functools.partial(
-                    self._device_communication_status_changed, antenna_fqdn
-                ),
-                functools.partial(
-                    self.component_state_changed_callback,
-                    fqdn=antenna_fqdn,
-                    power_state_changed_callback=functools.partial(self._antenna_power_state_changed, antenna_fqdn)
-                ),
+                functools.partial(self._device_communication_status_changed, antenna_fqdn),
+                functools.partial(self.component_state_changed_callback, fqdn=antenna_fqdn),
             )
             for antenna_fqdn in antenna_fqdns
         ]
@@ -222,18 +213,13 @@ class StationComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
-                functools.partial(
-                    self.component_state_changed_callback,
-                    fqdn=tile_fqdn,
-                    power_state_changed_callback=functools.partial(self._tile_power_state_changed, tile_fqdn)
-                ),
+                functools.partial(self.component_state_changed_callback, fqdn=tile_fqdn),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         ]
 
         super().__init__(
             logger,
-            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )
@@ -356,7 +342,8 @@ class StationComponentManager(MccsComponentManager):
                 f"\tiles: {self._tile_power_states}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
-            self.update_component_power_state(evaluated_power_state)
+            self.component_state_changed_callback({"power_state": evaluated_power_state})
+            #self.update_component_power_state(evaluated_power_state)
 
     def off(
         self: StationComponentManager,

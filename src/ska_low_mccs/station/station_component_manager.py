@@ -16,7 +16,8 @@ from typing import Callable, Optional, Sequence
 
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     DeviceComponentManager,
@@ -357,15 +358,34 @@ class StationComponentManager(MccsComponentManager):
             )
             self.update_component_power_state(evaluated_power_state)
 
-    @check_communicating
     def off(
         self: StationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> ResultCode:
+        """Submit the _off method.
+
+        This method returns immediately after it submitted
+        `self._off` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :type task_callback: Callable, optional
+        """
+        task_status, response = self.submit_task(
+            self._off, task_callback=task_callback
+        )
+        return task_status, response
+
+    @check_communicating
+    def _off(
+        self: StationComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Turn off this station.
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         results = [proxy.off() for proxy in self._tile_proxies] + [
             self._apiu_proxy.off()
         ]  # Never mind antennas, turning off APIU suffices
@@ -377,8 +397,35 @@ class StationComponentManager(MccsComponentManager):
         else:
             return ResultCode.OK
 
-    @check_communicating
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        with self._power_state_lock:
+            self._target_power_state = PowerState.ON
+        self._review_power()
+        task_callback(
+            status=TaskStatus.COMPLETED, result="This slow task has completed"
+        )
+        return ResultCode.OK
+
+
     def on(
+        self: StationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> ResultCode:
+        """Submit the _on method.
+
+        This method returns immediately after it submitted
+        `self._on` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :type task_callback: Callable, optional
+        """
+        task_status, response = self.submit_task(
+            self._on, task_callback=task_callback
+        )
+        return task_status, response
+
+    @check_communicating
+    def _on(
         self: StationComponentManager,
     ) -> ResultCode:
         """

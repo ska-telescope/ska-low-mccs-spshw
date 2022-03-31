@@ -19,14 +19,14 @@ __all__ = [
     "SubrackHealthModel",
 ]
 
+from .subrack_data import SubrackData
+from .subrack_simulator import SubrackSimulator
+from .subrack_driver import SubrackDriver
 from .subrack_component_manager import (
     BaseSubrackSimulatorComponentManager,
-    SubrackComponentManager,
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
+    SubrackComponentManager,
 )
-from .subrack_data import SubrackData
-from .subrack_device import MccsSubrack
-from .subrack_driver import SubrackDriver
 from .subrack_health_model import SubrackHealthModel
-from .subrack_simulator import SubrackSimulator
+from .subrack_device import MccsSubrack

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
 # from ska_tango_base.base.task_queue_manager import QueueManager
@@ -99,7 +100,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         #     return
         # Report anyway. Let upper levels decide if information is redundant
         self._tpm_power_states = tpm_power_states
-        self._component_state_changed_callback(tpm_power_states)
+        self._component_state_changed_callback({"tpm_power_states": tpm_power_states})
 
     @property
     def tpm_power_states(
@@ -165,6 +166,10 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
+            "turn_on_tpms",
+            "turn_off_tpms",
+            "turn_on_tpm",
+            "turn_off_tpm",
             "check_tpm_power_states",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
@@ -204,6 +209,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         return getattr(self._component, name)
 
 
+
 class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
     """A component manager for a subrack simulator."""
 
@@ -227,7 +233,6 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         """
         super().__init__(
             SubrackSimulator(),
-            logger,
             logger,
             max_workers,
             communication_status_changed_callback,
@@ -326,22 +331,6 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
 class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an subrack (simulator or driver) and its power supply."""
 
-    # def create_queue_manager(self: SubrackComponentManager) -> QueueManager:
-    #     """
-    #     Create a QueueManager.
-
-    #     Overwrite the creation of the queue manger specifying the
-    #     required max queue size and number of workers.
-
-    #     :return: The queue manager.
-    #     """
-    #     return QueueManager(
-    #         max_queue_size=8,  # 8 PowerOnTpm commands
-    #         num_workers=1,
-    #         logger=self.logger,
-    #         push_change_event=self._push_change_event,
-    #     )
-
     def __init__(
         self: SubrackComponentManager,
         initial_simulation_mode: SimulationMode,
@@ -372,9 +361,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             we start connecting to the real upstream power supply
             device.
         """
+        self._tpm_power_states_lock = threading.Lock()
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_power_changed_callback = component_state_changed_callback
-        self._tpm_power_changed_callback(self._tpm_power_states)
+        self._tpm_power_changed_callback({"tpm_power_states": self._tpm_power_states})
         self._component_state_changed_callback = component_state_changed_callback
 
         hardware_component_manager = SwitchingSubrackComponentManager(
@@ -449,7 +439,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if self._tpm_power_states == tpm_power_states:
             return
         self._tpm_power_states = list(tpm_power_states)
-        self._tpm_power_changed_callback(tpm_power_states)
+        self._tpm_power_changed_callback({"tpm_power_states": tpm_power_states})
 
     def _power_supply_communication_status_changed(
         self: SubrackComponentManager,
@@ -508,7 +498,55 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             SwitchingSubrackComponentManager, self._hardware_component_manager
         ).simulation_mode = mode
 
-    def off(self: SubrackComponentManager) -> ResultCode | None:
+    def on(self: MccsComponentManager, task_callback: Callable = None) -> tuple[TaskStatus, str]:
+        """
+        Submit the on slow task.
+
+        This method returns immediately after it submitted
+        `self._on` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :returns: task status and message
+        """
+        return self.submit_task(self._on, task_callback=task_callback)
+
+    def _on(self: MccsComponentManager, task_callback: Callable = None, task_abort_event: threading.Event = None) -> None:
+        """
+        Tell the upstream power supply proxy to turn the hardware on.
+
+        :return: a result code, or None if there was nothing to do.
+        """
+        # Indicate that the task has started
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            super().on()
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="On command has been aborted")
+            return
+
+        task_callback(
+            status=TaskStatus.COMPLETED, result="On command has completed"
+        )
+
+    def off(self: MccsComponentManager, task_callback: Callable = None) -> tuple[TaskStatus, str]:
+        """
+        Submit the off slow task.
+
+        This method returns immediately after it submitted
+        `self._on` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :returns: task status and message
+        """
+        return self.submit_task(self._off, task_callback=task_callback)
+
+    def _off(self: SubrackComponentManager, task_callback: Callable = None, task_abort_event: threading.Event = None) -> None:
         """
         Tell the subrack simulator to turn off.
 
@@ -519,14 +557,24 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: a result code, or None if there was nothing to do.
         """
+        # Indicate that the task has started
+        task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
                 SwitchingSubrackComponentManager, self._hardware_component_manager
             ).turn_off_tpms()
-        except ConnectionError:
-            self.logger.error("Cannot turn off the TPMs, the subrack is disconnected")
-        result_code = super().off()
-        return result_code
+            super().off()
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="Off command has been aborted")
+            return
+
+        task_callback(
+            status=TaskStatus.COMPLETED, result="Off command completed"
+        )
 
     @check_communicating
     def turn_off_tpm(self: SubrackComponentManager, logical_tpm_id: int) -> bool | None:
@@ -615,6 +663,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "tpm_present",
             "tpm_supply_fault",
             "is_tpm_on",
+            "turn_on_tpms",
+            "turn_off_tpms",
+            "turn_on_tpm",
+            "turn_off_tpm",
             "check_tpm_power_states",
             "set_subrack_fan_speed",
             "set_subrack_fan_modes",
@@ -634,6 +686,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "simulate_humidity",
             "simulate_temperature",
             "simulate_voltage",
+
         ]:
             return self._get_from_hardware(name)
         return default_value
@@ -660,7 +713,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param power_state: The desired power state
         """
-        with self._power_state_lock:
+        with self._tpm_power_states_lock:
             self.power_state = power_state
 
     def turn_on_tpm(
@@ -696,10 +749,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._turn_on_tpm, task_callback=task_callback
-        )
-        return task_status, unique_id
+        return self.submit_task(self._turn_on_tpms, task_callback=task_callback)
 
     def turn_off_tpms(
         self: SubrackComponentManager,
@@ -714,7 +764,4 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._turn_on_tpm, task_callback=task_callback
-        )
-        return task_status, unique_id
+        return self.submit_task(self._turn_off_tpms, task_callback=task_callback)

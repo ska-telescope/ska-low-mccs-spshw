@@ -28,10 +28,10 @@ import time
 from typing import Any, Callable, List, Optional, cast
 
 from ska_tango_base.commands import ResultCode, SlowCommand
-from ska_tango_base.control_model import CommunicationStatus, ControlMode, PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.component import MccsComponentManager, WebHardwareClient
-from ska_low_mccs.subrack import SubrackData
+from ska_low_mccs.subrack.subrack_data import SubrackData, FanMode
 
 __all__ = ["SubrackDriver"]
 
@@ -54,7 +54,7 @@ class SubrackDriver(MccsComponentManager):
     DEFAULT_BOARD_CURRENT = 1.1
     DEFAULT_SUBRACK_FAN_SPEED = [4999.0, 5000.0, 5001.0, 5002.0]
     MAX_SUBRACK_FAN_SPEED = 8000.0
-    DEFAULT_SUBRACK_FAN_MODES = [ControlMode.AUTO] * 4
+    DEFAULT_SUBRACK_FAN_MODES = [FanMode.AUTO] * 4
     DEFAULT_TPM_PRESENT = [True] * 8
     DEFAULT_POWER_SUPPLY_POWERS = [50.0, 70.0]
     DEFAULT_POWER_SUPPLY_VOLTAGES = [12.0, 12.1]
@@ -112,9 +112,9 @@ class SubrackDriver(MccsComponentManager):
 
         super().__init__(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
-            max_workers=max_workers,
         )
 
     def start_communicating(self: SubrackDriver) -> None:
@@ -245,7 +245,7 @@ class SubrackDriver(MccsComponentManager):
         return self._subrack_fan_speeds_percent
 
     @property
-    def subrack_fan_modes(self: SubrackDriver) -> list[ControlMode]:
+    def subrack_fan_modes(self: SubrackDriver) -> list[FanMode]:
         """
         Return the subrack fan Mode.
 
@@ -254,7 +254,7 @@ class SubrackDriver(MccsComponentManager):
         self.logger.debug("Reading backplane fan modes")
         response = self._client.get_attribute("subrack_fan_modes")
         if response["status"] == "OK":
-            self._subrack_fan_modes = cast(List[ControlMode], response["value"])
+            self._subrack_fan_modes = cast(List[FanMode], response["value"])
         return self._subrack_fan_modes
 
     @property
@@ -586,7 +586,7 @@ class SubrackDriver(MccsComponentManager):
         return True
 
     def set_subrack_fan_modes(
-        self: SubrackDriver, fan_id: int, mode: ControlMode
+        self: SubrackDriver, fan_id: int, mode: FanMode
     ) -> bool:
         """
         Set Fan Operational Mode for the subrack's fan.

@@ -35,9 +35,9 @@ class SubrackData:
 
 class FanMode(enum.IntEnum):
     """Python enumerated type for ``FanMode`` attribute."""
+
     MANUAL = 1
     """
     Tango Device accepts commands from all clients.
     """
     AUTO = 2
-

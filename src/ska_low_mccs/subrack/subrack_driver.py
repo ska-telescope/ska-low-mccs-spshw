@@ -31,7 +31,7 @@ from ska_tango_base.commands import ResultCode, SlowCommand
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.component import MccsComponentManager, WebHardwareClient
-from ska_low_mccs.subrack.subrack_data import SubrackData, FanMode
+from ska_low_mccs.subrack.subrack_data import FanMode, SubrackData
 
 __all__ = ["SubrackDriver"]
 
@@ -176,7 +176,9 @@ class SubrackDriver(MccsComponentManager):
         tpm_power_states = str(self.tpm_power_states)
         self.logger.debug("TPM power changed: " + tpm_power_states)
         if self._component_state_changed_callback is not None:
-            self._component_state_changed_callback(self.tpm_power_states)
+            self._component_state_changed_callback(
+                {"tpm_power_states": tpm_power_states}
+            )
 
     @property
     def backplane_temperatures(self: SubrackDriver) -> list[float]:
@@ -585,9 +587,7 @@ class SubrackDriver(MccsComponentManager):
         )
         return True
 
-    def set_subrack_fan_modes(
-        self: SubrackDriver, fan_id: int, mode: FanMode
-    ) -> bool:
+    def set_subrack_fan_modes(self: SubrackDriver, fan_id: int, mode: FanMode) -> bool:
         """
         Set Fan Operational Mode for the subrack's fan.
 

@@ -12,12 +12,12 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
-# from ska_tango_base.base.task_queue_manager import QueueManager
-from ska_tango_base.commands import ResultCode, TaskStatus
+from ska_tango_base.commands import TaskStatus
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.component import (
     ComponentManagerWithUpstreamPowerSupply,
+    MccsComponentManager,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
     SwitchingComponentManager,
@@ -207,7 +207,6 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         """
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._component, name)
-
 
 
 class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
@@ -498,7 +497,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             SwitchingSubrackComponentManager, self._hardware_component_manager
         ).simulation_mode = mode
 
-    def on(self: MccsComponentManager, task_callback: Callable = None) -> tuple[TaskStatus, str]:
+    def on(
+        self: MccsComponentManager, task_callback: Callable = None
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.
 
@@ -511,11 +512,16 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
-    def _on(self: MccsComponentManager, task_callback: Callable = None, task_abort_event: threading.Event = None) -> None:
+    def _on(
+        self: MccsComponentManager,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Tell the upstream power supply proxy to turn the hardware on.
 
-        :return: a result code, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
         task_callback(status=TaskStatus.IN_PROGRESS)
@@ -526,14 +532,16 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="On command has been aborted")
+            task_callback(
+                status=TaskStatus.ABORTED, result="On command has been aborted"
+            )
             return
 
-        task_callback(
-            status=TaskStatus.COMPLETED, result="On command has completed"
-        )
+        task_callback(status=TaskStatus.COMPLETED, result="On command has completed")
 
-    def off(self: MccsComponentManager, task_callback: Callable = None) -> tuple[TaskStatus, str]:
+    def off(
+        self: MccsComponentManager, task_callback: Callable = None
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the off slow task.
 
@@ -546,7 +554,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         return self.submit_task(self._off, task_callback=task_callback)
 
-    def _off(self: SubrackComponentManager, task_callback: Callable = None, task_abort_event: threading.Event = None) -> None:
+    def _off(
+        self: SubrackComponentManager,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Tell the subrack simulator to turn off.
 
@@ -555,7 +567,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         overrule it so that, should the subrack hardware be turned on
         again, the tpms will be turned off.
 
-        :return: a result code, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
         task_callback(status=TaskStatus.IN_PROGRESS)
@@ -569,12 +582,12 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="Off command has been aborted")
+            task_callback(
+                status=TaskStatus.ABORTED, result="Off command has been aborted"
+            )
             return
 
-        task_callback(
-            status=TaskStatus.COMPLETED, result="Off command completed"
-        )
+        task_callback(status=TaskStatus.COMPLETED, result="Off command completed")
 
     @check_communicating
     def turn_off_tpm(self: SubrackComponentManager, logical_tpm_id: int) -> bool | None:
@@ -686,7 +699,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             "simulate_humidity",
             "simulate_temperature",
             "simulate_voltage",
-
         ]:
             return self._get_from_hardware(name)
         return default_value

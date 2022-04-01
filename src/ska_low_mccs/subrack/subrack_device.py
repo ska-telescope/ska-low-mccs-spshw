@@ -699,7 +699,6 @@ class MccsSubrack(SKABaseDevice):
         unique_id, return_code = handler(argin)
         return ([return_code], [unique_id])
 
-
     @command(
         dtype_out="DevVarLongStringArray",
     )

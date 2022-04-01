@@ -26,7 +26,6 @@ from ska_low_mccs.component import (
     check_on,
 )
 from ska_low_mccs.utils import threadsafe
-from test import device
 
 __all__ = ["StationComponentManager"]
 
@@ -220,6 +219,7 @@ class StationComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
+            max_workers,
             communication_status_changed_callback,
             component_state_changed_callback,
         )

@@ -444,7 +444,7 @@ class TileOrchestrator:
         self: TileOrchestrator,
     ) -> None:
         self._tpm_power_state = PowerState.NO_SUPPLY
-        self._component_state_changed_callback({"power_state": PowerState.OFF})
+        self._component_state_changed_callback({"power_state": PowerState.NO_SUPPLY})
 
     def _report_tpm_off(self: TileOrchestrator) -> None:
         self._tpm_power_state = PowerState.OFF

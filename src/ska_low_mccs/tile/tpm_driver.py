@@ -26,7 +26,7 @@ import numpy as np
 from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_tango_base.commands import ResultCode, SlowCommand, SubmittedSlowCommand
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import MccsComponentManager

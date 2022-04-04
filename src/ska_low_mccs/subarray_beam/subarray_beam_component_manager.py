@@ -172,6 +172,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
 
         :param argin: Json string containing args
         :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
         """
         config_dict = json.loads(argin)
 
@@ -204,13 +206,13 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """
         Implement :py:meth:`.MccsSubarrayBeam.Configure` command.
 
-        :param subarray_beam_id:
-        :param station_ids:
-        :param update_rate:
-        :param channels:
-        :param sky_coordinates:
-        :param antenna_weights:
-        :param phase_centre:
+        :param subarray_beam_id: id of this subarray beam.
+        :param station_ids: ids of stations in this subarray beam.
+        :param update_rate: update rate of the scan.
+        :param channels: ids of channels configured for this subarray beam.
+        :param sky_coordinates: sky coordinates for this subarray beam to point at.
+        :param antenna_weights: weights to use for the antennas.
+        :param phase_centre: the phase centre of this subarray beam.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Task abort, defaults to None
         """
@@ -234,21 +236,23 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
         """
         return self.submit_task(self._scan, task_callback=task_callback)
 
     def _scan(
         self,
-        scan_id,
-        scan_time,
+        scan_id: int,
+        scan_time: float,
         task_callback: Callable = None,
         task_abort_event: threading.Event = None,
     ) -> None:
         """
         Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
 
-        :param scan_id: 
-        :param scan_time: 
+        :param scan_id: Scan ID to associte with the data.
+        :param scan_time: Start time/ duration of the scan.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Task abort, defaults to None
         """

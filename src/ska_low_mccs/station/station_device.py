@@ -149,36 +149,6 @@ class MccsStation(SKAObsDevice):
 
             return (ResultCode.OK, "Initialisation complete")
 
-#     class OnCommand(ResponseCommand):
-#         """
-#         A class for the MccsStation's On() command.
-# 
-#         This class overrides the SKABaseDevice OnCommand to allow for an
-#         eventual consistency semantics. This requires an override
-#         because the SKABaseDevice OnCommand only allows On() to be run
-#         when in OFF state.
-#         """
-# 
-#         def do(  # type: ignore[override]
-#             self: MccsStation.OnCommand,
-#         ) -> tuple[ResultCode, str]:
-#             """
-#             Stateless hook for Off() command functionality.
-# 
-#             :return: A tuple containing a return code and a string
-#                 message indicating status. The message is for
-#                 information purpose only.
-#             """
-#             # It's fine to complete this long-running command here
-#             # (returning ResultCode.OK), even though the component manager
-#             # may not actually be finished turning everything on.
-#             # The completion of the original On command to MccsController
-#             # is waiting for the various power mode callbacks to be received
-#             # rather than completion of the various long-running commands.
-#             _ = self.target.on()
-#             message = "Station On command completed OK"
-#             return (ResultCode.OK, message)
-
     def is_On_allowed(self: MccsStation) -> bool:
         """
         Check if command `Off` is allowed in the current device state.

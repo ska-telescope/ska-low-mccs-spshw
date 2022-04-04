@@ -87,10 +87,10 @@ class MccsAPIU(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("PowerUpAntenna", "turn_on_antenna"),
-            ("PowerDownAntenna", "turn_off_antenna"),
-            ("PowerUp", "turn_on_antennas"),
-            ("PowerDown", "turn_off_antennas"),
+            ("PowerUpAntenna", "power_up_antenna"),
+            ("PowerDownAntenna", "power_down_antenna"),
+            ("PowerUp", "power_up"),
+            ("PowerDown", "power_down"),
         ]:
             self.register_command_object(
                 command_name,
@@ -401,7 +401,6 @@ class MccsAPIU(SKABaseDevice):
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
     )
-    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
     def PowerUpAntenna(self: MccsAPIU, argin: int) -> DevVarLongStringArrayType:
         """
         Power up the antenna.
@@ -414,8 +413,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUpAntenna")
-        result_code, unique_id = handler(argin)
-        return ([result_code], [unique_id])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     @command(
         dtype_in="DevULong",
@@ -433,8 +432,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerDownAntenna")
-        result_code, unique_id = handler(argin)
-        return ([result_code], [unique_id])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -448,8 +447,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUp")
-        result_code, unique_id = handler()
-        return ([result_code], [unique_id])
+        result_code, message = handler()
+        return ([result_code], [message])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -463,8 +462,8 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerDown")
-        result_code, unique_id = handler()
-        return ([result_code], [unique_id])
+        result_code, message = handler()
+        return ([result_code], [message])
 
 
 # ----------

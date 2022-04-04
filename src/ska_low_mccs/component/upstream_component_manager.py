@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -291,6 +292,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             called when the component power mode changes
         """
         self._target_power_state: Optional[PowerState] = None
+        self._power_state_lock = threading.RLock()
 
         self._power_supply_communication_status = CommunicationStatus.DISABLED
         self._hardware_communication_status = CommunicationStatus.DISABLED

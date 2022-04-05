@@ -684,19 +684,18 @@ class ControllerComponentManager(MccsComponentManager):
         results = [station_proxy.on() for station_proxy in self._stations.values()] + [
             subrack_proxy.on() for subrack_proxy in self._subracks.values()
         ]
-        #TODO check results for all queued and not failed
-        #TODO wait for the respective LRC's to complete, whilst reporting progress
-        results = [station_proxy.longRunningCommand[1] for station_proxy in self._stations.values()] + [
-            subrack_proxy.longRunningCommand[1] for subrack_proxy in self._subracks.values()
-        ]
-        #TODO now check the results for any failed
-        if ResultCode.FAILED in results:
+        completed = True
+        for result in results:
+            if result[0] == TaskStatus.FAILED:
+                completed = False
+                break
+        if completed:
             task_callback(
-                status=TaskStatus.FAILED, result="The Off command has failed"
+                status=TaskStatus.COMPLETED, result="The Off command has completed"
             )
         else:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The Off command has completed"
+                status=TaskStatus.FAILED, result="The Off command has failed"
             )
 
     def allocate(

@@ -16,10 +16,10 @@ from typing import Any, List, Optional, Tuple
 import tango
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import (
-    ObservationCommand,
-    ResponseCommand,
+    SubmittedSlowCommand,
+    SlowCommand,
     ResultCode,
-    StateModelCommand,
+    FastCommand,
 )
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.subarray import SKASubarray
@@ -53,12 +53,13 @@ class MccsSubarray(SKASubarray):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsSubarray) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubarrayHealthModel(self.health_changed)
+        self._health_model = SubarrayHealthModel(self._component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -71,36 +72,30 @@ class MccsSubarray(SKASubarray):
         """
         return SubarrayComponentManager(
             self.logger,
-            self.push_change_event,
+            self._max_workers,
             self._component_communication_status_changed,
-            self._assign_completed,
-            self._release_completed,
-            self._configure_completed,
-            self._abort_completed,
-            self._obsreset_completed,
-            self._restart_completed,
-            self._resources_changed,
-            self._configured_changed,
-            self._scanning_changed,
-            self._obs_fault_occurred,
-            self._health_model.station_health_changed,
-            self._health_model.subarray_beam_health_changed,
-            self._health_model.station_beam_health_changed,
+            self._component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsSubarray) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        self.register_command_object(
-            "SendTransientBuffer",
-            self.SendTransientBufferCommand(
-                self.component_manager,
-                self.op_state_model,
-                self.obs_state_model,
-                self.logger,
-            ),
-        )
+        for (command_name, method_name) in [
+            ("SendTransientBuffer", "send_transient_buffer"),
+            ("AssignResources", "assign_resources"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
+            )
 
     class InitCommand(SKASubarray.InitCommand):
         """Command class for device initialisation."""
@@ -117,23 +112,111 @@ class MccsSubarray(SKASubarray):
             """
             (result_code, message) = super().do()
 
-            device = self.target
-            device.set_change_event("stationFQDNs", True, True)
-            device.set_archive_event("stationFQDNs", True, True)
+            self.set_change_event("stationFQDNs", True, True)
+            self.set_archive_event("stationFQDNs", True, True)
 
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._build_state = release.get_release_info()
+            self._version_id = release.version
 
             return (ResultCode.OK, "Init command started")
 
     # ----------
     # Callbacks
     # ----------
+    def _component_state_changed_callback(self: MccsSubarray, state_change: dict[str, Any], fqdn: Optional[str],) -> None:
+        """
+        Handle change in this device's state.
+
+        This is a callback hook, called whenever the state changes. It
+        is responsible for updating the tango side of things i.e. making
+        sure the attribute is up to date, and events are pushed.
+
+        :param state_change: A dictionary containing the name of the state that changed and its new value.
+        """
+        # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
+        # valid_device_types = {"station": "station_health_changed",
+        #                     "beam": "station_beam_health_changed",
+        #                     "subarraybeam": "subarray_beam_health_changed"}
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
+            # if fqdn is None:
+            #     # Do regular health update.
+            #    if self._health_state != health:
+            #         self._health_state = health
+            #         self.push_change_event("healthState", health)
+            # else:
+            #     # Identify and call subservient device method.
+            #     device_type = fqdn.split("/")[1]
+            #     if device_type in valid_device_types.keys():
+            #         valid_device_types[device_type](fqdn, health)
+
+        if "station_health_state" in state_change.keys():
+            station_health = state_change.get("station_health_state")
+            self._health_model.station_health_changed(fqdn, station_health)
+
+        if "station_beam_health_state" in state_change.keys():
+            station_beam_health = state_change.get("station_beam_health_state")
+            self._health_model.station_beam_health_changed(fqdn, station_beam_health)
+
+        if "subarray_beam_health_state" in state_change.keys():
+            subarray_beam_health = state_change.get("subarray_beam_health_state")
+            self._health_model.subarray_beam_health_changed(fqdn, subarray_beam_health)
+
+        # resources should be passed in the dict's value as a list of sets to be extracted here.
+        if "resources_changed" in state_change.keys():
+            resources = state_change.get("resources_changed")
+            station_fqdns       = resources[0]
+            subarray_beam_fqdns = resources[1]
+            station_beam_fqdns  = resources[2]
+            self._resources_changed(station_fqdns, subarray_beam_fqdns, station_beam_fqdns)
+
+        if "configured_changed" in state_change.keys():
+            is_configured = state_change.get("configured_changed")
+            if is_configured:
+                self.obs_state_model.perform_action("component_configured")
+            else:
+                self.obs_state_model.perform_action("component_unconfigured")
+
+        if "scanning_changed" in state_change.keys():
+            is_scanning = state_change.get("scanning_changed")
+            if is_scanning:
+                self.obs_state_model.perform_action("component_scanning")
+            else:
+                self.obs_state_model.perform_action("component_not_scanning")
+
+        if "assign_completed" in state_change.keys():
+            self.obs_state_model.perform_action("assign_completed")
+
+        if "release_completed" in state_change.keys():
+            self.obs_state_model.perform_action("release_completed")
+
+        if "configure_completed" in state_change.keys():
+            self.obs_state_model.perform_action("configure_completed")
+
+        if "abort_completed" in state_change.keys():
+            self.obs_state_model.perform_action("abort_completed")
+
+        if "obsreset_completed" in state_change.keys():
+            self.obs_state_model.perform_action("obsreset_completed")
+
+        if "restart_completed" in state_change.keys():
+            self.obs_state_model.perform_action("restart_completed")
+
+        if "obsfault" in state_change.keys():
+            self.obs_state_model.perform_action("component_obsfault")
+
+        if "obsstate_changed" in state_change.keys():
+            obs_state = state_change.get("obsstate_changed")
+            self.component_manager._device_obs_state_changed(obs_state)
+
+        if "station_power_state" in state_change.keys():
+            station_power = state_change.get("station_power_state")
+            self.component_manager._station_power_state_changed(station_power)
+
+
     def _component_communication_status_changed(
         self: MccsSubarray,
         communication_status: CommunicationStatus,
@@ -162,72 +245,6 @@ class MccsSubarray(SKASubarray):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _assign_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the assign command.
-
-        This is a callback hook, called by the component manager when
-        the assign command completes.
-        """
-        self.obs_state_model.perform_action("assign_completed")
-
-    def _release_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the release or release_all command.
-
-        This is a callback hook, called by the component manager when
-        the release or release_all command completes.
-        """
-        self.obs_state_model.perform_action("release_completed")
-
-    def _configure_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the configure command.
-
-        This is a callback hook, called by the component manager when
-        the configure command completes.
-        """
-        self.obs_state_model.perform_action("configure_completed")
-
-    def _abort_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the abort command.
-
-        This is a callback hook, called by the component manager when
-        the abort command completes.
-        """
-        self.obs_state_model.perform_action("abort_completed")
-
-    def _obsreset_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the obs_reset command.
-
-        This is a callback hook, called by the component manager when
-        the obs_reset command completes.
-        """
-        self.obs_state_model.perform_action("obsreset_completed")
-
-    def _restart_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the restart command.
-
-        This is a callback hook, called by the component manager when
-        the restart command completes.
-        """
-        self.obs_state_model.perform_action("restart_completed")
-
     def _resources_changed(
         self: MccsSubarray,
         station_fqdns: set[str],
@@ -255,64 +272,19 @@ class MccsSubarray(SKASubarray):
             station_fqdns, subarray_beam_fqdns, station_beam_fqdns
         )
 
-    def _configured_changed(
-        self: MccsSubarray,
-        is_configured: bool,
-    ) -> None:
-        """
-        Handle change in whether the subarray is configured.
+    # def health_changed(self: MccsSubarray, health: HealthState) -> None:
+    #     """
+    #     Handle the HealthModel's health state changes.
 
-        This is a callback hook, called by the component manager when
-        whether the subarray is configured changes.
+    #     Responsible for updating the tango side of things i.e. making sure the attribute
+    #     is up to date, and events are pushed.
 
-        :param is_configured: whether the subarray is configured
-        """
-        if is_configured:
-            self.obs_state_model.perform_action("component_configured")
-        else:
-            self.obs_state_model.perform_action("component_unconfigured")
-
-    def _scanning_changed(
-        self: MccsSubarray,
-        is_scanning: bool,
-    ) -> None:
-        """
-        Handle change in whether the subarray is scanning.
-
-        This is a callback hook, called by the component manager when
-        whether the subarray is scanning changes.
-
-        :param is_scanning: whether the subarray is scanning
-        """
-        if is_scanning:
-            self.obs_state_model.perform_action("component_scanning")
-        else:
-            self.obs_state_model.perform_action("component_not_scanning")
-
-    def _obs_fault_occurred(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle occurrence of an observation fault.
-
-        This is a callback hook, called by the component manager when an
-        observation fault occurs.
-        """
-        self.obs_state_model.perform_action("component_obsfault")
-
-    def health_changed(self: MccsSubarray, health: HealthState) -> None:
-        """
-        Handle the HealthModel's health state changes.
-
-        Responsible for updating the tango side of things i.e. making sure the attribute
-        is up to date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+    #     :param health: the new health value
+    #     """
+    #     if self._health_state == health:
+    #         return
+    #     self._health_state = health
+    #     self.push_change_event("healthState", health)
 
     # ------------------
     # Attribute methods
@@ -449,8 +421,8 @@ class MccsSubarray(SKASubarray):
         # TODO Call assign resources directly - DON'T USE LRC - for now.
         handler = self.get_command_object("AssignResources")
         params = json.loads(argin)
-        (return_code, message) = handler(params)
-        return ([return_code], [message])
+        (return_code, unique_id) = handler(params)
+        return ([return_code], [unique_id])
 
     class ReleaseResourcesCommand(
         ObservationCommand, ResponseCommand, StateModelCommand
@@ -814,38 +786,6 @@ class MccsSubarray(SKASubarray):
             result_code = component_manager.restart()
             return (result_code, self.RESULT_MESSAGES[result_code])
 
-    class SendTransientBufferCommand(ResponseCommand):
-        """Class for handling the SendTransientBuffer(argin) command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "SendTransientBuffer command completed OK",
-            ResultCode.QUEUED: "SendTransientBuffer command queued",
-            ResultCode.FAILED: "SendTransientBuffer command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.SendTransientBufferCommand, argin: list[int]
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the SendTransientBuffer command.
-
-            :param argin: specification of the segment of the transient
-                buffer to send, comprising:
-                1. Start time (timestamp: milliseconds since UNIX epoch)
-                2. End time (timestamp: milliseconds since UNIX epoch)
-                3. Dispersion measure
-                Together, these parameters narrow the selection of
-                transient buffer data to the period of time and
-                frequencies that are of interest.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.send_transient_buffer()
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SendTransientBuffer(
         self: MccsSubarray, argin: list[int]
@@ -877,8 +817,8 @@ class MccsSubarray(SKASubarray):
             purposes only
         """
         handler = self.get_command_object("SendTransientBuffer")
-        (result_code, status) = handler(argin)
-        return ([result_code], [status])
+        (result_code, unique_id) = handler(argin)
+        return ([result_code], [unique_id])
 
 
 # ----------

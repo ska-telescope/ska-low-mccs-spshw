@@ -304,7 +304,7 @@ class ApiuSimulator(ObjectComponent):
         """
         return self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON
 
-    #@check_antenna_id
+    # @check_antenna_id
     def turn_off_antenna(self: ApiuSimulator, antenna_id: int) -> ResultCode | None:
         """
         Turn off a specified antenna.
@@ -321,7 +321,7 @@ class ApiuSimulator(ObjectComponent):
         self._antenna_power_changed()
         return ResultCode.OK
 
-    #@check_antenna_id
+    # @check_antenna_id
     def turn_on_antenna(self: ApiuSimulator, antenna_id: int) -> ResultCode | None:
         """
         Turn on a specified antenna.
@@ -332,11 +332,11 @@ class ApiuSimulator(ObjectComponent):
         :return: a result code, or None if there was nothing to do
         """
         print("the antenna is", antenna_id)
-#         if self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON:
-#             return None
-#  
-#         self._antenna_data[antenna_id - 1]["power_mode"] = PowerState.ON
-#         self._antenna_power_changed()
+        #         if self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON:
+        #             return None
+        #
+        #         self._antenna_data[antenna_id - 1]["power_mode"] = PowerState.ON
+        #         self._antenna_power_changed()
         return ResultCode.OK
 
     def turn_off_antennas(self: ApiuSimulator) -> ResultCode | None:

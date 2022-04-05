@@ -14,6 +14,7 @@ from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.apiu import ApiuSimulator
 from ska_low_mccs.component import (
@@ -24,7 +25,6 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 
@@ -120,7 +120,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
             return self._get_from_component(name)
         return default_value
 
-    #@check_communicating
+    # @check_communicating
     def _get_from_component(
         self: ApiuSimulatorComponentManager,
         name: str,
@@ -320,24 +320,26 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         Submit the off slow task.
 
-        This method returns immediately after it is submitted for execution.
+                This method returns immediately after it is submitted for execution.
 
--        :param task_callback: Update task state, defaults to None
+        -        :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a response message
+                :return: A tuple containing a task status and a response message
         """
-        return self.submit_task(
-            self._off, task_callback=task_callback)
+        return self.submit_task(self._off, task_callback=task_callback)
 
-    def _off(self: ApiuComponentManager, task_callback: Callable = None, task_abort_event: threading.Event = None) -> None:
+    def _off(
+        self: ApiuComponentManager,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Tell the APIU simulator to turn off.
- 
+
         This is implemented in the super-class to tell the upstream
         power supply proxy to turn the APIU hardware off. Here we
         overrule it so that, should the APIU hardware be turned on
         again, the antennas will be turned off.
- 
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
         try:
@@ -347,7 +349,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             # super().off()
         except Exception as ex:
             task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-        
+
         if task_abort_event.is_set():
             task_callback(status=TaskStatus.ABORTED, result="This task aborted")
             return
@@ -404,9 +406,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        return self.submit_task(
-            self._turn_on_antennas, task_callback=task_callback
-        )
+        return self.submit_task(self._turn_on_antennas, task_callback=task_callback)
 
     def power_down(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None
@@ -420,9 +420,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        return self.submit_task(
-            self._turn_off_antennas, task_callback=task_callback
-        )
+        return self.submit_task(self._turn_off_antennas, task_callback=task_callback)
 
     def _turn_on_antenna(
         self: ApiuComponentManager,
@@ -430,7 +428,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_callback: Callable = None,
         task_abort_event: threading.Event = None,
     ):
-        """This is a long running method
+        """
+        This is a long running method.
 
         :param logger: logger
         :param task_callback: Update task state, defaults to None
@@ -447,11 +446,15 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="The antenna on task aborted")
+            task_callback(
+                status=TaskStatus.ABORTED, result="The antenna on task aborted"
+            )
             print("on aborted")
             return
 
-        task_callback(status=TaskStatus.COMPLETED, result="The antenna on task has completed")
+        task_callback(
+            status=TaskStatus.COMPLETED, result="The antenna on task has completed"
+        )
         print("on completed ")
 
     def _turn_off_antenna(
@@ -460,7 +463,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_callback: Callable = None,
         task_abort_event: threading.Event = None,
     ):
-        """This is a long running method
+        """
+        This is a long running method.
 
         :param logger: logger
         :param task_callback: Update task state, defaults to None
@@ -471,11 +475,15 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._hardware_component_manager.turn_off_antenna(antenna)
 
         if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="The antenna off task aborted")
+            task_callback(
+                status=TaskStatus.ABORTED, result="The antenna off task aborted"
+            )
             print("off aborted")
             return
 
-        task_callback(status=TaskStatus.COMPLETED, result="The antenna off task has completed")
+        task_callback(
+            status=TaskStatus.COMPLETED, result="The antenna off task has completed"
+        )
         print("off completed ")
 
     def _turn_on_antennas(
@@ -483,7 +491,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_callback: Callable = None,
         task_abort_event: threading.Event = None,
     ):
-        """This is a long running method
+        """
+        This is a long running method.
 
         :param logger: logger
         :param task_callback: Update task state, defaults to None
@@ -498,11 +507,15 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="The antenna all on task aborted")
+            task_callback(
+                status=TaskStatus.ABORTED, result="The antenna all on task aborted"
+            )
             print("on aborted")
             return
 
-        task_callback(status=TaskStatus.COMPLETED, result="The antenna all on task has completed")
+        task_callback(
+            status=TaskStatus.COMPLETED, result="The antenna all on task has completed"
+        )
         print("on completed ")
 
     def _turn_off_antennas(
@@ -510,7 +523,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_callback: Callable = None,
         task_abort_event: threading.Event = None,
     ):
-        """This is a long running method
+        """
+        This is a long running method.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
@@ -520,9 +534,13 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._hardware_component_manager.turn_off_antennas()
 
         if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="The antenna all off task aborted")
+            task_callback(
+                status=TaskStatus.ABORTED, result="The antenna all off task aborted"
+            )
             print("off aborted")
             return
 
-        task_callback(status=TaskStatus.COMPLETED, result="The antenna all off task has completed")
+        task_callback(
+            status=TaskStatus.COMPLETED, result="The antenna all off task has completed"
+        )
         print("off completed ")

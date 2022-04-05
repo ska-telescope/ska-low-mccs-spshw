@@ -25,7 +25,7 @@ class StationHealthModel(HealthModel):
         apiu_fqdn: str,
         antenna_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
-        health_changed_callback: Callable[[HealthState], None],
+        component_state_changed_callback: Callable[[Any], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -33,9 +33,9 @@ class StationHealthModel(HealthModel):
         :param apiu_fqdn: the FQDN of this station's APIU
         :param antenna_fqdns: the FQDNs of this station's antennas
         :param tile_fqdns: the FQDNs of this station's tiles
-        :param health_changed_callback: callback to be called whenever
-            there is a change to this this health model's evaluated
-            health state.
+        :param component_state_changed_callback: callback to be called whenever
+            there is a change to this component's state, including the health
+            model's evaluated health state.
         """
         self._apiu_health: Optional[HealthState] = HealthState.UNKNOWN
         self._antenna_health: dict[str, Optional[HealthState]] = {
@@ -44,7 +44,7 @@ class StationHealthModel(HealthModel):
         self._tile_health: dict[str, Optional[HealthState]] = {
             tile_fqdn: HealthState.UNKNOWN for tile_fqdn in tile_fqdns
         }
-        super().__init__(health_changed_callback)
+        super().__init__(component_state_changed_callback)
 
     def apiu_health_changed(
         self: StationHealthModel,

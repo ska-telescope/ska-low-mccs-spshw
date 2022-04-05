@@ -32,8 +32,8 @@ import threading
 from time import sleep
 from typing import Any, Callable, Optional
 
-from ska_low_mccs.component import ControlMode, ObjectComponent
-from ska_low_mccs.subrack.subrack_data import SubrackData
+from ska_low_mccs.component import ObjectComponent
+from ska_low_mccs.subrack.subrack_data import FanMode, SubrackData
 
 __all__ = ["SubrackSimulator"]
 
@@ -69,7 +69,7 @@ class SubrackSimulator(ObjectComponent):
     This can be overruled using the set_subrack_fan_speed method.
     """
 
-    DEFAULT_SUBRACK_FAN_MODES = [ControlMode.AUTO] * 4
+    DEFAULT_SUBRACK_FAN_MODES = [FanMode.AUTO] * 4
     """
     The default fan mode for the subrack.
 
@@ -100,7 +100,7 @@ class SubrackSimulator(ObjectComponent):
         board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
         board_current: float = DEFAULT_BOARD_CURRENT,
         subrack_fan_speeds: list[float] = DEFAULT_SUBRACK_FAN_SPEEDS,
-        subrack_fan_modes: list[ControlMode] = DEFAULT_SUBRACK_FAN_MODES,
+        subrack_fan_modes: list[FanMode] = DEFAULT_SUBRACK_FAN_MODES,
         power_supply_currents: list[float] = DEFAULT_POWER_SUPPLY_CURRENTS,
         power_supply_voltages: list[float] = DEFAULT_POWER_SUPPLY_VOLTAGES,
         power_supply_fan_speeds: list[float] = DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
@@ -159,12 +159,12 @@ class SubrackSimulator(ObjectComponent):
         self._tpm_supply_fault = [0] * self._bay_count
 
         self._are_tpms_on_changed_callback: Optional[
-            Callable[[list[bool]], None]
+            Callable[[dict[str, Any]], None]
         ] = None
 
     def set_are_tpms_on_changed_callback(
         self: SubrackSimulator,
-        are_tpms_on_changed_callback: Optional[Callable[[list[bool]], None]] = None,
+        are_tpms_on_changed_callback: Optional[Callable[[dict[str, Any]], None]] = None,
     ) -> None:
         """
         Set the callback to be called when the power mode of a TPM changes.
@@ -192,8 +192,8 @@ class SubrackSimulator(ObjectComponent):
         """
         self._component_progress_changed_callback = component_progress_changed_callback
 
-    def check_tpm_power_modes(self: SubrackSimulator) -> None:
-        """Check TPM power modes, calling the relevant callback."""
+    def check_tpm_power_states(self: SubrackSimulator) -> None:
+        """Check TPM power states, calling the relevant callback."""
         self._are_tpms_on_changed()
 
     def _are_tpms_on_changed(self: SubrackSimulator) -> None:
@@ -294,7 +294,7 @@ class SubrackSimulator(ObjectComponent):
         ]
 
     @property
-    def subrack_fan_modes(self: SubrackSimulator) -> list[ControlMode]:
+    def subrack_fan_modes(self: SubrackSimulator) -> list[FanMode]:
         """
         Return the subrack fan Mode.
 
@@ -424,7 +424,7 @@ class SubrackSimulator(ObjectComponent):
     @property
     def tpm_voltages(self: SubrackSimulator) -> list[float]:
         """
-        Return the voltages of the TPMs housed in this subrack.
+        Return the voltages of theControl TPMs housed in this subrack.
 
         :return: the voltages of the TPMs housed in this subrack
         """
@@ -677,7 +677,7 @@ class SubrackSimulator(ObjectComponent):
         )
 
     def set_subrack_fan_modes(
-        self: SubrackSimulator, fan_id: int, mode: ControlMode
+        self: SubrackSimulator, fan_id: int, mode: FanMode
     ) -> None:
         """
         Set Fan Operational Mode for the subrack's fan.

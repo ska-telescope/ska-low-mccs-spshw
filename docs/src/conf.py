@@ -169,15 +169,12 @@ html_theme = "sphinx_rtd_theme"
 # documentation.
 #
 html_theme_options = {
-    # 'logo_only' : False,
-    # 'logo_only' : 'ska_logo.jpg',
-    # 'logo' : 'ska_logo.jpg',
 }
 
 html_context = {
     "display_gitlab": True,  # Integrate GitHub
     "favicon": "img/favicon.ico",
-    "logo": "img/logo.jpg",
+    "logo": "img/logo.png",
     "theme_logo_only": True,
 }
 

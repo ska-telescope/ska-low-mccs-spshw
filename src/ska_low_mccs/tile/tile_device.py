@@ -16,7 +16,7 @@ from typing import Any, List, Optional, Tuple
 import numpy as np
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.base.op_state_model import OpStateModel
+#from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import (
     DeviceInitCommand,
     FastCommand,
@@ -191,8 +191,6 @@ class MccsTile(SKABaseDevice):
             )
 
         antenna_args = (
-            self.component_manager,
-            self.op_state_model,
             self.logger,
             self.AntennasPerTile,
         )
@@ -224,6 +222,7 @@ class MccsTile(SKABaseDevice):
             self._device._csp_destination_port = 0
             self._device._antenna_ids = []
 
+            print("tile InitCommand finished")
             return (ResultCode.OK, "Init command completed OK")
 
     class OnCommand(SKABaseDevice):
@@ -2140,8 +2139,6 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.LoadAntennaTaperingCommand,
-            target: object,
-            state_model: OpStateModel,
             logger: logging.Logger,
             antennas_per_tile: int,
         ) -> None:
@@ -2158,7 +2155,7 @@ class MccsTile(SKABaseDevice):
                 provided, then a default module logger will be used.
             :param antennas_per_tile: the number of antennas per tile
             """
-            super().__init__(target, state_model, logger)
+            super().__init__(logger)
             self._antennas_per_tile = antennas_per_tile
 
         def do(  # type: ignore[override]
@@ -2286,8 +2283,6 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SetPointingDelayCommand,
-            target: object,
-            state_model: OpStateModel,
             logger: logging.Logger,
             antennas_per_tile: int,
         ) -> None:
@@ -2304,7 +2299,7 @@ class MccsTile(SKABaseDevice):
                 provided, then a default module logger will be used.
             :param antennas_per_tile: the number of antennas per tile
             """
-            super().__init__(target, state_model, logger)
+            super().__init__(logger)
             self._antennas_per_tile = antennas_per_tile
 
         def do(  # type: ignore[override]

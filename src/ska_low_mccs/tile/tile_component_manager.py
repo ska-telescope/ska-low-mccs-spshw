@@ -37,6 +37,8 @@ from ska_low_mccs.tile import (
     TileTime,
     TpmDriver,
 )
+# from ska_low_mccs.tile.tpm_driver import TpmDriver
+# from ska_low_mccs.tile.time_util import TileTime
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
 from ska_low_mccs.tile.tpm_status import TpmStatus
 
@@ -626,28 +628,28 @@ class TileComponentManager(MccsComponentManager):
         # Don't set comms NOT_ESTABLISHED here. It should already have been handled
         # synchronously by the orchestator.
         # Check if it was already connected.
-        unconnected = self._subrack_proxy is None
-        if unconnected:
-            self._subrack_proxy = MccsDeviceProxy(
-                self._subrack_fqdn, self._logger, connect=False
-            )
-            try:
-                self._subrack_proxy.connect()
-            except tango.DevFailed as dev_failed:
-                self._subrack_proxy = None
-                raise ConnectionError(
-                    f"Could not connect to '{self._subrack_fqdn}'"
-                ) from dev_failed
-
-        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerState",
-            self._tpm_power_state_change_event_received,
+#         unconnected = self._subrack_proxy is None
+#         if unconnected:
+#             self._subrack_proxy = MccsDeviceProxy(
+#                 self._subrack_fqdn, self._logger, connect=False
+#             )
+#             try:
+#                 self._subrack_proxy.connect()
+#             except tango.DevFailed as dev_failed:
+#                 self._subrack_proxy = None
+#                 raise ConnectionError(
+#                     f"Could not connect to '{self._subrack_fqdn}'"
+#                 ) from dev_failed
+# 
+#         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
+#             f"tpm{self._subrack_tpm_id}PowerState",
+#             self._tpm_power_state_change_event_received,
+#         )
+# 
+#         if unconnected:
+        self._tile_orchestrator.update_subrack_communication_status(
+            CommunicationStatus.ESTABLISHED
         )
-
-        if unconnected:
-            self._tile_orchestrator.update_subrack_communication_status(
-                CommunicationStatus.ESTABLISHED
-            )
 
     def _tpm_power_state_change_event_received(
         self: TileComponentManager,

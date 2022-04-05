@@ -127,10 +127,10 @@ class MccsComponentManager(
 
         self._component_state_changed_callback = component_state_changed_callback
         super().__init__(
-            logger,
-            communication_status_changed_callback,
-            component_state_changed_callback,
+            logger=logger,
             max_workers=max_workers,
+            communication_state_callback=communication_status_changed_callback,
+            component_state_callback=component_state_changed_callback,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:

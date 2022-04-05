@@ -8,18 +8,18 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import DeviceInitCommand, ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
     HealthState,
     PowerState,
     SimulationMode,
 )
-from tango.server import attribute, command, device_property
+from tango.server import attribute, device_property
 
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
 
@@ -50,6 +50,7 @@ class MccsAntenna(SKABaseDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsAntenna) -> None:
@@ -57,7 +58,7 @@ class MccsAntenna(SKABaseDevice):
         self._health_state: Optional[
             HealthState
         ] = None  # SKABaseDevice.InitCommand.do() does this too late.
-        self._health_model = AntennaHealthModel(self.health_changed)
+        self._health_model = AntennaHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -74,13 +75,12 @@ class MccsAntenna(SKABaseDevice):
             f"low-mccs/tile/{self.TileId:04}",
             self.LogicalTileAntennaId,
             self.logger,
-            self.push_change_event,
+            self._max_workers,
             self._component_communication_status_changed,
-            self._component_power_mode_changed,
-            self._component_fault,
+            self.component_state_changed_callback,
         )
 
-    class InitCommand(SKABaseDevice.InitCommand):
+    class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS antenna device."""
 
         def do(  # type: ignore[override]
@@ -95,31 +95,30 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            super().do()
-
-            device = self.target
-
-            device._antennaId = 0
-            device._gain = 0.0
-            device._rms = 0.0
-            device._xPolarisationFaulty = False
-            device._yPolarisationFaulty = False
-            device._xDisplacement = 0.0
-            device._yDisplacement = 0.0
-            device._zDisplacement = 0.0
-            device._timestampOfLastSpectrum = ""
-            device._logicalAntennaId = 0
-            device._xPolarisationScalingFactor = [0]
-            device._yPolarisationScalingFactor = [0]
-            device._calibrationCoefficient = [0.0]
-            device._pointingCoefficient = [0.0]
-            device._spectrumX = [0.0]
-            device._spectrumY = [0.0]
-            device._position = [0.0]
-            device._delays = [0.0]
-            device._delayRates = [0.0]
-            device._bandpassCoefficient = [0.0]
-            device._first = True
+            self._device._antennaId = 0
+            self._device._gain = 0.0
+            self._device._rms = 0.0
+            self._device._xPolarisationFaulty = False
+            self._device._yPolarisationFaulty = False
+            self._device._xDisplacement = 0.0
+            self._device._yDisplacement = 0.0
+            self._device._zDisplacement = 0.0
+            self._device._timestampOfLastSpectrum = ""
+            self._device._logicalAntennaId = 0
+            self._device._xPolarisationScalingFactor = [0]
+            self._device._yPolarisationScalingFactor = [0]
+            self._device._calibrationCoefficient = [0.0]
+            self._device._pointingCoefficient = [0.0]
+            self._device._spectrumX = [0.0]
+            self._device._spectrumY = [0.0]
+            self._device._position = [0.0]
+            self._device._delays = [0.0]
+            self._device._delayRates = [0.0]
+            self._device._bandpassCoefficient = [0.0]
+            self._device._first = True
+            self._device._altitude = 0.0
+            self._device._fieldNodeLatitude = 0.0
+            self._device._fieldNodeLongitude = 0.0
 
             event_names = [
                 "voltage",
@@ -128,35 +127,10 @@ class MccsAntenna(SKABaseDevice):
                 "yPolarisationFaulty",
             ]
             for name in event_names:
-                device.set_change_event(name, True, True)
-                device.set_archive_event(name, True, True)
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+                self._device.set_change_event(name, True, True)
+                self._device.set_archive_event(name, True, True)
 
             return (ResultCode.OK, "Init command completed OK")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
-    )
-    def Reset(self: MccsAntenna) -> DevVarLongStringArrayType:
-        """
-        Reset the device from the FAULT state.
-
-        To modify behaviour for this command, modify the do() method of
-        the command class.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        # TODO Call Reset directly - DON'T USE LRC - for now.
-        handler = self.get_command_object("Reset")
-        (result_code, message) = handler()
-        return ([result_code], [message])
 
     # --------------
     # Callback hooks
@@ -189,18 +163,17 @@ class MccsAntenna(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_power_mode_changed(
-        self: MccsAntenna,
-        power_mode: PowerState,
+    def component_state_changed_callback(
+        self: MccsAntenna, state_change: dict[str, Any]
     ) -> None:
         """
-        Handle change in the power mode of the component.
+        Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the power mode of the component changes. It is implemented here
-        to drive the op_state.
+        the state of the component changes.
 
-        :param power_mode: the power mode of the component.
+        :param state_change: a dict containing the state change(s)
+            of the component.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -208,44 +181,28 @@ class MccsAntenna(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                self.op_state_model.perform_action(
+                    action_map[self.component_manager.power_state]
+                )
+                self._health_model.component_fault(False)
 
-        self.op_state_model.perform_action(action_map[power_mode])
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
-    def _component_fault(
-        self: MccsAntenna,
-        is_fault: bool,
-    ) -> None:
-        """
-        Handle change in the fault status of the component.
-
-        This is a callback hook, called by the component manager when
-        the component fault status changes. It is implemented here to
-        drive the op_state.
-
-        :param is_fault: whether the component is faulting or not.
-        """
-        if is_fault:
-            self.op_state_model.perform_action("component_fault")
-            self._health_model.component_fault(True)
-        else:
-            self._component_power_mode_changed(self.component_manager.power_mode)
-            self._health_model.component_fault(False)
-
-    def health_changed(self: MccsAntenna, health: HealthState) -> None:
-        """
-        Handle change in this device's health state.
-
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            self.component_manager.set_power_state(power_state)
+            if power_state:
+                self.op_state_model.perform_action(action_map[power_state])
 
     # ----------
     # Attributes
@@ -372,7 +329,7 @@ class MccsAntenna(SKABaseDevice):
 
         :return: the Latitude of field node centre
         """
-        return self._fieldNodeLongitude
+        return self._fieldNodeLatitude
 
     @attribute(dtype="float", label="altitude", unit="meters")
     def altitude(self: MccsAntenna) -> float:
@@ -524,43 +481,9 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
-
-    class OnCommand(SKABaseDevice.OnCommand):
-        """
-        A class for the MccsAntenna's On() command.
-
-        This class overrides the SKABaseDevice OnCommand to allow for an
-        eventual consistency semantics. For example it is okay to call
-        On() before the APIU is on; this device will happily wait for
-        the APIU to come on, then tell it to turn on its Antenna. This
-        change of semantics requires an override because the
-        SKABaseDevice OnCommand only allows On() to be run when in OFF
-        state.
-        """
-
-        def do(  # type: ignore[override]
-            self: MccsAntenna.OnCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for On() command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            # It's fine to complete this long-running command here
-            # (returning ResultCode.OK), even though the component manager
-            # may not actually be finished turning everything on.
-            # The completion of the original On command to MccsController
-            # is waiting for the various power mode callbacks to be received
-            # rather than completion of the various long-running commands.
-            _ = self.target.on()
-            message = "Antenna On command completed OK"
-            return (ResultCode.OK, message)
-
     def is_On_allowed(self: MccsAntenna) -> bool:
         """
-        Check if command `Off` is allowed in the current device state.
+        Check if command `On` is allowed in the current device state.
 
         :return: ``True`` if the command is allowed
         """

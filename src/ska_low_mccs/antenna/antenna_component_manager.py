@@ -9,11 +9,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+import threading
+import time
+from typing import Any, Callable, Optional
 
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     DeviceComponentManager,
@@ -34,11 +37,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Callable[[bool], None],
-        antenna_power_mode_changed_callback: Callable[[PowerState], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new APIU proxy instance.
@@ -46,17 +47,14 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         :param fqdn: the FQDN of the APIU
         :param logical_antenna_id: this antenna's id within the APIU
         :param logger: the logger to be used by this object.
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param antenna_power_mode_changed_callback: callback to be
-            called when the power mode of the antenna changes.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+
 
         :raises AssertionError: if parameters are out of bounds
         """
@@ -70,11 +68,9 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
-            supplied_power_mode_changed_callback=antenna_power_mode_changed_callback,
+            component_state_changed_callback,
         )
 
     def stop_communicating(self: _ApiuProxy) -> None:
@@ -89,7 +85,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         This raises NotImplementedError because the antenna is passive
         hardware and cannot meaningfully be reset.
 
-        :raises NotImplementedError: because the antenna's power mode is
+        :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
@@ -102,7 +98,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        if self.supplied_power_mode == PowerState.ON:
+        if self.supplied_power_state == PowerState.ON:
             return None
         return self._power_up_antenna()
 
@@ -118,7 +114,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        if self.supplied_power_mode == PowerState.OFF:
+        if self.supplied_power_state == PowerState.OFF:
             return None
         return self._power_down_antenna()
 
@@ -177,25 +173,25 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         if event_value == tango.DevState.ON and not self._antenna_change_registered:
             self._register_are_antennas_on_callback()
         elif event_value == tango.DevState.OFF:
-            self.update_supplied_power_mode(PowerState.OFF)
+            self.update_supplied_power_state(PowerState.OFF)
 
     def _register_are_antennas_on_callback(self: _ApiuProxy) -> None:
         assert self._proxy is not None  # for the type checker
         self._proxy.add_change_event_callback(
             "areAntennasOn",
-            self._antenna_power_mode_changed,
+            self._antenna_power_state_changed,
             stateless=True,
         )
         self._antenna_change_registered = True
 
-    def _antenna_power_mode_changed(
+    def _antenna_power_state_changed(
         self: _ApiuProxy,
         event_name: str,
         event_value: list[bool],
         event_quality: tango.AttrQuality,
     ) -> None:
         """
-        Handle change in antenna power mode.
+        Handle change in antenna power state.
 
         This is a callback that is triggered by an event subscription
         on the APIU device.
@@ -209,7 +205,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             "APIU 'areAntennasOn' attribute changed callback called but "
             f"event_name is {event_name}."
         )
-        self.update_supplied_power_mode(
+        self.update_supplied_power_state(
             PowerState.ON
             if event_value[self._logical_antenna_id - 1]
             else PowerState.OFF
@@ -238,9 +234,9 @@ class _TileProxy(DeviceComponentManager):
         fqdn: str,
         logical_antenna_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -248,13 +244,13 @@ class _TileProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the Tile device
         :param logical_antenna_id: this antenna's id within the Tile
         :param logger: the logger to be used by this object.
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         :raises AssertionError: if parameters are out of bounds
         """
         assert (
@@ -265,59 +261,58 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            lambda power_mode: None,  # tile doesn't manage antenna power
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
     def off(self: _TileProxy) -> None:
         """
         Turn the antenna off; this is not implemented.
 
-        This raises NotImplementedError because the antenna's power mode
+        This raises NotImplementedError because the antenna's power state
         is not controlled via the Tile device; it is controlled via the
         APIU device.
 
-        :raises NotImplementedError: because the antenna's power mode is
+        :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
         raise NotImplementedError(
-            "Antenna power mode is not controlled via Tile device."
+            "Antenna power state is not controlled via Tile device."
         )
 
     def standby(self: _TileProxy) -> None:
         """
-        Put the antenna into standby mode; this is not implemented.
+        Put the antenna into standby state; this is not implemented.
 
         This raises NotImplementedError because the antenna has no
-        standby mode; and because the antenna's power mode is not
+        standby state; and because the antenna's power state is not
         controlled via the Tile device; it is controlled via the APIU
         device.
 
-        :raises NotImplementedError: because the antenna's power mode is
+        :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
         raise NotImplementedError(
-            "Antenna power mode is not controlled via Tile device."
+            "Antenna power state is not controlled via Tile device."
         )
 
     def on(self: _TileProxy) -> None:
         """
         Turn the antenna on; this is not implemented.
 
-        This raises NotImplementedError because the antenna's power mode
+        This raises NotImplementedError because the antenna's power state
         is not controlled via the Tile device; it is controlled via the
         APIU device.
 
-        :raises NotImplementedError: because the antenna's power mode is
+        :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
         raise NotImplementedError(
-            "Antenna power mode is not controlled via Tile device."
+            "Antenna power state is not controlled via Tile device."
         )
 
     def reset(self: _TileProxy) -> None:
@@ -327,7 +322,7 @@ class _TileProxy(DeviceComponentManager):
         This raises NotImplementedError because the antenna is passive
         hardware and cannot meaningfully be reset.
 
-        :raises NotImplementedError: because the antenna's power mode is
+        :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
@@ -350,10 +345,9 @@ class AntennaComponentManager(MccsComponentManager):
         tile_fqdn: str,
         tile_antenna_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -365,18 +359,17 @@ class AntennaComponentManager(MccsComponentManager):
             antenna's tile.
         :param tile_antenna_id: the id of the antenna in the tile.
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
-        self._apiu_power_mode = PowerState.UNKNOWN
-        self._target_power_mode: Optional[PowerState] = None
+        self._power_state_lock = threading.RLock()
+        self._apiu_power_state = PowerState.UNKNOWN
+        self._target_power_state: Optional[PowerState] = None
 
         self._apiu_communication_status: CommunicationStatus = (
             CommunicationStatus.DISABLED
@@ -391,27 +384,24 @@ class AntennaComponentManager(MccsComponentManager):
             apiu_fqdn,
             apiu_antenna_id,
             logger,
-            push_change_event,
-            self._apiu_communication_status_changed,
-            self._apiu_power_mode_changed,
-            self._apiu_component_fault_changed,
-            self._antenna_power_mode_changed,
+            max_workers,
+            communication_status_changed_callback,
+            component_state_changed_callback,
         )
         self._tile_proxy = _TileProxy(
             tile_fqdn,
             tile_antenna_id,
             logger,
-            push_change_event,
-            self._tile_communication_status_changed,
-            self._tile_component_fault_changed,
+            max_workers,
+            communication_status_changed_callback,
+            component_state_changed_callback,
         )
 
         super().__init__(
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: AntennaComponentManager) -> None:
@@ -473,28 +463,27 @@ class AntennaComponentManager(MccsComponentManager):
                 return
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
-    def _apiu_power_mode_changed(
+    def _apiu_power_state_changed(
         self: AntennaComponentManager,
-        apiu_power_mode: PowerState,
+        apiu_power_state: PowerState,
     ) -> None:
-        with self._power_mode_lock:
-            self._apiu_power_mode = apiu_power_mode
+        with self._power_state_lock:
+            self._apiu_power_state = apiu_power_state
 
-            if apiu_power_mode == PowerState.UNKNOWN:
-                self.update_component_power_mode(PowerState.UNKNOWN)
-            elif apiu_power_mode in [PowerState.OFF, PowerState.STANDBY]:
-                self.update_component_power_mode(PowerState.OFF)
+            if apiu_power_state == PowerState.UNKNOWN:
+                self.update_component_state({"power_state": PowerState.UNKNOWN})
+            elif apiu_power_state in [PowerState.OFF, PowerState.STANDBY]:
+                self.update_component_state({"power_state": PowerState.OFF})
             else:
-                # power_mode is ON, wait for antenna power change
+                # power_state is ON, wait for antenna power change
                 pass
         self._review_power()
 
-    def _antenna_power_mode_changed(
+    def _antenna_power_state_changed(
         self: AntennaComponentManager,
-        antenna_power_mode: PowerState,
+        antenna_power_state: PowerState,
     ) -> None:
-        with self._power_mode_lock:
-            self.update_component_power_mode(antenna_power_mode)
+        self.update_component_state({"power_state": antenna_power_state})
         self._review_power()
 
     def _apiu_component_fault_changed(
@@ -507,8 +496,8 @@ class AntennaComponentManager(MccsComponentManager):
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_apiu = faulty
-        self.update_component_fault(
-            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
+        self.update_component_state(
+            {"fault": self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile}
         )
 
     def _tile_component_fault_changed(
@@ -521,8 +510,8 @@ class AntennaComponentManager(MccsComponentManager):
         :param faulty: whether the antenna is faulting.
         """
         self._antenna_faulty_via_tile = faulty
-        self.update_component_fault(
-            self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile
+        self.update_component_state(
+            {"fault": self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile}
         )
 
     # @check_communicating
@@ -534,56 +523,86 @@ class AntennaComponentManager(MccsComponentManager):
 
         :return: a ResultCode, or None if there was nothing to do
         """
-        with self._power_mode_lock:
-            self._target_power_mode = PowerState.OFF
+        with self._power_state_lock:
+            self._target_power_state = PowerState.OFF
         return self._review_power()
 
     def standby(self: AntennaComponentManager) -> None:
         """
-        Put the antenna into standby mode; this is not implemented.
+        Put the antenna into standby state; this is not implemented.
 
         This raises NotImplementedError because the antenna has no
-        standby mode.
+        standby state.
 
         :raises NotImplementedError: because the antenna has no standby
-            mode.
+            state.
         """
-        raise NotImplementedError("Antenna has no standby mode.")
+        raise NotImplementedError("Antenna has no standby state.")
 
     # @check_communicating
-    def on(self: AntennaComponentManager) -> ResultCode | None:
+    def on(self: AntennaComponentManager, task_callback: Callable = None):
+        """
+        Submit the on slow task.
+
+        This method returns immediately after it submitted
+        `self._on` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :returns: task status and message
+        """
+        return self.submit_task(self._on, task_callback=task_callback)
+
+    def _on(
+        self: AntennaComponentManager,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Turn the antenna on.
 
-        :return: whether successful, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :returns: whether successful, or None if there was nothing to do.
         """
-        with self._power_mode_lock:
-            self._target_power_mode = PowerState.ON
-        return self._review_power()
+        # Indicate that the task has started
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            with self._power_state_lock:
+                self._target_power_state = PowerState.ON
+            self._review_power()
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+
+        # Indicate that the task has completed
+        task_callback(
+            status=TaskStatus.COMPLETED, result="This slow task has completed"
+        )
+        return ResultCode.OK
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
-        with self._power_mode_lock:
-            if self._target_power_mode is None:
+        with self._power_state_lock:
+            if self._target_power_state is None:
                 return None
-            if self.power_mode == self._target_power_mode:
-                self._target_power_mode = None  # attained without any action needed
+            if self.power_state == self._target_power_state:
+                self._target_power_state = None  # attained without any action needed
                 return None
 
-            if self._apiu_power_mode != PowerState.ON:
+            if self._apiu_power_state != PowerState.ON:
                 return ResultCode.QUEUED
             if (
-                self.power_mode == PowerState.OFF
-                and self._target_power_mode == PowerState.ON
+                self.power_state == PowerState.OFF
+                and self._target_power_state == PowerState.ON
             ):
                 result_code = self._apiu_proxy.power_on()
-                self._target_power_mode = None
+                self._target_power_state = None
                 return result_code
             if (
-                self.power_mode == PowerState.ON
-                and self._target_power_mode == PowerState.OFF
+                self.power_state == PowerState.ON
+                and self._target_power_state == PowerState.OFF
             ):
                 result_code = self._apiu_proxy.power_off()
-                self._target_power_mode = None
+                self._target_power_state = None
                 return result_code
             return ResultCode.QUEUED
 
@@ -594,11 +613,20 @@ class AntennaComponentManager(MccsComponentManager):
         This raises NotImplementedError because the antenna is passive
         hardware and cannot meaningfully be reset.
 
-        :raises NotImplementedError: because the antenna's power mode is
+        :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
         """
         raise NotImplementedError("Antenna cannot be reset.")
+
+    def set_power_state(self: AntennaComponentManager, power_state: PowerState) -> None:
+        """
+        Set the power state of the antenna.
+
+        :param power_state: The desired power state
+        """
+        with self._power_state_lock:
+            self.power_state = power_state
 
     @property
     def current(self: AntennaComponentManager) -> float:

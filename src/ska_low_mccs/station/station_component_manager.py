@@ -184,7 +184,9 @@ class StationComponentManager(MccsComponentManager):
         }
 
         self._apiu_power_state = PowerState.UNKNOWN
-        self._antenna_power_states = {fqdn: PowerState.UNKNOWN for fqdn in antenna_fqdns}
+        self._antenna_power_states = {
+            fqdn: PowerState.UNKNOWN for fqdn in antenna_fqdns
+        }
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
 
         self._apiu_proxy = DeviceComponentManager(
@@ -192,11 +194,7 @@ class StationComponentManager(MccsComponentManager):
             logger,
             max_workers,
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
-            functools.partial(
-                self.component_state_changed_callback,
-                fqdn=apiu_fqdn,
-                power_state_changed_callback=self._apiu_power_state_changed
-            ),
+            functools.partial(self.component_state_changed_callback, fqdn=apiu_fqdn),
         )
         self._antenna_proxies = [
             DeviceComponentManager(
@@ -207,9 +205,7 @@ class StationComponentManager(MccsComponentManager):
                     self._device_communication_status_changed, antenna_fqdn
                 ),
                 functools.partial(
-                    self.component_state_changed_callback,
-                    fqdn=antenna_fqdn,
-                    power_state_changed_callback=functools.partial(self._antenna_power_state_changed, antenna_fqdn)
+                    self.component_state_changed_callback, fqdn=antenna_fqdn
                 ),
             )
             for antenna_fqdn in antenna_fqdns
@@ -223,9 +219,7 @@ class StationComponentManager(MccsComponentManager):
                 max_workers,
                 functools.partial(self._device_communication_status_changed, tile_fqdn),
                 functools.partial(
-                    self.component_state_changed_callback,
-                    fqdn=tile_fqdn,
-                    power_state_changed_callback=functools.partial(self._tile_power_state_changed, tile_fqdn)
+                    self.component_state_changed_callback, fqdn=tile_fqdn
                 ),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
@@ -356,13 +350,14 @@ class StationComponentManager(MccsComponentManager):
                 f"\tiles: {self._tile_power_states}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
-            self.update_component_power_state(evaluated_power_state)
+            self.update_component_state({"power_state": evaluated_power_state})
 
     def off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
     ) -> ResultCode:
-        """Submit the _off method.
+        """
+        Submit the _off method.
 
         This method returns immediately after it submitted
         `self._off` for execution.
@@ -370,9 +365,7 @@ class StationComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :type task_callback: Callable, optional
         """
-        task_status, response = self.submit_task(
-            self._off, task_callback=task_callback
-        )
+        task_status, response = self.submit_task(self._off, task_callback=task_callback)
         return task_status, response
 
     @check_communicating
@@ -406,12 +399,12 @@ class StationComponentManager(MccsComponentManager):
         )
         return ResultCode.OK
 
-
     def on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
     ) -> ResultCode:
-        """Submit the _on method.
+        """
+        Submit the _on method.
 
         This method returns immediately after it submitted
         `self._on` for execution.
@@ -419,9 +412,7 @@ class StationComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :type task_callback: Callable, optional
         """
-        task_status, response = self.submit_task(
-            self._on, task_callback=task_callback
-        )
+        task_status, response = self.submit_task(self._on, task_callback=task_callback)
         return task_status, response
 
     @check_communicating
@@ -477,7 +468,8 @@ class StationComponentManager(MccsComponentManager):
         delays: list[float],
         task_callback: Optional[Callable] = None,
     ) -> ResultCode:
-        """Submit the apply_pointing method.
+        """
+        Submit the apply_pointing method.
 
         This method returns immediately after it submitted
         `self._apply_pointing` for execution.
@@ -534,8 +526,11 @@ class StationComponentManager(MccsComponentManager):
             self._is_configured = is_configured
             self.component_state_changed_callback({"is_configured": is_configured})
 
-    def configure(self, argin: str, task_callback: Optional[Callable] = None) -> tuple[ResultCode, str]:
-        """Submit the configure method.
+    def configure(
+        self, argin: str, task_callback: Optional[Callable] = None
+    ) -> tuple[ResultCode, str]:
+        """
+        Submit the configure method.
 
         This method returns immediately after it submitted
         `self._configure` for execution.
@@ -552,7 +547,9 @@ class StationComponentManager(MccsComponentManager):
         return task_status, response
 
     @check_communicating
-    def _configure(self, station_id: int, task_callback: Optional[Callable] = None) -> tuple[ResultCode, str]:
+    def _configure(
+        self, station_id: int, task_callback: Optional[Callable] = None
+    ) -> tuple[ResultCode, str]:
         """
         Configure the station.
 

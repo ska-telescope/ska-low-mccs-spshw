@@ -39,7 +39,7 @@ class _StationProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable[[dict[str,Any]], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
         Initialise a new instance.
@@ -602,19 +602,18 @@ class ControllerComponentManager(MccsComponentManager):
         if self._station_beam_health_changed_callback is not None:
             self._station_beam_health_changed_callback(fqdn, health)
 
-    def off(self: ControllerComponentManager, task_callback: Callable = None)-> tuple[TaskStatus, str]:
+    def off(
+        self: ControllerComponentManager, task_callback: Callable = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn off the MCCS subsystem.
 
         :return: a result code
         """
-        return self.submit_task(
-            self._off, task_callback=task_callback)
+        return self.submit_task(self._off, task_callback=task_callback)
 
-    #@check_communicating
-    def _off(
-        self: ControllerComponentManager, task_callback: Callable = None
-    ) -> None:
+    # @check_communicating
+    def _off(self: ControllerComponentManager, task_callback: Callable = None) -> None:
         """
         Turn off the MCCS subsystem.
 
@@ -625,11 +624,9 @@ class ControllerComponentManager(MccsComponentManager):
         results = [station_proxy.off() for station_proxy in self._stations.values()] + [
             subrack_proxy.off() for subrack_proxy in self._subracks.values()
         ]
-        #TODO wait for the respective LRC's to complete, whilst reporting progress
+        # TODO wait for the respective LRC's to complete, whilst reporting progress
         if ResultCode.FAILED in results:
-            task_callback(
-                status=TaskStatus.FAILED, result="The Off command has failed"
-            )
+            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
         else:
             task_callback(
                 status=TaskStatus.COMPLETED, result="The Off command has completed"
@@ -637,7 +634,8 @@ class ControllerComponentManager(MccsComponentManager):
 
     @check_communicating
     def standby(
-        self: ControllerComponentManager, task_callback: Callable = None,
+        self: ControllerComponentManager,
+        task_callback: Callable = None,
     ) -> tuple[TaskStatus, str]:
         """
         Put the MCCS subsystem into low power standby mode.
@@ -650,27 +648,25 @@ class ControllerComponentManager(MccsComponentManager):
             station_proxy.standby() for station_proxy in self._stations.values()
         ] + [subrack_proxy.standby() for subrack_proxy in self._subracks.values()]
 
-        #TODO wait for the respective LRC's to complete, whilst reporting progress
+        # TODO wait for the respective LRC's to complete, whilst reporting progress
         if ResultCode.FAILED in results:
-            task_callback(
-                status=TaskStatus.FAILED, result="The Off command has failed"
-            )
+            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
         else:
             task_callback(
                 status=TaskStatus.COMPLETED, result="The Off command has completed"
             )
 
-    def on(self: ControllerComponentManager, task_callback: Callable = None) -> tuple[TaskStatus, str]:
+    def on(
+        self: ControllerComponentManager, task_callback: Callable = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn on the MCCS subsystem.
 
         :return: a result code
         """
-        return self.submit_task(
-            self._on, task_callback=task_callback
-        )
+        return self.submit_task(self._on, task_callback=task_callback)
 
-    #@check_communicating
+    # @check_communicating
     def _on(
         self: ControllerComponentManager,
     ) -> ResultCode:
@@ -694,9 +690,7 @@ class ControllerComponentManager(MccsComponentManager):
                 status=TaskStatus.COMPLETED, result="The Off command has completed"
             )
         else:
-            task_callback(
-                status=TaskStatus.FAILED, result="The Off command has failed"
-            )
+            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
 
     def allocate(
         self: ControllerComponentManager,
@@ -734,16 +728,15 @@ class ControllerComponentManager(MccsComponentManager):
         station_fqdns = []
         for station_id_list in station_ids:
             station_fqdns.append(
-                [
-                    f"low-mccs/station/{station_id:03d}"
-                    for station_id in station_id_list
-                ]
+                [f"low-mccs/station/{station_id:03d}" for station_id in station_id_list]
             )
 
         channel_blocks = kwargs.get("channel_blocks", list())
 
         return self.submit_task(
-            self._allocate, args=[subarray_id, station_fqdns, subarray_beam_fqdns, channel_blocks], task_callback=task_callback
+            self._allocate,
+            args=[subarray_id, station_fqdns, subarray_beam_fqdns, channel_blocks],
+            task_callback=task_callback,
         )
 
     @check_communicating
@@ -849,11 +842,9 @@ class ControllerComponentManager(MccsComponentManager):
                         station_beam_fqdns[station_beam_index]
                     ].write_subarray_id(subarray_id)
 
-        #TODO wait for the respective LRC's to complete, whilst reporting progress
+        # TODO wait for the respective LRC's to complete, whilst reporting progress
         if ResultCode.FAILED in results:
-            task_callback(
-                status=TaskStatus.FAILED, result="The Off command has failed"
-            )
+            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
         else:
             task_callback(
                 status=TaskStatus.COMPLETED, result="The Off command has completed"
@@ -867,13 +858,13 @@ class ControllerComponentManager(MccsComponentManager):
         """
         Release a subarray's resources.
 
-       :param argin: JSON-formatted string containing an integer
-           subarray_id, a release all flag.
+        :param argin: JSON-formatted string containing an integer
+            subarray_id, a release all flag.
 
-       :return: A tuple containing a return code and a string
-           message indicating status. The message is for
-           information purpose only.
-       """
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
         kwargs = json.loads(argin)
         if kwargs["release_all"]:
             subarray_id = kwargs["subarray_id"]
@@ -924,11 +915,9 @@ class ControllerComponentManager(MccsComponentManager):
             station_proxy.release_from_subarray(subarray_fqdn)
 
         results = self._subarrays[subarray_fqdn].release_all_resources()
-        #TODO wait for the respective LRC's to complete, whilst reporting progress
+        # TODO wait for the respective LRC's to complete, whilst reporting progress
         if ResultCode.FAILED in results:
-            task_callback(
-                status=TaskStatus.FAILED, result="The Off command has failed"
-            )
+            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
         else:
             task_callback(
                 status=TaskStatus.COMPLETED, result="The Off command has completed"
@@ -937,7 +926,7 @@ class ControllerComponentManager(MccsComponentManager):
     def restart_subarray(
         self: ControllerComponentManager,
         subarray_fqdn: int,
-        task_callback: Optional[Callable] = None
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Restart an MCCS subarray.
@@ -949,11 +938,13 @@ class ControllerComponentManager(MccsComponentManager):
             information purpose only.
         """
         return self.submit_task(
-            self._restart_subarray, [f"low-mcss/subarray/{subarray_id:02d}"], task_callback=task_callback
+            self._restart_subarray,
+            [f"low-mcss/subarray/{subarray_id:02d}"],
+            task_callback=task_callback,
         )
 
-    #@check_communicating
-    #@check_on
+    # @check_communicating
+    # @check_on
     def _restart_subarray(
         self: ControllerComponentManager,
         subarray_fqdn: str,
@@ -970,11 +961,9 @@ class ControllerComponentManager(MccsComponentManager):
         self._resource_manager.deallocate_from(subarray_fqdn)
 
         results = self._subarrays[subarray_fqdn].restart()
-        #TODO wait for the respective LRC's to complete, whilst reporting progress
+        # TODO wait for the respective LRC's to complete, whilst reporting progress
         if ResultCode.FAILED in results:
-            task_callback(
-                status=TaskStatus.FAILED, result="The Off command has failed"
-            )
+            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
         else:
             task_callback(
                 status=TaskStatus.COMPLETED, result="The Off command has completed"

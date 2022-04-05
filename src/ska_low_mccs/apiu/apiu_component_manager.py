@@ -429,17 +429,14 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_abort_event: threading.Event = None,
     ):
         """
-        This is a long running method.
+        Turn on the antenna using slow command.
 
         :param logger: logger
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        print("dummy turn on", antenna)
-        print(self._hardware_component_manager)
         task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            print(f"the antenna is : {antenna}")
             self._hardware_component_manager.turn_on_antenna(antenna)
         except Exception as ex:
             task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -449,13 +446,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(
                 status=TaskStatus.ABORTED, result="The antenna on task aborted"
             )
-            print("on aborted")
             return
 
         task_callback(
             status=TaskStatus.COMPLETED, result="The antenna on task has completed"
         )
-        print("on completed ")
 
     def _turn_off_antenna(
         self: ApiuComponentManager,
@@ -464,13 +459,12 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_abort_event: threading.Event = None,
     ):
         """
-        This is a long running method.
+        Turn off the antenna using slow command.
 
         :param logger: logger
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        print("dummy turn off", antenna)
         task_callback(status=TaskStatus.IN_PROGRESS)
         self._hardware_component_manager.turn_off_antenna(antenna)
 
@@ -478,13 +472,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(
                 status=TaskStatus.ABORTED, result="The antenna off task aborted"
             )
-            print("off aborted")
             return
 
         task_callback(
             status=TaskStatus.COMPLETED, result="The antenna off task has completed"
         )
-        print("off completed ")
 
     def _turn_on_antennas(
         self: ApiuComponentManager,
@@ -492,13 +484,12 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_abort_event: threading.Event = None,
     ):
         """
-        This is a long running method.
+        Turn on all antennas using slow command.
 
         :param logger: logger
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        print("dummy turn on all")
         task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             self._hardware_component_manager.turn_on_antennas()
@@ -510,13 +501,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(
                 status=TaskStatus.ABORTED, result="The antenna all on task aborted"
             )
-            print("on aborted")
             return
 
         task_callback(
             status=TaskStatus.COMPLETED, result="The antenna all on task has completed"
         )
-        print("on completed ")
 
     def _turn_off_antennas(
         self: ApiuComponentManager,
@@ -524,12 +513,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_abort_event: threading.Event = None,
     ):
         """
-        This is a long running method.
+        Turn off all antennas using slow command.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        print("dummy turn off all")
         task_callback(status=TaskStatus.IN_PROGRESS)
         self._hardware_component_manager.turn_off_antennas()
 
@@ -537,10 +525,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(
                 status=TaskStatus.ABORTED, result="The antenna all off task aborted"
             )
-            print("off aborted")
             return
 
         task_callback(
             status=TaskStatus.COMPLETED, result="The antenna all off task has completed"
         )
-        print("off completed ")

@@ -10,13 +10,18 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-import time
 import threading
+import time
 from typing import List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand, ResultCode
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SubmittedSlowCommand,
+)
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from tango.server import command, device_property
 
@@ -96,7 +101,7 @@ class MccsController(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("Allocate","allocate"),
+            ("Allocate", "allocate"),
             ("Release", "release"),
             ("RestartSubarray", "restart_subarray"),
         ]:
@@ -111,7 +116,6 @@ class MccsController(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
-
 
     class InitCommand(DeviceInitCommand):
         """
@@ -232,7 +236,6 @@ class MccsController(SKABaseDevice):
                 )
                 self._health_model.component_fault(False)
 
-
     def wait_until_on(
         device: MccsDeviceProxy, timeout: float, period: float = 0.5
     ) -> tuple[ResultCode, str]:
@@ -253,9 +256,7 @@ class MccsController(SKABaseDevice):
                 return (ResultCode.OK, message)
             time.sleep(period)
             elapsed_time += period
-        message = (
-            f"Controller On command didn't complete within {timeout} seconds"
-        )
+        message = f"Controller On command didn't complete within {timeout} seconds"
         return (ResultCode.FAILED, message)
 
         # Wait for conditions on component manager to unblock
@@ -375,6 +376,7 @@ class MccsController(SKABaseDevice):
         handler = self.get_command_object("Release")
         (result_code, status) = handler(argin)
         return ([result_code], [status])
+
 
 # ----------
 # Run server

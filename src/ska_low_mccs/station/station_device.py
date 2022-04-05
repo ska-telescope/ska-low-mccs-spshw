@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import functools
 import json
-from typing import Any, List, Callable, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import ResultCode, SubmittedSlowCommand, DeviceInitCommand
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
@@ -203,12 +203,12 @@ class MccsStation(SKAObsDevice):
         Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the state of the component changes. 
+        the state of the component changes.
         For the power_state parameter it is implemented here
         to drive the op_state.
         For the health parameter it is implemented to update the health attribute
         and push change events whenever the HealthModel's evaluated health state changes.
-        
+
         :param kwargs: the component state change parameters to be set, and their new values.
         """
         if fqdn is None:
@@ -220,13 +220,23 @@ class MccsStation(SKAObsDevice):
                 health_state_changed_callback = self._health_model.apiu_health_changed
                 power_state_changed_callback = self.component_manager._apiu_mode_changed
             elif device_family == "antenna":
-                health_state_changed_callback = functools.partial(self._health_model.antenna_health_changed, fqdn)
-                power_state_changed_callback = functools.partial(self.component_manager._antenna_power_mode_changed, fqdn)
+                health_state_changed_callback = functools.partial(
+                    self._health_model.antenna_health_changed, fqdn
+                )
+                power_state_changed_callback = functools.partial(
+                    self.component_manager._antenna_power_mode_changed, fqdn
+                )
             elif device_family == "tile":
-                health_state_changed_callback = functools.partial(self._health_model.tile_health_changed, fqdn)
-                power_state_changed_callback = functools.partial(self.component_manager._tile_power_mode_changed, fqdn)
+                health_state_changed_callback = functools.partial(
+                    self._health_model.tile_health_changed, fqdn
+                )
+                power_state_changed_callback = functools.partial(
+                    self.component_manager._tile_power_mode_changed, fqdn
+                )
             else:
-                raise ValueError(f"unknown fqdn '{fqdn}', should belong to antenna, tile or apiu")
+                raise ValueError(
+                    f"unknown fqdn '{fqdn}', should belong to antenna, tile or apiu"
+                )
 
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")

@@ -130,7 +130,7 @@ class PowerSupplyProxySimulator(
             Set the supplied power mode changed callback.
 
             :param component_state_changed_callback: the callback to be
-                called when the power mode changes.
+                called when the component state changes.
             """
             self._supplied_power_state_changed_callback = (
                 component_state_changed_callback
@@ -202,7 +202,7 @@ class PowerSupplyProxySimulator(
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
-            called when the supplied power mode changes
+            called when the state of the component changes
         :param initial_supplied_power_state: the initial supplied power
             mode of the simulated component
         """
@@ -289,7 +289,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
-            called when the component power mode changes
+            called when the component state changes
         """
         self._target_power_state: Optional[PowerState] = None
         self._power_state_lock = threading.RLock()

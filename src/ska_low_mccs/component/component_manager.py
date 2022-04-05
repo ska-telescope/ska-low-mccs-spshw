@@ -204,7 +204,6 @@ class MccsComponentManager(
         Handle notification that the component's power mode has changed.
 
         This is a callback hook, to be passed to the managed component.
-
         :param state_change: the new state of the component
         """
         self.update_component_state(state_change)
@@ -217,7 +216,6 @@ class MccsComponentManager(
         Update the power mode, calling callbacks as required.
 
         This is a helper method for use by subclasses.
-
         :param state_change: pass thru.
         """
         if self._component_state_changed_callback is not None:

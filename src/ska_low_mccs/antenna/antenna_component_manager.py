@@ -549,19 +549,18 @@ class AntennaComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :returns: task status
+        :returns: task status and message
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
         self: AntennaComponentManager,
-         task_callback: Callable = None,
+        task_callback: Callable = None,
         task_abort_event: threading.Event = None,
     ) -> None:
         """
         Turn the antenna on.
 
-        :param logger: logger
         :param task_callback: Update task state, defaults to None
 
         :returns: whether successful, or None if there was nothing to do.
@@ -571,11 +570,10 @@ class AntennaComponentManager(MccsComponentManager):
         try:
             with self._power_state_lock:
                 self._target_power_state = PowerState.ON
-            # self._review_power()
-            task_abort_event.wait(20) # this line for testing only
+            self._review_power()
         except Exception as ex:
             task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            
+
         # Indicate that the task has completed
         task_callback(
             status=TaskStatus.COMPLETED, result="This slow task has completed"

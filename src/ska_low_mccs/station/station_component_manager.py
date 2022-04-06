@@ -534,13 +534,13 @@ class StationComponentManager(MccsComponentManager):
         configuration = json.loads(argin)
         station_id = configuration.get("station_id")
         return self.submit_task(
-            self._configure, [station_id], task_callback=task_callback
+            self._configure, args=[station_id], task_callback=task_callback
         )
 
     @check_communicating
     def _configure(
-        self, station_id: int, task_callback: Optional[Callable] = None
-    ) -> tuple[ResultCode, str]:
+        self, station_id: int, task_callback: Optional[Callable] = None, task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Configure the station.
 
@@ -550,28 +550,16 @@ class StationComponentManager(MccsComponentManager):
         :param station_id: the id of the station for which the provided
             configuration is intended.
         :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :param task_abort_event: abort event
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             if station_id != self._station_id:
                 raise ValueError("Wrong station id")
             self._update_is_configured(True)
-            result_code = ResultCode.OK
         except ValueError as value_error:
-            # Here instead of returning the result code we will use the task_callback to report the error
-            # e.g. task_callback(status=TaskStatus.FAILED, result="This task has failed")
-            return (
-                ResultCode.FAILED,
-                f"Configure command failed: {value_error}",
-            )
+            task_callback(status=TaskStatus.FAILED, result=f"Configure command has failed: {value_error}")
+            return
 
-        # Here instead of returning the result code we will use the task_callback to report the task finishing
-        # e.g. task_callback(status=TaskStatus.FAILED, result="This task has failed")
-        # or task_callback(status=TaskStatus.COMPLETED, result="This task has completed")
-        if result_code == ResultCode.OK:
-            return (ResultCode.OK, "Configure command completed OK")
-        else:
-            return (ResultCode.FAILED, "Configure command failed")
+        task_callback(status=TaskStatus.COMPLETED, result="Configure command has completed")
+

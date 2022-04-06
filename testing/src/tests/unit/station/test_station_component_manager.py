@@ -15,10 +15,9 @@ import unittest.mock
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station import StationComponentManager
 from ska_low_mccs.testing.mock import MockCallable
 

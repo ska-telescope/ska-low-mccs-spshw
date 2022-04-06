@@ -9,17 +9,17 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import ResultCode, TaskStatus
 from ska_tango_base.control_model import (
     CommunicationStatus,
     PowerState,
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
@@ -91,6 +91,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
 
     __PASSTHROUGH = [
         "adc_rms",
+        "arp_table",
         "board_temperature",
         "calculate_delay",
         "check_pending_data_requests",
@@ -99,8 +100,10 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "configure_integrated_beam_data",
         "configure_integrated_channel_data",
         "configure_test_generator",
+        "cpld_flash_write",
         "current_tile_beamformer_frame",
         "current",
+        "download_firmware",
         "erase_fpga",
         "firmware_available",
         "firmware_name",
@@ -113,6 +116,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "get_40g_configuration",
         "tpm_version",
         "initialise_beamformer",
+        "initialise",
         "is_beamformer_running",
         "is_programmed",
         "load_antenna_tapering",
@@ -121,6 +125,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "load_calibration_curve",
         "load_pointing_delay",
         "phase_terminal_count",
+        "post_synchronisation",
         "pps_delay",
         "read_address",
         "read_register",
@@ -138,12 +143,14 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "set_lmc_integrated_download",
         "set_pointing_delay",
         "set_time_delays",
+        "start_acquisition",
         "start_beamformer",
         "station_id",
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
         "switch_calibration_bank",
+        "sync_fpgas",
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
@@ -496,7 +503,7 @@ class TileComponentManager(MccsComponentManager):
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
-
+        self._power_state_lock = threading.RLock()
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
         self._subrack_communication_status = CommunicationStatus.DISABLED
@@ -571,16 +578,16 @@ class TileComponentManager(MccsComponentManager):
         """
         return self._tile_orchestrator.desire_standby()
 
-    def component_progress_changed(self: TileComponentManager, progress: int) -> None:
-        """
-        Handle notification that the component's progress value has changed.
+    # def component_progress_changed(self: TileComponentManager, progress: int) -> None:
+    #     """
+    #     Handle notification that the component's progress value has changed.
 
-        This is a callback hook, to be passed to the managed component.
+    #     This is a callback hook, to be passed to the managed component.
 
-        :param progress: The progress percentage of the long-running command
-        """
-        if self._component_progress_changed_callback is not None:
-            self._component_progress_changed_callback(progress)
+    #     :param progress: The progress percentage of the long-running command
+    #     """
+    #     if self._component_progress_changed_callback is not None:
+    #         self._component_progress_changed_callback(progress)
 
     def _subrack_communication_status_changed(
         self: TileComponentManager,
@@ -703,7 +710,7 @@ class TileComponentManager(MccsComponentManager):
         self: TileComponentManager,
         power_state: PowerState,
     ) -> None:
-        self._tile_orchestrator.update_tpm_power_mode(power_state)
+        self._tile_orchestrator.update_tpm_power_state(power_state)
 
     def _tpm_communication_status_changed(
         self: TileComponentManager,
@@ -731,7 +738,7 @@ class TileComponentManager(MccsComponentManager):
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        self.update_component_power_state(power_state)
+        # self.update_component_power_state(power_state)
         self.logger.debug(
             f"power state: {self.power_state}, communication status: {self.communication_status}"
         )
@@ -860,6 +867,7 @@ class TileComponentManager(MccsComponentManager):
 
     __PASSTHROUGH = [
         "adc_rms",
+        "arp_table",
         "board_temperature",
         "calculate_delay",
         "check_pending_data_requests",
@@ -868,8 +876,10 @@ class TileComponentManager(MccsComponentManager):
         "configure_integrated_beam_data",
         "configure_integrated_channel_data",
         "configure_test_generator",
+        "cpld_flash_write",
         "current_tile_beamformer_frame",
         "current",
+        "download_firmware",
         "erase_fpga",
         "firmware_available",
         "firmware_name",
@@ -882,6 +892,7 @@ class TileComponentManager(MccsComponentManager):
         "get_40g_configuration",
         "hardware_version",
         "initialise_beamformer",
+        "initialise",
         "is_beamformer_running",
         "is_programmed",
         "load_antenna_tapering",
@@ -890,6 +901,7 @@ class TileComponentManager(MccsComponentManager):
         "load_calibration_curve",
         "load_pointing_delay",
         "phase_terminal_count",
+        "post_synchronisation",
         "pps_delay",
         "read_address",
         "read_register",
@@ -907,12 +919,14 @@ class TileComponentManager(MccsComponentManager):
         "set_lmc_integrated_download",
         "set_pointing_delay",
         "set_time_delays",
+        "start_acquisition",
         "start_beamformer",
         "station_id",
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
         "switch_calibration_bank",
+        "sync_fpgas",
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
@@ -1005,10 +1019,7 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._initialise, task_callback=task_callback
-        )
-        return task_status, unique_id
+        return self.submit_task(self._initialiase, task_callback=task_callback)
 
     def download_firmware(
         self: TileComponentManager,
@@ -1027,10 +1038,9 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
+        return self.submit_task(
             self._download_firmware, args=[argin], task_callback=task_callback
         )
-        return task_status, unique_id
 
     def arp_table(
         self: TileComponentManager,
@@ -1045,10 +1055,7 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._arp_table, task_callback=task_callback
-        )
-        return task_status, unique_id
+        return self.submit_task(self._arp_table, task_callback=task_callback)
 
     def start_acquisition(
         self: TileComponentManager,
@@ -1066,10 +1073,9 @@ class TileComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
+        return self.submit_task(
             self._start_acquisition, args=[argin], task_callback=task_callback
         )
-        return task_status, unique_id
 
     def cpld_flash_write(
         self: TileComponentManager,
@@ -1086,10 +1092,9 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
+        return self.submit_task(
             self._cpld_flash_write, args=[argin], task_callback=task_callback
         )
-        return task_status, unique_id
 
     def post_synchronisation(
         self: TileComponentManager,
@@ -1104,10 +1109,7 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._post_synchronisation, task_callback=task_callback
-        )
-        return task_status, unique_id
+        return self.submit_task(self._post_synchronisation, task_callback=task_callback)
 
     def sync_fpgas(
         self: TileComponentManager,
@@ -1122,7 +1124,13 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        task_status, unique_id = self.submit_task(
-            self._sync_fpgas, task_callback=task_callback
-        )
-        return task_status, unique_id
+        return self.submit_task(self._sync_fpgas, task_callback=task_callback)
+
+    def set_power_state(self: TileComponentManager, power_state: PowerState) -> None:
+        """
+        Set the power state of the subrack.
+
+        :param power_state: The desired power state
+        """
+        with self._power_state_lock:
+            self.power_state = power_state

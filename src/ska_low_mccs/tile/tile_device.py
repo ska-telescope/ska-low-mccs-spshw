@@ -10,7 +10,6 @@ from __future__ import annotations  # allow forward references in type hints
 
 import json
 import logging
-import threading
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
@@ -69,7 +68,6 @@ class MccsTile(SKABaseDevice):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
-        self._power_state_lock = threading.RLock()
         super().init_device()
 
     def _init_state_model(self: MccsTile) -> None:
@@ -317,7 +315,7 @@ class MccsTile(SKABaseDevice):
         if (communication_status == CommunicationStatus.ESTABLISHED) and (
             admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
         ):
-            self._component_power_state_changed(power_state)
+            self._component_state_changed({"power_state": power_state})
 
         self._health_model.is_communicating(
             communication_status == CommunicationStatus.ESTABLISHED
@@ -340,11 +338,12 @@ class MccsTile(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        with self._power_state_lock:
-            if "power_state" in state_change.keys():
-                power_state = state_change.get("power_state")
-                if power_state:
-                    self.op_state_model.perform_action(action_map[power_state])
+
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            self.component_manager.set_power_state(power_state)
+            if power_state:
+                self.op_state_model.perform_action(action_map[power_state])
 
         if "fault" in state_change.keys():
             is_fault = state_change.get("fault")
@@ -1562,7 +1561,8 @@ class MccsTile(SKABaseDevice):
         >>>    }
         """
         handler = self.get_command_object("GetArpTable")
-        return handler()
+        unique_id, return_code = handler()
+        return ([return_code], [unique_id])
 
     class SetChanneliserTruncationCommand(FastCommand):
         """Class for handling the SetChanneliserTruncation(argin) command."""

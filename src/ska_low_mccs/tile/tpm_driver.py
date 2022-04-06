@@ -26,7 +26,7 @@ import numpy as np
 from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_tango_base.commands import ResultCode, SlowCommand
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import MccsComponentManager
@@ -73,37 +73,34 @@ class TpmDriver(MccsComponentManager):
     def __init__(
         self: TpmDriver,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         tile_id: int,
         ip: str,
         port: int,
         tpm_version: str,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
-        Initialise a new TPM driver instance.
+         Initialise a new TPM driver instance trying to connect to the given IP and port.
 
-        Tries to connect to the given IP and port.
-
-        :param logger: a logger for this simulator to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param tile_id: the unique ID for the tile
-        :param ip: IP address for hardware tile
-        :param port: IP address for hardware tile control
-        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-        :param communication_status_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+         :param logger: a logger for this simulator to use
+         :param max_workers: Nos. of worker threads for async commands.
+         :param tile_id: the unique ID for the tile
+         :param ip: IP address for hardware tile
+         :param port: IP address for hardware tile control
+         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+         :param communication_status_changed_callback: callback to be
+             called when the status of the communications channel between
+             the component manager and its component changes
+         :param component_state_changed_callback: callback to be called when the
+             component state changes.
         """
         self._hardware_lock = threading.RLock()
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
-
+        self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
         self._station_id = 0
         self._voltage = self.VOLTAGE
@@ -151,10 +148,9 @@ class TpmDriver(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
         self._poll_rate = 2.0
@@ -220,7 +216,7 @@ class TpmDriver(MccsComponentManager):
                     # polling attempt was unsuccessful
                     self.logger.warning("Connection to tpm lost!")
                     self.tpm_disconnected()
-                    self.update_component_fault(True)
+                    self.update_component_state({"fault": True})
                     self._hardware_lock.release()
                     return
                 # polling attempt succeeded
@@ -270,7 +266,7 @@ class TpmDriver(MccsComponentManager):
                 f"instruction..."
             )
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-            self.update_component_fault(True)
+            self.update_component_state({"fault": True})
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
 
@@ -289,7 +285,7 @@ class TpmDriver(MccsComponentManager):
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
-        self.update_component_fault(False)
+        self.update_component_state({"fault": False})
         self.logger.debug("Tpm connected to tile.")
         self._tpm_status = TpmStatus.UNPROGRAMMED
         self._is_programmed = False
@@ -327,7 +323,7 @@ class TpmDriver(MccsComponentManager):
             # The status in unknown, either because it has not been tested or
             # because it comes from an unconnected state.
             # try to determine the status. Successive tests until one fails
-            # if self.power_mode != PowerState.ON:
+            # if self.power_state != PowerState.ON:
             #     self._tpm_status = TpmStatus.OFF
             if self.communication_status != CommunicationStatus.ESTABLISHED:
                 self._tpm_status = TpmStatus.UNCONNECTED
@@ -445,7 +441,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("Lock released")
         return self._is_programmed
 
-    class DownloadFirmware(SlowCommand):
+    class DownloadFirmware(SubmittedSlowCommand):
         """Long running command for Download firmware."""
 
         def do(  # type: ignore[override]
@@ -522,7 +518,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
-    class Initialise(SlowCommand):
+    class Initialise(SubmittedSlowCommand):
         """Long running command for Tile initialisation."""
 
         def do(  # type: ignore[override]

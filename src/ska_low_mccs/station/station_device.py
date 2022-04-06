@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import functools
-import json
 from typing import Any, Callable, List, Optional, Tuple
 
 import tango
@@ -204,12 +203,12 @@ class MccsStation(SKAObsDevice):
 
         This is a callback hook, called by the component manager when
         the state of the component changes.
-        For the power_state parameter it is implemented here
-        to drive the op_state.
+        For the power_state parameter it is implemented here to drive the op_state.
         For the health parameter it is implemented to update the health attribute
         and push change events whenever the HealthModel's evaluated health state changes.
 
-        :param kwargs: the component state change parameters to be set, and their new values.
+        :param state_change: a dict containing the state parameters to be set, and new values.
+        :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is a station.
         """
         if fqdn is None:
             health_state_changed_callback = self.health_changed

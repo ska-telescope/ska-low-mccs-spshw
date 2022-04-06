@@ -51,20 +51,15 @@ class _TileProxy(DeviceComponentManager):
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
         :param logger: the logger to be used by this object.
-        :param push_change_event: method to call when the base classes
-            want to send an event
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_state_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param health_changed_callback: callback to be called when the
-            health state of the device changes. The value it is called
-            with will normally be a HealthState, but may be None if the
-            admin mode of the device indicates that the device's health
-            should not be included in upstream health rollup.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
@@ -155,21 +150,13 @@ class StationComponentManager(MccsComponentManager):
         :param tile_fqdns: FQDNs of the Tango devices and manage this
             station's TPMs
         :param logger: the logger to be used by this object.
-        :param push_change_event: method to call when the base classes
-            want to send an event
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_state_changed_callback: callback to be
-            called when the component power mode changes
-        :param apiu_health_changed_callback: callback to be called when
-            the health of this station's APIU changes
-        :param antenna_health_changed_callback: callback to be called when
-            the health of one of this station's antennas changes
-        :param tile_health_changed_callback: callback to be called when
-            the health of one of this station's tiles changes
-        :param is_configured_changed_callback: callback to be called
-            when whether this component manager is configured changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         self._station_id = station_id
 
@@ -364,6 +351,7 @@ class StationComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :type task_callback: Callable, optional
+        :return: a result code and response message
         """
         task_status, response = self.submit_task(self._off, task_callback=task_callback)
         return task_status, response
@@ -376,6 +364,7 @@ class StationComponentManager(MccsComponentManager):
         """
         Turn off this station.
 
+        :param task_callback: Update task state, defaults to None
         :return: a result code
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
@@ -411,6 +400,7 @@ class StationComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :type task_callback: Callable, optional
+        :return: a result code and response message
         """
         task_status, response = self.submit_task(self._on, task_callback=task_callback)
         return task_status, response
@@ -478,6 +468,7 @@ class StationComponentManager(MccsComponentManager):
             delays
         :param task_callback: Update task state, defaults to None
         :type task_callback: Callable, optional
+        :return: a task status and response message
         """
         task_status, response = self.submit_task(
             self._apply_pointing, delays=delays, task_callback=task_callback
@@ -497,6 +488,7 @@ class StationComponentManager(MccsComponentManager):
         :param delays: an array containing a beam index and antenna
             delays
 
+        :param task_callback: :param task_callback:
         :return: a result code
         """
         results = [
@@ -538,6 +530,7 @@ class StationComponentManager(MccsComponentManager):
         :param argin: Configuration specification dict as a json string.
         :param task_callback: Update task state, defaults to None
         :type task_callback: Callable, optional
+        :return: a result code and response string
         """
         configuration = json.loads(argin)
         station_id = configuration.get("station_id")

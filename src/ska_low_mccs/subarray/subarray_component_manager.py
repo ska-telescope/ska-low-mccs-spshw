@@ -37,7 +37,7 @@ class _StationProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    def configure(self: _StationProxy, configuration: dict) -> ResultCode:
+    def configure(self: _StationProxy, configuration: dict) -> tuple[TaskStatus, str]:
         """
         Configure the station.
 
@@ -48,8 +48,8 @@ class _StationProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        ([result_code], unique_id) = self._proxy.Configure(configuration_str)
-        return result_code
+        (result_code, unique_id) = self._proxy.Configure(configuration_str)
+        return (result_code, unique_id)
 
 
 class _SubarrayBeamProxy(ObsDeviceComponentManager):
@@ -57,7 +57,7 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    def configure(self: _SubarrayBeamProxy, configuration: dict) -> ResultCode:
+    def configure(self: _SubarrayBeamProxy, configuration: dict) -> tuple[TaskStatus, str]:
         """
         Configure the subarray beam.
 
@@ -68,12 +68,12 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
         """
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
-        ([result_code], unique_id) = self._proxy.Configure(configuration_str)
-        return result_code
+        (result_code, unique_id) = self._proxy.Configure(configuration_str)
+        return (result_code, unique_id)
 
     @check_communicating
     @check_on
-    def scan(self: _SubarrayBeamProxy, scan_id: int, start_time: float) -> ResultCode:
+    def scan(self: _SubarrayBeamProxy, scan_id: int, start_time: float) -> tuple[TaskStatus, str]:
         """
         Start the subarray beam scanning.
 
@@ -85,7 +85,7 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
         assert self._proxy is not None
         scan_arg = json.dumps({"scan_id": scan_id, "start_time": start_time})
         ([result_code], unique_id) = self._proxy.Scan(scan_arg)
-        return result_code
+        return (result_code, unique_id)
 
 
 class _StationBeamProxy(ObsDeviceComponentManager):
@@ -93,7 +93,7 @@ class _StationBeamProxy(ObsDeviceComponentManager):
 
     @check_communicating
     @check_on
-    def configure(self: _StationBeamProxy, configuration: dict) -> ResultCode:
+    def configure(self: _StationBeamProxy, configuration: dict) -> tuple[TaskStatus, str]:
         """
         Configure the station beam.
 
@@ -105,7 +105,7 @@ class _StationBeamProxy(ObsDeviceComponentManager):
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
         ([result_code], unique_id) = self._proxy.Configure(configuration_str)
-        return result_code
+        return (result_code, unique_id)
 
 
 class SubarrayComponentManager(
@@ -220,9 +220,36 @@ class SubarrayComponentManager(
         return set(self._stations.keys())
 
     @check_communicating
-    def assign(  # type: ignore[override]
+    def assign(
         self: SubarrayComponentManager,
         resource_spec: dict,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `AssignResources` slow command.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param resource_spec: resource specification; for example
+
+            .. code-block:: python
+
+                {
+                    "subarray_beams": ["low-mccs/subarraybeam/01"],
+                    "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
+                    "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"]
+                    "channel_blocks": [3]
+                }
+        :param task_callback: Update task state, defaults to None
+        :return: a result code and response message.
+        """
+        return self.submit_task(self._assign, args=(resource_spec), task_callback=task_callback,)
+
+    @check_communicating
+    def _assign(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        resource_spec: dict,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Assign resources to this subarray.
@@ -239,9 +266,11 @@ class SubarrayComponentManager(
                     "station_beams": ["low-mccs/beam/01","low-mccs/beam/02"]
                     "channel_blocks": [3]
                 }
-
+        :param task_callback: Update task state, defaults to None
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
         station_fqdns: list[list[str]] = resource_spec.get("stations", [])
         subarray_beam_fqdns: list[str] = resource_spec.get("subarray_beams", [])
         station_beam_fqdns: list[str] = resource_spec.get("station_beams", [])
@@ -302,6 +331,8 @@ class SubarrayComponentManager(
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn].start_communicating()
 
+        task_callback(status=TaskStatus.COMPLETED, result="AssignResources has completed.")
+
         return ResultCode.OK
 
     def _flatten_new_station_groups(
@@ -361,26 +392,67 @@ class SubarrayComponentManager(
     def release(  # type: ignore[override]
         self: SubarrayComponentManager,
         argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `release` slow command.
+
+        :param argin: list of resource fqdns to release.
+        :param task_callback: Update task state, defaults to None
+
+        :return: A task status and response message.
+        """
+        return self.submit_task(self._release, args=[argin], task_callback=task_callback,)
+
+    @check_communicating
+    def _release(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
     ) -> None:
         """
         Release resources from this subarray.
 
         :param argin: list of resource fqdns to release.
+        :param task_callback: Update task state, defaults to None
 
         :raises NotImplementedError: because MCCS Subarray cannot perform a
             partial release of resources.
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        
+        task_callback(status=TaskStatus.COMPLETED, result="Not Implemented: MCCS Subarray cannot partially release resources.")
         raise NotImplementedError("MCCS Subarray cannot partially release resources.")
 
     @check_communicating
-    def release_all(  # type: ignore[override]
+    def release_all(
         self: SubarrayComponentManager,
-    ) -> ResultCode:
+        task_callback: Optional[Callable],
+    ) -> tuple[TaskStatus, str]:
         """
+        Submit the `ReleaseAllResources` slow command.
+
         Release all resources from this subarray.
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code
         """
+        return self.submit_task(self._release_all, args=[], task_callback=task_callback,)
+
+
+    @check_communicating
+    def _release_all(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        task_callback: Optional[Callable],
+    ) -> ResultCode:
+        """
+        Release all resources from this subarray.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a result code
+        """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
             self._station_groups.clear()
@@ -397,20 +469,42 @@ class SubarrayComponentManager(
             )
             self._evaluate_communication_status()
         self._release_completed_callback({"release_completed": None})
+
+        task_callback(status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed.")
         return ResultCode.OK
 
     @check_communicating
     def configure(  # type: ignore[override]
         self: SubarrayComponentManager,
         configuration: dict[str, Any],
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `configure` slow command.
+
+        :param configuration: the configurations to be applied
+        :param task_callback: Update task state, defaults to None
+
+        :return: A task status and response message.
+        """
+        return self.submit_task(self._configure, args=[configuration], task_callback=task_callback,)
+
+    @check_communicating
+    def _configure(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        configuration: dict[str, Any],
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Configure the resources for a scan.
 
         :param configuration: the configurations to be applied
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
         stations = configuration["stations"]
         station_configuration = {station["station_id"]: station for station in stations}
         subarray_beams = configuration["subarray_beams"]
@@ -427,6 +521,7 @@ class SubarrayComponentManager(
         if result_code == ResultCode.OK:
             self._configure_completed_callback({"configure_completed": None})
 
+        task_callback(status=TaskStatus.COMPLETED, result="Configure has completed.")
         return result_code
 
     def _configure_stations(
@@ -486,15 +581,36 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         scan_id: int,
         start_time: float,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `Scan` command.
+
+        :param scan_id: the id of the scan
+        :param start_time: the start time of the scan
+        :param task_callback: Update task state, defaults to None
+
+        :return: A task status and response message.
+        """
+        return self.submit_task(self._scan, args=[scan_id, start_time], task_callback=task_callback,)
+
+    @check_communicating
+    def _scan(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        scan_id: int,
+        start_time: float,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Start scanning.
 
         :param scan_id: the id of the scan
         :param start_time: the start time of the scan
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         self._scan_id = scan_id
 
         result_code = ResultCode.OK
@@ -503,33 +619,68 @@ class SubarrayComponentManager(
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
         self._scanning_changed_callback({"scanning_changed": True})
+        # TODO: Scan may not have actually completed by this point, check.
+        task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
         return result_code
 
     @check_communicating
     def end_scan(  # type: ignore[override]
         self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `end_scan` slow command.
+        :param task_callback: Update task state, defaults to None
+
+        :return: A task status and response message.
+        """
+        return self.submit_task(self._end_scan, args=[], task_callback=task_callback,)
+
+    @check_communicating
+    def _end_scan(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         End scanning.
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         self._scan_id = None
 
         # Stuff goes here. This should tell the subarray beam device to
         # stop scanning, but that device doesn't support it yet.
         self._scanning_changed_callback({"scanning_changed": False})
+        task_callback(status=TaskStatus.COMPLETED, result="EndScan has completed.")
         return ResultCode.OK
 
     @check_communicating
     def deconfigure(  # type: ignore[override]
         self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `deconfigure` slow command.
+        :param task_callback: Update task state, defaults to None
+
+        :return: A task status and response message.
+        """
+        return self.submit_task(self._deconfigure, args=[], task_callback=task_callback,)
+
+    @check_communicating
+    def _deconfigure(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Deconfigure resources.
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
         for station_proxy in self._stations.values():
             proxy_result_code = station_proxy.configure({})
@@ -540,6 +691,7 @@ class SubarrayComponentManager(
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
         self._configured_changed_callback({"configured_changed": False})
+        task_callback(status=TaskStatus.COMPLETED, result="End/Deconfigure has completed.")
         return result_code
 
     @check_communicating
@@ -559,30 +711,61 @@ class SubarrayComponentManager(
     @check_communicating
     def obsreset(  # type: ignore[override]
         self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `ObsReset` slow command.
+
+        :return: A task status and response message.
+        """
+        return self.submit_task(self._obsreset, args=[], task_callback=task_callback,)
+
+    @check_communicating
+    def _obsreset(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Reset the observation by returning to unconfigured state.
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         # other stuff here
         self.deconfigure()
         self._obsreset_completed_callback({"obsreset_completed": None})
+        task_callback(status=TaskStatus.COMPLETED, result="ObsReset has completed.")
         return ResultCode.OK
 
     @check_communicating
     def restart(  # type: ignore[override]
         self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `Restart` slow command.
+        :param task_callback: Update task state, defaults to None
+
+        :return: A task status and response message.
+        """
+        return self.submit_task(self._restart, args=[], task_callback=task_callback,)
+
+    @check_communicating
+    def _restart(  # type: ignore[override]
+        self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Restart the subarray by returning to unresourced state.
 
         :return: a result code
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         # other stuff here
         self.deconfigure()
-        result_code = self.release_all()
+        result_code = self.release_all(task_callback=task_callback)
         self._restart_completed_callback({"restart_completed": None})
+        task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
         return result_code
 
     def send_transient_buffer(
@@ -595,11 +778,9 @@ class SubarrayComponentManager(
         :param task_callback: Update task state. Defaults to None.
         
         :return: Task status and response message."""
-        task_status, response = self.submit_task(
+        return self.submit_task(
             self._send_transient_buffer, args=[], task_callback=task_callback
         )
-        return ([task_status], [response])
-
 
     @check_communicating
     def _send_transient_buffer(

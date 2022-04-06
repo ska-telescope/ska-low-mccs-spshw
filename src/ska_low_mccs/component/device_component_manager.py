@@ -34,7 +34,7 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        max_workers: int,
+        max_workers: Optional[int],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Optional[Callable[[Any], None]],
     ) -> None:
@@ -346,14 +346,9 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         self: ObsDeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[
-            Callable[[Optional[HealthState]], None]
-        ] = None,
-        obs_state_changed_callback: Optional[Callable[[ObsState], None]] = None,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -377,15 +372,14 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         :param obs_state_changed_callback: callback to be called when
             the observation state of the device changes.
         """
-        self._obs_state_changed_callback = obs_state_changed_callback
+        self._component_state_changed_callback = component_state_changed_callback
+        self._obs_state_changed_callback = component_state_changed_callback
         super().__init__(
             fqdn,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
-            health_changed_callback,
+            component_state_changed_callback,
         )
 
     class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
@@ -433,4 +427,4 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         ), f"obs state changed callback called but event_name is {event_name}."
 
         if self._obs_state_changed_callback is not None:
-            self._obs_state_changed_callback(event_value)
+            self._obs_state_changed_callback({"obsstate_changed": event_value})

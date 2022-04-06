@@ -82,19 +82,19 @@ class TpmDriver(MccsComponentManager):
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
-         Initialise a new TPM driver instance trying to connect to the given IP and port.
+        Initialise a new TPM driver instance trying to connect to the given IP and port.
 
-         :param logger: a logger for this simulator to use
-         :param max_workers: Nos. of worker threads for async commands.
-         :param tile_id: the unique ID for the tile
-         :param ip: IP address for hardware tile
-         :param port: IP address for hardware tile control
-         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-         :param communication_status_changed_callback: callback to be
-             called when the status of the communications channel between
-             the component manager and its component changes
-         :param component_state_changed_callback: callback to be called when the
-             component state changes.
+        :param logger: a logger for this simulator to use
+        :param max_workers: Nos. of worker threads for async commands.
+        :param tile_id: the unique ID for the tile
+        :param ip: IP address for hardware tile
+        :param port: IP address for hardware tile control
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         self._hardware_lock = threading.RLock()
         self._is_programmed = False

@@ -37,7 +37,8 @@ from .tile_data import TileData
 from .time_util import TileTime
 from .tpm_driver import TpmDriver
 from .base_tpm_simulator import BaseTpmSimulator
-#from .demo_tile_device import DemoTile
+
+# from .demo_tile_device import DemoTile
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator
 from .tile_component_manager import (

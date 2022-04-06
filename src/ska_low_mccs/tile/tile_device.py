@@ -15,7 +15,8 @@ from typing import Any, List, Optional, Tuple
 import numpy as np
 import tango
 from ska_tango_base.base import SKABaseDevice
-#from ska_tango_base.base.op_state_model import OpStateModel
+
+# from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import (
     DeviceInitCommand,
     FastCommand,

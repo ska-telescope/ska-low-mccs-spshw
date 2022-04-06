@@ -122,6 +122,8 @@ class MccsComponentManager(
             communication_status_changed_callback
         )
 
+        self._power_state_lock = threading.RLock()
+
         self._power_state: Optional[PowerState] = PowerState.UNKNOWN
         self._faulty: Optional[bool] = None
 

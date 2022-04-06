@@ -619,7 +619,7 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_out=str)
-    def GetFndhInfo(self: MccsPasdBus) -> str:
+    def GetFndhInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
         """
         Return information about the FNDH.
 
@@ -655,7 +655,7 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetSmartboxInfo(self: MccsPasdBus) -> str:
+    def GetSmartboxInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
         """
         Return information about a smartbox.
 
@@ -715,7 +715,7 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetAntennaInfo(self: MccsPasdBus) -> str:
+    def GetAntennaInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
         """
         Return information about relationship of an antenna to other PaSD components.
 

@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from ska_tango_base.commands import ResultCode
 
@@ -32,10 +32,14 @@ class SubarrayBeam(ObjectComponent):
         """
         self._logger = logger
 
-        self._is_beam_locked_changed_callback: Optional[Callable[[bool], None]] = None
+        self._is_beam_locked_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None
 
         self._is_configured = False
-        self._is_configured_changed_callback: Optional[Callable[[bool], None]] = None
+        self._is_configured_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None
 
         self._subarray_id = 0
         self._subarray_beam_id = 0
@@ -51,7 +55,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_beam_locked_changed_callback(
         self: SubarrayBeam,
-        is_beam_locked_changed_callback: Optional[Callable[[bool], None]],
+        is_beam_locked_changed_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is locked changes.
@@ -64,7 +68,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_configured_changed_callback(
         self: SubarrayBeam,
-        is_configured_changed_callback: Optional[Callable[[bool], None]],
+        is_configured_changed_callback: Optional[Callable[[dict[str, bool]], None]],
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is configured changes.
@@ -143,7 +147,7 @@ class SubarrayBeam(ObjectComponent):
         return self._update_rate
 
     @property
-    def is_beam_locked(self: SubarrayBeam) -> bool:
+    def is_beam_locked(self: SubarrayBeam) -> Optional[Any]:
         """
         Return whether the beam is locked.
 
@@ -152,7 +156,7 @@ class SubarrayBeam(ObjectComponent):
         return self._is_beam_locked
 
     @is_beam_locked.setter
-    def is_beam_locked(self: SubarrayBeam, value: bool) -> None:
+    def is_beam_locked(self: SubarrayBeam, value: dict[str, bool]) -> None:
         """
         Set whether the beam is locked.
 
@@ -247,7 +251,7 @@ class SubarrayBeam(ObjectComponent):
 
     def _update_is_configured(
         self: SubarrayBeam,
-        is_configured: bool,
+        is_configured: dict[str, bool],
     ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured

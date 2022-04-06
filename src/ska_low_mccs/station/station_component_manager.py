@@ -467,13 +467,12 @@ class StationComponentManager(MccsComponentManager):
         :param delays: an array containing a beam index and antenna
             delays
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
+
         :return: a task status and response message
         """
-        task_status, response = self.submit_task(
-            self._apply_pointing, delays=delays, task_callback=task_callback
+        return self.submit_task(
+            self._apply_pointing, [delays], task_callback=task_callback
         )
-        return task_status, response
 
     @check_communicating
     @check_on
@@ -487,8 +486,8 @@ class StationComponentManager(MccsComponentManager):
 
         :param delays: an array containing a beam index and antenna
             delays
-
         :param task_callback: :param task_callback:
+
         :return: a result code
         """
         results = [
@@ -529,15 +528,14 @@ class StationComponentManager(MccsComponentManager):
 
         :param argin: Configuration specification dict as a json string.
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
+
         :return: a result code and response string
         """
         configuration = json.loads(argin)
         station_id = configuration.get("station_id")
-        task_status, response = self.submit_task(
-            self._configure, station_id=station_id, task_callback=task_callback
+        return self.submit_task(
+            self._configure, [station_id], task_callback=task_callback
         )
-        return task_status, response
 
     @check_communicating
     def _configure(
@@ -552,8 +550,7 @@ class StationComponentManager(MccsComponentManager):
         :param station_id: the id of the station for which the provided
             configuration is intended.
         :param task_callback: Update task state, defaults to None
-        :raises ValueError: if the configuration was intended for a
-            different station
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.

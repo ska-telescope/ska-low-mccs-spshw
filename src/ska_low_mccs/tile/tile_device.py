@@ -2146,12 +2146,6 @@ class MccsTile(SKABaseDevice):
             """
             Initialise a new LoadAntennaTaperingCommand instance.
 
-            :param target: the object that this command acts upon; for
-                example, the device for which this class implements the
-                command
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :param antennas_per_tile: the number of antennas per tile
@@ -2290,12 +2284,6 @@ class MccsTile(SKABaseDevice):
             """
             Initialise a new SetPointingDelayCommand instance.
 
-            :param target: the object that this command acts upon; for
-                example, the device for which this class implements the
-                command
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :param antennas_per_tile: the number of antennas per tile

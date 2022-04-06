@@ -80,7 +80,6 @@ class MccsAPIU(SKABaseDevice):
             self._max_workers,
             self._component_communication_status_changed,
             self.component_state_changed_callback,
-            max_workers=1,
         )
 
     def init_command_objects(self: MccsAPIU) -> None:

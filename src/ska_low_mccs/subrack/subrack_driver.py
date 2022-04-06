@@ -27,7 +27,7 @@ import logging
 import time
 from typing import Any, Callable, List, Optional, cast
 
-from ska_tango_base.commands import ResultCode, SlowCommand
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.component import MccsComponentManager, WebHardwareClient
@@ -120,35 +120,31 @@ class SubrackDriver(MccsComponentManager):
     def start_communicating(self: SubrackDriver) -> None:
         """Establish communication with the subrack."""
         super().start_communicating()
-        connect_command = self.ConnectToSubrack(target=self)
-        _ = self.enqueue(connect_command)
+        self.connect_to_subrack()
 
-    class ConnectToSubrack(SlowCommand):
-        """Connect to subrack command class."""
+    def connect_to_subrack(
+        self: SubrackDriver.ConnectToSubrack,
+    ) -> tuple[ResultCode, str]:
+        """
+        Establish communication with the subrack, then start monitoring.
 
-        def do(  # type: ignore[override]
-            self: SubrackDriver.ConnectToSubrack,
-        ) -> tuple[ResultCode, str]:
-            """
-            Establish communication with the subrack, then start monitoring.
+        This contains the actual communication logic that is enqueued to
+        be run asynchronously.
 
-            This contains the actual communication logic that is enqueued to
-            be run asynchronously.
-
-            :return: a result code and message
-            """
-            connected = self._client.connect()
-            target_connection = f"{self._ip}:{str(self._port)}"
-            if connected:
-                self.update_communication_status(CommunicationStatus.ESTABLISHED)
-                message = f"Connected to {target_connection}"
-                self.logger.info(message)
-                return ResultCode.OK, message
-
-            self.logger.error("status:ERROR")
-            message = f"Failed to connect to {target_connection}"
+        :return: a result code and message
+        """
+        connected = self._client.connect()
+        target_connection = f"{self._ip}:{str(self._port)}"
+        if connected:
+            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            message = f"Connected to {target_connection}"
             self.logger.info(message)
-            return ResultCode.FAILED, message
+            return ResultCode.OK, message
+
+        self.logger.error("status:ERROR")
+        message = f"Failed to connect to {target_connection}"
+        self.logger.info(message)
+        return ResultCode.FAILED, message
 
     def stop_communicating(self: SubrackDriver) -> None:
         """Stop communicating with the subrack."""

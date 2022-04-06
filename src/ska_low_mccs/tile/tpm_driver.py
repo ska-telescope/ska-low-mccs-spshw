@@ -26,8 +26,8 @@ import numpy as np
 from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import MccsComponentManager
 
@@ -441,44 +441,37 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("Lock released")
         return self._is_programmed
 
-    class DownloadFirmware(SubmittedSlowCommand):
-        """Long running command for Download firmware."""
-
-        def do(  # type: ignore[override]
-            self: TpmDriver.DownloadFirmware, bitfile: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Download the provided firmware bitfile onto the TPM.
-
-            :param bitfile: a binary firmware blob
-
-            :return: a result code and message
-            """
-            if self.target._download_firmware(bitfile):
-                return ResultCode.OK, "Firmware downloaded successfully"
-            else:
-                return (
-                    ResultCode.FAILED,
-                    "Could not program Tile",
-                )
-
-    def download_firmware(self: TpmDriver, bitfile: str) -> None:
+    def download_firmware(
+        self: TpmDriver,
+        bitfile: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
         """
         Download firmware bitfile onto the TPM as a long runnning command.
 
         :param bitfile: a binary firmware blob
-        """
-        download_file_command = self.DownloadFirmware(target=self)
-        _ = self.enqueue(download_file_command)
+        :param task_callback: Update task state, defaults to None
 
-    def _download_firmware(self: TpmDriver, bitfile: str) -> bool:
+        :return: TaskStatus and message
+        """
+        return self.submit_task(
+            self._download_firmware, args=[bitfile], task_callback=task_callback
+        )
+
+    def _download_firmware(
+        self: TpmDriver,
+        bitfile: str,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: a binary firmware blob
-
-        :returns: true if programmed successful
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
         is_programmed = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
@@ -490,7 +483,16 @@ class TpmDriver(MccsComponentManager):
         if is_programmed:
             self._firmware_name = bitfile
             self._tpm_status = TpmStatus.PROGRAMMED
-        return is_programmed
+
+        if is_programmed:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The download firmware task has completed",
+            )
+        else:
+            task_callback(
+                status=TaskStatus.FAILED, result="The download firmware task has failed"
+            )
 
     def erase_fpga(self: TpmDriver) -> None:
         """Erase FPGA programming to reduce FPGA power consumption."""
@@ -518,69 +520,78 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
-    class Initialise(SubmittedSlowCommand):
-        """Long running command for Tile initialisation."""
+    def _initialise(
+        self: TpmDriver.Initialise,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ):
+        """
+        Download firmware, if not already downloaded, and initializes tile.
 
-        def do(  # type: ignore[override]
-            self: TpmDriver.Initialise,
-        ) -> tuple[ResultCode, str]:
-            """
-            Download firmware, if not already downloaded, and initializes tile.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        #
+        # If not programmed, program it.
+        # TODO: there is no way to check whether the TPM is already correctly initialised.
+        # If it is, re-initialising it is bad.
+        #
+        prog_status = False
+        with self._hardware_lock:
+            self.logger.debug("Lock acquired")
+            if self.tile.is_programmed() is False:
+                self.tile.program_fpgas(self._firmware_name)
+            prog_status = self.tile.is_programmed()
+        self.logger.debug("Lock released")
+        #
+        # Initialisation after programming the FPGA
+        #
+        if prog_status:
+            self._is_programmed = True
+            self._tpm_status = TpmStatus.PROGRAMMED
+            #
+            # Base initialisation
+            #
+            with self._hardware_lock:
+                self.logger.debug("Lock acquired")
+                self.tile.initialise()
+                self.tile.set_station_id(0, 0)
+            self.logger.debug("Lock released")
+            #
+            # extra steps required to have it working
+            #
+            with self._hardware_lock:
+                self.logger.debug("Lock acquired")
+                self.initialise_beamformer(128, 8, True, True)
+            self.logger.debug("Lock released")
+            with self._hardware_lock:
+                self.logger.debug("Lock acquired")
+                self.tile.post_synchronisation()
+                self.tile.set_station_id(self._tile_id, self._station_id)
+            self.logger.debug("Lock released")
+            self._tpm_status = TpmStatus.INITIALISED
+            self.logger.debug("TpmDriver: initialisation completed")
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The initialisation task has completed",
+            )
+        else:
+            self._tpm_status = TpmStatus.UNPROGRAMMED
+            self.logger.error("TpmDriver: Cannot initialise board")
+            task_callback(
+                status=TaskStatus.COMPLETED, result="The initialisation task has failed"
+            )
 
-            :return: a result code and message
-            """
-            target = self.target
-            #
-            # If not programmed, program it.
-            # TODO: there is no way to check whether the TPM is already correctly initialised.
-            # If it is, re-initialising it is bad.
-            #
-            target.logger.debug("TpmDriver: initialise")
-            prog_status = False
-            with target._hardware_lock:
-                target.logger.debug("Lock acquired")
-                if target.tile.is_programmed() is False:
-                    target.tile.program_fpgas(target._firmware_name)
-                prog_status = target.tile.is_programmed()
-            target.logger.debug("Lock released")
-            #
-            # Initialisation after programming the FPGA
-            #
-            if prog_status:
-                target._is_programmed = True
-                target._tpm_status = TpmStatus.PROGRAMMED
-                #
-                # Base initialisation
-                #
-                with target._hardware_lock:
-                    target.logger.debug("Lock acquired")
-                    target.tile.initialise()
-                    target.tile.set_station_id(0, 0)
-                target.logger.debug("Lock released")
-                #
-                # extra steps required to have it working
-                #
-                with target._hardware_lock:
-                    target.logger.debug("Lock acquired")
-                    target.initialise_beamformer(128, 8, True, True)
-                target.logger.debug("Lock released")
-                with target._hardware_lock:
-                    target.logger.debug("Lock acquired")
-                    target.tile.post_synchronisation()
-                    target.tile.set_station_id(target._tile_id, target._station_id)
-                target.logger.debug("Lock released")
-                target._tpm_status = TpmStatus.INITIALISED
-                target.logger.debug("TpmDriver: initialisation completed")
-                return (ResultCode.OK, "Initialsation completed")
-            else:
-                target._tpm_status = TpmStatus.UNPROGRAMMED
-                target.logger.error("TpmDriver: Cannot initialise board")
-                return (ResultCode.FAILED, "Cannot initialise board")
+    def initialise(self: TpmDriver, task_callback: Optional[Callable] = None) -> None:
+        """
+        Download firmware, if not already downloaded, and initializes tile.
 
-    def initialise(self: TpmDriver) -> None:
-        """Download firmware, if not already downloaded, and initializes tile."""
-        initialise_command = self.Initialise(target=self)
-        _ = self.enqueue(initialise_command)
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a message
+        """
+        return self.submit_task(self._initialise, task_callback=task_callback)
 
     @property
     def tile_id(self: TpmDriver) -> int:

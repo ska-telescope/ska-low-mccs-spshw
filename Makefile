@@ -39,6 +39,7 @@ python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ testing/src/ 	
 
 python-post-lint:
-	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
+	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/
+#testing/src/
 
 .PHONY: python-post-format python-post-lint

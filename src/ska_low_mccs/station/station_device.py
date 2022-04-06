@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
@@ -209,6 +209,8 @@ class MccsStation(SKAObsDevice):
 
         :param state_change: a dict containing the state parameters to be set, and new values.
         :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is a station.
+
+        :raises ValueError: fqdn not found
         """
         if fqdn is None:
             health_state_changed_callback = self.health_changed

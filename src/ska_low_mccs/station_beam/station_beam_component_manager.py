@@ -13,7 +13,7 @@ import logging
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode, TaskStatus
-from ska_tango_base.control_model import CommunicationStatus, HealthState
+from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import (
     DeviceComponentManager,

@@ -629,9 +629,6 @@ class TileComponentManager(MccsComponentManager):
 
         This contains the actual communication logic that is enqueued to
         be run asynchronously.
-
-        :raises ConnectionError: if the attempt to establish
-            communication with the channel fails.
         """
         # Don't set comms NOT_ESTABLISHED here. It should already have been handled
         # synchronously by the orchestator.

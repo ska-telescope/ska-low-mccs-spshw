@@ -440,11 +440,17 @@ class ControllerComponentManager(MccsComponentManager):
         for station_beam_proxy in self._station_beams.values():
             station_beam_proxy.stop_communicating()
 
-    def _communication_status_changed_callback(
+    def communication_status_changed_callback(
         self: ControllerComponentManager,
         fqdn: str,
         communication_status: CommunicationStatus,
     ) -> None:
+        """
+        Handle communication changes.
+
+        :param fqdn: fqdn of changed device
+        :param communication_status: new status
+        """
         if fqdn not in self._device_communication_statuses:
             self.logger.warning(
                 f"Received a communication status changed event for device {fqdn} "

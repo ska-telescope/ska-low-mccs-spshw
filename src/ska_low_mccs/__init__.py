@@ -59,7 +59,7 @@ from .device_proxy import MccsDeviceProxy
 # from .cluster_manager import MccsClusterManagerDevice
 # from .controller import MccsController
 # from .pasd_bus import MccsPasdBus
-# from .station import MccsStation
+from .station import MccsStation
 # from .station_beam import MccsStationBeam
 # from .subarray import MccsSubarray
 # from .subarray_beam import MccsSubarrayBeam

@@ -394,9 +394,8 @@ class TestPatchedStation:
         """
         config_dict = {"station_id": 1}
         json_str = json.dumps(config_dict)
-        print(json_str)
 
-        ([result_code], [message]) = device_under_test.Configure(json_str)
+        device_under_test.Configure(json_str)
         mock_component_manager._configure.assert_next_call(1)
 
     def test_applyPointing(

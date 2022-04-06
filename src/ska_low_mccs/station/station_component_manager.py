@@ -518,7 +518,7 @@ class StationComponentManager(MccsComponentManager):
             self.component_state_changed_callback({"is_configured": is_configured})
 
     def configure(
-        self, argin: str, task_callback: Optional[Callable] = None
+        self: StationComponentManager, argin: str, task_callback: Optional[Callable] = None
     ) -> tuple[ResultCode, str]:
         """
         Submit the configure method.
@@ -537,9 +537,9 @@ class StationComponentManager(MccsComponentManager):
             self._configure, args=[station_id], task_callback=task_callback
         )
 
-    @check_communicating
+    #@check_communicating
     def _configure(
-        self, station_id: int, task_callback: Optional[Callable] = None, task_abort_event: threading.Event = None,
+        self: StationComponentManager, station_id: int, task_callback: Optional[Callable] = None, task_abort_event: threading.Event = None,
     ) -> None:
         """
         Configure the station.

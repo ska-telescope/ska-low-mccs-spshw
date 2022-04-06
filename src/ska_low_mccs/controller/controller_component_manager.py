@@ -12,10 +12,11 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Hashable, Iterable, Optional
+from typing import Any, Callable, Hashable, Iterable, Optional
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     DeviceComponentManager,
@@ -48,8 +49,7 @@ class _StationProxy(DeviceComponentManager):
         :param subarray_fqdns: the FQDNs of subarrays which channel
             blocks can be assigned to.
         :param logger: the logger to be used by this object.
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
+        :param max_workers: nos. of worker threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -603,44 +603,69 @@ class ControllerComponentManager(MccsComponentManager):
             self._station_beam_health_changed_callback(fqdn, health)
 
     def off(
-        self: ControllerComponentManager, task_callback: Callable = None
+        self: ControllerComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn off the MCCS subsystem.
 
-        :return: a result code
+        :param task_callback: Update task state, defaults to None
+
+        :return: a TaskStatus and message
         """
         return self.submit_task(self._off, task_callback=task_callback)
 
     # @check_communicating
-    def _off(self: ControllerComponentManager, task_callback: Callable = None) -> None:
+    def _off(
+        self: ControllerComponentManager,
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Turn off the MCCS subsystem.
 
-        :return: a result code
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
 
         results = [station_proxy.off() for station_proxy in self._stations.values()] + [
             subrack_proxy.off() for subrack_proxy in self._subracks.values()
         ]
-        # TODO wait for the respective LRC's to complete, whilst reporting progress
-        if ResultCode.FAILED in results:
-            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
-        else:
+        completed = True
+        for result in results:
+            if result[0] == TaskStatus.FAILED:
+                completed = False
+                break
+        if completed:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The Off command has completed"
+                status=TaskStatus.COMPLETED, result="The off command has completed"
             )
+        else:
+            task_callback(status=TaskStatus.FAILED, result="The off command has failed")
+
+    def standby(
+        self: ControllerComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Put the MCCS subsystem in standby mode.
+
+        :param task_callback: Update task state, defaults to None
+
+        :returns: task status and message
+        """
+        return self.submit_task(self._standby, task_callback=task_callback)
 
     @check_communicating
-    def standby(
+    def _standby(
         self: ControllerComponentManager,
         task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
     ) -> tuple[TaskStatus, str]:
         """
         Put the MCCS subsystem into low power standby mode.
 
-        :return: a result code
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -648,32 +673,43 @@ class ControllerComponentManager(MccsComponentManager):
             station_proxy.standby() for station_proxy in self._stations.values()
         ] + [subrack_proxy.standby() for subrack_proxy in self._subracks.values()]
 
-        # TODO wait for the respective LRC's to complete, whilst reporting progress
-        if ResultCode.FAILED in results:
-            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
+        completed = True
+        for result in results:
+            if result[0] == TaskStatus.FAILED:
+                completed = False
+                break
+        if completed:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="The standby command has completed"
+            )
         else:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The Off command has completed"
+                status=TaskStatus.FAILED, result="The standby command has failed"
             )
 
     def on(
-        self: ControllerComponentManager, task_callback: Callable = None
+        self: ControllerComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn on the MCCS subsystem.
 
-        :return: a result code
+        :param task_callback: Update task state, defaults to None
+
+        :returns: task status and message
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
-    # @check_communicating
+    @check_communicating
     def _on(
         self: ControllerComponentManager,
-    ) -> ResultCode:
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Turn on the MCCS subsystem.
 
-        :return: a result code
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -712,6 +748,7 @@ class ControllerComponentManager(MccsComponentManager):
             "station_ids": list[list[int]],
             "channel_blocks": list[int],
             }
+        :param task_callback: Update task state, defaults to None
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
@@ -747,7 +784,9 @@ class ControllerComponentManager(MccsComponentManager):
         station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
-    ) -> ResultCode:
+        task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Allocate resources to a subarray.
 
@@ -759,10 +798,10 @@ class ControllerComponentManager(MccsComponentManager):
             allocated to the subarray
         :param channel_blocks: numbers of the channel blocks to be allocated
             to the subarray from each station in the associated grouping
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :raises ValueError: if trying to assign a station not in the controller's Stations
-
-        :return: a result code
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -843,11 +882,13 @@ class ControllerComponentManager(MccsComponentManager):
                     ].write_subarray_id(subarray_id)
 
         # TODO wait for the respective LRC's to complete, whilst reporting progress
-        if ResultCode.FAILED in results:
-            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
+        if ResultCode.FAILED == result_code:
+            task_callback(
+                status=TaskStatus.FAILED, result="The allocate command has failed"
+            )
         else:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The Off command has completed"
+                status=TaskStatus.COMPLETED, result="The allocate command has completed"
             )
 
     def release(
@@ -860,10 +901,9 @@ class ControllerComponentManager(MccsComponentManager):
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, a release all flag.
+        :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: a TaskStatus and message
         """
         kwargs = json.loads(argin)
         if kwargs["release_all"]:
@@ -883,14 +923,15 @@ class ControllerComponentManager(MccsComponentManager):
         self: ControllerComponentManager,
         subarray_id: int,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode | None:
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Deallocate all resources from a subarray.
 
         :param subarray_id: Id of the subarray from which all resources
             are to be deallocated
-
-        :return: a result code, or None if there was nothing to do
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -898,7 +939,7 @@ class ControllerComponentManager(MccsComponentManager):
 
         allocated = self._resource_manager.get_allocated(subarray_fqdn)
         if not allocated:
-            return None
+            return
 
         self._resource_manager.deallocate_from(subarray_fqdn)
 
@@ -916,26 +957,27 @@ class ControllerComponentManager(MccsComponentManager):
 
         results = self._subarrays[subarray_fqdn].release_all_resources()
         # TODO wait for the respective LRC's to complete, whilst reporting progress
-        if ResultCode.FAILED in results:
-            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
+        if ResultCode.FAILED == results[0]:
+            task_callback(
+                status=TaskStatus.FAILED, result="The release command has failed"
+            )
         else:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The Off command has completed"
+                status=TaskStatus.COMPLETED, result="The release command has completed"
             )
 
     def restart_subarray(
         self: ControllerComponentManager,
-        subarray_fqdn: int,
+        subarray_id: int,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Restart an MCCS subarray.
 
-        :param argin: an integer subarray_id.
+        :param subarray_id: an integer subarray_id.
+        :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: a task status and a message
         """
         return self.submit_task(
             self._restart_subarray,
@@ -948,23 +990,26 @@ class ControllerComponentManager(MccsComponentManager):
     def _restart_subarray(
         self: ControllerComponentManager,
         subarray_fqdn: str,
-    ) -> ResultCode:
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Deallocate all resources from a subarray.
 
         :param subarray_fqdn: FQDN of the subarray from which all
             resources are to be deallocated
-
-        :return: a result code
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
         self._resource_manager.deallocate_from(subarray_fqdn)
 
         results = self._subarrays[subarray_fqdn].restart()
-        # TODO wait for the respective LRC's to complete, whilst reporting progress
         if ResultCode.FAILED in results:
-            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
+            task_callback(
+                status=TaskStatus.FAILED, result="The restart command has failed"
+            )
         else:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The Off command has completed"
+                status=TaskStatus.COMPLETED, result="The restart command has completed"
             )

@@ -8,7 +8,7 @@
 """An implementation of a health model for a controller."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 from ska_tango_base.control_model import HealthState
 

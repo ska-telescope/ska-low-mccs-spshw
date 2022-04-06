@@ -12,7 +12,6 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 from ska_tango_base.executor import TaskStatus
 
@@ -320,11 +319,11 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         Submit the off slow task.
 
-                This method returns immediately after it is submitted for execution.
+        This method returns immediately after it is submitted for execution.
 
-        -        :param task_callback: Update task state, defaults to None
+        :param task_callback: Update task state, defaults to None
 
-                :return: A tuple containing a task status and a response message
+        :return: A tuple containing a task status and a response message
         """
         return self.submit_task(self._off, task_callback=task_callback)
 
@@ -340,6 +339,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         power supply proxy to turn the APIU hardware off. Here we
         overrule it so that, should the APIU hardware be turned on
         again, the antennas will be turned off.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: abort callback
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
         try:
@@ -431,7 +433,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         Turn on the antenna using slow command.
 
-        :param logger: logger
+        :param antenna: id of antenna to turn on
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -461,7 +463,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         Turn off the antenna using slow command.
 
-        :param logger: logger
+        :param antenna: id of antenna to turn on
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -486,7 +488,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         Turn on all antennas using slow command.
 
-        :param logger: logger
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """

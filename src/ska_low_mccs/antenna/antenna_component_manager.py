@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from typing import Any, Callable, Optional
 
 import tango
@@ -562,8 +561,7 @@ class AntennaComponentManager(MccsComponentManager):
         Turn the antenna on.
 
         :param task_callback: Update task state, defaults to None
-
-        :returns: whether successful, or None if there was nothing to do.
+        :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
         task_callback(status=TaskStatus.IN_PROGRESS)
@@ -578,7 +576,6 @@ class AntennaComponentManager(MccsComponentManager):
         task_callback(
             status=TaskStatus.COMPLETED, result="This slow task has completed"
         )
-        return ResultCode.OK
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
         with self._power_state_lock:

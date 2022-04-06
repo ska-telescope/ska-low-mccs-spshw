@@ -9,24 +9,16 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import json
 import threading
-import time
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    FastCommand,
-    ResultCode,
-    SubmittedSlowCommand,
-)
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from tango.server import command, device_property
 
 import ska_low_mccs.release as release
-from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 
 __all__ = ["MccsController", "main"]
@@ -235,34 +227,6 @@ class MccsController(SKABaseDevice):
                     action_map[self.component_manager.power_state]
                 )
                 self._health_model.component_fault(False)
-
-    def wait_until_on(
-        device: MccsDeviceProxy, timeout: float, period: float = 0.5
-    ) -> tuple[ResultCode, str]:
-        """
-        Wait until the device is on.
-
-        :param device: the device to wait for
-        :param timeout: the time we are prepared to wait for the device to become ON
-        :param period: the polling period in seconds
-
-        :return: a return code and a string message indicating status.
-            The message is for information purpose only.
-        """
-        elapsed_time = 0.0
-        while elapsed_time <= timeout:
-            if device.get_state() == tango.DevState.ON:
-                message = "Controller On command completed OK"
-                return (ResultCode.OK, message)
-            time.sleep(period)
-            elapsed_time += period
-        message = f"Controller On command didn't complete within {timeout} seconds"
-        return (ResultCode.FAILED, message)
-
-        # Wait for conditions on component manager to unblock
-        result_code, message = wait_until_on(self.target, timeout=30.0)
-        self.target.logger.info(message)
-        return (result_code, message)
 
     # ----------
     # Attributes

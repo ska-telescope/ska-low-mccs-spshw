@@ -8,7 +8,7 @@
 """An implementation of a health model for subarrays."""
 from __future__ import annotations
 
-from typing import Callable, Any
+from typing import Any, Callable
 
 from ska_tango_base.control_model import HealthState
 

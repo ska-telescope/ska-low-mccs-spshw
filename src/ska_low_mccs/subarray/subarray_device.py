@@ -10,21 +10,17 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-import logging
 from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import (
-    SubmittedSlowCommand,
-    SlowCommand,
-    ResultCode,
-    FastCommand,
     DeviceInitCommand,
+    FastCommand,
+    ResultCode,
+    SubmittedSlowCommand,
 )
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.subarray import SKASubarray
-from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 from tango.server import attribute, command
 
 import ska_low_mccs.release as release
@@ -130,7 +126,11 @@ class MccsSubarray(SKASubarray):
     # ----------
     # Callbacks
     # ----------
-    def _component_state_changed_callback(self: MccsSubarray, state_change: dict[str, Any], fqdn: Optional[str],) -> None:
+    def _component_state_changed_callback(
+        self: MccsSubarray,
+        state_change: dict[str, Any],
+        fqdn: Optional[str],
+    ) -> None:
         """
         Handle change in this device's state.
 
@@ -139,6 +139,7 @@ class MccsSubarray(SKASubarray):
         sure the attribute is up to date, and events are pushed.
 
         :param state_change: A dictionary containing the name of the state that changed and its new value.
+        :param fqdn: The fqdn of the device.
         """
         # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
         # valid_device_types = {"station": "station_health_changed",
@@ -177,10 +178,12 @@ class MccsSubarray(SKASubarray):
         # resources should be passed in the dict's value as a list of sets to be extracted here.
         if "resources_changed" in state_change.keys():
             resources = state_change.get("resources_changed")
-            station_fqdns       = resources[0]
+            station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
-            station_beam_fqdns  = resources[2]
-            self._resources_changed(station_fqdns, subarray_beam_fqdns, station_beam_fqdns)
+            station_beam_fqdns = resources[2]
+            self._resources_changed(
+                station_fqdns, subarray_beam_fqdns, station_beam_fqdns
+            )
 
         if "configured_changed" in state_change.keys():
             is_configured = state_change.get("configured_changed")
@@ -224,7 +227,6 @@ class MccsSubarray(SKASubarray):
         if "station_power_state" in state_change.keys():
             station_power = state_change.get("station_power_state")
             self.component_manager._station_power_state_changed(fqdn, station_power)
-
 
     def _component_communication_status_changed(
         self: MccsSubarray,
@@ -399,9 +401,14 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Configure(self: MccsSubarray, argin: dict,) -> tuple[ResultCode, str]:
+    def Configure(
+        self: MccsSubarray,
+        argin: dict,
+    ) -> tuple[ResultCode, str]:
         """
         Configure this subarray.
+
+        :param argin: Dictionary containing configuration settings.
 
         :return: A tuple containing a return code and a string
             message indicating status.
@@ -411,9 +418,14 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Scan(self: MccsSubarray, argin: dict[str, Any],) -> tuple[ResultCode, str]:
+    def Scan(
+        self: MccsSubarray,
+        argin: dict[str, Any],
+    ) -> tuple[ResultCode, str]:
         """
         Start scanning.
+
+        :param argin: Json string containing scan_id and start_time.
 
         :return: A tuple containing a return code and a string
             message indicating status.
@@ -433,7 +445,6 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-
         handler = self.get_command_object("EndScan")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
@@ -446,7 +457,6 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-
         handler = self.get_command_object("End")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
@@ -489,7 +499,6 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-
         handler = self.get_command_object("ObsReset")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
@@ -502,7 +511,6 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-
         handler = self.get_command_object("Restart")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
@@ -540,6 +548,7 @@ class MccsSubarray(SKASubarray):
         handler = self.get_command_object("SendTransientBuffer")
         (result_code, unique_id) = handler(argin)
         return ([result_code], [unique_id])
+
 
 # ----------
 # Run server

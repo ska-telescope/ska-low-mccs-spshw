@@ -156,7 +156,7 @@ class SubarrayBeam(ObjectComponent):
         return self._is_beam_locked
 
     @is_beam_locked.setter
-    def is_beam_locked(self: SubarrayBeam, value: dict[str, bool]) -> None:
+    def is_beam_locked(self: SubarrayBeam, value: bool) -> None:
         """
         Set whether the beam is locked.
 
@@ -251,7 +251,7 @@ class SubarrayBeam(ObjectComponent):
 
     def _update_is_configured(
         self: SubarrayBeam,
-        is_configured: dict[str, bool],
+        is_configured: bool,
     ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured

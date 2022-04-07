@@ -193,13 +193,13 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
 
     def _configure(
         self,
-        subarray_beam_id,
-        station_ids,
-        update_rate,
-        channels,
-        sky_coordinates,
-        antenna_weights,
-        phase_centre,
+        subarray_beam_id: int,
+        station_ids: list[list[int]],
+        update_rate: float,
+        channels: list[list[int]],
+        sky_coordinates: list[float],
+        antenna_weights: list[float],
+        phase_centre: list[float],
         task_callback: Callable,
         task_abort_event: threading.Event,
     ) -> None:

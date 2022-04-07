@@ -201,7 +201,7 @@ class MccsPasdBus(SKABaseDevice):
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = state_change["health_state"]
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
@@ -619,7 +619,7 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_out=str)
-    def GetFndhInfo(self: MccsPasdBus) -> str:
+    def GetFndhInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
         """
         Return information about the FNDH.
 
@@ -655,7 +655,7 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetSmartboxInfo(self: MccsPasdBus) -> str:
+    def GetSmartboxInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
         """
         Return information about a smartbox.
 
@@ -715,7 +715,7 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetAntennaInfo(self: MccsPasdBus) -> str:
+    def GetAntennaInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
         """
         Return information about relationship of an antenna to other PaSD components.
 

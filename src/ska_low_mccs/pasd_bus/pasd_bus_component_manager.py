@@ -164,7 +164,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[bool], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _simulator_component_manager: Optional[PasdBusSimulatorComponentManager] = None,
     ) -> None:
         """

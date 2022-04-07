@@ -8,7 +8,7 @@
 """An implementation of a health model for subarray beams."""
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 from ska_tango_base.control_model import HealthState
 
@@ -22,7 +22,7 @@ class SubarrayBeamHealthModel(HealthModel):
 
     def __init__(
         self: SubarrayBeamHealthModel,
-        health_changed_callback: Callable[[HealthState], None],
+        health_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.

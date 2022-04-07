@@ -561,8 +561,12 @@ class StationComponentManager(MccsComponentManager):
                 raise ValueError("Wrong station id")
             self._update_is_configured(True)
         except ValueError as value_error:
-            task_callback(status=TaskStatus.FAILED, result=f"Configure command has failed: {value_error}")
+            task_callback(
+                status=TaskStatus.FAILED,
+                result=f"Configure command has failed: {value_error}",
+            )
             return
 
-        task_callback(status=TaskStatus.COMPLETED, result="Configure command has completed")
-
+        task_callback(
+            status=TaskStatus.COMPLETED, result="Configure command has completed"
+        )

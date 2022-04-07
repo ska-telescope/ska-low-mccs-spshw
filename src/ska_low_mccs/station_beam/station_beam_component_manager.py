@@ -12,8 +12,9 @@ import json
 import logging
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.commands import ResultCode, TaskStatus
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     DeviceComponentManager,
@@ -52,7 +53,7 @@ class StationBeamComponentManager(MccsComponentManager):
         logger: logging.Logger,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        max_workers: Optional[int] = None,
+        max_workers: int,
     ) -> None:
         """
         Initialise a new instance.
@@ -90,6 +91,8 @@ class StationBeamComponentManager(MccsComponentManager):
 
         # Not used *yet*.
         self._component_state_changed_callback = component_state_changed_callback
+
+        self._max_workers = max_workers
 
         super().__init__(
             logger,
@@ -157,6 +160,7 @@ class StationBeamComponentManager(MccsComponentManager):
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
                     self.logger,
+                    self._max_workers,
                     self._device_communication_status_changed,
                     self._component_state_changed_callback,
                 )
@@ -344,7 +348,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the `configure` slow task.
 
@@ -408,7 +412,8 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         self._beam_id = beam_id
         self._station_id = station_id
@@ -419,14 +424,17 @@ class StationBeamComponentManager(MccsComponentManager):
         self._phase_centre = list(phase_centre)
         # TODO: forward relevant configuration to participating stations
 
-        task_callback(status=TaskStatus.COMPLETED, result="Configure has completed.")
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure has completed."
+            )
 
         return ResultCode.OK
 
     @check_communicating
     def apply_pointing(
         self: StationBeamComponentManager, task_callback: Optional[Callable] = None
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the apply_pointing slow task.
 
@@ -439,7 +447,7 @@ class StationBeamComponentManager(MccsComponentManager):
         task_status, response = self.submit_task(
             self._apply_pointing, args=[], task_callback=task_callback
         )
-        return ([task_status], [response])
+        return (task_status, response)
 
     @check_communicating
     def _apply_pointing(
@@ -452,7 +460,8 @@ class StationBeamComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :return: a result code
         """
-        task_callback(TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(TaskStatus.IN_PROGRESS)
 
         zipped_delays_and_rates = [
             item
@@ -465,6 +474,7 @@ class StationBeamComponentManager(MccsComponentManager):
 
         assert self._station_proxy is not None
 
-        task_callback(TaskStatus.COMPLETED, result="Apply pointing has completed.")
+        if task_callback is not None:
+            task_callback(TaskStatus.COMPLETED, result="Apply pointing has completed.")
 
         return self._station_proxy.apply_pointing(station_pointing_args)

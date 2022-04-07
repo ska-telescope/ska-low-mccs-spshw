@@ -164,7 +164,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self: SubarrayBeamComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
-    ):
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the configure slow task.
 
@@ -193,15 +193,15 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
 
     def _configure(
         self,
-        subarray_beam_id,
-        station_ids,
-        update_rate,
-        channels,
-        sky_coordinates,
-        antenna_weights,
-        phase_centre,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        subarray_beam_id: int,
+        station_ids: list[list[int]],
+        update_rate: float,
+        channels: list[list[int]],
+        sky_coordinates: list[float],
+        antenna_weights: list[float],
+        phase_centre: list[float],
+        task_callback: Callable,
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Implement :py:meth:`.MccsSubarrayBeam.Configure` command.
@@ -229,7 +229,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             status=TaskStatus.COMPLETED, result="Configure command completed OK"
         )
 
-    def scan(self, task_callback: Optional[Callable] = None):
+    def scan(self, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
         """
         Submit the scan slow task.
 
@@ -245,8 +245,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self,
         scan_id: int,
         scan_time: float,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Callable,
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Implement :py:meth:`.MccsSubarrayBeam.Scan` command.

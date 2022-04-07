@@ -226,7 +226,7 @@ available to you:
 Try it out:
 
 .. code-block:: shell-session
-   :emphasize-lines: 3,4,5,6,19
+   :emphasize-lines: 3,4,5,6,20
 
    me@local:~$ cd ska-low-mccs
    me@local:~/ska-low-mccs$ make python-test
@@ -240,9 +240,9 @@ Try it out:
    cachedir: .pytest_cache
 
    metadata: {'Python': '3.7.3', 'Platform': 'Linux-5.13.0-28-generic-x86_64-with-debian-10.11', 'Packages': {'pytest': '6.2.5', 'py': '1.11.0', 'pluggy': '1.0.0'}, 'Plugins': {'repeat': '0.9.1', 'rerunfailures': '10.2', 'cov': '2.12.1', 'report': '0.2.1', 'xdist': '1.34.0', 'bdd': '4.1.0', 'timeout': '2.1.0', 'split': '0.6.0', 'json-report': '1.4.1', 'metadata': '1.11.0', 'forked': '1.4.0', 'pydocstyle': '2.2.0', 'pylint': '0.18.0', 'pycodestyle': '2.2.0', 'mock': '3.7.0'}}
-rootdir: /workspaces/ska-low-mccs, configfile: pyproject.toml, testpaths: testing/src/
-plugins: repeat-0.9.1, rerunfailures-10.2, cov-2.12.1, report-0.2.1, xdist-1.34.0, bdd-4.1.0, timeout-2.1.0, split-0.6.0, json-report-1.4.1, metadata-1.11.0, forked-1.4.0, pydocstyle-2.2.0, pylint-0.18.0, pycodestyle-2.2.0, mock-3.7.0
-collected 1529 items
+   rootdir: /workspaces/ska-low-mccs, configfile: pyproject.toml, testpaths: testing/src/
+   plugins: repeat-0.9.1, rerunfailures-10.2, cov-2.12.1, report-0.2.1, xdist-1.34.0, bdd-4.1.0, timeout-2.1.0, split-0.6.0, json-report-1.4.1, metadata-1.11.0, forked-1.4.0, pydocstyle-2.2.0, pylint-0.18.0, pycodestyle-2.2.0, mock-3.7.0
+   collected 1529 items
 
    testing/src/tests/integration/test_health_management.py::test_controller_health_rollup PASSED [  0%]
    testing/src/tests/functional/test_controller_subarray_interactions.py::test_allocate_subarray SKIPPED       [  0%]

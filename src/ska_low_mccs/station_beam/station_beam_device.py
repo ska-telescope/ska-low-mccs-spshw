@@ -8,7 +8,7 @@
 """This module implements the MCCS station beam device."""
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
@@ -46,6 +46,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsStationBeam) -> None:
@@ -67,9 +68,9 @@ class MccsStationBeam(SKAObsDevice):
         return StationBeamComponentManager(
             self.BeamId,
             self.logger,
-            self.push_change_event,
             self._communication_status_changed,
             self.component_state_changed_callback,
+            self._max_workers,
         )
 
     def init_command_objects(self: MccsStationBeam) -> None:
@@ -131,21 +132,21 @@ class MccsStationBeam(SKAObsDevice):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         """
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
         if "station_health" in state_change.keys():
-            station_health = state_change.get("station_health")
+            station_health = cast(HealthState, state_change.get("station_health"))
             self._health_model.station_health_changed(station_health)
 
         if "station_fault" in state_change.keys():
-            station_fault = state_change.get("station_fault")
+            station_fault = cast(bool, state_change.get("station_fault"))
             self._health_model.station_fault_changed(station_fault)
 
         if "beam_locked" in state_change.keys():
-            beam_locked = state_change.get("beam_locked")
+            beam_locked = cast(bool, state_change.get("beam_locked"))
             self._health_model.is_beam_locked_changed(beam_locked)
 
     def _communication_status_changed(

@@ -147,7 +147,7 @@ class SubarrayBeam(ObjectComponent):
         return self._update_rate
 
     @property
-    def is_beam_locked(self: SubarrayBeam) -> Optional[Any]:
+    def is_beam_locked(self: SubarrayBeam) -> bool:
         """
         Return whether the beam is locked.
 

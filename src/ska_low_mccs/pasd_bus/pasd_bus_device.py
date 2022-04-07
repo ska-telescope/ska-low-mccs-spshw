@@ -201,7 +201,7 @@ class MccsPasdBus(SKABaseDevice):
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = state_change["health_state"]
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)

@@ -163,13 +163,13 @@ class MccsSubarrayBeam(SKAObsDevice):
         :param state_change: the state change dict
         """
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = state_change["health_state"]
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
         if "beam_locked" in state_change.keys():
-            beam_locked = state_change.get("beam_locked")
+            beam_locked = state_change["beam_locked"]
             self._health_model.is_beam_locked_changed(beam_locked)
 
     #         if "configured_changed" in state_change.keys():

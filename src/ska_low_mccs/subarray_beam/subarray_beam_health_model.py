@@ -8,7 +8,7 @@
 """An implementation of a health model for subarray beams."""
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from ska_tango_base.control_model import HealthState
 
@@ -51,7 +51,7 @@ class SubarrayBeamHealthModel(HealthModel):
         return health
 
     def is_beam_locked_changed(
-        self: SubarrayBeamHealthModel, is_beam_locked: Optional[Any]
+        self: SubarrayBeamHealthModel, is_beam_locked: bool
     ) -> None:
         """
         Handle a change in whether the subarray beam is locked.

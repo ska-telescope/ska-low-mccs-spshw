@@ -13,7 +13,6 @@ import unittest.mock
 from typing import Any, Optional, Sequence, Tuple
 
 import tango
-from ska_tango_base.commands import ResultCode
 
 __all__ = ["MockCallable", "MockChangeEventCallback"]
 
@@ -321,7 +320,6 @@ class MockChangeEventCallback(MockCallable):
         assert (
             call_quality == quality
         ), f"Call quality {call_quality} does not match expected quality {quality}"
-
 
     def assert_not_called(self: MockChangeEventCallback) -> None:  # type: ignore[override]
         """

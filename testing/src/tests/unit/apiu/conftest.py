@@ -11,9 +11,9 @@ from __future__ import annotations
 import logging
 import random
 import unittest.mock
-from typing import Callable
-import pytest
+from typing import Any, Callable
 
+import pytest
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.apiu import (
@@ -22,7 +22,6 @@ from ska_low_mccs.apiu import (
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
 )
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -80,8 +79,8 @@ def initial_power_mode() -> PowerState:
 @pytest.fixture()
 def apiu_simulator(
     apiu_antenna_count: int,
+    component_state_changed_callback: MockCallable,
     initial_fault: bool = False,
-    #    component_fault_callback: MockCallable,
 ) -> ApiuSimulator:
     """
     Return an APIU simulator.
@@ -91,15 +90,15 @@ def apiu_simulator(
     :param apiu_antenna_count: the number of antennas in the APIU
     :param initial_fault: whether the simulator should start by
         simulating a fault.
+    :param component_fault_callback: callback to be called when the
+        component faults (or stops faulting)
 
     :return: an APIU simulator
     """
-    #     :param component_fault_callback: callback to be called when the
-    #         component faults (or stops faulting)
     return ApiuSimulator(
         apiu_antenna_count,
+        component_state_changed_callback,
         initial_fault,
-        #        component_fault_callback,
     )
 
 

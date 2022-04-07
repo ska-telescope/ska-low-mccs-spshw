@@ -103,7 +103,7 @@ class MccsStation(SKAObsDevice):
                     self._command_tracker,
                     self.component_manager,
                     method_name,
-                    callback = None,
+                    callback=None,
                     logger=None,
                 ),
             )

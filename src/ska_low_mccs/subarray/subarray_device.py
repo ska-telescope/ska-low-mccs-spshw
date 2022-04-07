@@ -13,9 +13,8 @@ import json
 from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import (
+from ska_tango_base.commands import (  # FastCommand,
     DeviceInitCommand,
-    FastCommand,
     ResultCode,
     SubmittedSlowCommand,
 )

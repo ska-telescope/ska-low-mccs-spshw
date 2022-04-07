@@ -118,9 +118,9 @@ class SubarrayComponentManager(
     def __init__(
         self: SubarrayComponentManager,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.

@@ -115,11 +115,11 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self.set_change_event("stationFQDNs", True, True)
-            self.set_archive_event("stationFQDNs", True, True)
+            self._device.set_change_event("stationFQDNs", True, True)
+            self._device.set_archive_event("stationFQDNs", True, True)
 
-            self._build_state = release.get_release_info()
-            self._version_id = release.version
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
             return (ResultCode.OK, "Init command started")
 
@@ -129,7 +129,7 @@ class MccsSubarray(SKASubarray):
     def _component_state_changed_callback(
         self: MccsSubarray,
         state_change: dict[str, Any],
-        fqdn: Optional[str],
+        fqdn: Optional[str] = None,
     ) -> None:
         """
         Handle change in this device's state.
@@ -461,35 +461,35 @@ class MccsSubarray(SKASubarray):
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
 
-    class AbortCommand(FastCommand):
-        """Class for handling the Abort() command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "Abort command started",  # Base classes return this
-            ResultCode.FAILED: "Abort command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.AbortCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of the AbortCommand.
-
-            :py:meth:`ska_tango_base.FastCommand` command for this
-            :py:class:`.MccsSubarray` device.
-
-            An abort command will leave the system in an ABORTED state.
-            Output to CSP is stopped, as is the beamformer and all running
-            jobs. The system can then be inspected in the ABORTED state
-            before it's de-configured and returned to the IDLE state by the
-            ObsReset command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            result_code = self.component_manager.abort()
-            return (result_code, self.RESULT_MESSAGES[result_code])
+    #     class AbortCommand(FastCommand):
+    #         """Class for handling the Abort() command."""
+    #
+    #         RESULT_MESSAGES = {
+    #             ResultCode.OK: "Abort command started",  # Base classes return this
+    #             ResultCode.FAILED: "Abort command failed",
+    #         }
+    #
+    #         def do(  # type: ignore[override]
+    #             self: MccsSubarray.AbortCommand,
+    #         ) -> tuple[ResultCode, str]:
+    #             """
+    #             Implement the functionality of the AbortCommand.
+    #
+    #             :py:meth:`ska_tango_base.FastCommand` command for this
+    #             :py:class:`.MccsSubarray` device.
+    #
+    #             An abort command will leave the system in an ABORTED state.
+    #             Output to CSP is stopped, as is the beamformer and all running
+    #             jobs. The system can then be inspected in the ABORTED state
+    #             before it's de-configured and returned to the IDLE state by the
+    #             ObsReset command.
+    #
+    #             :return: A tuple containing a return code and a string
+    #                 message indicating status. The message is for
+    #                 information purpose only.
+    #             """
+    #             result_code = self.component_manager.abort()
+    #             return (result_code, self.RESULT_MESSAGES[result_code])
 
     @command(dtype_out="DevVarLongStringArray")
     def ObsReset(self: MccsSubarray) -> tuple[ResultCode, str]:

@@ -10,20 +10,16 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-import logging
 from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import (
-    ObservationCommand,
-    ResponseCommand,
+from ska_tango_base.commands import (  # FastCommand,
+    DeviceInitCommand,
     ResultCode,
-    StateModelCommand,
+    SubmittedSlowCommand,
 )
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.subarray import SKASubarray
-from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 from tango.server import attribute, command
 
 import ska_low_mccs.release as release
@@ -53,12 +49,13 @@ class MccsSubarray(SKASubarray):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsSubarray) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubarrayHealthModel(self.health_changed)
+        self._health_model = SubarrayHealthModel(self._component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -71,38 +68,40 @@ class MccsSubarray(SKASubarray):
         """
         return SubarrayComponentManager(
             self.logger,
-            self.push_change_event,
+            self._max_workers,
             self._component_communication_status_changed,
-            self._assign_completed,
-            self._release_completed,
-            self._configure_completed,
-            self._abort_completed,
-            self._obsreset_completed,
-            self._restart_completed,
-            self._resources_changed,
-            self._configured_changed,
-            self._scanning_changed,
-            self._obs_fault_occurred,
-            self._health_model.station_health_changed,
-            self._health_model.subarray_beam_health_changed,
-            self._health_model.station_beam_health_changed,
+            self._component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsSubarray) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        self.register_command_object(
-            "SendTransientBuffer",
-            self.SendTransientBufferCommand(
-                self.component_manager,
-                self.op_state_model,
-                self.obs_state_model,
-                self.logger,
-            ),
-        )
+        for (command_name, method_name) in [
+            ("SendTransientBuffer", "send_transient_buffer"),
+            ("AssignResources", "assign"),
+            ("ReleaseResources", "release"),
+            ("ReleaseAllResources", "release_all"),
+            ("Configure", "configure"),
+            ("Scan", "scan"),
+            ("EndScan", "end_scan"),
+            ("End", "deconfigure"),
+            ("ObsReset", "obsreset"),
+            ("Restart", "restart"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
+            )
 
-    class InitCommand(SKASubarray.InitCommand):
+    class InitCommand(DeviceInitCommand):
         """Command class for device initialisation."""
 
         def do(  # type: ignore[override]
@@ -115,25 +114,119 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             """
-            (result_code, message) = super().do()
+            self._device.set_change_event("stationFQDNs", True, True)
+            self._device.set_archive_event("stationFQDNs", True, True)
 
-            device = self.target
-            device.set_change_event("stationFQDNs", True, True)
-            device.set_archive_event("stationFQDNs", True, True)
-
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
             return (ResultCode.OK, "Init command started")
 
     # ----------
     # Callbacks
     # ----------
+    def _component_state_changed_callback(
+        self: MccsSubarray,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
+    ) -> None:
+        """
+        Handle change in this device's state.
+
+        This is a callback hook, called whenever the state changes. It
+        is responsible for updating the tango side of things i.e. making
+        sure the attribute is up to date, and events are pushed.
+
+        :param state_change: A dictionary containing the name of the state that changed and its new value.
+        :param fqdn: The fqdn of the device.
+        """
+        # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
+        # valid_device_types = {"station": "station_health_changed",
+        #                     "beam": "station_beam_health_changed",
+        #                     "subarraybeam": "subarray_beam_health_changed"}
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
+            # If all health states use "health_state" and overwrite each other
+            # then the below code should fix it.
+            # if fqdn is None:
+            #     # Do regular health update.
+            #    if self._health_state != health:
+            #         self._health_state = health
+            #         self.push_change_event("healthState", health)
+            # else:
+            #     # Identify and call subservient device method.
+            #     device_type = fqdn.split("/")[1]
+            #     if device_type in valid_device_types.keys():
+            #         valid_device_types[device_type](fqdn, health)
+
+        if "station_health_state" in state_change.keys():
+            station_health = state_change.get("station_health_state")
+            self._health_model.station_health_changed(fqdn, station_health)
+
+        if "station_beam_health_state" in state_change.keys():
+            station_beam_health = state_change.get("station_beam_health_state")
+            self._health_model.station_beam_health_changed(fqdn, station_beam_health)
+
+        if "subarray_beam_health_state" in state_change.keys():
+            subarray_beam_health = state_change.get("subarray_beam_health_state")
+            self._health_model.subarray_beam_health_changed(fqdn, subarray_beam_health)
+
+        # resources should be passed in the dict's value as a list of sets to be extracted here.
+        if "resources_changed" in state_change.keys():
+            resources = state_change.get("resources_changed")
+            station_fqdns = resources[0]
+            subarray_beam_fqdns = resources[1]
+            station_beam_fqdns = resources[2]
+            self._resources_changed(
+                station_fqdns, subarray_beam_fqdns, station_beam_fqdns
+            )
+
+        if "configured_changed" in state_change.keys():
+            is_configured = state_change.get("configured_changed")
+            if is_configured:
+                self.obs_state_model.perform_action("component_configured")
+            else:
+                self.obs_state_model.perform_action("component_unconfigured")
+
+        if "scanning_changed" in state_change.keys():
+            is_scanning = state_change.get("scanning_changed")
+            if is_scanning:
+                self.obs_state_model.perform_action("component_scanning")
+            else:
+                self.obs_state_model.perform_action("component_not_scanning")
+
+        if "assign_completed" in state_change.keys():
+            self.obs_state_model.perform_action("assign_completed")
+
+        if "release_completed" in state_change.keys():
+            self.obs_state_model.perform_action("release_completed")
+
+        if "configure_completed" in state_change.keys():
+            self.obs_state_model.perform_action("configure_completed")
+
+        if "abort_completed" in state_change.keys():
+            self.obs_state_model.perform_action("abort_completed")
+
+        if "obsreset_completed" in state_change.keys():
+            self.obs_state_model.perform_action("obsreset_completed")
+
+        if "restart_completed" in state_change.keys():
+            self.obs_state_model.perform_action("restart_completed")
+
+        if "obsfault" in state_change.keys():
+            self.obs_state_model.perform_action("component_obsfault")
+
+        if "obsstate_changed" in state_change.keys():
+            obs_state = state_change.get("obsstate_changed")
+            self.component_manager._device_obs_state_changed(fqdn, obs_state)
+
+        if "station_power_state" in state_change.keys():
+            station_power = state_change.get("station_power_state")
+            self.component_manager._station_power_state_changed(fqdn, station_power)
+
     def _component_communication_status_changed(
         self: MccsSubarray,
         communication_status: CommunicationStatus,
@@ -162,72 +255,6 @@ class MccsSubarray(SKASubarray):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _assign_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the assign command.
-
-        This is a callback hook, called by the component manager when
-        the assign command completes.
-        """
-        self.obs_state_model.perform_action("assign_completed")
-
-    def _release_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the release or release_all command.
-
-        This is a callback hook, called by the component manager when
-        the release or release_all command completes.
-        """
-        self.obs_state_model.perform_action("release_completed")
-
-    def _configure_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the configure command.
-
-        This is a callback hook, called by the component manager when
-        the configure command completes.
-        """
-        self.obs_state_model.perform_action("configure_completed")
-
-    def _abort_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the abort command.
-
-        This is a callback hook, called by the component manager when
-        the abort command completes.
-        """
-        self.obs_state_model.perform_action("abort_completed")
-
-    def _obsreset_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the obs_reset command.
-
-        This is a callback hook, called by the component manager when
-        the obs_reset command completes.
-        """
-        self.obs_state_model.perform_action("obsreset_completed")
-
-    def _restart_completed(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle completion of the restart command.
-
-        This is a callback hook, called by the component manager when
-        the restart command completes.
-        """
-        self.obs_state_model.perform_action("restart_completed")
-
     def _resources_changed(
         self: MccsSubarray,
         station_fqdns: set[str],
@@ -255,64 +282,19 @@ class MccsSubarray(SKASubarray):
             station_fqdns, subarray_beam_fqdns, station_beam_fqdns
         )
 
-    def _configured_changed(
-        self: MccsSubarray,
-        is_configured: bool,
-    ) -> None:
-        """
-        Handle change in whether the subarray is configured.
+    # def health_changed(self: MccsSubarray, health: HealthState) -> None:
+    #     """
+    #     Handle the HealthModel's health state changes.
 
-        This is a callback hook, called by the component manager when
-        whether the subarray is configured changes.
+    #     Responsible for updating the tango side of things i.e. making sure the attribute
+    #     is up to date, and events are pushed.
 
-        :param is_configured: whether the subarray is configured
-        """
-        if is_configured:
-            self.obs_state_model.perform_action("component_configured")
-        else:
-            self.obs_state_model.perform_action("component_unconfigured")
-
-    def _scanning_changed(
-        self: MccsSubarray,
-        is_scanning: bool,
-    ) -> None:
-        """
-        Handle change in whether the subarray is scanning.
-
-        This is a callback hook, called by the component manager when
-        whether the subarray is scanning changes.
-
-        :param is_scanning: whether the subarray is scanning
-        """
-        if is_scanning:
-            self.obs_state_model.perform_action("component_scanning")
-        else:
-            self.obs_state_model.perform_action("component_not_scanning")
-
-    def _obs_fault_occurred(
-        self: MccsSubarray,
-    ) -> None:
-        """
-        Handle occurrence of an observation fault.
-
-        This is a callback hook, called by the component manager when an
-        observation fault occurs.
-        """
-        self.obs_state_model.perform_action("component_obsfault")
-
-    def health_changed(self: MccsSubarray, health: HealthState) -> None:
-        """
-        Handle the HealthModel's health state changes.
-
-        Responsible for updating the tango side of things i.e. making sure the attribute
-        is up to date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+    #     :param health: the new health value
+    #     """
+    #     if self._health_state == health:
+    #         return
+    #     self._health_state = health
+    #     self.push_change_event("healthState", health)
 
     # ------------------
     # Attribute methods
@@ -375,69 +357,8 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    class AssignResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
-        """
-        A class for MccsSubarray's AssignResources() command.
-
-        Overrides SKASubarray.AssignResourcesCommand because that is a
-        CompletionCommand, which is misimplemented and assumes
-        synchronous completion.
-        """
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "AssignResources command completed OK",
-            ResultCode.QUEUED: "AssignResources command queued",
-            ResultCode.FAILED: "AssignResources command failed",
-        }
-
-        def __init__(
-            self: MccsSubarray.AssignResourcesCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param target: the object that this command acts upon; for
-                example, the device's component manager
-            :param op_state_model: the op state model that this command
-                uses to check that it is allowed to run
-            :param obs_state_model: the observation state model that
-                 this command uses to check that it is allowed to run,
-                 and that it drives with actions.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            super().__init__(
-                target,
-                obs_state_model,
-                "assign",
-                op_state_model,
-                logger=logger,
-            )
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.AssignResourcesCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for AssignResources() command functionality.
-
-            :param argin: The resources to be assigned
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.assign(argin)
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def AssignResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
+    def AssignResources(self: MccsSubarray, argin: str) -> tuple[ResultCode, str]:
         """
         Assign resources to this subarray.
 
@@ -446,410 +367,157 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-        # TODO Call assign resources directly - DON'T USE LRC - for now.
         handler = self.get_command_object("AssignResources")
         params = json.loads(argin)
-        (return_code, message) = handler(params)
-        return ([return_code], [message])
+        (return_code, unique_id) = handler(params)
+        return ([return_code], [unique_id])
 
-    class ReleaseResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def ReleaseResources(self: MccsSubarray, argin: str) -> tuple[ResultCode, str]:
         """
-        A class for MccsSubarray's ReleaseResources() command.
+        Release resources from this subarray.
 
-        Overrides SKASubarray.ReleaseResourcesCommand because that is a
-        CompletionCommand, which is misimplemented and assumes
-        synchronous completion.
+        :param argin: the resources to be released
+
+        :return: A tuple containing a return code and a string
+            message indicating status.
         """
+        handler = self.get_command_object("ReleaseResources")
+        params = json.loads(argin)
+        (return_code, unique_id) = handler(params)
+        return ([return_code], [unique_id])
 
-        RESULT_MESSAGES = {
-            ResultCode.OK: "ReleaseResources command completed OK",
-            ResultCode.QUEUED: "ReleaseResources command queued",
-            ResultCode.FAILED: "ReleaseResources command failed",
-        }
-
-        def __init__(
-            self: MccsSubarray.ReleaseResourcesCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new ReleaseResourcesCommand instance.
-
-            :param target: the object that this command acts upon; for
-                example, the device's component manager
-            :param op_state_model: the op state model that this command
-                uses to check that it is allowed to run
-            :param obs_state_model: the observation state model that
-                 this command uses to check that it is allowed to run,
-                 and that it drives with actions.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            super().__init__(
-                target,
-                obs_state_model,
-                "release",
-                op_state_model,
-                logger=logger,
-            )
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.ReleaseResourcesCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for ReleaseResources() command functionality.
-
-            :param argin: The resources to be released
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.release(argin)
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class ReleaseAllResourcesCommand(
-        ObservationCommand, ResponseCommand, StateModelCommand
-    ):
+    @command(dtype_out="DevVarLongStringArray")
+    def ReleaseAllResources(self: MccsSubarray) -> tuple[ResultCode, str]:
         """
-        A class for MccsSubarray's ReleaseAllResources() command.
+        Release all resources from this subarray.
 
-        Overrides SKASubarray.ReleaseAllResourcesCommand because that is
-        a CompletionCommand, which is misimplemented and assumes
-        synchronous completion.
+        :return: A tuple containing a return code and a string
+            message indicating status.
         """
+        handler = self.get_command_object("ReleaseAllResources")
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
-        RESULT_MESSAGES = {
-            ResultCode.OK: "ReleaseAllResources command completed OK",
-            ResultCode.QUEUED: "ReleaseAllResources command queued",
-            ResultCode.FAILED: "ReleaseAllResources command failed",
-        }
-
-        def __init__(
-            self: MccsSubarray.ReleaseAllResourcesCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new ReleaseAllResourcesCommand instance.
-
-            :param target: the object that this command acts upon; for
-                example, the device's component manager
-            :param op_state_model: the op state model that this command
-                uses to check that it is allowed to run
-            :param obs_state_model: the observation state model that
-                 this command uses to check that it is allowed to run,
-                 and that it drives with actions.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            super().__init__(
-                target,
-                obs_state_model,
-                "release",
-                op_state_model,
-                logger=logger,
-            )
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.ReleaseAllResourcesCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for ReleaseAllResources() command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.release_all()
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class ConfigureCommand(ObservationCommand, ResponseCommand, StateModelCommand):
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def Configure(
+        self: MccsSubarray,
+        argin: dict,
+    ) -> tuple[ResultCode, str]:
         """
-        Class for handling the Configure(argin) command.
+        Configure this subarray.
 
-        Overrides SKASubarray.ConfigureCommand because that is a
-        CompletionCommand, which is misimplemented and assumes
-        synchronous completion.
+        :param argin: Dictionary containing configuration settings.
+
+        :return: A tuple containing a return code and a string
+            message indicating status.
         """
+        handler = self.get_command_object("Configure")
+        (return_code, unique_id) = handler(argin)
+        return ([return_code], [unique_id])
 
-        RESULT_MESSAGES = {
-            ResultCode.OK: "Configure command completed OK",
-            ResultCode.QUEUED: "Configure command queued",
-            ResultCode.FAILED: "Configure command failed",
-        }
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def Scan(
+        self: MccsSubarray,
+        argin: dict[str, Any],
+    ) -> tuple[ResultCode, str]:
+        """
+        Start scanning.
 
-        def __init__(
-            self: MccsSubarray.ConfigureCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new ConfigureCommand instance.
+        :param argin: Json string containing scan_id and start_time.
 
-            :param target: the object that this command acts upon; for
-                example, the device's component manager
-            :param op_state_model: the op state model that this command
-                uses to check that it is allowed to run
-            :param obs_state_model: the observation state model that
-                 this command uses to check that it is allowed to run,
-                 and that it drives with actions.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            super().__init__(
-                target,
-                obs_state_model,
-                "configure",
-                op_state_model,
-                logger=logger,
-            )
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        scan_id = argin["scan_id"]
+        start_time = argin["start_time"]
 
-        def do(  # type: ignore[override]
-            self: MccsSubarray.ConfigureCommand,
-            argin: dict,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of the configure command.
+        handler = self.get_command_object("Scan")
+        (return_code, unique_id) = handler(scan_id, start_time)
+        return ([return_code], [unique_id])
 
-            :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Configure` command for this
-            :py:class:`.MccsSubarray` device.
+    @command(dtype_out="DevVarLongStringArray")
+    def EndScan(self: MccsSubarray) -> tuple[ResultCode, str]:
+        """
+        Stop scanning.
 
-            :param argin: configuration specification
-                {
-                "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
-                "stations":[{"station_id": 1},{"station_id": 2}],
-                "subarray_beams":[{
-                "subarray_beam_id":1,
-                "station_ids":[1,2],
-                "update_rate": 0.0,
-                "channels":  [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
-                "antenna_weights": [1.0, 1.0, 1.0],
-                "phase_centre": [0.0, 0.0]}]
-                }
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        handler = self.get_command_object("EndScan")
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.configure(argin)
-            return (result_code, self.RESULT_MESSAGES[result_code])
+    @command(dtype_out="DevVarLongStringArray")
+    def End(self: MccsSubarray) -> tuple[ResultCode, str]:
+        """
+        Deconfigure resources.
 
-    class ScanCommand(SKASubarray.ScanCommand):
-        """Class for handling the Scan(argin) command."""
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        handler = self.get_command_object("End")
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
-        RESULT_MESSAGES = {
-            ResultCode.OK: "Scan command started",  # Base classes return this
-            ResultCode.STARTED: "Scan command started",
-            ResultCode.FAILED: "Scan command failed",
-        }
+    #     class AbortCommand(FastCommand):
+    #         """Class for handling the Abort() command."""
+    #
+    #         RESULT_MESSAGES = {
+    #             ResultCode.OK: "Abort command started",  # Base classes return this
+    #             ResultCode.FAILED: "Abort command failed",
+    #         }
+    #
+    #         def do(  # type: ignore[override]
+    #             self: MccsSubarray.AbortCommand,
+    #         ) -> tuple[ResultCode, str]:
+    #             """
+    #             Implement the functionality of the AbortCommand.
+    #
+    #             :py:meth:`ska_tango_base.FastCommand` command for this
+    #             :py:class:`.MccsSubarray` device.
+    #
+    #             An abort command will leave the system in an ABORTED state.
+    #             Output to CSP is stopped, as is the beamformer and all running
+    #             jobs. The system can then be inspected in the ABORTED state
+    #             before it's de-configured and returned to the IDLE state by the
+    #             ObsReset command.
+    #
+    #             :return: A tuple containing a return code and a string
+    #                 message indicating status. The message is for
+    #                 information purpose only.
+    #             """
+    #             result_code = self.component_manager.abort()
+    #             return (result_code, self.RESULT_MESSAGES[result_code])
 
-        def do(  # type: ignore[override]
-            self: MccsSubarray.ScanCommand, argin: dict[str, Any]
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of the scan command.
+    @command(dtype_out="DevVarLongStringArray")
+    def ObsReset(self: MccsSubarray) -> tuple[ResultCode, str]:
+        """
+        Reset the observation by returning to unconfigured state.
 
-            :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Scan`
-            command for this :py:class:`.MccsSubarray` device.
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        handler = self.get_command_object("ObsReset")
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
-            :param argin: dict
-                {
-                "interface": "https://schema.skao.int/ska-low-mccs-scan/2.0",
-                "scan_id":1,
-                "start_time": 0.0,
-                }
+    @command(dtype_out="DevVarLongStringArray")
+    def Restart(self: MccsSubarray) -> tuple[ResultCode, str]:
+        """
+        Restart the subarray by returning to unresourced state.
 
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            scan_id = argin["scan_id"]
-            start_time = argin["start_time"]
-
-            component_manager = self.target
-            result_code = component_manager.scan(scan_id, start_time)
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class EndScanCommand(SKASubarray.EndScanCommand):
-        """Class for handling the EndScan() command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "End Scan command completed OK",
-            ResultCode.FAILED: "Scan command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.EndScanCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of EndScanCommand.
-
-            :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.EndScan` command for this
-            :py:class:`.MccsSubarray` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.end_scan()
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class EndCommand(SKASubarray.EndCommand):
-        """Class for handling the End() command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "End command started",
-            ResultCode.FAILED: "End command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.EndCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of the end command.
-
-            :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.End` command for this
-            :py:class:`.MccsSubarray` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.deconfigure()
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class AbortCommand(SKASubarray.AbortCommand):
-        """Class for handling the Abort() command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "Scan command started",  # Base classes return this
-            ResultCode.FAILED: "Scan command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.AbortCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of the AbortCommand.
-
-            :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Abort` command for this
-            :py:class:`.MccsSubarray` device.
-
-            An abort command will leave the system in an ABORTED state.
-            Output to CSP is stopped, as is the beamformer and all running
-            jobs. The system can then be inspected in the ABORTED state
-            before it's de-configured and returned to the IDLE state by the
-            ObsReset command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.abort()
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class ObsResetCommand(SKASubarray.ObsResetCommand):
-        """Class for handling the ObsReset() command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "ObsReset command completed OK",
-            ResultCode.FAILED: "ObsReset command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.ObsResetCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of the ObsResetCommand.
-
-            :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.ObsReset` command for this
-            :py:class:`.MccsSubarray` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.obs_reset()
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class RestartCommand(SKASubarray.RestartCommand):
-        """Class for handling the Restart() command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "RestartCommand command completed OK",
-            ResultCode.FAILED: "RestartCommand command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.RestartCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the functionality of the RestartComand.
-
-            :py:meth:`ska_tango_base.subarray.subarray_device.SKASubarray.Restart` command for this
-            :py:class:`.MccsSubarray` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.restart()
-            return (result_code, self.RESULT_MESSAGES[result_code])
-
-    class SendTransientBufferCommand(ResponseCommand):
-        """Class for handling the SendTransientBuffer(argin) command."""
-
-        RESULT_MESSAGES = {
-            ResultCode.OK: "SendTransientBuffer command completed OK",
-            ResultCode.QUEUED: "SendTransientBuffer command queued",
-            ResultCode.FAILED: "SendTransientBuffer command failed",
-        }
-
-        def do(  # type: ignore[override]
-            self: MccsSubarray.SendTransientBufferCommand, argin: list[int]
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement the SendTransientBuffer command.
-
-            :param argin: specification of the segment of the transient
-                buffer to send, comprising:
-                1. Start time (timestamp: milliseconds since UNIX epoch)
-                2. End time (timestamp: milliseconds since UNIX epoch)
-                3. Dispersion measure
-                Together, these parameters narrow the selection of
-                transient buffer data to the period of time and
-                frequencies that are of interest.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.send_transient_buffer()
-            return (result_code, self.RESULT_MESSAGES[result_code])
+        :return: A tuple containing a return code and a string
+            message indicating status.
+        """
+        handler = self.get_command_object("Restart")
+        (return_code, unique_id) = handler()
+        return ([return_code], [unique_id])
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SendTransientBuffer(
         self: MccsSubarray, argin: list[int]
-    ) -> DevVarLongStringArrayType:
+    ) -> tuple[ResultCode, str]:
         """
         Cause the subarray to send the requested segment of the transient buffer to SDP.
 
@@ -877,8 +545,8 @@ class MccsSubarray(SKASubarray):
             purposes only
         """
         handler = self.get_command_object("SendTransientBuffer")
-        (result_code, status) = handler(argin)
-        return ([result_code], [status])
+        (result_code, unique_id) = handler(argin)
+        return ([result_code], [unique_id])
 
 
 # ----------

@@ -539,7 +539,10 @@ class StationComponentManager(MccsComponentManager):
 
     @check_communicating
     def _configure(
-        self, station_id: int, task_callback: Optional[Callable] = None, task_abort_event: threading.Event = None,
+        self,
+        station_id: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> None:
         """
         Configure the station.
@@ -558,8 +561,12 @@ class StationComponentManager(MccsComponentManager):
                 raise ValueError("Wrong station id")
             self._update_is_configured(True)
         except ValueError as value_error:
-            task_callback(status=TaskStatus.FAILED, result=f"Configure command has failed: {value_error}")
+            task_callback(
+                status=TaskStatus.FAILED,
+                result=f"Configure command has failed: {value_error}",
+            )
             return
 
-        task_callback(status=TaskStatus.COMPLETED, result="Configure command has completed")
-
+        task_callback(
+            status=TaskStatus.COMPLETED, result="Configure command has completed"
+        )

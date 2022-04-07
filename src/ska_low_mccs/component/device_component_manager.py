@@ -34,9 +34,9 @@ class DeviceComponentManager(MccsComponentManager):
         self: DeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        max_workers: int,
+        max_workers: Optional[int],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -49,10 +49,6 @@ class DeviceComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-            When the health state of the device changes, the value it is called
-            with will normally be a HealthState, but may be None if the
-            admin mode of the device indicates that the device's health
-            should not be included in upstream health rollup.
         """
         self._fqdn: str = fqdn
         self._proxy: Optional[MccsDeviceProxy] = None
@@ -143,7 +139,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        if self.power_mode == PowerState.ON:
+        if self.power_state == PowerState.ON:
             return None  # already on
         # on_command = self.DeviceProxyOnCommand()
         # Enqueue the on command.
@@ -179,7 +175,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        if self.power_mode == PowerState.OFF:
+        if self.power_state == PowerState.OFF:
             return None  # already off
         # off_command = self.DeviceProxyOffCommand(target=self)
         # Enqueue the off command.
@@ -218,7 +214,7 @@ class DeviceComponentManager(MccsComponentManager):
 
         :return: a result code, or None if there was nothing to do.
         """
-        if self.power_mode == PowerState.STANDBY:
+        if self.power_state == PowerState.STANDBY:
             return None  # already standby
         assert self._proxy is not None  # for the type checker
         ([result_code], [message]) = self._proxy.Standby()
@@ -269,19 +265,23 @@ class DeviceComponentManager(MccsComponentManager):
         ), f"state changed callback called but event_name is {event_name}."
 
         if event_value == tango.DevState.FAULT and not self.faulty:
-            self.update_component_fault(True)
+            self._component_state_changed_callback({"fault": True})
         elif event_value != tango.DevState.FAULT and self.faulty:
-            self.update_component_fault(False)
+            self._component_state_changed_callback({"fault": False})
 
-        with self._power_mode_lock:
+        with self._power_state_lock:
             if event_value == tango.DevState.OFF:
-                self.update_component_power_mode(PowerState.OFF)
+                self._component_state_changed_callback({"power_state": PowerState.OFF})
             elif event_value == tango.DevState.STANDBY:
-                self.update_component_power_mode(PowerState.STANDBY)
+                self._component_state_changed_callback(
+                    {"power_state": PowerState.STANDBY}
+                )
             elif event_value == tango.DevState.ON:
-                self.update_component_power_mode(PowerState.ON)
+                self._component_state_changed_callback({"power_state": PowerState.ON})
             else:  # INIT, DISABLE, UNKNOWN, FAULT
-                self.update_component_power_mode(PowerState.UNKNOWN)
+                self._component_state_changed_callback(
+                    {"power_state": PowerState.UNKNOWN}
+                )
 
     def _device_health_state_changed(
         self: DeviceComponentManager,
@@ -335,8 +335,8 @@ class DeviceComponentManager(MccsComponentManager):
         )
         if self._health != health:
             self._health = health
-            if self._health_changed_callback is not None:
-                self._health_changed_callback(self._health)
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback({"health_state": self._health})
 
 
 class ObsDeviceComponentManager(DeviceComponentManager):
@@ -346,46 +346,29 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         self: ObsDeviceComponentManager,
         fqdn: str,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
-        health_changed_callback: Optional[
-            Callable[[Optional[HealthState]], None]
-        ] = None,
-        obs_state_changed_callback: Optional[Callable[[ObsState], None]] = None,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        max_workers: Optional[int] = None,
     ) -> None:
         """
         Initialise a new instance.
 
-        :param fqdn: the FQDN of the device
+        :param fqdn: the FQDN of the device.
         :param logger: the logger to be used by this object.
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param health_changed_callback: callback to be called when the
-            health state of the device changes. The value it is called
-            with will normally be a HealthState, but may be None if the
-            admin mode of the device indicates that the device's health
-            should not be included in upstream health rollup.
-        :param obs_state_changed_callback: callback to be called when
-            the observation state of the device changes.
+            the component manager and its component changes.
+        :param component_state_changed_callback: callback to be called when the component's state changes.
+        :param max_workers: Maximum number of workers in thread pool.
         """
-        self._obs_state_changed_callback = obs_state_changed_callback
+        self._component_state_changed_callback = component_state_changed_callback
+        self._obs_state_changed_callback = component_state_changed_callback
         super().__init__(
             fqdn,
             logger,
-            push_change_event,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
-            health_changed_callback,
+            component_state_changed_callback,
         )
 
     class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
@@ -433,4 +416,4 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         ), f"obs state changed callback called but event_name is {event_name}."
 
         if self._obs_state_changed_callback is not None:
-            self._obs_state_changed_callback(event_value)
+            self._obs_state_changed_callback({"obsstate_changed": event_value})

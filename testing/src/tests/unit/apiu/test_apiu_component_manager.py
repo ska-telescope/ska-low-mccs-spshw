@@ -273,36 +273,36 @@ class TestApiuComponentManager:
     def test_component_fault_callback(
         self: TestApiuComponentManager,
         apiu_component_manager: ApiuComponentManager,
-        component_fault_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test that the callback is called when we simulate a fault.
 
         :param apiu_component_manager: the APIU component manager under
             test
-        :param component_fault_callback: callback to be called when the
+        :param component_state_changed_callback: callback to be called when the
             component faults (or stops faulting)
         """
         apiu_component_manager.start_communicating()
         time.sleep(0.1)
         apiu_component_manager.on()
-        component_fault_callback.assert_next_call(False)
+        component_state_changed_callback.assert_next_call(False)
         cast(
             SwitchingApiuComponentManager, apiu_component_manager
         )._hardware_component_manager._component.simulate_fault(True)
-        component_fault_callback.assert_next_call(True)
+        component_state_changed_callback.assert_next_call(True)
 
         cast(
             SwitchingApiuComponentManager, apiu_component_manager
         )._hardware_component_manager._component.simulate_fault(False)
-        component_fault_callback.assert_next_call(False)
+        component_state_changed_callback.assert_next_call(False)
 
     @pytest.mark.parametrize("antenna_id", [1, 2])
     def test_component_antenna_power_changed_callback(
         self: TestApiuComponentManager,
         apiu_antenna_count: int,
         apiu_component_manager: ApiuComponentManager,
-        component_antenna_power_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
         antenna_id: int,
     ) -> None:
         """
@@ -326,26 +326,26 @@ class TestApiuComponentManager:
 
         expected_are_antennas_on = [False] * apiu_antenna_count
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        component_antenna_power_changed_callback.assert_next_call(
+        component_state_changed_callback.assert_next_call(
             expected_are_antennas_on
         )
 
         apiu_component_manager.turn_on_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = True
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        component_antenna_power_changed_callback.assert_next_call(
+        component_state_changed_callback.assert_next_call(
             expected_are_antennas_on
         )
 
         apiu_component_manager.turn_on_antenna(antenna_id)
-        component_antenna_power_changed_callback.assert_not_called()
+        component_state_changed_callback.assert_not_called()
 
         apiu_component_manager.turn_off_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = False
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        component_antenna_power_changed_callback.assert_next_call(
+        component_state_changed_callback.assert_next_call(
             expected_are_antennas_on
         )
 
         apiu_component_manager.turn_off_antenna(antenna_id)
-        component_antenna_power_changed_callback.assert_not_called()
+        component_state_changed_callback.assert_not_called()

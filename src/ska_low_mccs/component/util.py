@@ -61,6 +61,10 @@ def check_communicating(func: Wrapped) -> Wrapped:
             not been established.
         :return: whatever the wrapped function returns
         """
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",component_manager)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",args)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",kwargs)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",func.__name__)
         if component_manager.communication_status != CommunicationStatus.ESTABLISHED:
             raise ConnectionError(
                 f"Cannot execute '{type(component_manager).__name__}.{func.__name__}'. "

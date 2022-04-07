@@ -55,7 +55,7 @@ __all__ = [
 from .device_proxy import MccsDeviceProxy
 
 # from .antenna import MccsAntenna
-# from .apiu import MccsAPIU
+from .apiu import MccsAPIU
 # from .cluster_manager import MccsClusterManagerDevice
 # from .controller import MccsController
 # from .pasd_bus import MccsPasdBus

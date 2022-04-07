@@ -531,7 +531,10 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code and response string
         """
+        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%", argin)
         configuration = json.loads(argin)
+        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%", configuration)
+        print("%%%%%%%%%%%%%%%",self._configure) 
         station_id = configuration.get("station_id")
         return self.submit_task(
             self._configure, args=[station_id], task_callback=task_callback

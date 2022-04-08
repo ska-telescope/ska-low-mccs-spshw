@@ -154,7 +154,7 @@ class TestSubarrayBeam:
         :param is_configured_changed_callback: a callback to be called
             when whether the subarray beam is configured changes
         """
-        is_configured_changed_callback.assert_next_call(False)
+        is_configured_changed_callback.assert_next_call({"configured_changed": False})
 
         subarray_beam_id = 1
         station_ids = [1, 2]
@@ -173,7 +173,7 @@ class TestSubarrayBeam:
             antenna_weights,
             phase_centre,
         )
-        is_configured_changed_callback.assert_next_call(True)
+        is_configured_changed_callback.assert_next_call({"configured_changed": True})
 
         assert subarray_beam.subarray_beam_id == subarray_beam_id
         assert subarray_beam.station_ids == station_ids

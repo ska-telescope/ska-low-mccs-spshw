@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 
-from ska_low_mccs.component import CommunicationStatus
+from ska_tango_base.control_model import CommunicationStatus
+
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
@@ -52,6 +53,22 @@ def is_configured_changed_callback(
     """
     return mock_callback_factory()
 
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> Callable[dict[str, Any], None]:
+    """
+    Return a mock callback for a change in the subarray beam state.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that the beam state has changed
+    """
+    return mock_callback_factory()
+
 
 @pytest.fixture()
 def subarray_beam_component(
@@ -72,8 +89,7 @@ def subarray_beam_component_manager(
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_is_beam_locked_changed_callback: Callable[[bool], None],
-    is_configured_changed_callback: Callable[[bool], None],
+    component_state_changed_callback: Callable[dict[str, Any], None],
 ) -> SubarrayBeamComponentManager:
     """
     Return a subarray beam component manager.
@@ -84,10 +100,8 @@ def subarray_beam_component_manager(
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_is_beam_locked_changed_callback: a callback to be
-        called when whether the beam is locked changes.
-    :param is_configured_changed_callback: a callback to be
-        called when whether the beam is configured changes.
+    :param component_state_changed_callback: a callback to be
+        called when the component state changes.
 
     :return: a subarray beam component manager
     """
@@ -95,6 +109,5 @@ def subarray_beam_component_manager(
         logger,
         lrc_result_changed_callback,
         communication_status_changed_callback,
-        component_is_beam_locked_changed_callback,
-        is_configured_changed_callback,
+        component_state_changed_callback,
     )

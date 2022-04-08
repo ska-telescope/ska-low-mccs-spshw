@@ -140,6 +140,7 @@ class MccsSubarray(SKASubarray):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
+        print(f"Entered cpt state changed with: {state_change}")
         # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
         # valid_device_types = {"station": "station_health_changed",
         #                     "beam": "station_beam_health_changed",
@@ -226,6 +227,12 @@ class MccsSubarray(SKASubarray):
         if "station_power_state" in state_change.keys():
             station_power = state_change.get("station_power_state")
             self.component_manager._station_power_state_changed(fqdn, station_power)
+
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            with self.component_manager._power_state_lock:
+                if power_state != self.component_manager.power_state:
+                    self.component_manager.power_state = power_state
 
     def _component_communication_status_changed(
         self: MccsSubarray,

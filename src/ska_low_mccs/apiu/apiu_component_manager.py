@@ -445,7 +445,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: A tuple containing a ResultCode and a response message
         """
         return self.submit_task(
-            self._turn_off_antenna, args=[antenna], task_callback=task_callback)
+            self._turn_off_antenna, args=[antenna], task_callback=task_callback
+        )
 
     def power_up(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None

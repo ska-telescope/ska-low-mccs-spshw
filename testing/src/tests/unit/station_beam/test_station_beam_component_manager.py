@@ -8,11 +8,12 @@
 """This module contains the tests of the station beam component manager."""
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
+from ska_tango_base.control_model import CommunicationStatus
 
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station_beam import StationBeamComponentManager
 from ska_low_mccs.testing.mock import MockCallable
 
@@ -194,15 +195,20 @@ class TestStationBeamComponentManager:
         antenna_weights = [1.0, 1.0, 1.0]
         phase_centre = [0.0, 0.0]
 
-        station_beam_component_manager.configure(
-            beam_id,
-            station_id,
-            update_rate,
-            channels,
-            desired_pointing,
-            antenna_weights,
-            phase_centre,
-        )
+        config = {
+            "beam_id": beam_id,
+            "station_ids": [station_id],
+            "update_rate": update_rate,
+            "channels": [channels],
+            "desired_pointing": [desired_pointing],
+            "antenna_weights": [antenna_weights],
+            "phase_centre": [phase_centre],
+        }
+
+        config_dict = json.dumps(config)
+
+        task_status, response = station_beam_component_manager.configure(config_dict)
+        print(task_status, response)
 
         assert station_beam_component_manager.beam_id == beam_id
         assert station_beam_component_manager.station_id == station_id

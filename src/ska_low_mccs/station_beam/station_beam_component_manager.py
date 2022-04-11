@@ -362,13 +362,14 @@ class StationBeamComponentManager(MccsComponentManager):
                 "station_ids": [1,2],
                 "update_rate": 0.0,
                 "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                "desired_pointing": [0.0, 180.0, 0.0, 45.0, 0.0],
                 "antenna_weights": [1.0, 1.0, 1.0],
                 "phase_centre": [0.0, 0.0],
                 }
 
         :return: A return code and a unique command ID.
         """
+        print("In Config Submit")
         config_dict = json.loads(argin)
 
         task_status, response = self.submit_task(
@@ -376,9 +377,9 @@ class StationBeamComponentManager(MccsComponentManager):
             args=(
                 config_dict.get("beam_id"),
                 config_dict.get("station_ids", []),
-                config_dict.get("channels", []),
                 config_dict.get("update_rate"),
-                config_dict.get("sky_coordinates", []),
+                config_dict.get("channels", []),
+                config_dict.get("desired_pointing", []),
                 config_dict.get("antenna_weights", []),
                 config_dict.get("phase_centre", []),
             ),
@@ -412,6 +413,7 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        print("In Config")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 

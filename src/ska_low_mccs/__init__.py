@@ -62,8 +62,9 @@ from .apiu import MccsAPIU
 # from .pasd_bus import MccsPasdBus
 from .station import MccsStation
 
-# from .station_beam import MccsStationBeam
-# from .subarray import MccsSubarray
+from .station_beam import MccsStationBeam
+from .subarray import MccsSubarray
+
 # from .subarray_beam import MccsSubarrayBeam
 # from .subrack import MccsSubrack
 # from .tel_state import MccsTelState

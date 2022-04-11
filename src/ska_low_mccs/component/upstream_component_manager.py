@@ -418,7 +418,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         return self._review_power()
 
     # @check_communicating
-    def on(self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None) -> ResultCode | None:
+    def on(self: ComponentManagerWithUpstreamPowerSupply) -> ResultCode | None:
         """
         Tell the upstream power supply proxy to turn the hardware off.
 

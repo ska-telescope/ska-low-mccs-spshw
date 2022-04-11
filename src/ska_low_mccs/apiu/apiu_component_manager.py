@@ -436,7 +436,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         return self.submit_task(
-            self._turn_off_antenna, args=[antenna], task_callback=task_callback)
+            self._turn_off_antenna, args=[antenna], task_callback=task_callback
+        )
 
     def power_up(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None

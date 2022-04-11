@@ -14,8 +14,9 @@ import logging
 from typing import Any, Callable, Optional, Sequence
 
 import ska_tango_base.subarray
-from ska_tango_base.commands import ResultCode, TaskStatus
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, ObsState, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     MccsComponentManager,
@@ -185,7 +186,7 @@ class SubarrayComponentManager(
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
             with self._power_state_lock:
-                self.component_state_changed_callback({"power_state": PowerState.ON})
+                self._component_state_changed_callback({"power_state": PowerState.ON})
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""
@@ -242,9 +243,10 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code and response message.
         """
+        print("In Assign")
         return self.submit_task(
             self._assign,
-            args=(resource_spec),
+            args=[resource_spec],
             task_callback=task_callback,
         )
 
@@ -272,7 +274,9 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        print("In _Assign")
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         station_fqdns: list[list[str]] = resource_spec.get("stations", [])
         subarray_beam_fqdns: list[str] = resource_spec.get("subarray_beams", [])
@@ -343,10 +347,10 @@ class SubarrayComponentManager(
                 self._subarray_beams[fqdn].start_communicating()
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn].start_communicating()
-
-        task_callback(
-            status=TaskStatus.COMPLETED, result="AssignResources has completed."
-        )
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="AssignResources has completed."
+            )
 
         return ResultCode.OK
 
@@ -438,18 +442,20 @@ class SubarrayComponentManager(
         :raises NotImplementedError: because MCCS Subarray cannot perform a
             partial release of resources.
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
-        task_callback(
-            status=TaskStatus.COMPLETED,
-            result="Not Implemented: MCCS Subarray cannot partially release resources.",
-        )
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Not Implemented: MCCS Subarray cannot partially release resources.",
+            )
         raise NotImplementedError("MCCS Subarray cannot partially release resources.")
 
     @check_communicating
     def release_all(
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable],
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `ReleaseAllResources` slow command.
@@ -468,7 +474,7 @@ class SubarrayComponentManager(
     @check_communicating
     def _release_all(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable],
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Release all resources from this subarray.
@@ -477,7 +483,8 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
@@ -500,9 +507,10 @@ class SubarrayComponentManager(
             self._evaluate_communication_status()
         self._release_completed_callback({"release_completed": None})
 
-        task_callback(
-            status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."
-        )
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."
+            )
         return ResultCode.OK
 
     @check_communicating
@@ -539,7 +547,8 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         stations = configuration["stations"]
         station_configuration = {station["station_id"]: station for station in stations}
@@ -557,7 +566,10 @@ class SubarrayComponentManager(
         if result_code == ResultCode.OK:
             self._configure_completed_callback({"configure_completed": None})
 
-        task_callback(status=TaskStatus.COMPLETED, result="Configure has completed.")
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure has completed."
+            )
         return result_code
 
     def _configure_stations(
@@ -650,7 +662,8 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         self._scan_id = scan_id
 
         result_code = ResultCode.OK
@@ -660,7 +673,8 @@ class SubarrayComponentManager(
                 result_code = ResultCode.FAILED
         self._scanning_changed_callback({"scanning_changed": True})
         # TODO: Scan may not have actually completed by this point, check.
-        task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
+        if task_callback is not None:
+            task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
         return result_code
 
     @check_communicating
@@ -693,13 +707,15 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         self._scan_id = None
 
         # Stuff goes here. This should tell the subarray beam device to
         # stop scanning, but that device doesn't support it yet.
         self._scanning_changed_callback({"scanning_changed": False})
-        task_callback(status=TaskStatus.COMPLETED, result="EndScan has completed.")
+        if task_callback is not None:
+            task_callback(status=TaskStatus.COMPLETED, result="EndScan has completed.")
         return ResultCode.OK
 
     @check_communicating
@@ -732,7 +748,8 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
         for station_proxy in self._stations.values():
             proxy_result_code = station_proxy.configure({})
@@ -743,9 +760,10 @@ class SubarrayComponentManager(
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
         self._configured_changed_callback({"configured_changed": False})
-        task_callback(
-            status=TaskStatus.COMPLETED, result="End/Deconfigure has completed."
-        )
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="End/Deconfigure has completed."
+            )
         return result_code
 
     @check_communicating
@@ -792,11 +810,13 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         # other stuff here
         self.deconfigure()
         self._obsreset_completed_callback({"obsreset_completed": None})
-        task_callback(status=TaskStatus.COMPLETED, result="ObsReset has completed.")
+        if task_callback is not None:
+            task_callback(status=TaskStatus.COMPLETED, result="ObsReset has completed.")
         return ResultCode.OK
 
     @check_communicating
@@ -829,12 +849,14 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         # other stuff here
         self.deconfigure()
         result_code = self.release_all(task_callback=task_callback)
         self._restart_completed_callback({"restart_completed": None})
-        task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
+        if task_callback is not None:
+            task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
         return result_code
 
     def send_transient_buffer(
@@ -866,12 +888,14 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         # do stuff here
-        task_callback(
-            status=TaskStatus.COMPLETED,
-            result="send_transient_buffer command completed.",
-        )
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="send_transient_buffer command completed.",
+            )
         return ResultCode.OK
 
     def _device_communication_status_changed(

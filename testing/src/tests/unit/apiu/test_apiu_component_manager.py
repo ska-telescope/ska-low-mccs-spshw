@@ -287,11 +287,15 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         apiu_component_manager.on()
         component_state_changed_callback.assert_next_call({"fault": False})
-        component_state_changed_callback.assert_next_call({"power_state": PowerState.ON})
+        component_state_changed_callback.assert_next_call(
+            {"power_state": PowerState.ON}
+        )
         cast(
             SwitchingApiuComponentManager, apiu_component_manager
         )._hardware_component_manager._component.simulate_fault(True)
-        component_state_changed_callback.assert_next_call({"power_state": PowerState.OFF})
+        component_state_changed_callback.assert_next_call(
+            {"power_state": PowerState.OFF}
+        )
         component_state_changed_callback.assert_next_call({"fault": True})
 
         cast(
@@ -324,7 +328,9 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         apiu_component_manager.on()
         time.sleep(0.1)
-        component_state_changed_callback.assert_last_call({"power_state": PowerState.ON})
+        component_state_changed_callback.assert_last_call(
+            {"power_state": PowerState.ON}
+        )
         # assert apiu_component_manager.power_state == PowerState.ON
 
         expected_are_antennas_on = [False] * apiu_antenna_count

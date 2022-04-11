@@ -10,7 +10,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import threading
-from typing import Any, List, Optional, Tuple
+from typing import Any, cast, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
@@ -214,7 +214,7 @@ class MccsController(SKABaseDevice):
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:
-                self._health_state = health
+                self._health_state = cast(HealthState,health)
                 self.push_change_event("healthState", health)
 
         if "fault" in state_change.keys():
@@ -227,6 +227,18 @@ class MccsController(SKABaseDevice):
                     action_map[self.component_manager.power_state]
                 )
                 self._health_model.component_fault(False)
+
+        if "station_health_state" in state_change.keys():
+            station_health = state_change.get("station_health_state")
+            self._health_model.station_health_changed(fqdn, station_health)
+
+        if "station_beam_health_state" in state_change.keys():
+            station_beam_health = state_change.get("station_beam_health_state")
+            self._health_model.station_beam_health_changed(fqdn, station_beam_health)
+
+        if "subarray_beam_health_state" in state_change.keys():
+            subarray_beam_health = state_change.get("subarray_beam_health_state")
+            self._health_model.subarray_beam_health_changed(fqdn, subarray_beam_health)
 
     # ----------
     # Attributes

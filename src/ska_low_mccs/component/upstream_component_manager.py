@@ -14,6 +14,7 @@ from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     MccsComponentManager,
@@ -41,7 +42,6 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         self._supplied_power_state: Optional[PowerState] = None
         self._supplied_power_state_changed_callback = component_state_changed_callback
         super().__init__(
-            component,
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -79,7 +79,7 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         if self._supplied_power_state != supplied_power_state:
             self._supplied_power_state = supplied_power_state
             if self._supplied_power_state is not None:
-                self._supplied_power_state_changed_callback(self._supplied_power_state)
+                self._supplied_power_state_changed_callback({"power_state": self._supplied_power_state})
 
 
 class PowerSupplyProxySimulator(
@@ -116,15 +116,11 @@ class PowerSupplyProxySimulator(
                 power supply proxy simulator
             """
             self._supplied_power_state = initial_supplied_power_state
-            self._supplied_power_state_changed_callback: Optional[
-                Callable[[dict[str, Any]], None]
-            ] = None
+            self._supplied_power_state_changed_callback: Optional[Callable[[dict[str, Any]], None]] = None
 
         def set_supplied_power_state_changed_callback(
             self: PowerSupplyProxySimulator._Component,
-            component_state_changed_callback: Optional[
-                Callable[[dict[str, Any]], None]
-            ],
+            component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]] = None,
         ) -> None:
             """
             Set the supplied power mode changed callback.
@@ -190,7 +186,7 @@ class PowerSupplyProxySimulator(
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Optional(Callable[[dict[str, Any]], None]) = None,
         initial_supplied_power_state: PowerState = PowerState.OFF,
     ) -> None:
         """
@@ -406,28 +402,31 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
     @check_communicating
     def off(
-        self: ComponentManagerWithUpstreamPowerSupply,
-    ) -> ResultCode | None:
+        self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None
+    ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the hardware off.
 
-        :return: a result code, or None if there was nothing to do.
+        :return: a task status and message.
         """
         with self._power_state_lock:
             self._target_power_state = PowerState.OFF
-        return self._review_power()
+        rc = self._review_power()
+        # TODO sort out rc
+        return TaskStatus.COMPLETED,"Ignore return code for now"
 
     # @check_communicating
-    def on(self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None) -> ResultCode | None:
+    def on(self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the hardware off.
 
-        :return: a result code, or None if there was nothing to do.
+        :return: a task status and message.
         """
         with self._power_state_lock:
             self._target_power_state = PowerState.ON
         rc = self._review_power()
-        return rc
+        # TODO sort out rc
+        return TaskStatus.COMPLETED,"Ignore return code for now"
 
     @threadsafe
     def _review_power(

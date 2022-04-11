@@ -20,5 +20,5 @@ class SubarrayObsStateModel(ObsStateModel):
 
     def _obs_state_changed(
         self: SubarrayObsStateModel,
-        machine_state: ObsStateModel,
+        machine_state: str,
     ) -> None: ...

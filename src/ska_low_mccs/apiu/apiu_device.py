@@ -11,7 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import threading
-from typing import Any, List, Optional, Tuple
+from typing import Any, cast, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
@@ -198,14 +198,14 @@ class MccsAPIU(SKABaseDevice):
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:
-                self._health_state = health
+                self._health_state = cast(HealthState,health)
                 self.push_change_event("healthState", health)
 
         if "are_antennas_on" in state_change.keys():
             self._are_antennas_on: list[bool]  # typehint only
             are_antennas_on = state_change.get("are_antennas_on")
             if self._are_antennas_on != are_antennas_on:
-                self._are_antennas_on = list(are_antennas_on)
+                self._are_antennas_on = cast(List[bool], are_antennas_on)
                 self.push_change_event("areAntennasOn", self._are_antennas_on)
 
     # ----------
@@ -363,7 +363,7 @@ class MccsAPIU(SKABaseDevice):
 
         def __init__(
             self: MccsAPIU.IsAntennaOnCommand,
-            component_manager,
+            component_manager: ApiuComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """

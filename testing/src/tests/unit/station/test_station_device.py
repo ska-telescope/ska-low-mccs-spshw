@@ -400,5 +400,7 @@ class TestPatchedStation:
         # component manager will be called with an array not a list.
         (args, kwargs) = mock_component_manager.apply_pointing.get_next_call()
         assert not kwargs
-        assert len(args) == 1
+        # since v0.13 of the base classes, a second argument will be passed which is
+        # the task status callback
+        assert len(args) == 2
         assert list(args[0]) == argin

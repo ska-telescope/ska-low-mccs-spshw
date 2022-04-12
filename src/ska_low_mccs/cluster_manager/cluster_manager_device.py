@@ -14,12 +14,11 @@ based upon architecture in SKA-TEL-LFAA-06000052-02.
 
 from __future__ import annotations  # allow forward references in type hints
 
-import json
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
+from ska_tango_base.commands import FastCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import (
     CommunicationStatus,
     HealthState,
@@ -31,7 +30,6 @@ from tango.server import attribute, command
 
 import ska_low_mccs.release as release
 from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
-from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 
 __all__ = ["MccsClusterManagerDevice", "main"]
 
@@ -52,6 +50,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsClusterManagerDevice) -> None:
@@ -60,7 +59,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         self._health_state: Optional[
             HealthState
         ] = None  # SKABaseDevice.InitCommand.do() does this too late.
-        self._health_model = ClusterHealthModel(self.health_changed)
+        self._health_model = ClusterHealthModel(self._component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -81,27 +80,33 @@ class MccsClusterManagerDevice(SKABaseDevice):
             self.push_change_event,
             SimulationMode.TRUE,
             self._component_communication_status_changed,
-            self._component_power_mode_changed,
-            self._component_fault,
-            self._health_model.shadow_master_pool_node_health_changed,
+            self._component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsClusterManagerDevice) -> None:
         """Set up the command handler object for this device's commands."""
         super().init_command_objects()
 
-        for (command_name, command_object) in [
-            ("StartJob", self.StartJobCommand),
-            ("StopJob", self.StopJobCommand),
-            ("SubmitJob", self.SubmitJobCommand),
-            ("GetJobStatus", self.GetJobStatusCommand),
-            ("ClearJobStats", self.ClearJobStatsCommand),
-            ("PingMasterPool", self.PingMasterPoolCommand),
+        for (command_name, method_name) in [
+            ("StartJob", "start_job"),
+            ("StopJob", "stop_job"),
+            ("SubmitJob", "submit_job"),
+            ("GetJobStatus", "get_job_status"),
+            ("ClearJobStats", "clear_job_stats"),
+            ("PingMasterPool", "ping_master_pool"),
         ]:
             self.register_command_object(
                 command_name,
-                command_object(self.component_manager, self.logger),
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
             )
+            self.StartJobCommand
 
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for this device."""
@@ -119,15 +124,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            super().do()
-            device = self.target
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -162,18 +160,16 @@ class MccsClusterManagerDevice(SKABaseDevice):
             communication_status == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_power_mode_changed(
-        self: MccsClusterManagerDevice,
-        power_mode: PowerState,
+    def _component_state_changed_callback(
+        self: MccsClusterManagerDevice, state_change: dict[str, Any]
     ) -> None:
         """
-        Handle change in the power mode of the component.
+        Handle change in the state of the component.
 
         This is a callback hook, called by the component manager when
-        the power mode of the component changes. It is implemented here
-        to drive the op_state.
+        the state of the component changes.
 
-        :param power_mode: the power mode of the component.
+        :param state_change: dictionary of state change parameters.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -181,46 +177,32 @@ class MccsClusterManagerDevice(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            self.op_state_model.perform_action(action_map[power_state])
 
-        self.op_state_model.perform_action(action_map[power_mode])
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                power_mode = self.component_manager.power_mode
+                if power_mode is not None:
+                    self._component_power_mode_changed(
+                        self.component_manager.power_mode
+                    )
+                self._health_model.component_fault(False)
 
-    def _component_fault(
-        self: MccsClusterManagerDevice,
-        is_fault: bool,
-    ) -> None:
-        """
-        Handle change in the fault status of the component.
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
-        This is a callback hook, called by the component manager when
-        the component fault status changes. It is implemented here to
-        drive the op_state.
-
-        :param is_fault: whether the component is faulting or not.
-        """
-        if is_fault:
-            self.op_state_model.perform_action("component_fault")
-            self._health_model.component_fault(True)
-        else:
-            power_mode = self.component_manager.power_mode
-            if power_mode is not None:
-                self._component_power_mode_changed(self.component_manager.power_mode)
-            self._health_model.component_fault(False)
-
-    def health_changed(self: MccsClusterManagerDevice, health: HealthState) -> None:
-        """
-        Handle change in this device's health state.
-
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        if "shadow_master_pool_node_healths" in state_change.keys():
+            healths = state_change.get("shadow_master_pool_node_healths")
+            self._health_model.shadow_master_pool_node_health_changed(healths)
 
     # ----------
     # Attributes
@@ -509,33 +491,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # Commands
     # --------
 
-    class StartJobCommand(ResponseCommand):
-        """Class for handling the StartJob(argin) command."""
-
-        SUCCEEDED_MESSAGE = "StartJob command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.StartJobCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Run the user-specified functionality of this command.
-
-            :param argin: the job id
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            try:
-                component_manager.start_job(argin)
-            except ValueError as value_error:
-                return (ResultCode.FAILED, str(value_error))
-            except ConnectionError as connection_error:
-                return (ResultCode.FAILED, str(connection_error))
-            else:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartJob(
         self: MccsClusterManagerDevice, argin: str
@@ -552,33 +507,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         handler = self.get_command_object("StartJob")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
-
-    class StopJobCommand(ResponseCommand):
-        """Class for handling the StopJob(argin) command."""
-
-        SUCCEEDED_MESSAGE = "StopJob command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.StopJobCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Run the user-specified functionality of this command.
-
-            :param argin: the job id
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            try:
-                component_manager.stop_job(argin)
-            except ValueError as value_error:
-                return (ResultCode.FAILED, str(value_error))
-            except ConnectionError as connection_error:
-                return (ResultCode.FAILED, str(connection_error))
-            else:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StopJob(
@@ -597,27 +525,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SubmitJobCommand(BaseCommand):
-        """Class for handling the SubmitJob(argin) command."""
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.SubmitJobCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Run the user-specified functionality of this command.
-
-            :param argin: a JSON string specifying the job configuration
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            kwargs = json.loads(argin)
-            job_config = JobConfig(**kwargs)
-
-            component_manager = self.target
-            return component_manager.submit_job(job_config)
-
     @command(dtype_in="DevString", dtype_out="DevString")
     def SubmitJob(self: MccsClusterManagerDevice, argin: str) -> str:
         """
@@ -629,25 +536,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         """
         handler = self.get_command_object("SubmitJob")
         return handler(argin)
-
-    class GetJobStatusCommand(BaseCommand):
-        """Class for handling the GetJobStatus(argin) command."""
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.GetJobStatusCommand, argin: str
-        ) -> JobStatus:
-            """
-            Run the user-specified functionality of this command.
-
-            :param argin: the job id
-
-            :return: The status of the job
-            """
-            component_manager = self.target
-            try:
-                return component_manager.get_job_status(argin)
-            except ValueError:
-                return JobStatus.UNKNOWN
 
     @command(dtype_in="DevString", dtype_out="DevShort")
     def GetJobStatus(self: MccsClusterManagerDevice, argin: str) -> int:
@@ -661,7 +549,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         handler = self.get_command_object("GetJobStatus")
         return handler(argin)
 
-    class ClearJobStatsCommand(ResponseCommand):
+    class ClearJobStatsCommand(FastCommand):
         """Class for handling the ClearJobStats() command."""
 
         SUCCEEDED_MESSAGE = "Job stats cleared"
@@ -699,7 +587,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class PingMasterPoolCommand(ResponseCommand):
+    class PingMasterPoolCommand(FastCommand):
         """Class for handling the PingMasterPool() command."""
 
         SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"

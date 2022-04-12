@@ -267,6 +267,35 @@ def is_configured_changed_callback(
 
 
 @pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> Callable[[], None]:
+    """
+    Return a mock callback for a change in whether the station changes state.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback for a change in whether the station is
+        configured.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return an integer specifying the maximum number of worker threads 
+    available to execute long-running-commands.
+
+    :return: the max number of worker threads.
+    """
+    max_workers = 1
+    return max_workers
+
+
+@pytest.fixture()
 def station_component_manager(
     tango_harness: TangoHarness,
     station_id: int,
@@ -274,13 +303,9 @@ def station_component_manager(
     antenna_fqdns: list[str],
     tile_fqdns: list[str],
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    apiu_health_changed_callback: MockCallable,
-    antenna_health_changed_callback: MockCallable,
-    tile_health_changed_callback: MockCallable,
-    is_configured_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallable,
 ) -> StationComponentManager:
     """
     Return a station component manager.
@@ -318,13 +343,9 @@ def station_component_manager(
         antenna_fqdns,
         tile_fqdns,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        apiu_health_changed_callback,
-        antenna_health_changed_callback,
-        tile_health_changed_callback,
-        is_configured_changed_callback,
+        component_state_changed_callback,
     )
 
 

@@ -118,7 +118,9 @@ class ObjectComponentManager(MccsComponentManager):
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating
-    def off(self: ObjectComponentManager, task_callback: Callable) -> tuple[TaskStatus, str]:
+    def off(
+        self: ObjectComponentManager, task_callback: Callable
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component off.
 
@@ -127,7 +129,9 @@ class ObjectComponentManager(MccsComponentManager):
         return self._component.off()
 
     @check_communicating
-    def standby(self: ObjectComponentManager, task_callback: Callable) -> tuple[TaskStatus, str]:
+    def standby(
+        self: ObjectComponentManager, task_callback: Callable
+    ) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
 
@@ -136,7 +140,9 @@ class ObjectComponentManager(MccsComponentManager):
         return self._component.standby()
 
     @check_communicating
-    def on(self: ObjectComponentManager, task_callback: Callable) -> tuple[TaskStatus, str]:
+    def on(
+        self: ObjectComponentManager, task_callback: Callable
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component on.
 
@@ -145,7 +151,9 @@ class ObjectComponentManager(MccsComponentManager):
         return self._component.on()
 
     @check_communicating
-    def reset(self: ObjectComponentManager, task_callback: Callable) -> tuple[TaskStatus, str]:
+    def reset(
+        self: ObjectComponentManager, task_callback: Callable
+    ) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
 

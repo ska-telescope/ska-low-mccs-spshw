@@ -83,15 +83,13 @@ def apiu_simulator(
     initial_fault: bool = False,
 ) -> ApiuSimulator:
     """
-    Return an APIU simulator.
-
-    (This is a pytest fixture.)
+    Return an APIU simulator (This is a pytest fixture).
 
     :param apiu_antenna_count: the number of antennas in the APIU
+    :param component_state_callback: callback to be called when the
+            component faults (or stops faulting)
     :param initial_fault: whether the simulator should start by
         simulating a fault.
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
 
     :return: an APIU simulator
     """

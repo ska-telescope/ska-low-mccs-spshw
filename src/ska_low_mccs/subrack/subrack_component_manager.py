@@ -12,8 +12,9 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.commands import TaskStatus
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     ComponentManagerWithUpstreamPowerSupply,
@@ -508,14 +509,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param task_callback: Update task state, defaults to None
 
-        :returns: task status and message
+        :returns: A tuple containing a ResultCode and a response message
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
         self: MccsComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Tell the upstream power supply proxy to turn the hardware on.
@@ -523,21 +524,24 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        # Indicate that the task has started
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             super().on()
         except Exception as ex:
-            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
             return
 
-        if task_abort_event.is_set():
+        if task_abort_event and task_abort_event.is_set():
             task_callback(
                 status=TaskStatus.ABORTED, result="On command has been aborted"
             )
             return
-
-        task_callback(status=TaskStatus.COMPLETED, result="On command has completed")
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="On command has completed"
+            )
 
     def off(
         self: MccsComponentManager, task_callback: Callable = None
@@ -556,8 +560,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def _off(
         self: SubrackComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Tell the subrack simulator to turn off.
@@ -570,24 +574,27 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        # Indicate that the task has started
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
                 SwitchingSubrackComponentManager, self._hardware_component_manager
             ).turn_off_tpms()
             super().off()
         except Exception as ex:
-            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
             return
 
-        if task_abort_event.is_set():
-            task_callback(
-                status=TaskStatus.ABORTED, result="Off command has been aborted"
-            )
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Off command has been aborted"
+                )
             return
 
-        task_callback(status=TaskStatus.COMPLETED, result="Off command completed")
+        if task_callback:
+            task_callback(status=TaskStatus.COMPLETED, result="Off command completed")
 
     @check_communicating
     def turn_off_tpm(self: SubrackComponentManager, logical_tpm_id: int) -> bool | None:
@@ -732,7 +739,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         tpm_id: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Submit the turn_on_tpm slow task.
 
@@ -741,7 +748,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param tpm_id: the tpm to turn on
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a ResultCode and a response message
         """
         task_status, unique_id = self.submit_task(
             self._turn_on_tpm, args=[tpm_id], task_callback=task_callback
@@ -751,7 +758,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def turn_on_tpms(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Submit the turn_on_tpms slow task.
 
@@ -766,7 +773,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def turn_off_tpms(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Submit the turn_off_tpms slow task.
 
@@ -774,6 +781,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a ResultCode and a response message
         """
         return self.submit_task(self._turn_off_tpms, task_callback=task_callback)

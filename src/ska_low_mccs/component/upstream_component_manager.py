@@ -79,7 +79,9 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         if self._supplied_power_state != supplied_power_state:
             self._supplied_power_state = supplied_power_state
             if self._supplied_power_state is not None:
-                self._supplied_power_state_changed_callback({"power_state": self._supplied_power_state})
+                self._supplied_power_state_changed_callback(
+                    {"power_state": self._supplied_power_state}
+                )
 
 
 class PowerSupplyProxySimulator(
@@ -116,11 +118,15 @@ class PowerSupplyProxySimulator(
                 power supply proxy simulator
             """
             self._supplied_power_state = initial_supplied_power_state
-            self._supplied_power_state_changed_callback: Optional[Callable[[dict[str, Any]], None]] = None
+            self._supplied_power_state_changed_callback: Optional[
+                Callable[[dict[str, Any]], None]
+            ] = None
 
         def set_supplied_power_state_changed_callback(
             self: PowerSupplyProxySimulator._Component,
-            component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]] = None,
+            component_state_changed_callback: Optional[
+                Callable[[dict[str, Any]], None]
+            ] = None,
         ) -> None:
             """
             Set the supplied power mode changed callback.
@@ -186,7 +192,9 @@ class PowerSupplyProxySimulator(
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional(Callable[[dict[str, Any]], None]) = None,
+        component_state_changed_callback: Optional(
+            Callable[[dict[str, Any]], None]
+        ) = None,
         initial_supplied_power_state: PowerState = PowerState.OFF,
     ) -> None:
         """
@@ -413,10 +421,12 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             self._target_power_state = PowerState.OFF
         rc = self._review_power()
         # TODO sort out rc
-        return TaskStatus.COMPLETED,"Ignore return code for now"
+        return TaskStatus.COMPLETED, "Ignore return code for now"
 
     # @check_communicating
-    def on(self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None) -> tuple[TaskStatus, str]:
+    def on(
+        self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None
+    ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the hardware off.
 
@@ -426,7 +436,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             self._target_power_state = PowerState.ON
         rc = self._review_power()
         # TODO sort out rc
-        return TaskStatus.COMPLETED,"Ignore return code for now"
+        return TaskStatus.COMPLETED, "Ignore return code for now"
 
     @threadsafe
     def _review_power(

@@ -23,6 +23,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
+
 from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
@@ -158,10 +159,7 @@ class TestTileComponentManager:
 
         tile_component_manager._tpm_power_state_changed(second_power_state)
 
-        if (
-            first_power_state != PowerState.ON
-            and second_power_state == PowerState.ON
-        ):
+        if first_power_state != PowerState.ON and second_power_state == PowerState.ON:
             communication_status_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
@@ -601,7 +599,7 @@ class TestStaticSimulatorCommon:
         buffer = [0] * buffer_size
         for (index, value) in enumerate(write_values):
             buffer[write_offset + index] = value
-        expected_read = buffer[read_offset: (read_offset + read_length)]
+        expected_read = buffer[read_offset : (read_offset + read_length)]
         tile.write_register(register, write_values, write_offset, device)
         assert (
             tile.read_register(register, read_length, read_offset, device)
@@ -1011,8 +1009,6 @@ class TestDriverCommon:
 
         :param logger: the logger to be used by this object
         :param max_workers: nos of worker threads
-        :param lrc_result_changed_callback: a callback to
-            be used to subscribe to device LRC result changes
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"

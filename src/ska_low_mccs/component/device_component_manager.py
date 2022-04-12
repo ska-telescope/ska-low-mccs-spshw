@@ -269,16 +269,20 @@ class DeviceComponentManager(MccsComponentManager):
                 self._component_state_changed_callback({"fault": True})
             elif event_value != tango.DevState.FAULT and self.faulty:
                 self._component_state_changed_callback({"fault": False})
-    
+
             with self._power_state_lock:
                 if event_value == tango.DevState.OFF:
-                    self._component_state_changed_callback({"power_state": PowerState.OFF})
+                    self._component_state_changed_callback(
+                        {"power_state": PowerState.OFF}
+                    )
                 elif event_value == tango.DevState.STANDBY:
                     self._component_state_changed_callback(
                         {"power_state": PowerState.STANDBY}
                     )
                 elif event_value == tango.DevState.ON:
-                    self._component_state_changed_callback({"power_state": PowerState.ON})
+                    self._component_state_changed_callback(
+                        {"power_state": PowerState.ON}
+                    )
                 else:  # INIT, DISABLE, UNKNOWN, FAULT
                     self._component_state_changed_callback(
                         {"power_state": PowerState.UNKNOWN}

@@ -259,140 +259,172 @@ class TestMccsPasdBus:
                 "reload_database",
                 None,
                 None,
-                True,
-                [[ResultCode.QUEUED], ["12345_ReloadDatabase"]],
+                ([ResultCode.QUEUED], ["12345_ReloadDatabase"]),
+                ([ResultCode.QUEUED], ["12345_ReloadDatabase"]),
             ),
             (
                 "GetFndhInfo",
                 "get_fndh_info",
                 None,
                 None,
-                {"foo": "bah"},
-                '{"foo": "bah"}',
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_GetFndhInfo"],
+                ),
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_GetFndhInfo"],
+                ),
             ),
             (
                 "TurnFndhServiceLedOn",
                 "set_fndh_service_led_on",
                 None,
                 True,
-                True,
-                [
+                (
                     [ResultCode.QUEUED],
                     ["12345_TurnFndhServiceLedOn"],
-                ],
+                ),
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_TurnFndhServiceLedOn"],
+                ),
             ),
             (
                 "TurnFndhServiceLedOff",
                 "set_fndh_service_led_on",
                 None,
                 False,
-                True,
-                [
+                (
                     [ResultCode.QUEUED],
                     ["12345_TurnFndhServiceLedOff"],
-                ],
+                ),
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_TurnFndhServiceLedOff"],
+                ),
             ),
             (
                 "GetSmartboxInfo",
                 "get_smartbox_info",
                 1,
                 1,
-                {"foo": "bah"},
-                '{"foo": "bah"}',
+                ([ResultCode.QUEUED], ["12345_GetSmartboxInfo"]),
+                ([ResultCode.QUEUED], ["12345_GetSmartboxInfo"]),
             ),
             (
                 "TurnSmartboxOn",
                 "turn_smartbox_on",
                 1,
                 1,
-                True,
-                [[ResultCode.QUEUED], ["12345_TurnSmartboxOn"]],
+                ([ResultCode.QUEUED], ["12345_TurnSmartboxOn"]),
+                ([ResultCode.QUEUED], ["12345_TurnSmartboxOn"]),
             ),
             (
                 "TurnSmartboxOff",
                 "turn_smartbox_off",
                 1,
                 1,
-                True,
-                [[ResultCode.QUEUED], ["12345_TurnSmartboxOff"]],
+                ([ResultCode.QUEUED], ["12345_TurnSmartboxOff"]),
+                ([ResultCode.QUEUED], ["12345_TurnSmartboxOff"]),
             ),
             (
                 "TurnSmartboxServiceLedOn",
                 "turn_smartbox_service_led_on",
                 1,
                 1,
-                True,
-                [
+                (
                     [ResultCode.QUEUED], ["12345_TurnSmartboxServiceLedOn"],
-                ],
+                ),
+                (
+                    [ResultCode.QUEUED], ["12345_TurnSmartboxServiceLedOn"],
+                ),
             ),
             (
                 "TurnSmartboxServiceLedOn",
                 "turn_smartbox_service_led_on",
                 1,
                 1,
-                False,
-                [
+                (
                     [ResultCode.FAILED],
                     ["PaSD bus 'smartbox 1 service LED on' failed"],
-                ],
+                ),
+                (
+                    [ResultCode.FAILED],
+                    ["PaSD bus 'smartbox 1 service LED on' failed"],
+                ),
             ),
             (
                 "TurnSmartboxServiceLedOn",
                 "turn_smartbox_service_led_on",
                 1,
                 1,
-                None,
-                [
+                (
                     [ResultCode.QUEUED],
                     ["12345_TurnSmartboxServiceLedOn"],
-                ],
+                ),
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_TurnSmartboxServiceLedOn"],
+                ),
             ),
             (
                 "TurnSmartboxServiceLedOff",
                 "turn_smartbox_service_led_off",
                 1,
                 1,
-                True,
-                [
+                (
                     [ResultCode.QUEUED],
                     ["12345_TurnSmartboxServiceLedOff"],
-                ],
+                ),
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_TurnSmartboxServiceLedOff"],
+                ),
             ),
             (
                 "GetAntennaInfo",
                 "get_antenna_info",
                 1,
                 1,
-                {"foo": "bah"},
-                '{"foo": "bah"}',
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_GetAntennaInfo"],
+                ),
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_GetAntennaInfo"],
+                ),
             ),
             (
                 "ResetAntennaBreaker",
                 "reset_antenna_breaker",
                 1,
                 1,
-                True,
-                [
+                (
                     [ResultCode.QUEUED],
                     ["12345_ResetAntennaBreaker"],
-                ],
+                ),
+                (
+                    [ResultCode.QUEUED],
+                    ["12345_ResetAntennaBreaker"],
+                ),
             ),
             (
                 "TurnAntennaOn",
                 "turn_antenna_on",
                 1,
                 1,
-                True,
-                [[ResultCode.QUEUED], ["12345_TurnAntennaOn"]],
+                ([ResultCode.QUEUED], ["12345_TurnAntennaOn"]),
+                ([ResultCode.QUEUED], ["12345_TurnAntennaOn"]),
             ),
             (
                 "TurnAntennaOff",
                 "turn_antenna_off",
                 1,
                 1,
-                True,
-                [[ResultCode.QUEUED], ["12345_TurnAntennaOff"]],
+                ([ResultCode.QUEUED], ["12345_TurnAntennaOff"]),
+                ([ResultCode.QUEUED], ["12345_TurnAntennaOff"]),
             ),
         ],
     )
@@ -436,6 +468,7 @@ class TestMccsPasdBus:
         method_mock.assert_not_called()
 
         command = getattr(device_under_test, device_command)
+
         if device_command_argin is None:
             command_return = command()
         else:

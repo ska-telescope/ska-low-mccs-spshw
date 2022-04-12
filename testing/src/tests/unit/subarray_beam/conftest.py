@@ -13,7 +13,6 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
-
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
@@ -52,6 +51,7 @@ def is_configured_changed_callback(
         detects that whether the beam is configured has changed
     """
     return mock_callback_factory()
+
 
 @pytest.fixture()
 def component_state_changed_callback(

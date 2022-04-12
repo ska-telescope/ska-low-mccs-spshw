@@ -7,8 +7,11 @@
 # See LICENSE for more info.
 import enum
 import logging
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
+from tango.server import Device
+
+from ska_tango_base.base.component_manager import BaseComponentManager
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 

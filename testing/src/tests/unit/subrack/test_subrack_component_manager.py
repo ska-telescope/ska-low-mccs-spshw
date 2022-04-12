@@ -15,9 +15,8 @@ from typing import Any, Union
 import pytest
 from _pytest.fixtures import SubRequest
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState, SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
     SubrackData,
@@ -613,80 +612,85 @@ class TestSubrackComponentManager:
     """Tests of the subrack component manager."""
 
     @pytest.mark.parametrize("tpm_id", [1, 2])
-    def test_tpm_power_modes(
+    def test_tpm_power_states(
         self: TestSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
-        component_power_mode_changed_callback: MockCallable,
-        component_tpm_power_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
         tpm_id: int,
     ) -> None:
         """
-        Test that the callback is called when we change the power mode of an tpm.
-
-        (i.e. turn it on or off).
+        Test that the callback is called when we change the power mode of an tpm (i.e. turn it on or off).
 
         :param subrack_component_manager: the subrack component manager under
             test
-        :param component_power_mode_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the component power mode changes
-        :param component_tpm_power_changed_callback: callback to be
-            called when the power mode of an tpm changes
         :param tpm_id: the number of the tpm to use in the test
         """
-        component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        expected_tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        component_state_changed_callback.assert_next_call(
+            {"tpm_power_states": expected_tpm_power_states}
         )
 
-        component_tpm_power_changed_callback.assert_not_called()
+        component_state_changed_callback.assert_not_called()
 
         subrack_component_manager.start_communicating()
 
-        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
-        assert subrack_component_manager.power_mode == PowerState.OFF
-        component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        component_state_changed_callback.assert_next_call(
+            {"power_state": PowerState.OFF}
+        )
+        assert subrack_component_manager.power_state == PowerState.OFF
+
+        expected_tpm_power_states = [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        component_state_changed_callback.assert_next_call(
+            {"tpm_power_states": expected_tpm_power_states}
         )
 
-        component_tpm_power_changed_callback.assert_not_called()
+        component_state_changed_callback.assert_not_called()
 
         subrack_component_manager.on()
 
-        component_power_mode_changed_callback.assert_next_call(PowerState.ON)
-        assert subrack_component_manager.power_mode == PowerState.ON
+        component_state_changed_callback.assert_next_call(
+            {"power_state": PowerState.ON}
+        )
+        assert subrack_component_manager.power_state == PowerState.ON
 
-        expected_tpm_power_modes = [ExtendedPowerState.OFF] * SubrackData.TPM_BAY_COUNT
-        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
+        expected_tpm_power_states = [PowerState.OFF] * SubrackData.TPM_BAY_COUNT
+        component_state_changed_callback.assert_next_call(expected_tpm_power_states)
 
-        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
-        component_tpm_power_changed_callback.assert_not_called()
+        assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
+        component_state_changed_callback.assert_not_called()
 
         assert subrack_component_manager.turn_on_tpm(tpm_id)
-        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerState.ON
-        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
-        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
+        expected_tpm_power_states[tpm_id - 1] = PowerState.ON
+        component_state_changed_callback.assert_next_call(expected_tpm_power_states)
+        assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
         assert subrack_component_manager.turn_on_tpm(tpm_id) is None
-        component_tpm_power_changed_callback.assert_not_called()
+        component_state_changed_callback.assert_not_called()
 
         assert subrack_component_manager.turn_off_tpm(tpm_id) is True
-        expected_tpm_power_modes[tpm_id - 1] = ExtendedPowerState.OFF
-        component_tpm_power_changed_callback.assert_next_call(expected_tpm_power_modes)
-        assert subrack_component_manager.tpm_power_modes == expected_tpm_power_modes
+        expected_tpm_power_states[tpm_id - 1] = PowerState.OFF
+        component_state_changed_callback.assert_next_call(expected_tpm_power_states)
+        assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
         assert subrack_component_manager.turn_off_tpm(tpm_id) is None
-        component_tpm_power_changed_callback.assert_not_called()
+        component_state_changed_callback.assert_not_called()
 
         assert subrack_component_manager.off() == ResultCode.OK
-        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
-        assert subrack_component_manager.power_mode == PowerState.OFF
-
-        component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        component_state_changed_callback.assert_next_call(
+            {"power_state": PowerState.OFF}
         )
+        assert subrack_component_manager.power_state == PowerState.OFF
 
+        expected_tpm_power_states = [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+        component_state_changed_callback.assert_next_call(
+            {"tpm_power_states": expected_tpm_power_states}
+        )
+        expected_tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         subrack_component_manager.stop_communicating()
-        component_tpm_power_changed_callback.assert_next_call(
-            [ExtendedPowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        component_state_changed_callback.assert_next_call(
+            {"tpm_power_states": expected_tpm_power_states}
         )
 
     def test_component_progress_changed_callback(

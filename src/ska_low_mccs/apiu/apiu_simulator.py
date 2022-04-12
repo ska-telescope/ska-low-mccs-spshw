@@ -95,7 +95,7 @@ class ApiuSimulator(ObjectComponent):
     def __init__(
         self: ApiuSimulator,
         antenna_count: int,
-        component_state_changed_callback: Callable[[str, dict[str, Any]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         initial_fault: bool = False,
     ) -> None:
         """

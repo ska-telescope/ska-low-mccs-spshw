@@ -260,14 +260,14 @@ class ClusterSimulator(ObjectComponent):
         )
         if shadow_master_pool_node_health_changed_callback is not None:
             shadow_master_pool_node_health_changed_callback(
-                self.shadow_master_pool_status
+                {"shadow_master_pool_node_healths": self.shadow_master_pool_status}
             )
 
     def update_shadow_master_pool_node_health(self: ClusterSimulator) -> None:
         """Update the shadow master pool node health, calling callbacks as required."""
         if self._shadow_master_pool_node_health_changed_callback is not None:
             self._shadow_master_pool_node_health_changed_callback(
-                self.shadow_master_pool_status
+                {"shadow_master_pool_node_healths": self.shadow_master_pool_status}
             )
 
     @property
@@ -591,15 +591,13 @@ class ClusterSimulator(ObjectComponent):
         except KeyError as key_error:
             raise ValueError(self.NONEXISTENT_JOB_MESSAGE) from key_error
 
-    def submit_job(self: ClusterSimulator, job_config: JobConfig) -> str:
+    def submit_job(self: ClusterSimulator) -> str:
         """
         Submit a job to the cluster.
 
         Since the JobConfig class is not yet implemented, this simply
         creates a unique job id for the job, registers it as a STAGING
         job, and returns the job id.
-
-        :param job_config: specification of the submitted job
 
         :return: the job_id
         """

@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 import pytest
 import pytest_mock
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
@@ -25,6 +26,25 @@ from ska_low_mccs.testing.mock import (
     MockChangeEventCallback,
     MockDeviceBuilder,
 )
+
+class MockLongRunningCommand(MockCallable):   
+    def __call__(self: MockCallable, *args: Any, **kwargs: Any) -> Any:
+        """
+        Handle a callback call.
+
+        Create a standard mock, call it, and put it on the queue. (This
+        approach lets us take advantange of the mock's assertion
+        functionality later.)
+
+        :param args: positional args in the call
+        :param kwargs: keyword args in the call
+
+        :return: the object's return calue
+        """
+        called_mock = unittest.mock.Mock()
+        called_mock(*args, **kwargs)
+        self._queue.put(called_mock)
+        return TaskStatus.QUEUED, "Task queued"
 
 
 @pytest.fixture()
@@ -337,8 +357,8 @@ def mock_component_manager(
         device.
     """
     mock_component_manager = mocker.Mock()
-    mock_component_manager.apply_pointing = MockCallable()
-    mock_component_manager.configure = MockCallable()
+    mock_component_manager.apply_pointing = MockLongRunningCommand()
+    mock_component_manager.configure = MockLongRunningCommand()
     return mock_component_manager
 
 

@@ -31,7 +31,6 @@ __all__ = ["PowerSupplyProxySimulator"]
 class PowerSupplyProxyComponentManager(MccsComponentManager):
     def __init__(
         self: PowerSupplyProxyComponentManager,
-        component: ObjectComponent,
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],

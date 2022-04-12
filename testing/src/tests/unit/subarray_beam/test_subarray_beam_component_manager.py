@@ -14,7 +14,6 @@ from typing import Any, Callable, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
-
 from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
@@ -157,7 +156,7 @@ class TestSubarrayBeam:
         :param is_component_state_changed_callback: a callback to be called
             when whether the subarray beam component state changes
         """
-        #component_state_changed_callback.assert_next_call({"configured_changed": False})
+        # component_state_changed_callback.assert_next_call({"configured_changed": False})
 
         subarray_beam_id = 1
         station_ids = [1, 2]
@@ -178,7 +177,7 @@ class TestSubarrayBeam:
                 antenna_weights,
                 phase_centre,
             )
-            #component_state_changed_callback.assert_next_call({"configured_changed": True})
+            # component_state_changed_callback.assert_next_call({"configured_changed": True})
 
             assert subarray_beam.subarray_beam_id == subarray_beam_id
             assert subarray_beam.station_ids == station_ids
@@ -187,16 +186,16 @@ class TestSubarrayBeam:
             assert subarray_beam.desired_pointing == pytest.approx(desired_pointing)
             assert subarray_beam.antenna_weights == pytest.approx(antenna_weights)
             assert subarray_beam.phase_centre == pytest.approx(phase_centre)
-        
+
         if isinstance(subarray_beam, SubarrayBeamComponentManager):
             config = {
-            "subarray_beam_id": subarray_beam_id,
-            "station_ids": [station_ids],
-            "update_rate": update_rate,
-            "channels": [channels],
-            "sky_coordinates": [desired_pointing],
-            "antenna_weights": [antenna_weights],
-            "phase_centre": [phase_centre],
+                "subarray_beam_id": subarray_beam_id,
+                "station_ids": [station_ids],
+                "update_rate": update_rate,
+                "channels": [channels],
+                "sky_coordinates": [desired_pointing],
+                "antenna_weights": [antenna_weights],
+                "phase_centre": [phase_centre],
             }
 
             config_dict = json.dumps(config)
@@ -204,5 +203,5 @@ class TestSubarrayBeam:
             task_status, response = subarray_beam.configure(config_dict)
 
             assert task_status == TaskStatus.QUEUED
-            #assert unique_id.split("_")[-1] == "configure"
+            # assert unique_id.split("_")[-1] == "configure"
             assert response == "Task queued"

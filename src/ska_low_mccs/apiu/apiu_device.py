@@ -11,7 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import threading
-from typing import Any, cast, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.base import SKABaseDevice
@@ -198,7 +198,7 @@ class MccsAPIU(SKABaseDevice):
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:
-                self._health_state = cast(HealthState,health)
+                self._health_state = cast(HealthState, health)
                 self.push_change_event("healthState", health)
 
         if "are_antennas_on" in state_change.keys():

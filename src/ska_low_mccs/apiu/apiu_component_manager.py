@@ -358,7 +358,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_callback:
-            task_callback(status=TaskStatus.COMPLETED, result="Off command has completed")
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Off command has completed"
+            )
 
     def off(
         self: ApiuComponentManager,
@@ -408,7 +410,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_callback:
-            task_callback(status=TaskStatus.COMPLETED, result="Off command has completed")
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Off command has completed"
+            )
 
     def power_up_antenna(
         self: ApiuComponentManager,
@@ -573,7 +577,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         if task_callback:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The antenna all on task has completed"
+                status=TaskStatus.COMPLETED,
+                result="The antenna all on task has completed",
             )
 
     def _turn_off_antennas(
@@ -600,5 +605,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         if task_callback:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The antenna all off task has completed"
+                status=TaskStatus.COMPLETED,
+                result="The antenna all off task has completed",
             )

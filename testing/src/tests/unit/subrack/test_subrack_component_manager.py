@@ -619,8 +619,7 @@ class TestSubrackComponentManager:
         tpm_id: int,
     ) -> None:
         """
-        Test that the callback is called when we change the power mode of an tpm.
-        (i.e. turn it on or off).
+        Test that the callback is called when we change the power mode of an tpm (i.e. turn it on or off).
 
         :param subrack_component_manager: the subrack component manager under
             test
@@ -637,8 +636,9 @@ class TestSubrackComponentManager:
 
         subrack_component_manager.start_communicating()
 
-        component_state_changed_callback.assert_next_call({
-            "power_state": PowerState.OFF})
+        component_state_changed_callback.assert_next_call(
+            {"power_state": PowerState.OFF}
+        )
         assert subrack_component_manager.power_state == PowerState.OFF
 
         expected_tpm_power_states = [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
@@ -651,7 +651,7 @@ class TestSubrackComponentManager:
         subrack_component_manager.on()
 
         component_state_changed_callback.assert_next_call(
-            {"power_state":PowerState.ON}
+            {"power_state": PowerState.ON}
         )
         assert subrack_component_manager.power_state == PowerState.ON
 
@@ -679,7 +679,7 @@ class TestSubrackComponentManager:
 
         assert subrack_component_manager.off() == ResultCode.OK
         component_state_changed_callback.assert_next_call(
-            {"power_state":PowerState.OFF}
+            {"power_state": PowerState.OFF}
         )
         assert subrack_component_manager.power_state == PowerState.OFF
 

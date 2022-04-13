@@ -12,7 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import threading
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.base import SKABaseDevice
@@ -259,7 +259,7 @@ class MccsSubrack(SKABaseDevice):
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:
-                self._health_state = health
+                self._health_state = cast(HealthState, health)
                 self.push_change_event("healthState", health)
 
         if "tpm_power_states" in state_change.keys():
@@ -744,7 +744,7 @@ class MccsSubrack(SKABaseDevice):
 
         def __init__(
             self: MccsSubrack.SetSubrackFanSpeedCommand,
-            component_manager,
+            component_manager: SubrackComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """

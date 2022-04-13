@@ -123,7 +123,7 @@ class SubrackDriver(MccsComponentManager):
         super().start_communicating()
         task_status, response = self.submit_task(
             self._connect_to_subrack, args=[], task_callback=None
-            )
+        )
 
         # self.connect_to_subrack()
 
@@ -137,6 +137,9 @@ class SubrackDriver(MccsComponentManager):
 
         This contains the actual communication logic that is enqueued to
         be run asynchronously.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code and message
         """

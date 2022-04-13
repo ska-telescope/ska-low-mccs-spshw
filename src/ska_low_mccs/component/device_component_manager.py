@@ -9,6 +9,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
+import threading
 from typing import Any, Callable, Optional
 
 import tango
@@ -73,56 +74,46 @@ class DeviceComponentManager(MccsComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-        # connect_command = self.ConnectToDevice()
-        # Enqueue the connect command
-        # _ = self.enqueue(connect_command)
 
-    class ConnectToDeviceBase(SlowCommand):
-        """Base command class for connection to be enqueued."""
+        task_status, response = self.submit_task(
+            self._connect_to_device, args=[], task_callback=None
+        )
 
-        def do(  # type: ignore[override]
-            self: DeviceComponentManager.ConnectToDeviceBase,
-        ) -> tuple[ResultCode, str]:
-            """
-            Establish communication with the component, then start monitoring.
-
-            This contains the actual communication logic that is enqueued to
-            be run asynchronously.
-
-            :raises ConnectionError: if the attempt to establish
-                communication with the channel fails.
-            :return: a result code and message
-            """
-            self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
-            try:
-                self._proxy.connect()
-            except tango.DevFailed as dev_failed:
-                self._proxy = None
-                raise ConnectionError(
-                    f"Could not connect to '{self._fqdn}'"
-                ) from dev_failed
-
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
-            self._proxy.add_change_event_callback("state", self._device_state_changed)
-
-            if self._health_changed_callback is not None:
-                self._proxy.add_change_event_callback(
-                    "healthState", self._device_health_state_changed
-                )
-                self._proxy.add_change_event_callback(
-                    "adminMode", self._device_admin_mode_changed
-                )
-            return ResultCode.OK, f"Connected to '{self._fqdn}'"
-
-    class ConnectToDevice(ConnectToDeviceBase):
+    def _connect_to_device(
+        self: DeviceComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> tuple[ResultCode, str]:
         """
-        General connection command class.
+        Establish communication with the component, then start monitoring.
 
-        Class that can be overridden by a derived class or instantiated
-        at the DeviceComponentManager level.
+        This contains the actual communication logic that is enqueued to
+        be run asynchronously.
+
+        :raises ConnectionError: if the attempt to establish
+            communication with the channel fails.
+        :return: a result code and message
         """
+        self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
+        try:
+            self._proxy.connect()
+        except tango.DevFailed as dev_failed:
+            self._proxy = None
+            raise ConnectionError(
+                f"Could not connect to '{self._fqdn}'"
+            ) from dev_failed
 
-        pass
+        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self._proxy.add_change_event_callback("state", self._device_state_changed)
+
+        if self._health_changed_callback is not None:
+            self._proxy.add_change_event_callback(
+                "healthState", self._device_health_state_changed
+            )
+            self._proxy.add_change_event_callback(
+                "adminMode", self._device_admin_mode_changed
+            )
+        return ResultCode.OK, f"Connected to '{self._fqdn}'"
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
@@ -269,16 +260,20 @@ class DeviceComponentManager(MccsComponentManager):
                 self._component_state_changed_callback({"fault": True})
             elif event_value != tango.DevState.FAULT and self.faulty:
                 self._component_state_changed_callback({"fault": False})
-    
+
             with self._power_state_lock:
                 if event_value == tango.DevState.OFF:
-                    self._component_state_changed_callback({"power_state": PowerState.OFF})
+                    self._component_state_changed_callback(
+                        {"power_state": PowerState.OFF}
+                    )
                 elif event_value == tango.DevState.STANDBY:
                     self._component_state_changed_callback(
                         {"power_state": PowerState.STANDBY}
                     )
                 elif event_value == tango.DevState.ON:
-                    self._component_state_changed_callback({"power_state": PowerState.ON})
+                    self._component_state_changed_callback(
+                        {"power_state": PowerState.ON}
+                    )
                 else:  # INIT, DISABLE, UNKNOWN, FAULT
                     self._component_state_changed_callback(
                         {"power_state": PowerState.UNKNOWN}

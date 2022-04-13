@@ -188,6 +188,7 @@ class MccsController(SKABaseDevice):
     def _component_state_changed_callback(
         self: MccsController,
         state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
     ) -> None:
         """
         Handle change in the state of the component.
@@ -196,6 +197,7 @@ class MccsController(SKABaseDevice):
         the state of the component changes.
 
         :param state_change: the state of the component.
+        :param fqdn: The fqdn of the device.
         """
         action_map = {
             PowerState.OFF: "component_off",

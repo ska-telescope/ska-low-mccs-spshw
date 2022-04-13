@@ -11,7 +11,6 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 from typing import Any, Callable, Optional
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus
 from ska_tango_base.executor import TaskStatus
 
@@ -124,6 +123,8 @@ class ObjectComponentManager(MccsComponentManager):
         """
         Turn the component off.
 
+        :param task_callback: Update task state, defaults to None
+
         :return: a taskstatus and message.
         """
         return self._component.off()
@@ -134,6 +135,8 @@ class ObjectComponentManager(MccsComponentManager):
     ) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
+
+        :param task_callback: Update task state, defaults to None
 
         :return: a taskstatus and message
         """
@@ -146,6 +149,8 @@ class ObjectComponentManager(MccsComponentManager):
         """
         Turn the component on.
 
+        :param task_callback: Update task state, defaults to None
+
         :return: a taskstatus and message
         """
         return self._component.on()
@@ -156,6 +161,8 @@ class ObjectComponentManager(MccsComponentManager):
     ) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
+
+        :param task_callback: Update task state, defaults to None
 
         :return: a taskstatus and message
         """

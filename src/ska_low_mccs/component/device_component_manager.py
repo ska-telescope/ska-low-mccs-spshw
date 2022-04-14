@@ -21,6 +21,7 @@ from ska_tango_base.control_model import (
     ObsState,
     PowerState,
 )
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import MccsComponentManager, check_communicating
@@ -59,6 +60,10 @@ class DeviceComponentManager(MccsComponentManager):
         self._device_health_state = HealthState.UNKNOWN
         self._device_admin_mode = AdminMode.OFFLINE
         self._component_state_changed_callback = component_state_changed_callback
+        self._event_callbacks = {
+            "healthState": self._device_health_state_changed,
+            "adminMode": self._device_admin_mode_changed,
+        }
 
         super().__init__(
             logger,
@@ -76,25 +81,30 @@ class DeviceComponentManager(MccsComponentManager):
         super().start_communicating()
 
         task_status, response = self.submit_task(
-            self._connect_to_device, args=[], task_callback=None
+            self._connect_to_device, args=[self._event_callbacks], task_callback=None
         )
 
     def _connect_to_device(
         self: DeviceComponentManager,
+        event_callbacks: dict[str, Callable],
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> None:
         """
         Establish communication with the component, then start monitoring.
 
         This contains the actual communication logic that is enqueued to
         be run asynchronously.
 
+        :param event_callbacks: a dictionary of event callbacks
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
         :raises ConnectionError: if the attempt to establish
             communication with the channel fails.
-        :return: a result code and message
         """
         print(f"CONNECTING PROXY {self._fqdn}")
+        task_callback(status=TaskStatus.IN_PROGRESS)
         self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
         try:
             print("before proxy connect")
@@ -111,15 +121,19 @@ class DeviceComponentManager(MccsComponentManager):
         print(f"{self._fqdn}: AFTER comms status: {self.communication_status}")
         self._proxy.add_change_event_callback("state", self._device_state_changed)
 
-        self._proxy.add_change_event_callback(
-            "healthState", self._device_health_state_changed
-        )
-        self._proxy.add_change_event_callback(
-            "adminMode", self._device_admin_mode_changed
-        )
+
         print(f"Connected to '{self._fqdn}'")
         print(self.communication_status)
-        return ResultCode.OK, f"Connected to '{self._fqdn}'"
+
+        # TODO: Determine if we need this IF
+        #if self._health_changed_callback is not None:
+        for event, callback in event_callbacks.items():
+            self._proxy.add_change_event_callback(event, callback)
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result=f"Connected to '{self._fqdn}'"
+            )
 
     class ConnectToDeviceBase(SlowCommand):
         """Base command class for connection to be enqueued."""
@@ -419,32 +433,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
             communication_status_changed_callback,
             component_state_changed_callback,
         )
-
-    class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
-        """
-        General connection command class.
-
-        Class that can be overridden by a derived class or instantiated
-        at the DeviceComponentManager level.
-        """
-
-        def do(  # type: ignore[override]
-            self: ObsDeviceComponentManager.ConnectToDevice,
-        ) -> tuple[ResultCode, str]:
-            """
-            Establish communication with the component, then start monitoring.
-
-            This contains the actual communication logic that is enqueued to
-            be run asynchronously.
-
-            :return: a result code and message
-            """
-            result_code, message = super().do()
-            assert self.target._proxy is not None  # for the type checker
-            self.target._proxy.add_change_event_callback(
-                "obsState", self.target._obs_state_changed
-            )
-            return result_code, message
+        self._event_callbacks["obsState"] = self._obs_state_changed
 
     def _obs_state_changed(
         self: ObsDeviceComponentManager,

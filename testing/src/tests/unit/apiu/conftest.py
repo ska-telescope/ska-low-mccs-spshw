@@ -22,6 +22,7 @@ from ska_low_mccs.apiu import (
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
 )
+from ska_low_mccs.testing.mock import MockCallable
 
 
 @pytest.fixture()

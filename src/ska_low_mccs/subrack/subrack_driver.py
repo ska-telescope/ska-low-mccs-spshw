@@ -24,6 +24,7 @@ These assumptions may need to change in future.
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
+import threading
 import time
 from typing import Any, Callable, List, Optional, cast
 
@@ -120,16 +121,25 @@ class SubrackDriver(MccsComponentManager):
     def start_communicating(self: SubrackDriver) -> None:
         """Establish communication with the subrack."""
         super().start_communicating()
-        self.connect_to_subrack()
+        task_status, response = self.submit_task(
+            self._connect_to_subrack, args=[], task_callback=None
+        )
 
-    def connect_to_subrack(
-        self: SubrackDriver.ConnectToSubrack,
+        # self.connect_to_subrack()
+
+    def _connect_to_subrack(
+        self: SubrackDriver,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> tuple[ResultCode, str]:
         """
         Establish communication with the subrack, then start monitoring.
 
         This contains the actual communication logic that is enqueued to
         be run asynchronously.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code and message
         """

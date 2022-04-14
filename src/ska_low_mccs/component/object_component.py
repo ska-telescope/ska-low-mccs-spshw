@@ -10,7 +10,6 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import Any, Callable, Optional
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerState
 from ska_tango_base.executor import TaskStatus
 

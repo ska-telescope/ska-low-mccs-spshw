@@ -140,7 +140,6 @@ class MccsSubarray(SKASubarray):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
-        print(f"Entered cpt state changed with: {state_change}")
         # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
         # valid_device_types = {"station": "station_health_changed",
         #                     "beam": "station_beam_health_changed",

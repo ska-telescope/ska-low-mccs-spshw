@@ -94,26 +94,79 @@ class DeviceComponentManager(MccsComponentManager):
             communication with the channel fails.
         :return: a result code and message
         """
+        print(f"CONNECTING PROXY {self._fqdn}")
         self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
         try:
+            print("before proxy connect")
             self._proxy.connect()
+            print("after proxy connect")
         except tango.DevFailed as dev_failed:
             self._proxy = None
             raise ConnectionError(
                 f"Could not connect to '{self._fqdn}'"
             ) from dev_failed
-
+        print(f"{self._fqdn}: BEFORE comms status: {self.communication_status}")
+        print(f"{self._fqdn}: updating comms status")
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        print(f"{self._fqdn}: AFTER comms status: {self.communication_status}")
         self._proxy.add_change_event_callback("state", self._device_state_changed)
 
-        if self._health_changed_callback is not None:
-            self._proxy.add_change_event_callback(
-                "healthState", self._device_health_state_changed
-            )
-            self._proxy.add_change_event_callback(
-                "adminMode", self._device_admin_mode_changed
-            )
+        self._proxy.add_change_event_callback(
+            "healthState", self._device_health_state_changed
+        )
+        self._proxy.add_change_event_callback(
+            "adminMode", self._device_admin_mode_changed
+        )
+        print(f"Connected to '{self._fqdn}'")
+        print(self.communication_status)
         return ResultCode.OK, f"Connected to '{self._fqdn}'"
+
+    class ConnectToDeviceBase(SlowCommand):
+        """Base command class for connection to be enqueued."""
+
+        def do(  # type: ignore[override]
+            self: DeviceComponentManager.ConnectToDeviceBase,
+        ) -> tuple[ResultCode, str]:
+            """
+            Establish communication with the component, then start monitoring.
+
+            This contains the actual communication logic that is enqueued to
+            be run asynchronously.
+
+            :raises ConnectionError: if the attempt to establish
+                communication with the channel fails.
+            :return: a result code and message
+            """
+            self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
+            try:
+                self._proxy.connect()
+            except tango.DevFailed as dev_failed:
+                self._proxy = None
+                raise ConnectionError(
+                    f"Could not connect to '{self._fqdn}'"
+                ) from dev_failed
+
+            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self._proxy.add_change_event_callback("state", self._device_state_changed)
+
+            if self._health_changed_callback is not None:
+                self._proxy.add_change_event_callback(
+                    "healthState", self._device_health_state_changed
+                )
+                self._proxy.add_change_event_callback(
+                    "adminMode", self._device_admin_mode_changed
+                )
+            return ResultCode.OK, f"Connected to '{self._fqdn}'"
+
+    class ConnectToDevice(ConnectToDeviceBase):
+        """
+        General connection command class.
+
+        Class that can be overridden by a derived class or instantiated
+        at the DeviceComponentManager level.
+        """
+
+        pass
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""

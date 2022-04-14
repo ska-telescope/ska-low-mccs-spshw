@@ -619,7 +619,8 @@ class TestSubrackComponentManager:
         tpm_id: int,
     ) -> None:
         """
-        Test that the callback is called when we change the power mode of an tpm (i.e. turn it on or off).
+        Test that the callback is called when we change the power mode of an tpm. (i.e.
+        turn it on or off).
 
         :param subrack_component_manager: the subrack component manager under
             test

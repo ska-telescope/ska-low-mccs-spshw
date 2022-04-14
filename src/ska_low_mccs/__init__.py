@@ -65,7 +65,8 @@ from .station import MccsStation
 from .station_beam import MccsStationBeam
 from .subarray import MccsSubarray
 
-# from .subarray_beam import MccsSubarrayBeam
+from .subarray_beam import MccsSubarrayBeam
+
 # from .subrack import MccsSubrack
 # from .tel_state import MccsTelState
 # from .tile import MccsTile

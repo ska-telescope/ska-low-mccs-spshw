@@ -220,6 +220,16 @@ def tpm_version() -> str:
 
 
 @pytest.fixture()
+def tile_id() -> int:
+    """
+    Return the tile id.
+
+    :return: the tile id
+    """
+    return 1
+
+
+@pytest.fixture()
 def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     """
     Return a static TPM simulator.
@@ -314,10 +324,11 @@ def switching_tpm_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
+    max_workers: int,
+    tile_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    max_workers,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingTpmComponentManager:
@@ -334,6 +345,7 @@ def switching_tpm_component_manager(
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param max_workers: nos. of worker threads
+    :param tile_id: the unique ID for the tile
     :param communication_status_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
@@ -347,11 +359,11 @@ def switching_tpm_component_manager(
         simulation_mode,
         test_mode,
         logger,
-        1,  # default tile_id
+        max_workers,
+        tile_id,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        max_workers,
         communication_status_changed_callback,
         component_state_changed_callback,
     )
@@ -363,12 +375,13 @@ def tile_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
+    max_workers: int,
+    tile_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
     subrack_fqdn: str,
     subrack_tpm_id: int,
-    max_workers: int,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> TileComponentManager:
@@ -382,6 +395,7 @@ def tile_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
+    :param tile_id: the unique ID for the tile
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -401,13 +415,13 @@ def tile_component_manager(
         simulation_mode,
         test_mode,
         logger,
-        1,  # default tile_id
+        max_workers,
+        tile_id,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
         subrack_fqdn,
         subrack_tpm_id,
-        max_workers,
         communication_status_changed_callback,
         component_state_changed_callback,
     )

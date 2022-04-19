@@ -5,6 +5,8 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+from enum import IntEnum
+from typing import Any, Callable, Optional
 
 class TaskStatus(IntEnum):
     STAGING = 0

@@ -16,7 +16,6 @@ import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, ObsState, PowerState
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subarray import SubarrayComponentManager
 from ska_low_mccs.testing.mock import MockCallable

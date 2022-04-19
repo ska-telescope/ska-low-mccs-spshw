@@ -12,7 +12,7 @@ import logging
 import threading
 from typing import Any, Callable, Optional
 
-from ska_tango_base.base import TaskExecutorComponentManager
+from ska_tango_base.base.component_manager import TaskExecutorComponentManager
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 from typing_extensions import Protocol

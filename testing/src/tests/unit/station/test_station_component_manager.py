@@ -29,7 +29,7 @@ class TestStationComponentManager:
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
         communication_status_changed_callback: MockCallable,
-        is_configured_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the station component manager's management of communication.
@@ -46,6 +46,7 @@ class TestStationComponentManager:
             station_component_manager.communication_status
             == CommunicationStatus.DISABLED
         )
+        print("1 component manager comms status = ", station_component_manager._communication_status)
 
         station_component_manager.start_communicating()
         communication_status_changed_callback.assert_next_call(
@@ -54,12 +55,23 @@ class TestStationComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
+        print("1 component manager comms status = ", station_component_manager._communication_status)
         assert (
             station_component_manager.communication_status
             == CommunicationStatus.ESTABLISHED
         )
 
-        is_configured_changed_callback.assert_next_call(False)
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        component_state_changed_callback.assert_last_call({"is_configured": False})
+        #is_configured_changed_callback.assert_next_call(False)
 
         station_component_manager.stop_communicating()
         communication_status_changed_callback.assert_next_call(

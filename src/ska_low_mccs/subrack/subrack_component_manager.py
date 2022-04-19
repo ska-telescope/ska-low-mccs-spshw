@@ -363,8 +363,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         self._tpm_power_states_lock = threading.Lock()
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-        self._tpm_power_changed_callback = component_state_changed_callback
-        self._tpm_power_changed_callback({"tpm_power_states": self._tpm_power_states})
         self._component_state_changed_callback = component_state_changed_callback
 
         hardware_component_manager = SwitchingSubrackComponentManager(
@@ -439,7 +437,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if self._tpm_power_states == tpm_power_states:
             return
         self._tpm_power_states = list(tpm_power_states)
-        self._tpm_power_changed_callback({"tpm_power_states": tpm_power_states})
+        self._component_state_changed_callback({"tpm_power_states": tpm_power_states})
 
     def _power_supply_communication_status_changed(
         self: SubrackComponentManager,

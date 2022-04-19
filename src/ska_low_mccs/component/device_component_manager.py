@@ -9,6 +9,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
+import threading
 from typing import Any, Callable, Optional
 
 import tango
@@ -20,6 +21,7 @@ from ska_tango_base.control_model import (
     ObsState,
     PowerState,
 )
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import MccsComponentManager, check_communicating
@@ -58,6 +60,10 @@ class DeviceComponentManager(MccsComponentManager):
         self._device_health_state = HealthState.UNKNOWN
         self._device_admin_mode = AdminMode.OFFLINE
         self._component_state_changed_callback = component_state_changed_callback
+        self._event_callbacks = {
+            "healthState": self._device_health_state_changed,
+            "adminMode": self._device_admin_mode_changed,
+        }
 
         super().__init__(
             logger,
@@ -73,56 +79,51 @@ class DeviceComponentManager(MccsComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-        # connect_command = self.ConnectToDevice()
-        # Enqueue the connect command
-        # _ = self.enqueue(connect_command)
 
-    class ConnectToDeviceBase(SlowCommand):
-        """Base command class for connection to be enqueued."""
+        task_status, response = self.submit_task(
+            self._connect_to_device, args=[self._event_callbacks], task_callback=None
+        )
 
-        def do(  # type: ignore[override]
-            self: DeviceComponentManager.ConnectToDeviceBase,
-        ) -> tuple[ResultCode, str]:
-            """
-            Establish communication with the component, then start monitoring.
-
-            This contains the actual communication logic that is enqueued to
-            be run asynchronously.
-
-            :raises ConnectionError: if the attempt to establish
-                communication with the channel fails.
-            :return: a result code and message
-            """
-            self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
-            try:
-                self._proxy.connect()
-            except tango.DevFailed as dev_failed:
-                self._proxy = None
-                raise ConnectionError(
-                    f"Could not connect to '{self._fqdn}'"
-                ) from dev_failed
-
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
-            self._proxy.add_change_event_callback("state", self._device_state_changed)
-
-            if self._health_changed_callback is not None:
-                self._proxy.add_change_event_callback(
-                    "healthState", self._device_health_state_changed
-                )
-                self._proxy.add_change_event_callback(
-                    "adminMode", self._device_admin_mode_changed
-                )
-            return ResultCode.OK, f"Connected to '{self._fqdn}'"
-
-    class ConnectToDevice(ConnectToDeviceBase):
+    def _connect_to_device(
+        self: DeviceComponentManager,
+        event_callbacks: dict[str, Callable],
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
-        General connection command class.
+        Establish communication with the component, then start monitoring.
 
-        Class that can be overridden by a derived class or instantiated
-        at the DeviceComponentManager level.
+        This contains the actual communication logic that is enqueued to
+        be run asynchronously.
+
+        :param event_callbacks: a dictionary of event callbacks
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises ConnectionError: if the attempt to establish
+            communication with the channel fails.
         """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+        self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
+        try:
+            self._proxy.connect()
+        except tango.DevFailed as dev_failed:
+            self._proxy = None
+            raise ConnectionError(
+                f"Could not connect to '{self._fqdn}'"
+            ) from dev_failed
 
-        pass
+        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self._proxy.add_change_event_callback("state", self._device_state_changed)
+
+        if self._health_changed_callback is not None:
+            for event, callback in event_callbacks.items():
+                self._proxy.add_change_event_callback(event, callback)
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result=f"Connected to '{self._fqdn}'"
+            )
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
@@ -375,32 +376,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
             communication_status_changed_callback,
             component_state_changed_callback,
         )
-
-    class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
-        """
-        General connection command class.
-
-        Class that can be overridden by a derived class or instantiated
-        at the DeviceComponentManager level.
-        """
-
-        def do(  # type: ignore[override]
-            self: ObsDeviceComponentManager.ConnectToDevice,
-        ) -> tuple[ResultCode, str]:
-            """
-            Establish communication with the component, then start monitoring.
-
-            This contains the actual communication logic that is enqueued to
-            be run asynchronously.
-
-            :return: a result code and message
-            """
-            result_code, message = super().do()
-            assert self.target._proxy is not None  # for the type checker
-            self.target._proxy.add_change_event_callback(
-                "obsState", self.target._obs_state_changed
-            )
-            return result_code, message
+        self._event_callbacks["obsState"] = self._obs_state_changed
 
     def _obs_state_changed(
         self: ObsDeviceComponentManager,

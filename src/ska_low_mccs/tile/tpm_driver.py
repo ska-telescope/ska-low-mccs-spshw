@@ -96,6 +96,7 @@ class TpmDriver(MccsComponentManager):
         :param component_state_changed_callback: callback to be called when the
             component state changes.
         """
+        self.logger = logger
         self._hardware_lock = threading.RLock()
         self._is_programmed = False
         self._is_beamformer_running = False
@@ -521,7 +522,7 @@ class TpmDriver(MccsComponentManager):
         raise NotImplementedError
 
     def _initialise(
-        self: TpmDriver.Initialise,
+        self: TpmDriver,
         task_callback: Callable = None,
         task_abort_event: threading.Event = None,
     ):

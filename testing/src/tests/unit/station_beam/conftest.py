@@ -17,11 +17,7 @@ import tango
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
 
 
 @pytest.fixture()

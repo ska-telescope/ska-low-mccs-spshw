@@ -31,7 +31,6 @@ __all__ = ["PowerSupplyProxySimulator"]
 class PowerSupplyProxyComponentManager(MccsComponentManager):
     def __init__(
         self: PowerSupplyProxyComponentManager,
-        component: ObjectComponent,
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -410,7 +409,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
     @check_communicating
     def off(
-        self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None
+        self: ComponentManagerWithUpstreamPowerSupply,
     ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the hardware off.
@@ -419,13 +418,13 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         """
         with self._power_state_lock:
             self._target_power_state = PowerState.OFF
-        rc = self._review_power()
-        # TODO sort out rc
+        self._review_power()
+        # TODO sort out return from review_power
         return TaskStatus.COMPLETED, "Ignore return code for now"
 
     # @check_communicating
     def on(
-        self: ComponentManagerWithUpstreamPowerSupply, argin: Any = None
+        self: ComponentManagerWithUpstreamPowerSupply,
     ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the hardware off.
@@ -434,8 +433,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         """
         with self._power_state_lock:
             self._target_power_state = PowerState.ON
-        rc = self._review_power()
-        # TODO sort out rc
+        self._review_power()
+        # TODO sort out return from review_power
         return TaskStatus.COMPLETED, "Ignore return code for now"
 
     @threadsafe

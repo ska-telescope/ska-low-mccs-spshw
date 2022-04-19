@@ -10,7 +10,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import threading
-from typing import Any, cast, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.base import SKABaseDevice
@@ -188,6 +188,7 @@ class MccsController(SKABaseDevice):
     def _component_state_changed_callback(
         self: MccsController,
         state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
     ) -> None:
         """
         Handle change in the state of the component.
@@ -196,6 +197,7 @@ class MccsController(SKABaseDevice):
         the state of the component changes.
 
         :param state_change: the state of the component.
+        :param fqdn: The fqdn of the device.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -214,7 +216,7 @@ class MccsController(SKABaseDevice):
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:
-                self._health_state = cast(HealthState,health)
+                self._health_state = cast(HealthState, health)
                 self.push_change_event("healthState", health)
 
         if "fault" in state_change.keys():

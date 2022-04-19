@@ -22,6 +22,7 @@ from ska_low_mccs.apiu import (
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
 )
+from ska_low_mccs.testing.mock import MockCallable
 
 
 @pytest.fixture()
@@ -86,7 +87,7 @@ def apiu_simulator(
     Return an APIU simulator (This is a pytest fixture).
 
     :param apiu_antenna_count: the number of antennas in the APIU
-    :param component_state_callback: callback to be called when the
+    :param component_state_changed_callback: callback to be called when the
             component faults (or stops faulting)
     :param initial_fault: whether the simulator should start by
         simulating a fault.

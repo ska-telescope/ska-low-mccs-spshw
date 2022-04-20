@@ -956,13 +956,14 @@ class TestDriverCommon:
             self: TestDriverCommon.PatchedTpmDriver,
             logger: logging.Logger,
             max_workers: int,
+            tile_id: int,
             ip: str,
             port: int,
             tpm_version: str,
             communication_status_changed_callback: Callable[
                 [CommunicationStatus], None
             ],
-            component_state_callback: Callable[[bool], None],
+            component_state_changed_callback: Callable[[bool], None],
             aavs_tile: unittest.mock.Mock,
         ) -> None:
             """
@@ -970,25 +971,26 @@ class TestDriverCommon:
 
             :param logger: a logger for this simulator to use
             :param max_workers: nos of worker threads
+            :param tile_id: the unique ID for the tile
             :param ip: IP address for hardware tile
             :param port: IP address for hardware tile control
             :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
             :param communication_status_changed_callback: callback to be
                 called when the status of the communications channel between
                 the component manager and its component changes
-            :param component_state_callback: callback to be called when the
+            :param component_state_changed_callback: callback to be called when the
                 component faults (or stops faulting)
             :param aavs_tile: a mock of the hardware tile
             """
             super().__init__(
                 logger,
                 max_workers,
-                1,  # default tile_id
+                tile_id,
                 ip,
                 port,
                 tpm_version,
                 communication_status_changed_callback,
-                component_state_callback,
+                component_state_changed_callback,
             )
             self.tile = aavs_tile
 
@@ -996,12 +998,13 @@ class TestDriverCommon:
     def patched_tpm_driver(
         self: TestDriverCommon,
         logger: logging.Logger,
+        max_workers: int,
+        tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
-        max_workers: int,
         communication_status_changed_callback: MockCallable,
-        component_state_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
         hardware_tile_mock: unittest.mock.Mock,
     ) -> PatchedTpmDriver:
         """
@@ -1009,13 +1012,14 @@ class TestDriverCommon:
 
         :param logger: the logger to be used by this object
         :param max_workers: nos of worker threads
+        :param tile_id: the unique ID for the tile
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_state_callback: callback to be called when the
+        :param component_state_changed_callback: callback to be called when the
             component faults (or stops faulting)
         :param hardware_tile_mock: a mock of the hardware tile
 
@@ -1024,11 +1028,12 @@ class TestDriverCommon:
         return self.PatchedTpmDriver(
             logger,
             max_workers,
+            tile_id,
             tpm_ip,
             tpm_cpld_port,
             tpm_version,
             communication_status_changed_callback,
-            component_state_callback,
+            component_state_changed_callback,
             hardware_tile_mock,
         )
 

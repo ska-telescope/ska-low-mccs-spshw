@@ -79,7 +79,6 @@ class DeviceComponentManager(MccsComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-
         task_status, response = self.submit_task(
             self._connect_to_device, args=[self._event_callbacks], task_callback=None
         )
@@ -103,30 +102,23 @@ class DeviceComponentManager(MccsComponentManager):
         :raises ConnectionError: if the attempt to establish
             communication with the channel fails.
         """
-        print(f"CONNECTING PROXY {self._fqdn}")
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
         try:
-            print("before proxy connect")
             self._proxy.connect()
-            print("after proxy connect")
         except tango.DevFailed as dev_failed:
             self._proxy = None
             raise ConnectionError(
                 f"Could not connect to '{self._fqdn}'"
             ) from dev_failed
-        print(f"{self._fqdn}: BEFORE comms status: {self.communication_status}")
-        print(f"{self._fqdn}: updating comms status")
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
-        print(f"{self._fqdn}: AFTER comms status: {self.communication_status}")
+
         self._proxy.add_change_event_callback("state", self._device_state_changed)
 
-
         print(f"Connected to '{self._fqdn}'")
-        print(self.communication_status)
+        print(self.power_state)
 
-        # TODO: Determine if we need this IF
-        #if self._health_changed_callback is not None:
         for event, callback in event_callbacks.items():
             self._proxy.add_change_event_callback(event, callback)
 

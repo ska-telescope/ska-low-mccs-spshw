@@ -18,8 +18,12 @@ from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
-
+from ska_low_mccs.testing.mock import (
+    MockCallable,
+    MockChangeEventCallback,
+    MockDeviceBuilder,
+)
+from ska_tango_base.control_model import PowerState
 
 @pytest.fixture()
 def component_state_changed_callback(
@@ -604,8 +608,8 @@ def start_time() -> float:
 @pytest.fixture()
 def max_workers() -> int:
     """
-    Return a value for max_workers.
+    Return a value for max_workers for use in testing.
 
-    :return: maximum number of workers in thread pool.
+    :return: maximum number of workers in thread pool for use in testing.
     """
     return 2

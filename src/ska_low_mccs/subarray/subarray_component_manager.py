@@ -601,6 +601,8 @@ class SubarrayComponentManager(
             station_fqdn = f"low-mccs/station/{station_id:03d}"
             station_proxy = self._stations[station_fqdn]
             print(f"-- before configure call for {station_fqdn}")
+            print(station_proxy.communication_status)
+            print(station_proxy.power_state)
             proxy_result_code, response = station_proxy.configure(configuration)
             print("-- after configure call")
             if proxy_result_code == ResultCode.FAILED:
@@ -776,7 +778,7 @@ class SubarrayComponentManager(
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
-        
+
         # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
         # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
@@ -952,7 +954,6 @@ class SubarrayComponentManager(
         power_mode: PowerState,
     ) -> None:
         self._station_power_modes[fqdn] = power_mode
-
         if self._is_assigning and all(
             power_mode is not None for power_mode in self._station_power_modes.values()
         ):

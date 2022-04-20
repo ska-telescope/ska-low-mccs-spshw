@@ -6,7 +6,8 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements infrastructure for mocking callbacks and other callables."""
-from __future__ import annotations  # allow forward references in type hints
+from __future__ import annotations
+import collections  # allow forward references in type hints
 
 import queue
 import unittest.mock
@@ -14,7 +15,7 @@ from typing import Any, Optional, Sequence, Tuple
 
 import tango
 
-__all__ = ["MockCallable", "MockChangeEventCallback"]
+__all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque"]
 
 
 class MockCallable:
@@ -402,3 +403,66 @@ class MockChangeEventCallback(MockCallable):
 
         if called_mock is None and _do_assert:
             raise AssertionError(failure_message)
+
+class MockCallableDeque(MockCallable):
+    """
+    This class alters MockCallable to use a deque instead of a queue
+    and adds a method to TODO
+
+    It is a special case of a :py:class:`MockCallable` where the
+    callable will be called in a non-deterministic order.
+
+    This class allows inspection of the deque to find specific calls.
+    """
+    def __init__(
+        self: MockCallableDeque,
+        return_value: Any = None,
+        called_timeout: float = 5.0,
+        not_called_timeout: float = 1.0,
+    ):
+        """
+        Initialise a new instance.
+
+        :param return_value: what to return when called
+        :param called_timeout: how long to wait for a call to occur when
+            we are expecting one. It makes sense to wait a long time for
+            the expected call, as it will generally arrive much much
+            sooner anyhow, and failure for the call to arrive in time
+            will cause the assertion to fail. The default is 5 seconds.
+        :param not_called_timeout: how long to wait for a callback when
+            we are *not* expecting one. Since we need to wait the full
+            timeout period in order to determine that a callback has not
+            arrived, asserting that a call has not been made can
+            severely slow down your tests. By keeping this timeout quite
+            short, we can speed up our tests, at the risk of prematurely
+            passing an assertion. The default is 0.5
+        """
+        super().__init__(return_value=return_value, called_timeout=called_timeout, not_called_timeout=not_called_timeout)
+        self._queue: collections.deque = collections.deque()
+
+    def __call__(self: MockCallableDeque, *args: Any, **kwargs: Any) -> Any:
+        """
+        Handle a callback call.
+
+        Create a standard mock, call it, and put it on the deque. (This
+        approach lets us take advantange of the mock's assertion
+        functionality later.)
+
+        :param args: positional args in the call
+        :param kwargs: keyword args in the call
+
+        :return: the object's return value
+        """
+        called_mock = unittest.mock.Mock()
+        called_mock(*args, **kwargs)
+        self._queue.append(called_mock)
+        return self._return_value
+
+    def _fetch_call(self: MockCallableDeque) -> Optional[unittest.mock.Mock]:
+        try:
+            return self._queue.pop()
+        except IndexError:
+            return None
+
+    def assert_in_deque(self: MockCallableDeque) -> bool:
+        pass

@@ -13,11 +13,12 @@ __all__ = [
     "MockChangeEventCallback",
     "MockDeviceBuilder",
     "MockSubarrayBuilder",
+    "MockCallableDeque",
     # "MockGroupBuilder",
 ]
 
 
-from .mock_callable import MockCallable, MockChangeEventCallback
+from .mock_callable import MockCallable, MockChangeEventCallback, MockCallableDeque
 from .mock_device import MockDeviceBuilder
 
 # from .mock_subarray import MockSubarrayBuilder

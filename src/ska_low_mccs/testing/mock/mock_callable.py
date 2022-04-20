@@ -406,14 +406,15 @@ class MockChangeEventCallback(MockCallable):
 
 class MockCallableDeque(MockCallable):
     """
-    This class alters MockCallable to use a deque instead of a queue
-    and adds a method to TODO
+    This class alters MockCallable to use a deque instead of a queue and adds the `assert_in_deque` method
+    which checks the deque for calls to this mock with specific arguments.
 
     It is a special case of a :py:class:`MockCallable` where the
     callable will be called in a non-deterministic order.
 
     This class allows inspection of the deque to find specific calls.
     """
+
     def __init__(
         self: MockCallableDeque,
         return_value: Any = None,
@@ -437,7 +438,11 @@ class MockCallableDeque(MockCallable):
             short, we can speed up our tests, at the risk of prematurely
             passing an assertion. The default is 0.5
         """
-        super().__init__(return_value=return_value, called_timeout=called_timeout, not_called_timeout=not_called_timeout)
+        super().__init__(
+            return_value=return_value,
+            called_timeout=called_timeout,
+            not_called_timeout=not_called_timeout,
+        )
         self._queue: collections.deque = collections.deque()
 
     def __call__(self: MockCallableDeque, *args: Any, **kwargs: Any) -> Any:
@@ -458,27 +463,35 @@ class MockCallableDeque(MockCallable):
         self._queue.append(called_mock)
         return self._return_value
 
-    def _fetch_call(self: MockCallableDeque) -> Optional[unittest.mock.Mock]:
+    def _fetch_call(self: MockCallableDeque, timeout: float) -> Optional[unittest.mock.Mock]:
         try:
             return self._queue.pop()
         except IndexError:
             return None
 
-    def assert_in_deque(self: MockCallableDeque, expected_arguments_list: list[Any],) -> bool:
+    def assert_in_deque(
+        self: MockCallableDeque,
+        expected_arguments_list: list[Any],
+    ) -> bool:
         """
-        Assert that a call (or calls) to the callback with the expected arguments are present in the deque.
+        Assert that a call (or calls) to the callback with the expected arguments are
+        present in the deque.
+        This method clears the deque before returning so subsequent calls to this method don't match against old calls to the mock.
 
         :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
 
-        :returns: True if all arguments provided were found in the deque else returns False.
+        :returns: `True` if all arguments provided were found in the deque else returns `False`.
         """
+        # Iterate through the arguments provided in the list.
+        calls_found = 0                 # Number of calls matched to our expected list.
         for expected_argument in expected_arguments_list:
-            try:
-                # If found, remove the call from the queue and increment the counter.
-                self._queue.remove(expected_argument)
-                expected_arguments_list.remove(expected_argument)
-            except ValueError:
-                # If any argument is not found then return False.
-                return False
-        # If we've found all args in the expected_arguments_list then its size should be zero and we return True.
-        return len(expected_arguments_list)==0
+            # Compare each `expected_argument` against each item in the deque.
+            for index in range(len(self._queue)):
+                if expected_argument == self._queue[index].call_args[0][0]:
+                    calls_found += 1
+                    # Move on to the next expected_argument
+                    break
+        # Clear the deque before returning.
+        self._queue.clear()
+        # If we've found all args in the `expected_arguments_list` then its size should equal `calls_found` and we return `True`.
+        return len(expected_arguments_list) == calls_found

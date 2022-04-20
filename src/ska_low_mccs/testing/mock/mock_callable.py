@@ -464,5 +464,21 @@ class MockCallableDeque(MockCallable):
         except IndexError:
             return None
 
-    def assert_in_deque(self: MockCallableDeque) -> bool:
-        pass
+    def assert_in_deque(self: MockCallableDeque, expected_arguments_list: list[Any],) -> bool:
+        """
+        Assert that a call (or calls) to the callback with the expected arguments are present in the deque.
+
+        :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
+
+        :returns: True if all arguments provided were found in the deque else returns False.
+        """
+        for expected_argument in expected_arguments_list:
+            try:
+                # If found, remove the call from the queue and increment the counter.
+                self._queue.remove(expected_argument)
+                expected_arguments_list.remove(expected_argument)
+            except ValueError:
+                # If any argument is not found then return False.
+                return False
+        # If we've found all args in the expected_arguments_list then its size should be zero and we return True.
+        return len(expected_arguments_list)==0

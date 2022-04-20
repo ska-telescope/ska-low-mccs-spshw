@@ -455,12 +455,10 @@ class MockChangeEventCallback(MockCallable):
         if called_mock is None and _do_assert:
             raise AssertionError(failure_message)
 
-
 class MockCallableDeque(MockCallable):
     """
-    This class alters MockCallable to use a deque instead of a queue and adds the
-    `assert_in_deque` method which checks the deque for calls to this mock with specific
-    arguments.
+    This class alters MockCallable to use a deque instead of a queue and adds the `assert_in_deque` method
+    which checks the deque for calls to this mock with specific arguments.
 
     It is a special case of a :py:class:`MockCallable` where the
     callable will be called in a non-deterministic order.

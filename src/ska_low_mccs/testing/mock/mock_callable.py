@@ -476,22 +476,39 @@ class MockCallableDeque(MockCallable):
         """
         Assert that a call (or calls) to the callback with the expected arguments are
         present in the deque.
-        This method clears the deque before returning so subsequent calls to this method don't match against old calls to the mock.
+
+        This method clears the deque before returning so
+        subsequent calls to this method don't match against old calls to the mock.
 
         :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
 
         :returns: `True` if all arguments provided were found in the deque else returns `False`.
         """
-        # Iterate through the arguments provided in the list.
-        calls_found = 0                 # Number of calls matched to our expected list.
+        # Extract a list of all the call arguments currently in the deque.
+        call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
+        indices_to_remove = []
         for expected_argument in expected_arguments_list:
-            # Compare each `expected_argument` against each item in the deque.
-            for index in range(len(self._queue)):
-                if expected_argument == self._queue[index].call_args[0][0]:
-                    calls_found += 1
-                    # Move on to the next expected_argument
-                    break
-        # Clear the deque before returning.
-        self._queue.clear()
-        # If we've found all args in the `expected_arguments_list` then its size should equal `calls_found` and we return `True`.
-        return len(expected_arguments_list) == calls_found
+            if expected_argument in call_arguments:
+                # If we find an expected argument in the list then we remember where in the list it was so we can remove them later.
+                # call_arguments will be in the same order as the deque.
+                indices_to_remove.append(call_arguments.index(expected_argument))
+            else:
+                # We couldn't find an expected argument so return False.
+                return False
+
+        # Clear found items in ***reverse order***
+        indices_to_remove.sort(reverse=True)
+        self._remove_elements(indices_to_remove)
+        
+        # If we get here then we must have found all of our expected_arguments.
+        return True
+
+    def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:
+        """
+        Remove the calls at the index contained in `indices_to_remove`.
+
+        This method is used to clear found calls to the mock.
+        :param indices_to_remove: An integer list of indices to be removed from the deque.
+        """
+        for index in indices_to_remove:
+            self._queue.remove(self._queue[index])

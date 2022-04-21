@@ -13,7 +13,6 @@ from typing import Any, Optional, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.pasd_bus import (
     PasdBusComponentManager,
@@ -159,7 +158,6 @@ class TestPasdBusComponentManager:
             ("update_status", [], {}),
         ],
     )
-    # @pytest.mark.skip(reason="not working")
     def test_command(
         self: TestPasdBusComponentManager,
         mock_pasd_bus_simulator: unittest.mock.Mock,
@@ -191,4 +189,7 @@ class TestPasdBusComponentManager:
                 *args, **kwargs
             )
         elif isinstance(pasd_bus_component_manager, PasdBusComponentManager):
-            pass
+            _ = getattr(pasd_bus_component_manager, command_name)(*args, **kwargs)
+            getattr(mock_pasd_bus_simulator, command_name).assert_called_once_with(
+                *args, **kwargs
+            )

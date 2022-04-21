@@ -26,6 +26,31 @@ from ska_low_mccs.pasd_bus import (
 )
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+    
+    :return: number of worker threads
+    """
+    return 1
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for a change in the subarray beam state.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that the beam state has changed
+    """
+    return mock_callback_factory()
+
 
 @pytest.fixture()
 def pasd_config_path() -> str:

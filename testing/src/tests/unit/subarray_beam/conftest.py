@@ -52,11 +52,19 @@ def is_configured_changed_callback(
     """
     return mock_callback_factory()
 
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+    
+    :return: number of worker threads
+    """
+    return 1
 
 @pytest.fixture()
 def component_state_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> Callable[dict[str, Any], None]:
+) -> unittest.mock.Mock:
     """
     Return a mock callback for a change in the subarray beam state.
 
@@ -73,6 +81,9 @@ def component_state_changed_callback(
 @pytest.fixture()
 def subarray_beam_component(
     logger: logging.Logger,
+    max_workers: int,
+    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubarrayBeam:
     """
     Fixture that returns a subarray beam component.
@@ -81,7 +92,7 @@ def subarray_beam_component(
 
     :return: a subarray beam component
     """
-    return SubarrayBeam(logger)
+    return SubarrayBeam(logger, max_workers, communication_status_changed_callback, component_state_changed_callback)
 
 
 @pytest.fixture()

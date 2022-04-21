@@ -47,7 +47,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self._is_configured_changed_callback = component_state_changed_callback
 
         super().__init__(
-            SubarrayBeam(logger),
+            SubarrayBeam(logger, max_workers, communication_status_changed_callback, component_state_changed_callback),
             logger,
             max_workers,
             communication_status_changed_callback,

@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import threading
 from typing import Any, Callable, Optional, Sequence
 
 import ska_tango_base.subarray
@@ -42,6 +43,7 @@ class _StationProxy(ObsDeviceComponentManager):
 
         :return: A task status and response message.
         """
+        print("In station proxy configure.")
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
         (result_code, unique_id) = self._proxy.Configure(configuration_str)
@@ -175,7 +177,6 @@ class SubarrayComponentManager(
     def start_communicating(self: SubarrayComponentManager) -> None:
         """Establish communication with the station components."""
         super().start_communicating()
-
         if self._stations or self._subarray_beams:
             for station_proxy in self._stations.values():
                 station_proxy.start_communicating()
@@ -243,7 +244,6 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code and response message.
         """
-        print("In Assign")
         return self.submit_task(
             self._assign,
             args=[resource_spec],
@@ -255,6 +255,7 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         resource_spec: dict,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Assign resources to this subarray.
@@ -272,9 +273,9 @@ class SubarrayComponentManager(
                     "channel_blocks": [3]
                 }
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
-        print("In _Assign")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -347,6 +348,7 @@ class SubarrayComponentManager(
                 self._subarray_beams[fqdn].start_communicating()
             for fqdn in station_beam_fqdns_to_add:
                 self._station_beams[fqdn].start_communicating()
+
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="AssignResources has completed."
@@ -432,12 +434,14 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> None:
         """
         Release resources from this subarray.
 
         :param argin: list of resource fqdns to release.
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :raises NotImplementedError: because MCCS Subarray cannot perform a
             partial release of resources.
@@ -475,11 +479,13 @@ class SubarrayComponentManager(
     def _release_all(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Release all resources from this subarray.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
@@ -538,15 +544,18 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         configuration: dict[str, Any],
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Configure the resources for a scan.
 
         :param configuration: the configurations to be applied
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
+        print("In _configure")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -557,12 +566,15 @@ class SubarrayComponentManager(
             subarray_beam["subarray_beam_id"]: subarray_beam
             for subarray_beam in subarray_beams
         }
-
+        print("Before station config")
         result_code = self._configure_stations(station_configuration)
+        print("After station config")
+        print(result_code)
         if result_code != ResultCode.FAILED:
             result_code = self._configure_subarray_beams(subarray_beam_configuration)
         self._configured_changed_callback({"configured_changed": True})
 
+        print(result_code)
         if result_code == ResultCode.OK:
             self._configure_completed_callback({"configure_completed": None})
 
@@ -583,11 +595,14 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
+        print("in _config stations")
         result_code = ResultCode.OK
         for (station_id, configuration) in station_configuration.items():
             station_fqdn = f"low-mccs/station/{station_id:03d}"
             station_proxy = self._stations[station_fqdn]
-            proxy_result_code = station_proxy.configure(configuration)
+            print(f"-- before configure call for {station_fqdn}")
+            proxy_result_code, response = station_proxy.configure(configuration)
+            print("-- after configure call")
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
             elif proxy_result_code == ResultCode.QUEUED:
@@ -652,6 +667,7 @@ class SubarrayComponentManager(
         scan_id: int,
         start_time: float,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Start scanning.
@@ -659,6 +675,7 @@ class SubarrayComponentManager(
         :param scan_id: the id of the scan
         :param start_time: the start time of the scan
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
@@ -699,11 +716,13 @@ class SubarrayComponentManager(
     def _end_scan(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         End scanning.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
@@ -740,31 +759,30 @@ class SubarrayComponentManager(
     def _deconfigure(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Deconfigure resources.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        result_code = ResultCode.OK
         for station_proxy in self._stations.values():
-            proxy_result_code = station_proxy.configure({})
-            if proxy_result_code == ResultCode.FAILED:
-                result_code = ResultCode.FAILED
+            proxy_task_status, response = station_proxy.configure({})
         for subarray_beam_proxy in self._subarray_beams.values():
-            proxy_result_code = subarray_beam_proxy.configure({})
-            if proxy_result_code == ResultCode.FAILED:
-                result_code = ResultCode.FAILED
+            proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
+        
+        # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
+        # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="End/Deconfigure has completed."
             )
-        return result_code
 
     @check_communicating
     def abort(  # type: ignore[override]
@@ -802,11 +820,13 @@ class SubarrayComponentManager(
     def _obsreset(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Reset the observation by returning to unconfigured state.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
@@ -817,7 +837,6 @@ class SubarrayComponentManager(
         self._obsreset_completed_callback({"obsreset_completed": None})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="ObsReset has completed.")
-        return ResultCode.OK
 
     @check_communicating
     def restart(  # type: ignore[override]
@@ -841,11 +860,13 @@ class SubarrayComponentManager(
     def _restart(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Restart the subarray by returning to unresourced state.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
@@ -853,11 +874,10 @@ class SubarrayComponentManager(
             task_callback(status=TaskStatus.IN_PROGRESS)
         # other stuff here
         self.deconfigure()
-        result_code = self.release_all(task_callback=task_callback)
+        self.release_all(task_callback=task_callback)
         self._restart_completed_callback({"restart_completed": None})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
-        return result_code
 
     def send_transient_buffer(
         self: SubarrayComponentManager,
@@ -880,11 +900,13 @@ class SubarrayComponentManager(
     def _send_transient_buffer(
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Send the transient buffer.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code
         """
@@ -896,7 +918,6 @@ class SubarrayComponentManager(
                 status=TaskStatus.COMPLETED,
                 result="send_transient_buffer command completed.",
             )
-        return ResultCode.OK
 
     def _device_communication_status_changed(
         self: SubarrayComponentManager,

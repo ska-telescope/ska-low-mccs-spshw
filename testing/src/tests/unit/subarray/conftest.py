@@ -18,12 +18,12 @@ from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockCallableDeque
 
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[dict[str, Any]], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[dict[str, Any]], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
@@ -36,7 +36,7 @@ def component_state_changed_callback(
 
     :return: a mock callback to be called when the subarray's state changes.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 # TODO: Delete fixtures from here to.....

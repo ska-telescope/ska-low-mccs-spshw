@@ -477,8 +477,7 @@ class MockCallableDeque(MockCallable):
         Assert that a call (or calls) to the callback with the expected arguments are
         present in the deque.
 
-        This method clears the deque before returning so
-        subsequent calls to this method don't match against old calls to the mock.
+        This method clears matched calls from the deque before returning.
 
         :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
 
@@ -501,6 +500,41 @@ class MockCallableDeque(MockCallable):
         self._remove_elements(indices_to_remove)
         
         # If we get here then we must have found all of our expected_arguments.
+        return True
+
+    def assert_ordered_in_deque(
+        self: MockCallableDeque,
+        expected_arguments_list: list[Any],
+    ) -> bool:
+        """
+        Assert that the mock has been called with the provided arguments in the order specified.
+
+        This method clears matched calls from the deque before returning.
+
+        :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
+
+        :return: `True` if all arguments were found in the deque in the order provided else `False`.
+        """
+        # Extract a list of all the call arguments currently in the deque.
+        call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
+        indices_to_remove = []
+        for actual_argument in call_arguments:
+            try:
+                # We always want to match against the first in the list.
+                if actual_argument == expected_arguments_list[0]:
+                    indices_to_remove.append(call_arguments.index(actual_argument))
+                    # Remove the found item from our list.
+                    expected_arguments_list.pop()
+                else:
+                    # We couldn't find an expected argument so return False.
+                    return False
+            except IndexError:
+                return False
+        
+        # Clear found items in ***reverse order***
+        indices_to_remove.sort(reverse=True)
+        self._remove_elements(indices_to_remove)
+        # Found all entries in specified order.
         return True
 
     def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:

@@ -18,6 +18,7 @@ from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 class TestSubarrayBeam:
@@ -146,7 +147,7 @@ class TestSubarrayBeam:
     def test_configure(
         self: TestSubarrayBeam,
         subarray_beam: Union[SubarrayBeam, SubarrayBeamComponentManager],
-        component_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test the configure method.
@@ -166,8 +167,7 @@ class TestSubarrayBeam:
 
         if isinstance(subarray_beam, SubarrayBeam):
 
-            #assert component_state_changed_callback.calls_in_queue([{"configured_changed": False}])
-            #component_state_changed_callback.assert_next_call({"configured_changed": False})
+            #assert component_state_changed_callback.assert_in_deque([{"configured_changed": False}])
             
             subarray_beam.configure(
                 subarray_beam_id,
@@ -178,8 +178,8 @@ class TestSubarrayBeam:
                 antenna_weights,
                 phase_centre,
             )
-            #component_state_changed_callback.assert_next_call({"configured_changed": True})
-            #assert component_state_changed_callback.calls_in_queue([{"configured_changed": True}])
+
+            #assert component_state_changed_callback.assert_in_deque([{"configured_changed": True}])
 
             assert subarray_beam.subarray_beam_id == subarray_beam_id
             assert subarray_beam.station_ids == station_ids
@@ -202,12 +202,11 @@ class TestSubarrayBeam:
 
             config_dict = json.dumps(config)
 
-            assert component_state_changed_callback.calls_in_queue([{"configured_changed": False}])
+            assert component_state_changed_callback.assert_in_deque([{"configured_changed": False}])
 
             task_status, response = subarray_beam.configure(config_dict)
             
-            #component_state_changed_callback.assert_next_call({"configured_changed": True})
-            #assert component_state_changed_callback.calls_in_queue([{"configured_changed": True}])
+            #assert component_state_changed_callback.assert_in_deque([{"configured_changed": True}])
 
             assert task_status == TaskStatus.QUEUED
             #assert response == "Task queued"

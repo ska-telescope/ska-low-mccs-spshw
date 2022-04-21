@@ -471,7 +471,6 @@ class TestMccsPasdBus:
         method_mock.assert_not_called()
 
         command = getattr(device_under_test, device_command)
-
         if device_command_argin is None:
             command_return = command()
         else:

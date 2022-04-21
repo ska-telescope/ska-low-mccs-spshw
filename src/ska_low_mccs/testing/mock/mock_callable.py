@@ -509,8 +509,6 @@ class MockCallableDeque(MockCallable):
         """
         Assert that the mock has been called with the provided arguments in the order specified.
 
-        This method clears matched calls from the deque before returning.
-
         :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
 
         :return: `True` if all arguments were found in the deque in the order provided else `False`.
@@ -525,12 +523,13 @@ class MockCallableDeque(MockCallable):
                     indices_to_remove.append(call_arguments.index(actual_argument))
                     # Remove the found item from our list.
                     expected_arguments_list.pop()
-                else:
-                    # We couldn't find an expected argument so return False.
-                    return False
             except IndexError:
                 return False
-        
+
+        # If expected_arguments_list is not empty then we didn't find everything or it wasn't in the order we wanted.
+        if len(expected_arguments_list) >0:
+            return False
+
         # Clear found items in ***reverse order***
         indices_to_remove.sort(reverse=True)
         self._remove_elements(indices_to_remove)

@@ -6,15 +6,16 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements infrastructure for mocking callbacks and other callables."""
-from __future__ import annotations  # allow forward references in type hints
+from __future__ import annotations
 
+import collections  # allow forward references in type hints
 import queue
 import unittest.mock
 from typing import Any, Optional, Sequence, Tuple
 
 import tango
 
-__all__ = ["MockCallable", "MockChangeEventCallback"]
+__all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque"]
 
 
 class MockCallable:
@@ -402,3 +403,151 @@ class MockChangeEventCallback(MockCallable):
 
         if called_mock is None and _do_assert:
             raise AssertionError(failure_message)
+
+
+class MockCallableDeque(MockCallable):
+    """
+    This class alters MockCallable to use a deque instead of a queue.
+
+    It adds the `assert_in_deque` method which checks the deque for calls to
+    this mock with specific arguments.
+
+    It is a special case of a :py:class:`MockCallable` where the
+    callable will be called in a non-deterministic order.
+
+    This class allows inspection of the deque to find specific calls.
+    """
+
+    def __init__(
+        self: MockCallableDeque,
+        return_value: Any = None,
+        called_timeout: float = 5.0,
+        not_called_timeout: float = 1.0,
+    ):
+        """
+        Initialise a new instance.
+
+        :param return_value: what to return when called
+        :param called_timeout: how long to wait for a call to occur when
+            we are expecting one. It makes sense to wait a long time for
+            the expected call, as it will generally arrive much much
+            sooner anyhow, and failure for the call to arrive in time
+            will cause the assertion to fail. The default is 5 seconds.
+        :param not_called_timeout: how long to wait for a callback when
+            we are *not* expecting one. Since we need to wait the full
+            timeout period in order to determine that a callback has not
+            arrived, asserting that a call has not been made can
+            severely slow down your tests. By keeping this timeout quite
+            short, we can speed up our tests, at the risk of prematurely
+            passing an assertion. The default is 0.5
+        """
+        super().__init__(
+            return_value=return_value,
+            called_timeout=called_timeout,
+            not_called_timeout=not_called_timeout,
+        )
+        self._queue: collections.deque = collections.deque()
+
+    def __call__(self: MockCallableDeque, *args: Any, **kwargs: Any) -> Any:
+        """
+        Handle a callback call.
+
+        Create a standard mock, call it, and put it on the deque. (This
+        approach lets us take advantange of the mock's assertion
+        functionality later.)
+
+        :param args: positional args in the call
+        :param kwargs: keyword args in the call
+
+        :return: the object's return value
+        """
+        called_mock = unittest.mock.Mock()
+        called_mock(*args, **kwargs)
+        self._queue.append(called_mock)
+        return self._return_value
+
+    def _fetch_call(
+        self: MockCallableDeque, timeout: float
+    ) -> Optional[unittest.mock.Mock]:
+        try:
+            return self._queue.pop()
+        except IndexError:
+            return None
+
+    def assert_in_deque(
+        self: MockCallableDeque,
+        expected_arguments_list: list[Any],
+    ) -> bool:
+        """
+        Assert that a callback has the expected arguments are present in the deque.
+
+        This method clears matched calls from the deque before returning.
+
+        :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
+
+        :returns: `True` if all arguments provided were found in the deque else returns `False`.
+        """
+        # Extract a list of all the call arguments currently in the deque.
+        call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
+        indices_to_remove = []
+        for expected_argument in expected_arguments_list:
+            if expected_argument in call_arguments:
+                # If we find an expected argument in the list then we remember where in the list it was so we can remove them later.
+                # call_arguments will be in the same order as the deque.
+                indices_to_remove.append(call_arguments.index(expected_argument))
+            else:
+                # We couldn't find an expected argument so return False.
+                return False
+
+        # Clear found items in ***reverse order***
+        indices_to_remove.sort(reverse=True)
+        self._remove_elements(indices_to_remove)
+
+        # If we get here then we must have found all of our expected_arguments.
+        return True
+
+    def assert_ordered_in_deque(
+        self: MockCallableDeque,
+        expected_arguments_list: list[Any],
+    ) -> bool:
+        """
+        Assert that the mock has been called with the provided arguments.
+
+        It also mandates the order.
+
+        :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
+
+        :return: `True` if all arguments were found in the deque in the order provided else `False`.
+        """
+        # Extract a list of all the call arguments currently in the deque.
+        call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
+        indices_to_remove = []
+        for actual_argument in call_arguments:
+            try:
+                # We always want to match against the first in the list.
+                if actual_argument == expected_arguments_list[0]:
+                    indices_to_remove.append(call_arguments.index(actual_argument))
+                    # Remove the found item from our list.
+                    expected_arguments_list.pop()
+            except IndexError:
+                return False
+
+        # If expected_arguments_list is not empty then we didn't find everything or it wasn't in the order we wanted.
+        if len(expected_arguments_list) > 0:
+            return False
+
+        # Clear found items in ***reverse order***
+        indices_to_remove.sort(reverse=True)
+        self._remove_elements(indices_to_remove)
+        # Found all entries in specified order.
+        return True
+
+    def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:
+        """
+        Remove the calls at the index contained in `indices_to_remove`.
+
+        This method is used to clear found calls to the mock.
+        :param indices_to_remove: An integer list of indices to be removed from the deque.
+        """
+        for index in indices_to_remove:
+            self._queue.remove(self._queue[index])

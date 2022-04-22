@@ -14,11 +14,10 @@ import unittest
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockCallable
 
 

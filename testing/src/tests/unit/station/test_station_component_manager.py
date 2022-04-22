@@ -20,6 +20,7 @@ from ska_tango_base.control_model import CommunicationStatus, PowerState
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.station import StationComponentManager
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 class TestStationComponentManager:
@@ -29,7 +30,7 @@ class TestStationComponentManager:
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
         communication_status_changed_callback: MockCallable,
-        component_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test the station component manager's management of communication.
@@ -49,6 +50,7 @@ class TestStationComponentManager:
         print("1 component manager comms status = ", station_component_manager._communication_status)
 
         station_component_manager.start_communicating()
+        time.sleep(1)
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -70,8 +72,10 @@ class TestStationComponentManager:
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
-        component_state_changed_callback.assert_last_call({"is_configured": False})
         #is_configured_changed_callback.assert_next_call(False)
+
+        #component_state_changed_callback.assert_next_call_with_keys({'is_configured':False})
+        #component_state_changed_callback.assert_next_call_with_keys({'power_state': <PowerState.UNKNOWN: 0>}, fqdn='low-mccs/tile/0001')
 
         station_component_manager.stop_communicating()
         communication_status_changed_callback.assert_next_call(

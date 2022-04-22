@@ -268,7 +268,7 @@ def is_configured_changed_callback(
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[], None]:
     """
     Return a mock callback for a change in whether the station changes state.
@@ -280,7 +280,8 @@ def component_state_changed_callback(
     :return: a mock callback for a change in whether the station is
         configured.
     """
-    return mock_callback_factory()
+    #return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()

@@ -67,8 +67,10 @@ class TestMccsSubrack:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert device_under_test.state() == DevState.DISABLE
-        assert device_under_test.status() == "The device is in DISABLE state."
+        assert device_under_test.state() == DevState.DISABLE  # DevState.UNKNOWN ?
+        assert (
+            device_under_test.status() == "The device is in DISABLE state."
+        )  # "The device is in UNKNOWN state."?
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE

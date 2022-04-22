@@ -73,28 +73,9 @@ class _TileProxy(DeviceComponentManager):
             component_state_changed_callback,
         )
 
-    #     class ConnectToDevice(DeviceComponentManager.ConnectToDeviceBase):
-    #         """
-    #         General connection command class.
-    #
-    #         Class that can be overridden by a derived class or instantiated
-    #         at the DeviceComponentManager level.
-    #         """
-    #
-    #         def do(  # type: ignore[override]
-    #             self: _TileProxy.ConnectToDevice,
-    #         ) -> tuple[ResultCode, str]:
-    #             """
-    #             Establish communication with the component, then start monitoring.
-    #
-    #             This contains the actual communication logic that is enqueued to
-    #             be run asynchronously.
-    #
-    #             :return: a result code and message
-    #             """
-    #             self.target._connecting = True
-    #             result_code, message = super().do()
-    #             return result_code, message
+    def start_communicating(self: _TileProxy) -> None:
+        self._connecting = True
+        super().start_communicating()
 
     def _device_state_changed(
         self: _TileProxy,

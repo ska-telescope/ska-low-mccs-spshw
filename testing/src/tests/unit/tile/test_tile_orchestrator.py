@@ -135,22 +135,26 @@ class TestTileOrchestrator:
             ),
             "report_tpm_off": (
                 {"tpm_power_state": PowerState.OFF},
-                {"component_power_state_changed": [PowerState.OFF]},
+                {"component_power_state_changed": [{"power_state": PowerState.OFF}]},
                 None,
             ),
             "report_tpm_on": (
                 {"tpm_power_state": PowerState.ON},
-                {"component_power_state_changed": [PowerState.ON]},
+                {"component_power_state_changed": [{"power_state": PowerState.ON}]},
                 None,
             ),
             "report_tpm_no_power_supply": (
                 {"tpm_power_state": PowerState.NO_SUPPLY},
-                {"component_power_state_changed": [PowerState.OFF]},
+                {"component_power_state_changed": [{"power_state": PowerState.OFF}]},
                 None,
             ),
             "report_tpm_power_unknown": (
                 {"tpm_power_state": PowerState.UNKNOWN},
-                {"component_power_state_changed": [PowerState.UNKNOWN]},
+                {
+                    "component_power_state_changed": [
+                        {"power_state": PowerState.UNKNOWN}
+                    ]
+                },
                 None,
             ),
             "set_desired_off": ({"operator_desire": False}, {}, None),

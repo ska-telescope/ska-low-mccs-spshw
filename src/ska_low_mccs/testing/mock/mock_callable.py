@@ -465,7 +465,7 @@ class MockCallableDeque(MockCallable):
 
     def _fetch_call(self: MockCallableDeque, timeout: float) -> Optional[unittest.mock.Mock]:
         try:
-            return self._queue.pop()
+            return self._queue.popleft()
         except IndexError:
             return None
 

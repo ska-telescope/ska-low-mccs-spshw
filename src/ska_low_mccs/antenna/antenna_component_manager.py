@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from typing import Any, Callable, Optional
 
 import tango
@@ -540,7 +539,7 @@ class AntennaComponentManager(MccsComponentManager):
         raise NotImplementedError("Antenna has no standby state.")
 
     # @check_communicating
-    def on(self, task_callback: Callable = None):
+    def on(self: AntennaComponentManager, task_callback: Callable = None):
         """
         Submit the on slow task.
 
@@ -556,23 +555,27 @@ class AntennaComponentManager(MccsComponentManager):
     def _on(
         self: AntennaComponentManager,
         task_callback: Callable = None,
+        task_abort_event: threading.Event = None,
     ) -> None:
         """
         Turn the antenna on.
 
         :param task_callback: Update task state, defaults to None
-
-        :returns: whether successful, or None if there was nothing to do.
+        :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
         task_callback(status=TaskStatus.IN_PROGRESS)
-        with self._power_state_lock:
-            self._target_power_state = PowerState.ON
-        self._review_power()
+        try:
+            with self._power_state_lock:
+                self._target_power_state = PowerState.ON
+            self._review_power()
+        except Exception as ex:
+            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+
+        # Indicate that the task has completed
         task_callback(
             status=TaskStatus.COMPLETED, result="This slow task has completed"
         )
-        return ResultCode.OK
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
         with self._power_state_lock:

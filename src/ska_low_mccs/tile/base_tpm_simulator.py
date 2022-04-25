@@ -100,7 +100,6 @@ class BaseTpmSimulator(ObjectComponent):
         :param logger: a logger for this simulator to use
         """
         self.logger = logger
-
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False

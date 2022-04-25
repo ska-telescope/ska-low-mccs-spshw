@@ -17,11 +17,25 @@ import tango
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback.
+
+    To be called when the subarray's state changes.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the subarray's state changes.
+    """
+    return mock_callback_factory()
 
 
 @pytest.fixture()
@@ -92,11 +106,9 @@ def station_beam_component_manager(
     tango_harness: TangoHarness,
     beam_id: int,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: MockCallable,
-    component_is_beam_locked_changed_callback: MockCallable,
-    component_device_health_changed_callback: MockCallable,
-    component_device_fault_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallable,
 ) -> StationBeamComponentManager:
     """
     Return a station beam component manager.
@@ -104,30 +116,20 @@ def station_beam_component_manager(
     :param tango_harness: a test harness for MCCS tango devices
     :param beam_id: a beam id for the station beam under test.
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_is_beam_locked_changed_callback: a callback to be
-        called when whether the beam is locked changes.
-    :param component_device_health_changed_callback: a callback to be
-        called when the health of the component device (i.e. the
-        station) changes
-    :param component_device_fault_changed_callback: a callback to be
-        called when the fault state of the component device (i.e. the
-        station) changes
+    :param component_state_changed_callback: Callback to call when the component's state changes.
+    :param max_workers: Maximum number of workers in the thread pool.
 
     :return: a station beam component manager
     """
     return StationBeamComponentManager(
         beam_id,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_status_changed_callback,
-        component_is_beam_locked_changed_callback,
-        component_device_health_changed_callback,
-        component_device_fault_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -201,3 +203,13 @@ def initial_mocks(
         mock_station_off_fqdn: mock_station_off,
         mock_station_on_fqdn: mock_station_on,
     }
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return a value for max_workers.
+
+    :return: maximum number of workers in thread pool.
+    """
+    return 1

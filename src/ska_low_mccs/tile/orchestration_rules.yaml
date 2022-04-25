@@ -16,15 +16,15 @@
 # Each key is a tuple with the following items:
 # 1. The stimulus that has just been received
 # 2. The state of communication with the subrack Tango device
-# 3. The power mode of the TPM as reported by the subrack Tango device
-# 4. The goal/desire of the operator to change power mode of the TPM
+# 3. The power state of the TPM as reported by the subrack Tango device
+# 4. The goal/desire of the operator to change power state of the TPM
 # 5. The state of communication with the TPM
 
 # For example
 #     [
 #         DESIRE_ON,  # Stimulus: the operator has invoked the On() command
 #         ESTABLISHED,  # State: communication with the subrack is established
-#         ~,  # State: the operator has no particular desire with respect to the power mode of the TPM
+#         ~,  # State: the operator has no particular desire with respect to the power state of the TPM
 #         OFF,  # State: the subrack is powered on but NOT supplying power to the TPM
 #         DISABLED,  # State: Communication with the TPM is disabled
 #     ]
@@ -77,8 +77,8 @@
 # * ESTABLISHED: we have successfully established communication with the subrack Tango
 #   device.
 #
-# Valid values for TPM power mode:
-# * UNKNOWN: The subrack Tango device does not know the power mode of the TPM; for
+# Valid values for TPM power state:
+# * UNKNOWN: The subrack Tango device does not know the power state of the TPM; for
 #   example because its communication with its subrack hardware is not established.
 # * NO_SUPPLY: The TPM is powered off and cannot be commanded on; for example because
 #   the subrack hardware itself is powered off

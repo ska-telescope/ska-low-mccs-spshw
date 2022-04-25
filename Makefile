@@ -11,6 +11,8 @@
 #
 PROJECT = ska-low-mccs
 
+HELM_CHARTS_TO_PUBLISH = ska-low-mccs
+
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = testing/src/
@@ -36,7 +38,9 @@ include .make/base.mk
 python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ testing/src/ 	
 
-python-post-lint:
-	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
+# removed temporarily
+#python-post-lint:
+#	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/
+#testing/src/
 
-.PHONY: python-post-format python-post-lint
+.PHONY: python-post-format # python-post-lint

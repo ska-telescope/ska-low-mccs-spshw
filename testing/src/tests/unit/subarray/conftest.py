@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 import tango
@@ -18,13 +18,28 @@ from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
 
 
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_factory: Callable[[dict[str, Any]], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback.
+
+    To be called when the subarray's state changes.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the subarray's state changes.
+    """
+    return mock_callback_factory()
+
+
+# TODO: Delete fixtures from here to.....
 @pytest.fixture()
 def assign_completed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
@@ -251,84 +266,36 @@ def station_beam_health_changed_callback(
     return mock_callback_factory()
 
 
+# TODO: ... to here.
+
+
 @pytest.fixture()
 def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: MockCallable,
-    assign_completed_callback: MockCallable,
-    release_completed_callback: MockCallable,
-    configure_completed_callback: MockCallable,
-    abort_completed_callback: MockCallable,
-    obsreset_completed_callback: MockCallable,
-    restart_completed_callback: MockCallable,
-    resources_changed_callback: MockCallable,
-    configured_changed_callback: MockCallable,
-    scanning_changed_callback: MockCallable,
-    obs_fault_callback: MockCallable,
-    station_health_changed_callback: MockCallable,
-    subarray_beam_health_changed_callback: MockCallable,
-    station_beam_health_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallable,
 ) -> SubarrayComponentManager:
     """
     Return a subarray component manager.
 
     :param tango_harness: a test harness for MCCS tango devices
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: Maximum number of workers in the thread pool.
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param assign_completed_callback: callback to be called when the
-        component completes a resource assignment.
-    :param release_completed_callback: callback to be called when
-        the component completes a resource release.
-    :param configure_completed_callback: callback to be called when
-        the component completes a configuration.
-    :param abort_completed_callback: callback to be called when the
-        component completes an abort.
-    :param obsreset_completed_callback: callback to be called when
-        the component completes an observation reset.
-    :param restart_completed_callback: callback to be called when
-        the component completes a restart.
-    :param resources_changed_callback: callback to be called when this
-        subarray's resources change
-    :param configured_changed_callback: callback to be called when
-        whether the subarray is configured changes
-    :param scanning_changed_callback: callback to be called when whether
-        the subarray is scanning changes
-    :param obs_fault_callback: callback to be called when whether the
-        subarray is experiencing an observation fault changes.
-    :param station_health_changed_callback: a callback to be called when
-        the health of one of this subarray's stations changes
-    :param subarray_beam_health_changed_callback: a callback to be
-        called when the health of one of this subarray's subarray beams
-        changes
-    :param station_beam_health_changed_callback: a callback to be
-        called when the health of one of this subarray's station beams
-        changes
+    :param component_state_changed_callback: callback to be called when the
+        component's state changes.
 
-    :return: a station beam component manager
+    :return: a subarray component manager
     """
     return SubarrayComponentManager(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_status_changed_callback,
-        assign_completed_callback,
-        release_completed_callback,
-        configure_completed_callback,
-        abort_completed_callback,
-        obsreset_completed_callback,
-        restart_completed_callback,
-        resources_changed_callback,
-        configured_changed_callback,
-        scanning_changed_callback,
-        obs_fault_callback,
-        station_health_changed_callback,
-        subarray_beam_health_changed_callback,
-        station_beam_health_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -632,3 +599,13 @@ def start_time() -> float:
     :return: a scan start time for use in testing.
     """
     return 0.0
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return a value for max_workers.
+
+    :return: maximum number of workers in thread pool.
+    """
+    return 2

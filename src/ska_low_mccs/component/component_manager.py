@@ -12,7 +12,7 @@ import logging
 import threading
 from typing import Any, Callable, Optional
 
-from ska_tango_base.base import TaskExecutorComponentManager
+from ska_tango_base.base.component_manager import TaskExecutorComponentManager
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 from typing_extensions import Protocol
@@ -122,15 +122,17 @@ class MccsComponentManager(
             communication_status_changed_callback
         )
 
+        self._power_state_lock = threading.RLock()
+
         self._power_state: Optional[PowerState] = PowerState.UNKNOWN
         self._faulty: Optional[bool] = None
 
         self._component_state_changed_callback = component_state_changed_callback
         super().__init__(
-            logger,
-            communication_status_changed_callback,
-            component_state_changed_callback,
+            logger=logger,
             max_workers=max_workers,
+            communication_state_callback=communication_status_changed_callback,
+            component_state_callback=component_state_changed_callback,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:
@@ -204,7 +206,6 @@ class MccsComponentManager(
         Handle notification that the component's power mode has changed.
 
         This is a callback hook, to be passed to the managed component.
-
         :param state_change: the new state of the component
         """
         self.update_component_state(state_change)
@@ -217,7 +218,6 @@ class MccsComponentManager(
         Update the power mode, calling callbacks as required.
 
         This is a helper method for use by subclasses.
-
         :param state_change: pass thru.
         """
         if self._component_state_changed_callback is not None:

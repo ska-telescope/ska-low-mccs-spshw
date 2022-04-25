@@ -8,7 +8,7 @@
 """An implementation of a health model for a controller."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 from ska_tango_base.control_model import HealthState
 
@@ -26,7 +26,7 @@ class ControllerHealthModel(HealthModel):
         subrack_fqdns: Sequence[str],
         subarray_beam_fqdns: Sequence[str],
         station_beam_fqdns: Sequence[str],
-        health_changed_callback: Callable[[HealthState], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -37,7 +37,7 @@ class ControllerHealthModel(HealthModel):
             subarray beams
         :param station_beam_fqdns: the FQDNs of this controller's
             station beams
-        :param health_changed_callback: callback to be called whenever
+        :param component_state_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
         """
@@ -55,7 +55,7 @@ class ControllerHealthModel(HealthModel):
             station_beam_fqdn: HealthState.UNKNOWN
             for station_beam_fqdn in station_beam_fqdns
         }
-        super().__init__(health_changed_callback)
+        super().__init__(component_state_changed_callback)
 
     def station_health_changed(
         self: ControllerHealthModel,

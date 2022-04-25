@@ -169,12 +169,12 @@ class TestMccsAPIU:
         time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-up successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUp"
 
         [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-up is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUp"
 
     def test_PowerDown(
         self: TestMccsAPIU,
@@ -205,14 +205,14 @@ class TestMccsAPIU:
         time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-down is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDown"
 
         _ = device_under_test.PowerUp()
 
         [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-down successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDown"
 
     def test_PowerUpAntenna(
         self: TestMccsAPIU,
@@ -247,8 +247,8 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerUpAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-up successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUpAntenna"
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -256,8 +256,8 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerUpAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-up is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUpAntenna"
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -297,8 +297,8 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerDownAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-down is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDownAntenna"
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)
@@ -312,8 +312,8 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerDownAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-down successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDownAntenna"
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)

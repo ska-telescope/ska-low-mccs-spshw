@@ -10,8 +10,8 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import Any, Callable, Optional
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import PowerState
+from ska_tango_base.executor import TaskStatus
 
 __all__ = ["ObjectComponent"]
 
@@ -109,7 +109,7 @@ class ObjectComponent:
         if power_mode_changed_callback is not None:
             power_mode_changed_callback({"power_state": PowerState.ON})
 
-    def off(self: ObjectComponent) -> ResultCode | None:
+    def off(self: ObjectComponent) -> tuple[TaskStatus, str]:
         """
         Turn the component off.
 
@@ -117,7 +117,7 @@ class ObjectComponent:
         """
         raise NotImplementedError("This is an always-on component.")
 
-    def standby(self: ObjectComponent) -> ResultCode | None:
+    def standby(self: ObjectComponent) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
 
@@ -125,7 +125,7 @@ class ObjectComponent:
         """
         raise NotImplementedError("This is an always-on component.")
 
-    def on(self: ObjectComponent) -> ResultCode | None:
+    def on(self: ObjectComponent) -> tuple[TaskStatus, str]:
         """
         Turn the component on.
 
@@ -133,7 +133,7 @@ class ObjectComponent:
         """
         raise NotImplementedError("This is an always-on component.")
 
-    def reset(self: ObjectComponent) -> ResultCode | None:
+    def reset(self: ObjectComponent) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
 

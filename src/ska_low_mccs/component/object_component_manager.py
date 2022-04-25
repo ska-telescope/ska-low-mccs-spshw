@@ -11,8 +11,8 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 from typing import Any, Callable, Optional
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
     MccsComponentManager,
@@ -60,8 +60,7 @@ class ObjectComponentManager(MccsComponentManager):
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
-            called when the component power mode changes
-
+            called when the component state changes
         :param args: further positional arguments
         :param kwargs: further keyword arguments
         """
@@ -118,37 +117,53 @@ class ObjectComponentManager(MccsComponentManager):
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating
-    def off(self: ObjectComponentManager) -> ResultCode | None:
+    def off(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component off.
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message.
         """
-        return self._component.off()
+        return self._component.off(task_callback)
 
     @check_communicating
-    def standby(self: ObjectComponentManager) -> ResultCode | None:
+    def standby(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message
         """
-        return self._component.standby()
+        return self._component.standby(task_callback)
 
     @check_communicating
-    def on(self: ObjectComponentManager) -> ResultCode | None:
+    def on(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component on.
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message
         """
-        return self._component.on()
+        return self._component.on(task_callback)
 
     @check_communicating
-    def reset(self: ObjectComponentManager) -> ResultCode | None:
+    def reset(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message
         """
-        return self._component.reset()
+        return self._component.reset(task_callback)

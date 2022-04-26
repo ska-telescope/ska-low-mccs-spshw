@@ -9,12 +9,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
+import unittest.mock
+from typing import Any, Callable
 
 import pytest
 from ska_tango_base.control_model import CommunicationStatus
 
-from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.transient_buffer import (
     TransientBuffer,
     TransientBufferComponentManager,
@@ -34,25 +34,55 @@ def transient_buffer_component(logger: logging.Logger) -> TransientBuffer:
 
 
 @pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of maximum worker threads.
+
+    :return: the number of maximum worker threads.
+    """
+    return 1
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for antenna state change.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that the state of its component has changed.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
 def transient_buffer_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[Any], None],
 ) -> TransientBufferComponentManager:
     """
     Return a transient buffer component manager.
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: the maximum worker threads available
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
+    :param component_state_changed_callback: callback to be called
+        when the component state changes
 
     :return: a transient buffer component manager
     """
     return TransientBufferComponentManager(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_status_changed_callback,
+        component_state_changed_callback,
     )

@@ -10,40 +10,43 @@ from __future__ import annotations
 
 import logging
 import unittest
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    HealthState,
-    PowerState,
-    SimulationMode,
-)
+from ska_tango_base.control_model import CommunicationStatus, SimulationMode
 
 from ska_low_mccs.cluster_manager import (
     ClusterComponentManager,
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
-from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
-def component_shadow_master_pool_node_health_changed_callback(
+def component_state_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[list[bool]], None]:
     """
-    Return a mock callback for a change in shadow master pool node health.
+    Return a mock callback for a change in component state.
 
     :param mock_callback_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the component manager
-        detects that the health of a node in its shadow master pool has
-        changed.
+        detects that the state has changed.
     """
     return mock_callback_factory()
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of maximum worker threads.
+
+    :return: the number of maximum worker threads.
+    """
+    return 1
 
 
 @pytest.fixture()
@@ -59,80 +62,56 @@ def cluster_simulator() -> ClusterSimulator:
 @pytest.fixture()
 def cluster_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_power_mode_changed_callback: Callable[[PowerState], None],
-    component_fault_callback: Callable[[bool], None],
-    component_shadow_master_pool_node_health_changed_callback: Callable[
-        [list[HealthState]], None
-    ],
+    component_state_changed_callback: Callable[[Any], None],
 ) -> ClusterSimulatorComponentManager:
     """
     Return a cluster simulator component manager.
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: the maximum number of worker threads
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be
-        called when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_shadow_master_pool_node_health_changed_callback:
-        callback to be called when the health of a node in the
-        shadow pool changes
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
 
     :return: a cluster simulator component manager
     """
     return ClusterSimulatorComponentManager(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
-        component_shadow_master_pool_node_health_changed_callback,
+        component_state_changed_callback,
     )
 
 
 @pytest.fixture()
 def cluster_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_power_mode_changed_callback: Callable[[PowerState], None],
-    component_fault_callback: Callable[[bool], None],
-    component_shadow_master_pool_node_health_changed_callback: Callable[
-        [list[HealthState]], None
-    ],
+    component_state_changed_callback: Callable[[Any], None],
 ) -> ClusterComponentManager:
     """
     Return a cluster component manager in simulation mode.
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: the maximum number of worker threads
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be
-        called when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_shadow_master_pool_node_health_changed_callback:
-        callback to be called when the health of a node in the
-        shadow pool changes
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
 
     :return: a cluster manager for the MCCS cluster manager device, in
         hardware simulation mode
     """
     return ClusterComponentManager(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         SimulationMode.TRUE,
         communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
-        component_shadow_master_pool_node_health_changed_callback,
+        component_state_changed_callback,
     )

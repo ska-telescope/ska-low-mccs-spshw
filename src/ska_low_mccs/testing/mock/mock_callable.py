@@ -15,7 +15,7 @@ from typing import Any, Optional, Sequence, Tuple
 
 import tango
 
-__all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque"]
+__all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque", "MockComponentStateChangedCallback"]
 
 
 class MockCallable:
@@ -684,7 +684,7 @@ class MockComponentStateChangedCallback(MockCallableDeque):
     """A class used to mock calls to component_state_changed_callback."""
 
     def _find_next_call_with_state_params(
-        self: MockCallableDeque,
+        self: MockComponentStateChangedCallback,
         *state_change_keys: str,
         fqdn: str = None,
     ):
@@ -713,7 +713,7 @@ class MockComponentStateChangedCallback(MockCallableDeque):
         return None, None
 
     def get_next_call_with_state_params(
-        self: MockCallableDeque,
+        self: MockComponentStateChangedCallback,
         *state_change_keys: str,
         fqdn: str = None,
     ):
@@ -740,7 +740,7 @@ class MockComponentStateChangedCallback(MockCallableDeque):
             return None
 
     def assert_not_called_with_state_params(
-        self: MockCallableDeque,
+        self: MockComponentStateChangedCallback,
         *state_change_keys: str,
         fqdn: str = None,
     ):
@@ -752,12 +752,12 @@ class MockComponentStateChangedCallback(MockCallableDeque):
         )
         if index is not None:
             raise AssertionError(
-                f"Expected call with keys {state_change_keys} for device fqdn {fqdn} to be missing \
-                from deque, but was found at index: {index} with call: {actual_state_change}"
+                f"Expected call with keys {state_change_keys} for device fqdn {fqdn} to be missing "\
+                "from deque, but was found at index: {index} with call: {actual_state_change}"
             )
 
     def assert_next_call_with_state_params(
-        self: MockCallableDeque,
+        self: MockComponentStateChangedCallback,
         state_change: dict[str, Any],
         fqdn: str = None,
     ):
@@ -779,7 +779,7 @@ class MockComponentStateChangedCallback(MockCallableDeque):
             )
 
     def assert_next_calls_with_state_params(
-        self: MockCallableDeque, expected_arguments_list: list[(dict[str, Any], str)]
+        self: MockComponentStateChangedCallback, expected_arguments_list: list[(dict[str, Any], str)]
     ):
         """
         Assert that for the next sequence of calls to this mock where the state_change

@@ -564,14 +564,13 @@ class MockCallableDeque(MockCallable):
     def assert_ordered_in_deque(
         self: MockCallableDeque,
         expected_arguments_list: list[Any],
-    ) -> bool:
+    ) -> None:
         """
         Assert that the mock has been called with the provided arguments in the order
         specified.
 
         :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
 
-        :return: `True` if all arguments were found in the deque in the order provided else raises AssertionError.
         :raises: AssertionError if any argument is not found or they are in a different order.
         """
         # Extract a list of all the call arguments currently in the deque.
@@ -603,7 +602,6 @@ class MockCallableDeque(MockCallable):
         indices_to_remove.sort(reverse=True)
         self._remove_elements(indices_to_remove)
         # Found all entries in specified order.
-        return True
 
     def assert_next_call_with_key(
         self: MockCallableDeque, expected_argument: dict[str, Any]

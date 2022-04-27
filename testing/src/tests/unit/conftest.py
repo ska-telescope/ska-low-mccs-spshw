@@ -132,7 +132,8 @@ def mock_callback_deque_factory(
     mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallableDeque]:
     """
-    Return a factory that returns a new mock callback each call, using a deque.
+    Return a factory that returns a new mock callback using a deque each time it is
+    called.
 
     Use this fixture in tests that need more than one mock_callback. If
     your tests only needs a single mock callback, it is simpler to use

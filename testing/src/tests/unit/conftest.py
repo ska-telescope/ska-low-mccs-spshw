@@ -7,9 +7,10 @@
 # See LICENSE for more info.
 """This module contains pytest-specific test harness for MCCS unit tests."""
 import unittest
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 
 import pytest
+import ska_low_mccs
 
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback, MockCallableDeque
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, DeviceToLoadType
@@ -92,14 +93,15 @@ def mock_callback_factory(
         not_called_timeout=mock_callback_not_called_timeout,
     )
 
-
+    
 @pytest.fixture()
 def mock_callback_deque_factory(
     mock_callback_called_timeout: float,
     mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallableDeque]:
     """
-    Return a factory that returns a new mock callback using a deque each time it is called.
+    Return a factory that returns a new mock callback using a deque each time it is
+    called.
 
     Use this fixture in tests that need more than one mock_callback. If
     your tests only needs a single mock callback, it is simpler to use
@@ -113,9 +115,10 @@ def mock_callback_deque_factory(
     :return: a factory that returns a new mock callback each time it is
         called.
     """
-    return lambda: MockCallableDeque(
+    return lambda config=None: MockCallableDeque(
         called_timeout=mock_callback_called_timeout,
         not_called_timeout=mock_callback_not_called_timeout,
+        config=config,
     )
 
 

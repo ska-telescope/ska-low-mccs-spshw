@@ -227,6 +227,7 @@ class MccsSubarray(SKASubarray):
             station_power = state_change.get("station_power_state")
             self.component_manager._station_power_state_changed(fqdn, station_power)
 
+        # This might need changing. Seems that "power_state" changes could come from any subservient device too.
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
             with self.component_manager._power_state_lock:

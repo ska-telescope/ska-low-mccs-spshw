@@ -187,7 +187,7 @@ class SubarrayComponentManager(
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
             with self._power_state_lock:
-                self._component_state_changed_callback({"power_state": PowerState.ON})
+                self._component_state_changed_callback(state_change={"power_state": PowerState.ON})
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""
@@ -686,12 +686,11 @@ class SubarrayComponentManager(
         self._scan_id = scan_id
 
         result_code = ResultCode.OK
-        for subarray_beam_proxy in self._subarray_beams.values():
+        for subarray_beam_proxy in self._subarray_beams.values():                
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
         self._scanning_changed_callback({"scanning_changed": True})
-        # TODO: Scan may not have actually completed by this point, check.
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
         return result_code
@@ -883,8 +882,9 @@ class SubarrayComponentManager(
 
     def send_transient_buffer(
         self: SubarrayComponentManager,
+        argin: list[int],
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the send_transient_buffer slow task.
 
@@ -895,12 +895,13 @@ class SubarrayComponentManager(
         :return: Task status and response message.
         """
         return self.submit_task(
-            self._send_transient_buffer, args=[], task_callback=task_callback
+            self._send_transient_buffer, args=[argin], task_callback=task_callback,
         )
 
     @check_communicating
     def _send_transient_buffer(
         self: SubarrayComponentManager,
+        argin: list[int],
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
     ) -> None:

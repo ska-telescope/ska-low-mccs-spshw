@@ -15,10 +15,9 @@ from typing import Callable, Iterable, Optional
 import pytest
 import pytest_mock
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.controller import (
     ControllerComponentManager,
     ControllerResourceManager,

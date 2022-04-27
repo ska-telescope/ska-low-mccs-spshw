@@ -21,4 +21,4 @@ __all__ = [
 from .mock_callable import MockCallable, MockChangeEventCallback, MockCallableDeque
 from .mock_device import MockDeviceBuilder
 
-# from .mock_subarray import MockSubarrayBuilder
+from .mock_subarray import MockSubarrayBuilder

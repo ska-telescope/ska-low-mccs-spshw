@@ -9,7 +9,7 @@ import logging
 from typing import Any, Callable, Hashable, List, Optional, Tuple
 
 from ska_tango_base.base.component_manager import BaseComponentManager
-from ska_tango_base.base.base_device import _CommandTracker # type: ignore[import]
+from ska_tango_base.base.base_device import CommandTracker # type: ignore[import]
 from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SlowCommand, FastCommand
 from ska_tango_base.obs import SKAObsDevice
@@ -24,7 +24,7 @@ class SKASubarray(SKAObsDevice):
         ) -> tuple[ResultCode, str]: ...
 
     class AbortCommand(SlowCommand):
-        def __init__(self: SKASubarray.AbortCommand, command_tracker: _CommandTracker, 
+        def __init__(self: SKASubarray.AbortCommand, command_tracker: CommandTracker, 
         component_manager: BaseComponentManager, callback: Callable, logger: Optional[logging.Logger]=None) -> None: ...
         def do(self: SKASubarray.AbortCommand) -> tuple[ResultCode, str]: # type: ignore[override]
             ...

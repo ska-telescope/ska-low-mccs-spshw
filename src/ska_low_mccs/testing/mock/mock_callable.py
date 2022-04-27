@@ -621,7 +621,16 @@ class MockCallableDeque(MockCallable):
         :param indices_to_remove: An integer list of indices to be removed from the deque.
         """
         for index in indices_to_remove:
-            self._queue.remove(self._queue[index])
+            self._remove_element(index)
+
+    def _remove_element(self: MockCallableDeque, index: int) -> None:
+        """
+        Remove the calls at the index contained in `indices_to_remove`.
+
+        This method is used to clear found calls to the mock.
+        :param indices_to_remove: An integer list of indices to be removed from the deque.
+        """
+        self._queue.remove(self._queue[index])
 
 
 class MockComponentStateChangedCallback(MockCallableDeque):

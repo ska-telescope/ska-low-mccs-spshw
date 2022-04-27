@@ -63,7 +63,7 @@ class SubarrayBeamObsStateModel:
         if self._obs_state != obs_state:
             self._obs_state = obs_state
 
-    #            self._obs_state_changed_callback({"obs_state": obs_state})
+        self._obs_state_changed_callback({"obs_state": obs_state})
 
     def _evaluate_obs_state(
         self: SubarrayBeamObsStateModel,

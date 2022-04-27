@@ -188,7 +188,7 @@ class TestSubarrayBeam:
             assert subarray_beam.desired_pointing == pytest.approx(desired_pointing)
             assert subarray_beam.antenna_weights == pytest.approx(antenna_weights)
             assert subarray_beam.phase_centre == pytest.approx(phase_centre)
-
+            
         if isinstance(subarray_beam, SubarrayBeamComponentManager):
             config = {
                 "subarray_beam_id": subarray_beam_id,
@@ -204,9 +204,9 @@ class TestSubarrayBeam:
 
             assert component_state_changed_callback.assert_in_deque([{"configured_changed": False}])
 
-            task_status, response = subarray_beam.configure(config_dict)
-            
-            #assert component_state_changed_callback.assert_in_deque([{"configured_changed": True}])
+            task_status, unique_id = subarray_beam.configure(config_dict)
+            time.sleep(0.2)
+            assert component_state_changed_callback.assert_in_deque([{"configured_changed": True}])
 
             assert task_status == TaskStatus.QUEUED
-            #assert response == "Task queued"
+            assert unique_id == "Task queued"

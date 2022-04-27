@@ -216,6 +216,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Task abort, defaults to None
         """
+        self.component_state_changed_callback({"configured_changed" : True})
+
         task_callback(status=TaskStatus.IN_PROGRESS)
 
         # TODO Ben add config stuff here

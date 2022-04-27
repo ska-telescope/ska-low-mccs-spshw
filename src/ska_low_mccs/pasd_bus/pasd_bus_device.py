@@ -619,7 +619,7 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_out=str)
-    def GetFndhInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
+    def GetFndhInfo(self: MccsPasdBus, argin: int) -> Tuple[List[Any], List[Any]]:
         """
         Return information about the FNDH.
 
@@ -627,11 +627,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("GetFndhInfo")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
-    def TurnFndhServiceLedOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnFndhServiceLedOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn on an FNDH's blue service LED.
 
@@ -639,11 +639,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnFndhServiceLedOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
-    def TurnFndhServiceLedOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnFndhServiceLedOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn off an FNDH's blue service LED.
 
@@ -651,11 +651,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnFndhServiceLedOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetSmartboxInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
+    def GetSmartboxInfo(self: MccsPasdBus, argin: int) -> Tuple[List[Any], List[Any]]:
         """
         Return information about a smartbox.
 
@@ -663,11 +663,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("GetSmartboxInfo")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox.
 
@@ -675,11 +675,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox.
 
@@ -687,11 +687,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox's blue service LED.
 
@@ -699,11 +699,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxServiceLedOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox's blue service LED.
 
@@ -711,11 +711,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxServiceLedOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out=str)
-    def GetAntennaInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
+    def GetAntennaInfo(self: MccsPasdBus, argin: int) -> Tuple[List[Any], List[Any]]:
         """
         Return information about relationship of an antenna to other PaSD components.
 
@@ -723,11 +723,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("GetAntennaInfo")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def ResetAntennaBreaker(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def ResetAntennaBreaker(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Reset a tripped antenna breaker.
 
@@ -735,11 +735,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("ResetAntennaBreaker")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnAntennaOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnAntennaOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn on an antenna.
 
@@ -747,11 +747,11 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnAntennaOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnAntennaOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnAntennaOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn off an antenna.
 
@@ -759,7 +759,7 @@ class MccsPasdBus(SKABaseDevice):
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnAntennaOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
 

@@ -37,7 +37,7 @@ def max_workers() -> int:
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for a change in the subarray beam state.
@@ -49,7 +49,7 @@ def component_state_changed_callback(
     :return: a mock callback to be called when the component manager
         detects that the beam state has changed
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()

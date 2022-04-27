@@ -507,7 +507,7 @@ class MockCallableDeque(MockCallable):
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
         if expected_argument in call_arguments:
             # Found the argument in the deque so we remove the entry.
-            self._remove_elements(call_arguments.index(expected_argument))
+            self._remove_element(call_arguments.index(expected_argument))
         else:
             # We couldn't find an expected argument so raise an AssertionError.
             raise AssertionError(
@@ -587,7 +587,7 @@ class MockCallableDeque(MockCallable):
             if expected_key == call_key:
                 if expected_val == call_val:
                     # We have an exact match. Remove the entry.
-                    self._remove_elements(call_arguments.index(call_arg))
+                    self._remove_element(call_arguments.index(call_arg))
                 else:
                     # We have matched the key but not the value.
                     raise AssertionError(

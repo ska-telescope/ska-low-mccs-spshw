@@ -601,6 +601,8 @@ class SubarrayComponentManager(
             station_fqdn = f"low-mccs/station/{station_id:03d}"
             station_proxy = self._stations[station_fqdn]
             print(f"-- before configure call for {station_fqdn}")
+            print(station_proxy.communication_status)
+            print(station_proxy.power_state)
             proxy_result_code, response = station_proxy.configure(configuration)
             print("-- after configure call")
             if proxy_result_code == ResultCode.FAILED:
@@ -684,12 +686,11 @@ class SubarrayComponentManager(
         self._scan_id = scan_id
 
         result_code = ResultCode.OK
-        for subarray_beam_proxy in self._subarray_beams.values():
+        for subarray_beam_proxy in self._subarray_beams.values():                
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
         self._scanning_changed_callback({"scanning_changed": True})
-        # TODO: Scan may not have actually completed by this point, check.
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
         return result_code
@@ -776,7 +777,7 @@ class SubarrayComponentManager(
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
-        
+
         # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
         # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
@@ -881,8 +882,9 @@ class SubarrayComponentManager(
 
     def send_transient_buffer(
         self: SubarrayComponentManager,
+        argin: list[int],
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the send_transient_buffer slow task.
 
@@ -893,12 +895,13 @@ class SubarrayComponentManager(
         :return: Task status and response message.
         """
         return self.submit_task(
-            self._send_transient_buffer, args=[], task_callback=task_callback
+            self._send_transient_buffer, args=[argin], task_callback=task_callback,
         )
 
     @check_communicating
     def _send_transient_buffer(
         self: SubarrayComponentManager,
+        argin: list[int],
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
     ) -> None:
@@ -952,7 +955,6 @@ class SubarrayComponentManager(
         power_mode: PowerState,
     ) -> None:
         self._station_power_modes[fqdn] = power_mode
-
         if self._is_assigning and all(
             power_mode is not None for power_mode in self._station_power_modes.values()
         ):

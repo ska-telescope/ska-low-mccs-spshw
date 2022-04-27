@@ -12,8 +12,8 @@ import logging
 from typing import Callable
 
 import pytest
+from ska_tango_base.control_model import CommunicationStatus
 
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tel_state import TelState, TelStateComponentManager
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 

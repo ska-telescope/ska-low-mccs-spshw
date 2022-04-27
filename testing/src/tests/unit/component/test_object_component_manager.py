@@ -13,9 +13,10 @@ import unittest.mock
 
 import pytest
 import pytest_mock
+from ska_tango_base.control_model import CommunicationStatus
 
-from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.component import ObjectComponentManager
+from ska_low_mccs.testing.mock import MockCallable
 
 
 class TestObjectComponentManager:
@@ -40,10 +41,9 @@ class TestObjectComponentManager:
         self: TestObjectComponentManager,
         component: unittest.mock.Mock,
         logger: logging.Logger,
-        lrc_result_changed_callback: MockChangeEventCallback,
+        max_workers: int,
         communication_status_changed_callback: MockCallable,
-        component_power_mode_changed_callback: MockCallable,
-        component_fault_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
     ) -> ObjectComponentManager:
         """
         Return a component manager for the component object.
@@ -51,25 +51,21 @@ class TestObjectComponentManager:
         :param component: the component to be managed by the component
             manager.
         :param logger: a logger for the component manager to use
-        :param lrc_result_changed_callback: a callback to
-            be used to subscribe to device LRC result changes
+        :param max_workers: nos of threads
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
 
         :return: a component manager for the component object.
         """
         return ObjectComponentManager(
             component,
             logger,
-            lrc_result_changed_callback,
+            max_workers,
             communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            component_state_changed_callback,
         )
 
     def test_communication(
@@ -186,4 +182,5 @@ class TestObjectComponentManager:
         component_manager.start_communicating()
 
         getattr(component_manager, command)()
-        getattr(component, command).assert_next_call()
+        attr = getattr(component, command)
+        attr.assert_next_call(None)

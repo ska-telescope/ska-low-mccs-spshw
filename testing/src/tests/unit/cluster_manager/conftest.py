@@ -13,14 +13,18 @@ import unittest
 from typing import Callable
 
 import pytest
-from ska_tango_base.control_model import HealthState, PowerState, SimulationMode
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    SimulationMode,
+)
 
 from ska_low_mccs.cluster_manager import (
     ClusterComponentManager,
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 

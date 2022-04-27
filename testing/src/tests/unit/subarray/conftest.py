@@ -36,7 +36,8 @@ def component_state_changed_callback(
 
     :return: a mock callback to be called when the subarray's state changes.
     """
-    return mock_callback_deque_factory()
+    config = None
+    return mock_callback_deque_factory(config)
 
 
 # TODO: Delete fixtures from here to.....

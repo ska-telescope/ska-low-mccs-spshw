@@ -420,6 +420,7 @@ class MockCallableDeque(MockCallable):
         return_value: Any = None,
         called_timeout: float = 5.0,
         not_called_timeout: float = 1.0,
+        config: Optional[dict[str,Any]] = None,
     ):
         """
         Initialise a new instance.
@@ -437,6 +438,7 @@ class MockCallableDeque(MockCallable):
             severely slow down your tests. By keeping this timeout quite
             short, we can speed up our tests, at the risk of prematurely
             passing an assertion. The default is 0.5
+        :param config: An optional configuration string to apply to the mock.
         """
         super().__init__(
             return_value=return_value,
@@ -444,6 +446,7 @@ class MockCallableDeque(MockCallable):
             not_called_timeout=not_called_timeout,
         )
         self._queue: collections.deque = collections.deque()
+        self._configure_kwargs = config
 
     def __call__(self: MockCallableDeque, *args: Any, **kwargs: Any) -> Any:
         """
@@ -458,7 +461,10 @@ class MockCallableDeque(MockCallable):
 
         :return: the object's return value
         """
-        called_mock = unittest.mock.Mock()
+        if self._configure_kwargs:
+            called_mock = unittest.mock.Mock(**self._configure_kwargs)
+        else:
+            called_mock = unittest.mock.Mock()
         called_mock(*args, **kwargs)
         self._queue.append(called_mock)
         return self._return_value
@@ -469,39 +475,39 @@ class MockCallableDeque(MockCallable):
         except IndexError:
             return None
 
-    def assert_in_deque(
+    def assert_all_in_deque(
         self: MockCallableDeque,
         expected_arguments_list: list[Any],
-    ) -> bool:
+    ) -> None:
         """
-        Assert that a call (or calls) to the callback with the expected arguments are
+        Assert that a list of calls to the callback with the expected arguments are
         present in the deque.
-
-        This method clears the deque before returning so
-        subsequent calls to this method don't match against old calls to the mock.
 
         :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
 
-        :returns: `True` if all arguments provided were found in the deque else returns `False`.
+        :raises: AssertionError if any argument was not found.
+        """
+        for expected_argument in expected_arguments_list:
+            self.assert_in_deque(expected_argument)
+
+
+    def assert_in_deque(self: MockCallableDeque, expected_argument: Any) -> None:
+        """
+        Assert that a single call to the callback with the expected argument is
+        present in the deque.
+
+        :param expected_argument: An argument this mock is expected to be called with and found in the deque.
+
+        :raises: AssertionError if the expected argument was not found.
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
-        indices_to_remove = []
-        for expected_argument in expected_arguments_list:
-            if expected_argument in call_arguments:
-                # If we find an expected argument in the list then we remember where in the list it was so we can remove them later.
-                # call_arguments will be in the same order as the deque.
-                indices_to_remove.append(call_arguments.index(expected_argument))
-            else:
-                # We couldn't find an expected argument so return False.
-                raise AssertionError(f"Could not find {expected_argument} in the queue! Queue contents: {call_arguments}")
-
-        # Clear found items in ***reverse order***
-        indices_to_remove.sort(reverse=True)
-        self._remove_elements(indices_to_remove)
-
-        # If we get here then we must have found all of our expected_arguments.
-        return True
+        if expected_argument in call_arguments:
+            # Found the argument in the deque so we remove the entry.
+            self._remove_elements(call_arguments.index(expected_argument))
+        else:
+            # We couldn't find an expected argument so raise an AssertionError.
+            raise AssertionError(f"Could not find {expected_argument} in the queue! Queue contents: {call_arguments}")
 
     def assert_ordered_in_deque(
         self: MockCallableDeque,
@@ -542,55 +548,58 @@ class MockCallableDeque(MockCallable):
         # Found all entries in specified order.
         return True
 
-    def assert_next_call_with_keys(
-        self: MockCallableDeque, expected_arguments_list: list[dict[str, Any]]
-    ) -> bool:
+    def assert_next_call_with_key(self: MockCallableDeque, expected_argument: dict[str, Any]) -> None:
         """
-        Assert that the next call(s) to this mock with a given key also has the specified
+        Assert that the next call to this mock with a given key also has the specified
         value.
 
-        This method searches the deque for the *next* call(s) to the mock with the specified key while ignoring other keywords.
+        This method searches the deque for the *next* call to the mock with the specified key while ignoring other keys.
         If a match to the key is found then the value must also match.
-        If the key is not found or the value does not match the expected value this method will return `False` otherwise it will return `True`.
+        If the key is not found or the value does not match the expected value this method will raise an AssertionError otherwise it will return `True`.
 
-        :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
+        :param expected_argument: A dict containing the key-value argument this mock is expected to be called with.
 
-        :return: True if the next matching call(s) to the mock all have the specified values else False if the call(s) are not found or have a different value.
+        :raises AssertionError: If the key is not found or the value does not match the expected value.
         """
-        # List of dicts.
         call_arguments: list(dict) = [
             dict(queue_item.call_args[0][0]) for queue_item in self._queue
         ]
-        indices_to_remove = []
+        expected_key = list(expected_argument.keys())
+        expected_val = list(expected_argument.values())
+        # Check if the expected key is somewhere in the deque.
+        for call_arg in call_arguments:
+            # Should usually be just a single key. This method will require updating if multiple keys occur.
+            call_key = list(call_arg.keys())
+            call_val = list(call_arg.values())
+            # Check if we've found the key we're looking for. We're only considering the first match.
+            if expected_key == call_key:
+                if expected_val == call_val:
+                    # We have an exact match. Remove the entry.
+                    self._remove_elements(call_arguments.index(call_arg))
+                else:
+                    # We have matched the key but not the value.
+                    raise AssertionError(f"First call with expected key: {expected_key} had actual value: {call_val} not equal to expected value: {expected_val}")
 
+    def assert_next_calls_with_keys(
+        self: MockCallableDeque, expected_arguments_list: list[dict[str, Any]]
+    ) -> None:
+        """
+        Assert that the next calls to this mock with a given key also have the specified
+        values.
+
+        This method searches the deque for the *next* calls to the mock with the specified key while ignoring other keys.
+        If a match to the key is found then the value must also match.
+        If the key is not found or the value does not match the expected value this method will raise an AssertionError otherwise it will return `True`.
+
+        :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
+
+        :return: True if the next matching call to the mock all have the specified values else raise an AssertionError.
+        """
         # Try to match our expected args one at a time.
         for expected_argument in expected_arguments_list:
-            expected_key = list(expected_argument.keys())
-            expected_val = list(expected_argument.values())
-
             # Check if the expected key is somewhere in the deque.
-            for call_arg in call_arguments:
-                # Should usually be just a single key. This method will require updating if multiple keys occur.
-                call_key = list(call_arg.keys())
-                call_val = list(call_arg.values())
-
-                # Check if we've found the key we're looking for. We're only considering the first match.
-                if expected_key == call_key:
-                    if expected_val == call_val:
-                        # We have an exact match. Store the index for later removal.
-                        indices_to_remove.append(call_arguments.index(call_arg))
-                        break  # Move on to next expected argument.
-                    else:
-                        # We have matched the key but not the value.
-                        raise AssertionError(f"First call with expected key: {expected_key} had actual value: {call_val} not equal to expected value: {expected_val}")
-
-        # Clear found items in ***reverse order***
-        indices_to_remove.sort(reverse=True)
-        self._remove_elements(indices_to_remove)
-        # If `indices_to_remove` has an entry for each expected_argument in the list then we've matched everything.
-        if len(indices_to_remove) != len(expected_arguments_list):
-            raise AssertionError("Could not match all expected calls to their first occurrance in the queue!")
-        return True
+            # If not found this method will raise an exception.
+            self.assert_next_call_with_key(expected_argument)
 
     def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:
         """

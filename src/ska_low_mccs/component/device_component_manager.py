@@ -121,12 +121,11 @@ class DeviceComponentManager(MccsComponentManager):
         print(f"{self._fqdn}: AFTER comms status: {self.communication_status}")
         self._proxy.add_change_event_callback("state", self._device_state_changed)
 
-
         print(f"Connected to '{self._fqdn}'")
         print(self.communication_status)
 
         # TODO: Determine if we need this IF
-        #if self._health_changed_callback is not None:
+        # if self._health_changed_callback is not None:
         for event, callback in event_callbacks.items():
             self._proxy.add_change_event_callback(event, callback)
 

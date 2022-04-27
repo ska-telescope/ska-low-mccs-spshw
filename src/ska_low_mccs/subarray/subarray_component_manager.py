@@ -776,7 +776,7 @@ class SubarrayComponentManager(
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
-        
+
         # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
         # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:

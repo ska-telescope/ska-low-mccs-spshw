@@ -117,19 +117,23 @@ class PowerSupplyProxySimulator(
                 power supply proxy simulator
             """
             self._supplied_power_state = initial_supplied_power_state
+            self._supplied_power_mode_changed_callback: Optional[
+                Callable[[PowerState], None]
+            ] = None
 
         def set_component_state_changed_callback(
             self: PowerSupplyProxySimulator._Component,
-            power_state_changed: Optional[Callable[[dict[str, Any]], None]] = None,
+            supplied_power_state_changed: Optional[Callable[[dict[str, Any]], None]] = None,
         ) -> None:
             """
             Set the supplied power mode changed callback.
 
             :param power_state_changed: set the new power state
             """
-            self._power_state_changed = power_state_changed
-            if self._power_state_changed is not None:
-                self._power_state_changed(self._supplied_power_state)
+            self._supplied_power_state_changed_callback = (supplied_power_state_changed)
+            if self._supplied_power_state_changed_callback is not None:
+                print("UUUUUUUUUUUUUUUUUUUUUUUUUUUUU", self._supplied_power_state)
+                self._supplied_power_state_changed_callback(self._supplied_power_state)
 
         def power_off(
             self: PowerSupplyProxySimulator._Component,
@@ -153,6 +157,7 @@ class PowerSupplyProxySimulator(
 
             :return: a result code, or None if there was nothing to do.
             """
+            print("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj", self._supplied_power_state)
             if self._supplied_power_state == PowerState.ON:
                 return None
 
@@ -169,10 +174,14 @@ class PowerSupplyProxySimulator(
             :param supplied_power_state: the new supplied power mode of
                 the downstream device.
             """
+            print("update fffffffffffffffffffffffffffffffffffffffffffff", self._supplied_power_state, supplied_power_state)
             if self._supplied_power_state != supplied_power_state:
                 self._supplied_power_state = supplied_power_state
-                if self._power_state_changed is not None:
-                    self._power_state_changed(supplied_power_state)
+                print("update fffffffffffffffffffffffffffffffffffffffffffff2", self._supplied_power_state, supplied_power_state)
+                if self._supplied_power_state_changed_callback is not None:
+                    print("update fffffffffffffffffffffffffffffffffffffffffffff3", self._supplied_power_state, supplied_power_state)
+                    self._supplied_power_state_changed_callback(supplied_power_state)
+                    print("update fffffffffffffffffffffffffffffffffffffffffffff4", self._supplied_power_state, supplied_power_state)
 
     def __init__(
         self: PowerSupplyProxySimulator,
@@ -198,6 +207,7 @@ class PowerSupplyProxySimulator(
             mode of the simulated component
         """
         self._component_state_changed_callback = component_state_changed_callback
+        self._supplied_power_state = PowerState.OFF
         super().__init__(
             self._Component(initial_supplied_power_state),
             logger,
@@ -244,6 +254,7 @@ class PowerSupplyProxySimulator(
         supplied_power_state: PowerState,
     ) -> None:
         self.update_supplied_power_state(supplied_power_state)
+        print("gggggggggggggggggggggggggggggggggggg")
 
 
 class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
@@ -393,6 +404,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             # managers. Even when they are do-nothing placeholders, they should still
             # behave asynchronously.
             self._hardware_component_manager.start_communicating()
+            print("got here got here got here")
         super().component_state_changed_callback({"power_state": power_state})
         self._review_power()
 
@@ -411,7 +423,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         # TODO sort out return from review_power
         return TaskStatus.COMPLETED, "Ignore return code for now"
 
-    # @check_communicating
+    @check_communicating
     def on(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> tuple[TaskStatus, str]:
@@ -422,7 +434,9 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         """
         with self._power_state_lock:
             self._target_power_state = PowerState.ON
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",self._target_power_state, self.power_state)
         self._review_power()
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2",self.power_state)
         # TODO sort out return from review_power
         return TaskStatus.COMPLETED, "Ignore return code for now"
 
@@ -431,6 +445,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> ResultCode | None:
         with self._power_state_lock:
+            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA3",self._target_power_state, self.power_state)
             if self._target_power_state is None:
                 return None
             if self.power_state == self._target_power_state:
@@ -441,6 +456,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
                 and self._target_power_state == PowerState.ON
             ):
                 result_code = self._power_supply_component_manager.power_on()
+                # next line is a nasty nasty awful hack!!!!!!!!!!!!
+                self.power_state = self._target_power_state
                 self._target_power_state = None
                 return result_code
             if (
@@ -448,6 +465,28 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
                 and self._target_power_state == PowerState.OFF
             ):
                 result_code = self._power_supply_component_manager.power_off()
+                # next line is a nasty nasty awful hack!!!!!!!!!!!!
+                self.power_state = self._target_power_state
+                self._target_power_state = None
+                return result_code
+            if (
+                self.power_state == PowerState.UNKNOWN
+                and self._target_power_state == PowerState.ON
+            ):
+                print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4", self._target_power_state, self.power_state)
+                result_code = self._power_supply_component_manager.power_on()
+                print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5", self._target_power_state, self.power_state)
+                # next line is a nasty nasty awful hack!!!!!!!!!!!!
+                self.power_state = self._target_power_state
+                self._target_power_state = None
+                return result_code
+            if (
+                self.power_state == PowerState.UNKNOWN
+                and self._target_power_state == PowerState.OFF
+            ):
+                result_code = self._power_supply_component_manager.power_off()
+                # next line is a nasty nasty awful hack!!!!!!!!!!!!
+                self.power_state = self._target_power_state
                 self._target_power_state = None
                 return result_code
             return ResultCode.QUEUED

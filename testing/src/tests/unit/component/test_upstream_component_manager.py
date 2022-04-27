@@ -175,7 +175,6 @@ class TestPowerSupplyProxySimulator:
 
         component_manager.start_communicating()
         time.sleep(0.1)
-        print(dir(component_manager))
         assert component_manager.supplied_power_state == PowerState.OFF
 
         getattr(component_manager, command)()

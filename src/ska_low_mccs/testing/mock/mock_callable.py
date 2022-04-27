@@ -474,7 +474,6 @@ class MockCallableDeque(MockCallable):
         return_value: Any = None,
         called_timeout: float = 5.0,
         not_called_timeout: float = 1.0,
-        config: Optional[dict[str,Any]] = None,
     ):
         """
         Initialise a new instance.
@@ -500,7 +499,6 @@ class MockCallableDeque(MockCallable):
             not_called_timeout=not_called_timeout,
         )
         self._queue: collections.deque = collections.deque()
-        self._configure_kwargs = config
 
     def __call__(self: MockCallableDeque, *args: Any, **kwargs: Any) -> Any:
         """
@@ -515,10 +513,7 @@ class MockCallableDeque(MockCallable):
 
         :return: the object's return value
         """
-        if self._configure_kwargs:
-            called_mock = unittest.mock.Mock(**self._configure_kwargs)
-        else:
-            called_mock = unittest.mock.Mock()
+        called_mock = unittest.mock.Mock()
         called_mock(*args, **kwargs)
         self._queue.append(called_mock)
         return self._return_value

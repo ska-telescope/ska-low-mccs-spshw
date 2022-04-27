@@ -187,7 +187,7 @@ class SubarrayComponentManager(
         else:
             self.update_communication_status(CommunicationStatus.ESTABLISHED)
             with self._power_state_lock:
-                self._component_state_changed_callback(state_change={"power_state": PowerState.ON})
+                self._component_state_changed_callback({"power_state": PowerState.ON})
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""

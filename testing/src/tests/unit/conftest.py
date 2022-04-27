@@ -119,10 +119,9 @@ def mock_callback_deque_factory(
     :return: a factory that returns a new mock callback each time it is
         called.
     """
-    return lambda config=None: MockCallableDeque(
+    return lambda: MockCallableDeque(
         called_timeout=mock_callback_called_timeout,
         not_called_timeout=mock_callback_not_called_timeout,
-        config=config,
     )
 
 

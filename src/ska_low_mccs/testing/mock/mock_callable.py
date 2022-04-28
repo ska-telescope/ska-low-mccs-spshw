@@ -594,8 +594,8 @@ class MockCallableDeque(MockCallable):
         keyword-argument match the specified fqdn. If a match is found, the corresponding call is removed
         from the deque, and the dictionary values of the state_change argument with matching keys is returned.
 
-        :param state_change_keys: state_change keys to be seached for in the queue
-        :param fqdn: fqdn to be seached for in the queue
+        :param state_change_keys: state_change keys to be searched for in the queue
+        :param fqdn: fqdn to be searched for in the queue
         :return: tuple containing the values of the state_change dictionary with matching keys (or None)
         """
         index, actual_state_change = self._find_next_call_with_keys(
@@ -613,7 +613,7 @@ class MockCallableDeque(MockCallable):
         fqdn: str = None,
     ):
         """Assert that no call to this mock has been made where its state_change
-        argument has the given key(s) and its fqdn keword-argument matches the specified
+        argument has the given key(s) and its fqdn keyword-argument matches the specified
         fqdn."""
         index, actual_state_change = self._find_next_call_with_keys(
             *state_change_keys, fqdn=fqdn
@@ -655,12 +655,12 @@ class MockCallableDeque(MockCallable):
         self: MockCallableDeque, expected_arguments_list: list[(dict[str, Any], str)]
     ) -> None:
         """
-        Assert that the next calls to this mock with a given key also have the specified
+        Assert that the next calls to this mock with given keys also have the specified
         values.
 
         This method searches the deque for the *next* calls to the mock with the specified key while ignoring other keys.
         If a match to the key is found then the value must also match.
-        If the key is not found or the value does not match the expected value this method will raise an AssertionError otherwise it will return `True`.
+        If the key is not found or the value does not match the expected value this method will raise an AssertionError
 
         :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
         """

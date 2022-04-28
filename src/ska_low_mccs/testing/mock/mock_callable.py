@@ -15,11 +15,7 @@ from typing import Any, Optional, Sequence, Tuple
 
 import tango
 
-<<<<<<< HEAD
 __all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque"]
-=======
-__all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque", "MockComponentStateChangedCallback"]
->>>>>>> mccs-1008
 
 
 class MockCallable:
@@ -408,19 +404,12 @@ class MockChangeEventCallback(MockCallable):
         if called_mock is None and _do_assert:
             raise AssertionError(failure_message)
 
-<<<<<<< HEAD
-class MockCallableDeque(MockCallable):
-    """
-    This class alters MockCallable to use a deque instead of a queue and adds the `assert_in_deque` method
-    which checks the deque for calls to this mock with specific arguments.
-=======
 
 class MockCallableDeque(MockCallable):
     """
     This class alters MockCallable to use a deque instead of a queue and adds the
     `assert_in_deque` method which checks the deque for calls to this mock with specific
     arguments.
->>>>>>> mccs-1008
 
     It is a special case of a :py:class:`MockCallable` where the
     callable will be called in a non-deterministic order.
@@ -433,10 +422,6 @@ class MockCallableDeque(MockCallable):
         return_value: Any = None,
         called_timeout: float = 5.0,
         not_called_timeout: float = 1.0,
-<<<<<<< HEAD
-=======
-        config: Optional[dict[str, Any]] = None,
->>>>>>> mccs-1008
     ):
         """
         Initialise a new instance.
@@ -454,10 +439,6 @@ class MockCallableDeque(MockCallable):
             severely slow down your tests. By keeping this timeout quite
             short, we can speed up our tests, at the risk of prematurely
             passing an assertion. The default is 0.5
-<<<<<<< HEAD
-=======
-        :param config: An optional configuration string to apply to the mock.
->>>>>>> mccs-1008
         """
         super().__init__(
             return_value=return_value,
@@ -465,10 +446,6 @@ class MockCallableDeque(MockCallable):
             not_called_timeout=not_called_timeout,
         )
         self._queue: collections.deque = collections.deque()
-<<<<<<< HEAD
-=======
-        self._configure_kwargs = config
->>>>>>> mccs-1008
 
     def __call__(self: MockCallableDeque, *args: Any, **kwargs: Any) -> Any:
         """
@@ -483,59 +460,11 @@ class MockCallableDeque(MockCallable):
 
         :return: the object's return value
         """
-<<<<<<< HEAD
         called_mock = unittest.mock.Mock()
-=======
-        if self._configure_kwargs:
-            called_mock = unittest.mock.Mock(**self._configure_kwargs)
-        else:
-            called_mock = unittest.mock.Mock()
->>>>>>> mccs-1008
         called_mock(*args, **kwargs)
         self._queue.append(called_mock)
         return self._return_value
 
-<<<<<<< HEAD
-    def _fetch_call(self: MockCallableDeque, timeout: float) -> Optional[unittest.mock.Mock]:
-        try:
-            return self._queue.pop()
-        except IndexError:
-            return None
-
-    def assert_in_deque(
-        self: MockCallableDeque,
-        expected_arguments_list: list[Any],
-    ) -> bool:
-        """
-        Assert that a call (or calls) to the callback with the expected arguments are
-        present in the deque.
-
-        This method clears the deque before returning so
-        subsequent calls to this method don't match against old calls to the mock.
-
-        :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
-
-        :returns: `True` if all arguments provided were found in the deque else returns `False`.
-        """
-        # Extract a list of all the call arguments currently in the deque.
-        call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
-        indices_to_remove = []
-        for expected_argument in expected_arguments_list:
-            if expected_argument in call_arguments:
-                # If we find an expected argument in the list then we remember where in the list it was so we can remove them later.
-                # call_arguments will be in the same order as the deque.
-                indices_to_remove.append(call_arguments.index(expected_argument))
-            else:
-                # We couldn't find an expected argument so return False.
-                raise AssertionError(f"Could not find {expected_argument} in the queue! Queue contents: {call_arguments}")
-
-        # Clear found items in ***reverse order***
-        indices_to_remove.sort(reverse=True)
-        self._remove_elements(indices_to_remove)
-
-        # If we get here then we must have found all of our expected_arguments.
-        return True
-=======
     def _fetch_call(
         self: MockCallableDeque, timeout: float
     ) -> Optional[unittest.mock.Mock]:
@@ -578,28 +507,19 @@ class MockCallableDeque(MockCallable):
             raise AssertionError(
                 f"Could not find {expected_argument} in the queue! Queue contents: {call_arguments}"
             )
->>>>>>> mccs-1008
 
     def assert_ordered_in_deque(
         self: MockCallableDeque,
         expected_arguments_list: list[Any],
-<<<<<<< HEAD
-    ) -> bool:
-=======
     ) -> None:
->>>>>>> mccs-1008
         """
         Assert that the mock has been called with the provided arguments in the order
         specified.
 
         :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
 
-<<<<<<< HEAD
-        :return: `True` if all arguments were found in the deque in the order provided else `False`.
-=======
         :return: `True` if all arguments were found in the deque in the order provided else raises AssertionError.
         :raises: AssertionError if any argument is not found or they are in a different order.
->>>>>>> mccs-1008
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
@@ -613,84 +533,23 @@ class MockCallableDeque(MockCallable):
                     expected_arguments_list.pop()
             except IndexError as ind_err:
                 # Should only get here if expected_arguments_list was passed in empty.
-<<<<<<< HEAD
-                raise AssertionError(f"IndexError: expected_arguments_list size: {len(expected_arguments_list)}") from ind_err
-=======
                 raise AssertionError(
                     f"IndexError: expected_arguments_list size: {len(expected_arguments_list)}"
                 ) from ind_err
->>>>>>> mccs-1008
             # If we find everything before the end of the queue then no need to keep going.
             if len(expected_arguments_list) == 0:
                 break
 
         # If expected_arguments_list is not empty then we didn't find everything or it wasn't in the order we wanted.
         if len(expected_arguments_list) > 0:
-<<<<<<< HEAD
-            raise AssertionError(f"Could not find some arguments in the call queue or they were in the incorrect order: {expected_arguments_list}")
-=======
             raise AssertionError(
                 f"Could not find some arguments in the call queue or they were in the incorrect order: {expected_arguments_list}"
             )
->>>>>>> mccs-1008
 
         # Clear found items in ***reverse order***
         indices_to_remove.sort(reverse=True)
         self._remove_elements(indices_to_remove)
         # Found all entries in specified order.
-<<<<<<< HEAD
-        return True
-
-    def assert_next_call_with_keys(
-        self: MockCallableDeque, expected_arguments_list: list[dict[str, Any]]
-    ) -> bool:
-        """
-        Assert that the next call(s) to this mock with a given key also has the specified
-        value.
-
-        This method searches the deque for the *next* call(s) to the mock with the specified key while ignoring other keywords.
-        If a match to the key is found then the value must also match.
-        If the key is not found or the value does not match the expected value this method will return `False` otherwise it will return `True`.
-
-        :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
-
-        :return: True if the next matching call(s) to the mock all have the specified values else False if the call(s) are not found or have a different value.
-        """
-        # List of dicts.
-        call_arguments: list(dict) = [
-            dict(queue_item.call_args[0][0]) for queue_item in self._queue
-        ]
-        indices_to_remove = []
-
-        # Try to match our expected args one at a time.
-        for expected_argument in expected_arguments_list:
-            expected_key = list(expected_argument.keys())
-            expected_val = list(expected_argument.values())
-
-            # Check if the expected key is somewhere in the deque.
-            for call_arg in call_arguments:
-                # Should usually be just a single key. This method will require updating if multiple keys occur.
-                call_key = list(call_arg.keys())
-                call_val = list(call_arg.values())
-
-                # Check if we've found the key we're looking for. We're only considering the first match.
-                if expected_key == call_key:
-                    if expected_val == call_val:
-                        # We have an exact match. Store the index for later removal.
-                        indices_to_remove.append(call_arguments.index(call_arg))
-                        break  # Move on to next expected argument.
-                    else:
-                        # We have matched the key but not the value.
-                        raise AssertionError(f"First call with expected key: {expected_key} had actual value: {call_val} not equal to expected value: {expected_val}")
-
-        # Clear found items in ***reverse order***
-        indices_to_remove.sort(reverse=True)
-        self._remove_elements(indices_to_remove)
-        # If `indices_to_remove` has an entry for each expected_argument in the list then we've matched everything.
-        if len(indices_to_remove) != len(expected_arguments_list):
-            raise AssertionError("Could not match all expected calls to their first occurrance in the queue!")
-        return True
-=======
 
     def _find_next_call_with_keys(
         self: MockCallableDeque,
@@ -756,7 +615,7 @@ class MockCallableDeque(MockCallable):
         """Assert that no call to this mock has been made where its state_change
         argument has the given key(s) and its fqdn keword-argument matches the specified
         fqdn."""
-        index, actual_state_change = self._find_next_call_with_state_params(
+        index, actual_state_change = self._find_next_call_with_keys(
             *state_change_keys, fqdn=fqdn
         )
         if index is not None:
@@ -831,7 +690,6 @@ class MockCallableDeque(MockCallable):
             # Check if the expected key is somewhere in the deque.
             # If not found this method will raise an exception.
             self.assert_next_call_with_keys(expected_argument)
->>>>>>> mccs-1008
 
     def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:
         """
@@ -841,9 +699,6 @@ class MockCallableDeque(MockCallable):
         :param indices_to_remove: An integer list of indices to be removed from the deque.
         """
         for index in indices_to_remove:
-<<<<<<< HEAD
-            self._queue.remove(self._queue[index])
-=======
             self._remove_element(index)
 
     def _remove_element(self: MockCallableDeque, index: int) -> None:
@@ -966,4 +821,3 @@ class MockComponentStateChangedCallback(MockCallableDeque):
         for expected_argument in expected_arguments_list:
             state_change, fqdn = expected_argument
             self.assert_next_call_with_state_params(state_change, fqdn=fqdn)
->>>>>>> mccs-1008

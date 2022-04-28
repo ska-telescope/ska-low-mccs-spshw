@@ -63,6 +63,36 @@ class TestStationComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
+        component_state_changed_callback({'power_state': PowerState.ON, 'is_configured': True}, fqdn='low-mccs/tile/0002')
+        print("next call: ", component_state_changed_callback.get_next_call_with_state_params('power_state', 'is_configured', fqdn='low-mccs/tile/0002'))
+        # >> next call:  (<PowerState.ON: 4>, True)
+
+        component_state_changed_callback({'power_state': PowerState.ON, 'is_configured': False}, fqdn='low-mccs/tile/0002')
+        component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.ON, 'is_configured': False}, fqdn='low-mccs/tile/0002')
+
+        component_state_changed_callback({'power_state': PowerState.ON}, fqdn='low-mccs/tile/0003')
+        component_state_changed_callback.assert_not_called_with_state_params('power_state', 'is_configured', fqdn='low-mccs/tile/0002')
+
+        component_state_changed_callback.assert_not_called_with_state_params('is_configured', fqdn='low-mccs/tile/0002')
+
+        component_state_changed_callback({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
+        component_state_changed_callback({'power_state': PowerState.ON}, fqdn='low-mccs/antenna/000002')
+        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000002')
+        component_state_changed_callback({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
+        state_change_list = [
+            ({'power_state': PowerState.UNKNOWN}, 'low-mccs/antenna/000002'),
+            ({'power_state': PowerState.OFF}, 'low-mccs/antenna/000002'),
+            ({'power_state': PowerState.ON}, 'low-mccs/antenna/000002'),
+            ({'power_state': PowerState.UNKNOWN}, 'low-mccs/antenna/000002'),
+            ({'power_state': PowerState.OFF}, 'low-mccs/antenna/000002'),
+        ]
+        #component_state_changed_callback.assert_next_calls_with_state_params(state_change_list)
+        component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000002')
+        component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
+        component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.ON}, fqdn='low-mccs/antenna/000002')
+        component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000002')
+        component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
+
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
@@ -71,11 +101,78 @@ class TestStationComponentManager:
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
+        #print(component_state_changed_callback.get_next_call())
+        #print(component_state_changed_callback.get_next_call())
+        #print(component_state_changed_callback.get_next_call())
         #is_configured_changed_callback.assert_next_call(False)
 
-        #component_state_changed_callback.assert_next_call_with_keys({'is_configured':False})
-        #component_state_changed_callback.assert_next_call_with_keys({'power_state': <PowerState.UNKNOWN: 0>}, fqdn='low-mccs/tile/0001')
+        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/tile/0002') # deque index 0
+        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/tile/0001') # deque index 1
+        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/apiu/001') # deque index 2
+        component_state_changed_callback({'power_state': PowerState.OFF}) # deque index 3
+        component_state_changed_callback({'is_configured': False}) # deque index 4
+        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000001') # deque index 5
+        component_state_changed_callback({'power_state': PowerState.UNKNOWN, 'is_configured': False}, fqdn='low-mccs/apiu/001') # deque index 6
+        component_state_changed_callback({'power_state': PowerState.ON}, fqdn='low-mccs/apiu/001') # deque index 7
+        component_state_changed_callback({'power_state': PowerState.OFF}, fqdn='low-mccs/apiu/001') # deque index 8
+
+        print('------------ clear --------------')
+        print(component_state_changed_callback._find_next_call_with_state_params('power_state', fqdn='low-mccs/apiu/001'))
+        print(component_state_changed_callback._find_next_call_with_state_params('power_state'))
+        print(component_state_changed_callback._find_next_call_with_state_params('power_state', 'is_configured', fqdn='low-mccs/apiu/001'))
+        print(component_state_changed_callback._find_next_call_with_state_params('power_state', fqdn='low-mccs/apiu/999'))
+        print(component_state_changed_callback._find_next_call_with_state_params('is_configured', fqdn='low-mccs/apiu/001'))
+        print('------------ done 1 --------------')
+        print(component_state_changed_callback.get_next_call_with_state_params('power_state', fqdn='low-mccs/apiu/001'))
+        print(component_state_changed_callback.get_next_call_with_state_params('power_state'))
+        print(component_state_changed_callback.get_next_call_with_state_params('power_state', 'is_configured', fqdn='low-mccs/apiu/001'))
+        print(component_state_changed_callback.get_next_call_with_state_params('power_state', fqdn='low-mccs/apiu/001'))
+        print(component_state_changed_callback.get_next_call_with_state_params('power_state', fqdn='low-mccs/apiu/001'))
+        print(component_state_changed_callback.get_next_call_with_state_params('power_state', fqdn='low-mccs/apiu/001'))
+        print('------------ done 2 --------------')
+        # test assert_not_called_with_state_params
+        # the following assertions will pass
+        component_state_changed_callback.assert_not_called_with_state_params('health_state')
+        component_state_changed_callback.assert_not_called_with_state_params('power_state', fqdn='low-mccs/apiu/999')
+        # whereas these would fail
+        #component_state_changed_callback.assert_not_called_with_state_params('power_state', fqdn='low-mccs/tile/0002')
+        #component_state_changed_callback.assert_not_called_with_state_params('is_configured')
+        print('------------ done 3 --------------') 
+        component_state_changed_callback({'power_state': PowerState.OFF})
+        component_state_changed_callback({'power_state': PowerState.ON})
+        component_state_changed_callback({'power_state': PowerState.UNKNOWN})
+        component_state_changed_callback({'power_state': PowerState.OFF})
+
+        # test assert_next_call_with_state_params
+        # the following assertion would fail
+        component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.UNKNOWN})
+        # whereas these will pass
+        #component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.OFF})
+        #component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.ON})
+        #component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.UNKNOWN})
+        #component_state_changed_callback.assert_next_call_with_state_params({'power_state': PowerState.OFF})
+        print('------------ done 4 --------------')
+
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+
+
+
+        component_state_changed_callback.assert_next_call_with_keys([{'is_configured': True}])
 
         station_component_manager.stop_communicating()
         communication_status_changed_callback.assert_next_call(
@@ -124,7 +221,7 @@ class TestStationComponentManager:
         apiu_proxy.On.assert_next_call()
 
         # pretend to receive APIU power mode changed event
-        station_component_manager._apiu_power_mode_changed(PowerState.ON)
+        station_component_manager._apiu_power_state_changed(PowerState.ON)
 
         for tile_proxy in tile_proxies:
             tile_proxy.On.assert_next_call()
@@ -133,11 +230,11 @@ class TestStationComponentManager:
 
         # pretend to receive tile and antenna events
         for fqdn in tile_fqdns:
-            station_component_manager._tile_power_mode_changed(fqdn, PowerState.ON)
+            station_component_manager._tile_power_state_changed(fqdn, PowerState.ON)
         for fqdn in antenna_fqdns:
-            station_component_manager._antenna_power_mode_changed(fqdn, PowerState.ON)
+            station_component_manager._antenna_power_state_changed(fqdn, PowerState.ON)
 
-        assert station_component_manager.power_mode == PowerState.ON
+        assert station_component_manager.power_state == PowerState.ON
 
         station_component_manager.off()
         for proxy in [apiu_proxy] + tile_proxies:
@@ -146,19 +243,21 @@ class TestStationComponentManager:
     def test_power_events(
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
-        component_power_mode_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
+        #component_power_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the station component manager's management of power mode.
 
         :param station_component_manager: the station component manager
             under test.
-        :param component_power_mode_changed_callback: callback to be
+        :param component_power_state_changed_callback: callback to be
             called when the component power mode changes
         """
         station_component_manager.start_communicating()
-        component_power_mode_changed_callback.assert_next_call(PowerState.UNKNOWN)
-        assert station_component_manager.power_mode == PowerState.UNKNOWN
+        #component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
+        component_state_changed_callback.assert_next_call_with_keys([{"power_state": PowerState.UNKNOWN}])
+        assert station_component_manager.power_state == PowerState.UNKNOWN
 
         time.sleep(0.1)  # to let the UNKNOWN events subside
 
@@ -166,19 +265,22 @@ class TestStationComponentManager:
             antenna_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-            assert station_component_manager.power_mode == PowerState.UNKNOWN
-            component_power_mode_changed_callback.assert_not_called()
+            assert station_component_manager.power_state == PowerState.UNKNOWN
+            #component_power_state_changed_callback.assert_not_called()
+            component_state_changed_callback.assert_not_called()
         for tile_proxy in station_component_manager._tile_proxies:
             tile_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-            assert station_component_manager.power_mode == PowerState.UNKNOWN
-            component_power_mode_changed_callback.assert_not_called()
+            assert station_component_manager.power_state == PowerState.UNKNOWN
+            #component_power_state_changed_callback.assert_not_called()
+            component_state_changed_callback.assert_not_called()
         station_component_manager._apiu_proxy._device_state_changed(
             "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
         )
-        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
-        assert station_component_manager.power_mode == PowerState.OFF
+        #component_power_state_changed_callback.assert_next_call(PowerState.OFF)
+        component_state_changed_callback.assert_next_call_with_keys([{"power_state": PowerState.UNKNOWN}])
+        assert station_component_manager.power_state == PowerState.OFF
 
     def test_tile_setup(
         self: TestStationComponentManager,
@@ -232,7 +334,7 @@ class TestStationComponentManager:
         logger: logging.Logger,
         pointing_delays: unittest.mock.Mock,
         communication_status_changed_callback: MockCallable,
-        component_power_mode_changed_callback: MockCallable,
+        component_power_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -250,7 +352,7 @@ class TestStationComponentManager:
         :param communication_status_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
+        :param component_power_state_changed_callback: callback to be
             called when the component power mode changes
         """
         station_component_manager.start_communicating()
@@ -265,8 +367,8 @@ class TestStationComponentManager:
         # TODO: Using "last" instead of "next" here is a sneaky way of forcing a delay
         # so that we don't start faking receipt of events below until the real events
         # have all been received.
-        component_power_mode_changed_callback.assert_last_call(PowerState.UNKNOWN)
-        assert station_component_manager.power_mode == PowerState.UNKNOWN
+        component_power_state_changed_callback.assert_last_call(PowerState.UNKNOWN)
+        assert station_component_manager.power_state == PowerState.UNKNOWN
 
         # Tell this station each of its components is on, so that it thinks it is on
         station_component_manager._apiu_proxy._device_state_changed(
@@ -281,8 +383,8 @@ class TestStationComponentManager:
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
 
-        component_power_mode_changed_callback.assert_last_call(PowerState.ON)
-        assert station_component_manager.power_mode == PowerState.ON
+        component_power_state_changed_callback.assert_last_call(PowerState.ON)
+        assert station_component_manager.power_state == PowerState.ON
 
         station_component_manager.apply_pointing(pointing_delays)
         for tile_fqdn in tile_fqdns:

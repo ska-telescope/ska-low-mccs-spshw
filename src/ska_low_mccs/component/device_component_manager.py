@@ -79,10 +79,15 @@ class DeviceComponentManager(MccsComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-
+        print("submitting _connect_to_device")
         task_status, response = self.submit_task(
-            self._connect_to_device, args=[self._event_callbacks], task_callback=None
+           self._connect_to_device, args=[self._event_callbacks], task_callback=None
         )
+        #task_status, response = self.submit_task(
+        #   self._connect_to_device, self._event_callbacks, task_callback=None
+        #)
+        #self._connect_to_device(self._event_callbacks)
+        print("submitted _connect_to_device")
 
     def _connect_to_device(
         self: DeviceComponentManager,
@@ -103,7 +108,8 @@ class DeviceComponentManager(MccsComponentManager):
         :raises ConnectionError: if the attempt to establish
             communication with the channel fails.
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        #task_callback(status=TaskStatus.IN_PROGRESS)
+        print("in _connect_to_device")
         self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
         try:
             self._proxy.connect()
@@ -120,10 +126,10 @@ class DeviceComponentManager(MccsComponentManager):
             for event, callback in event_callbacks.items():
                 self._proxy.add_change_event_callback(event, callback)
 
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED, result=f"Connected to '{self._fqdn}'"
-            )
+        #if task_callback:
+        #    task_callback(
+        #        status=TaskStatus.COMPLETED, result=f"Connected to '{self._fqdn}'"
+        #    )
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""

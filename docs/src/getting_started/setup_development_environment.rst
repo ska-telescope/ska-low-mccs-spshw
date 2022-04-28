@@ -163,7 +163,7 @@ Git
 
    .. code-block:: shell-session
 
-     me@local:~$ git clone -recurse--submodules https://gitlab.com/ska-telescope/ska-low-mccs.git
+     me@local:~$ git clone --recurse-submodules https://gitlab.com/ska-telescope/ska-low-mccs.git
 
 
 POSIX shell
@@ -219,9 +219,9 @@ Basic development tools
 You now have a basic development setup. The following Make targets are
 available to you:
 
-* **make python-test** - run the tests in a SKA docker container
+* **poetry run make python-test** - run the tests in a SKA docker container
      
-* **make python-lint** - run linting in a SKA docker container
+* **poetry run make python-lint** - run linting in a SKA docker container
 
 Try it out:
 
@@ -229,41 +229,44 @@ Try it out:
    :emphasize-lines: 3,4,5,6,20
 
    me@local:~$ cd ska-low-mccs
-   me@local:~/ska-low-mccs$ make python-test
-   ... [output from Docker building the container image] ...
-   ... [output from Docker launching the container] ...
-   ... [output from poetry building its virtual environment] ...
-   ... [output from pytest launching its test session] ...
+   me@local:~/ska-low-mccs$ docker run --rm -it -v `pwd`:/app artefact.skao.int/ska-tango-images-pytango-builder:9.3.27 bash
+   root@703cb23c4406:/app# poetry config virtualenvs.create false
+   root@703cb23c4406:/app# poetry install --no-root (It will take some time to complete the process)
+   root@703cb23c4406:/app# poetry run make python-test
+   Skipping virtualenv creation, as specified in config file.
+	Makefile:46: warning: overriding recipe for target 'python-do-build'
+	.make/python.mk:115: warning: ignoring old recipe for target 'python-do-build'
+	Makefile:49: warning: overriding recipe for target 'python-do-publish'
+	.make/python.mk:165: warning: ignoring old recipe for target 'python-do-publish'
+	Skipping virtualenv creation, as specified in config file.
+	pytest 6.2.5
+	PYTHONPATH=./src:/app/src poetry run pytest  \
+	 --cov=src --cov-report=term-missing --cov-report xml:build/reports/code-coverage.xml --junitxml=build/reports/unit-tests.xml testing/src/
+	Skipping virtualenv creation, as specified in config file.
+	PyTango 9.3.3 (9, 3, 3)
+	PyTango compiled with:
+  	  Python : 3.7.3
+   	  Numpy  : 1.19.2
+   	  Tango  : 9.3.4
+   	  Boost  : 1.67.0
 
-   ============================= test session starts ==============================
-   platform linux -- Python 3.7.3, pytest-6.2.5, py-1.11.0, pluggy-1.0.0 -- /usr/bin/python3
-   cachedir: .pytest_cache
+	  PyTango runtime is:
+    	  Python : 3.7.3
+   	  Numpy  : 1.19.2
+    	  Tango  : 9.3.4
 
-   metadata: {'Python': '3.7.3', 'Platform': 'Linux-5.13.0-28-generic-x86_64-with-debian-10.11', 'Packages': {'pytest': '6.2.5', 'py': '1.11.0', 'pluggy': '1.0.0'}, 'Plugins': {'repeat': '0.9.1', 'rerunfailures': '10.2', 'cov': '2.12.1', 'report': '0.2.1', 'xdist': '1.34.0', 'bdd': '4.1.0', 'timeout': '2.1.0', 'split': '0.6.0', 'json-report': '1.4.1', 'metadata': '1.11.0', 'forked': '1.4.0', 'pydocstyle': '2.2.0', 'pylint': '0.18.0', 'pycodestyle': '2.2.0', 'mock': '3.7.0'}}
-   rootdir: /workspaces/ska-low-mccs, configfile: pyproject.toml, testpaths: testing/src/
-   plugins: repeat-0.9.1, rerunfailures-10.2, cov-2.12.1, report-0.2.1, xdist-1.34.0, bdd-4.1.0, timeout-2.1.0, split-0.6.0, json-report-1.4.1, metadata-1.11.0, forked-1.4.0, pydocstyle-2.2.0, pylint-0.18.0, pycodestyle-2.2.0, mock-3.7.0
-   collected 1529 items
+	PyTango running on:
+	uname_result(system='Linux', node='278b54bd07b5', release='5.4.0-107-generic', version='#121-Ubuntu SMP Thu Mar 24 16:04:27 UTC 2022', machine='x86_64', processor='')
+									============ test session starts ========
+									------------ JSON report ----------------
+									report saved to: build/reports/report.json
 
-   testing/src/tests/integration/test_health_management.py::test_controller_health_rollup PASSED [  0%]
-   testing/src/tests/functional/test_controller_subarray_interactions.py::test_allocate_subarray SKIPPED       [  0%]
+----------- coverage: platform linux, python 3.7.3-final-0 -----------								
+	38 files skipped due to complete coverage.
+	Coverage HTML written to dir build/htmlcov
+	Coverage XML written to file build/reports/code-coverage.xml
 
-   ... [lots more test results] ...
-
-   testing/src/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":17, "stations":["station1"]}] PASSED [ 99%]
-   testing/src/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":1, "stations":[]}] PASSED [100%]
-   
-   ---------------------------------- generated xml file: /app/build/reports/unit-tests.xml ----------------------------------
-   ------------------------------------------------------- JSON report -------------------------------------------------------
-   JSON report written to: build/reports/report.json (3921454 bytes)
-   
-   ----------- coverage: platform linux, python 3.7.3-final-0 -----------
-   Coverage HTML written to dir build/htmlcov
-   Coverage XML written to file build/reports/code-coverage.xml
-   
-   ================================= 1403 passed, 125 skipped, 1 xfailed, 10 warnings in 673.29s (0:11:13) ==================================
-   _________________________________________________________ summary _________________________________________________________
-
-   me@local:~/ska-low-mccs$
+================================================================== 1403 passed, 125 skipped, 1 xfailed, 8 warnings in 1347.75s (0:22:27) ==================================================================
    
 (The first time you run these commands, they may take a very long time.
 This is because the Docker image has to be downloaded. Once downloaded,

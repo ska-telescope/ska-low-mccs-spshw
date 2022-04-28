@@ -337,7 +337,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         Tell the APIU to turn on.
 
         This is implemented in the super-class to tell the upstream
-        power supply proxy to turn the APIU hardware on. 
+        power supply proxy to turn the APIU hardware on.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: abort callback

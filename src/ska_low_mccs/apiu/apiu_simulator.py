@@ -293,10 +293,6 @@ class ApiuSimulator(ObjectComponent):
 
         :return: whether each antenna is powered or not.
         """
-        print("KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK")
-        for antenna in self._antenna_data:
-            print(antenna["power_state"] == PowerState.ON)
-
         return [
             antenna["power_state"] == PowerState.ON for antenna in self._antenna_data
         ]

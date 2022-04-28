@@ -686,7 +686,7 @@ class SubarrayComponentManager(
         self._scan_id = scan_id
 
         result_code = ResultCode.OK
-        for subarray_beam_proxy in self._subarray_beams.values():                
+        for subarray_beam_proxy in self._subarray_beams.values():
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
@@ -767,8 +767,6 @@ class SubarrayComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -778,7 +776,8 @@ class SubarrayComponentManager(
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
 
-        # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
+        # TODO: Will need to wait here until all subservient devices indicate
+        # they've finished and then call the task_callback indicating the results.
         # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
             task_callback(
@@ -828,8 +827,6 @@ class SubarrayComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -868,8 +865,6 @@ class SubarrayComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -890,12 +885,15 @@ class SubarrayComponentManager(
 
         This method returns immediately after it is submitted for execution.
 
+        :param argin: list of arguments
         :param task_callback: Update task state. Defaults to None.
 
         :return: Task status and response message.
         """
         return self.submit_task(
-            self._send_transient_buffer, args=[argin], task_callback=task_callback,
+            self._send_transient_buffer,
+            args=[argin],
+            task_callback=task_callback,
         )
 
     @check_communicating
@@ -908,10 +906,9 @@ class SubarrayComponentManager(
         """
         Send the transient buffer.
 
+        :param argin: list of arguments
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)

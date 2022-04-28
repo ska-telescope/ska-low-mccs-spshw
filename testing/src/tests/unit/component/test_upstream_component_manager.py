@@ -80,8 +80,8 @@ class TestPowerSupplyProxySimulator:
             CommunicationStatus.DISABLED
         )
         time.sleep(0.1)
-        expected_arguments = [{"power_state": PowerState.OFF}]
-        assert component_state_changed_callback.assert_in_deque(expected_arguments)
+        expected_arguments = {"power_state": PowerState.OFF}
+        component_state_changed_callback.assert_in_deque(expected_arguments)
 
         assert component_manager.communication_status == CommunicationStatus.DISABLED
 

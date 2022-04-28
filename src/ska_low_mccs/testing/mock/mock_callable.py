@@ -613,8 +613,8 @@ class MockCallableDeque(MockCallable):
         fqdn: str = None,
     ):
         """Assert that no call to this mock has been made where its state_change
-        argument has the given key(s) and its fqdn keyword-argument matches the specified
-        fqdn."""
+        argument has the given key(s) and its fqdn keyword-argument matches the
+        specified fqdn."""
         index, actual_state_change = self._find_next_call_with_keys(
             *state_change_keys, fqdn=fqdn
         )
@@ -642,9 +642,11 @@ class MockCallableDeque(MockCallable):
         :raises AssertionError: If the key is not found or the value does not match the expected value.
         """
         expected_key = list(expected_argument.keys())
-        index, actual_state_change = self._find_next_call_with_keys(*expected_key, fqdn=fqdn)
+        index, actual_state_change = self._find_next_call_with_keys(
+            *expected_key, fqdn=fqdn
+        )
         if actual_state_change == expected_argument:
-             self._remove_element(index)
+            self._remove_element(index)
         else:
             # We have matched the key but not the value.
             raise AssertionError(

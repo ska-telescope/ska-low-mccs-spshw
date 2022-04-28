@@ -84,6 +84,7 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
 
         :return: A task status and response message.
         """
+        print("IN SCAN")
         assert self._proxy is not None
         scan_arg = json.dumps({"scan_id": scan_id, "start_time": start_time})
         ([result_code], unique_id) = self._proxy.Scan(scan_arg)
@@ -244,6 +245,7 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code and response message.
         """
+        print("QUEUEING ASSIGN")
         return self.submit_task(
             self._assign,
             args=[resource_spec],
@@ -276,6 +278,7 @@ class SubarrayComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
+        print("IN _ASSIGN")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -603,6 +606,7 @@ class SubarrayComponentManager(
             print(f"-- before configure call for {station_fqdn}")
             print(station_proxy.communication_status)
             print(station_proxy.power_state)
+            print(f"config: {configuration}")
             proxy_result_code, response = station_proxy.configure(configuration)
             print("-- after configure call")
             if proxy_result_code == ResultCode.FAILED:
@@ -768,6 +772,7 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
+        print("IN DECONFIG")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
         for station_proxy in self._stations.values():
@@ -775,9 +780,8 @@ class SubarrayComponentManager(
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
-
-        # TODO: Will need to wait here until all subservient devices indicate
-        # they've finished and then call the task_callback indicating the results.
+        print("AFTER DECONFIG")
+        # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
         # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
             task_callback(

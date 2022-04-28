@@ -55,7 +55,7 @@ def check_antenna_id(func: Wrapped) -> Wrapped:
         **kwargs: Any,
     ) -> Any:
         """
-        Check power_mode before calling the function.
+        Check power_state before calling the function.
 
         This is a wrapper function that implements the functionality of
         the decorator.
@@ -123,7 +123,7 @@ class ApiuSimulator(ObjectComponent):
 
         self._antenna_data = [
             {
-                "power_mode": PowerState.OFF,
+                "power_state": PowerState.OFF,
                 "voltage": self.DEFAULT_ANTENNA_VOLTAGE,
                 "current": self.DEFAULT_ANTENNA_CURRENT,
                 "temperature": self.DEFAULT_ANTENNA_TEMPERATURE,
@@ -294,7 +294,7 @@ class ApiuSimulator(ObjectComponent):
         :return: whether each antenna is powered or not.
         """
         return [
-            antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data
+            antenna["power_state"] == PowerState.ON for antenna in self._antenna_data
         ]
 
     @check_antenna_id
@@ -307,7 +307,7 @@ class ApiuSimulator(ObjectComponent):
 
         :return: whether the antenna is on
         """
-        return self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON
+        return self._antenna_data[antenna_id - 1]["power_state"] == PowerState.ON
 
     @check_antenna_id
     def turn_off_antenna(self: ApiuSimulator, antenna_id: int) -> ResultCode | None:
@@ -319,10 +319,10 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.OFF:
+        if self._antenna_data[antenna_id - 1]["power_state"] == PowerState.OFF:
             return None
 
-        self._antenna_data[antenna_id - 1]["power_mode"] = PowerState.OFF
+        self._antenna_data[antenna_id - 1]["power_state"] = PowerState.OFF
         self._antenna_power_changed()
         return ResultCode.OK
 
@@ -336,10 +336,10 @@ class ApiuSimulator(ObjectComponent):
 
         :return: a result code, or None if there was nothing to do
         """
-        if self._antenna_data[antenna_id - 1]["power_mode"] == PowerState.ON:
+        if self._antenna_data[antenna_id - 1]["power_state"] == PowerState.ON:
             return None
 
-        self._antenna_data[antenna_id - 1]["power_mode"] = PowerState.ON
+        self._antenna_data[antenna_id - 1]["power_state"] = PowerState.ON
         self._antenna_power_changed()
         return ResultCode.OK
 
@@ -350,12 +350,12 @@ class ApiuSimulator(ObjectComponent):
         :return: a result code, or None if there was nothing to do
         """
         if all(
-            antenna["power_mode"] == PowerState.OFF for antenna in self._antenna_data
+            antenna["power_state"] == PowerState.OFF for antenna in self._antenna_data
         ):
             return None
 
         for antenna in self._antenna_data:
-            antenna["power_mode"] = PowerState.OFF
+            antenna["power_state"] = PowerState.OFF
         self._antenna_power_changed()
         return ResultCode.OK
 
@@ -366,12 +366,12 @@ class ApiuSimulator(ObjectComponent):
         :return: a result code, or None if there was nothing to do
         """
         if all(
-            antenna["power_mode"] == PowerState.ON for antenna in self._antenna_data
+            antenna["power_state"] == PowerState.ON for antenna in self._antenna_data
         ):
             return None
 
         for antenna in self._antenna_data:
-            antenna["power_mode"] = PowerState.ON
+            antenna["power_state"] = PowerState.ON
         self._antenna_power_changed()
         return ResultCode.OK
 

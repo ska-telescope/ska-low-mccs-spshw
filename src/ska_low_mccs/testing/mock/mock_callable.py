@@ -534,7 +534,7 @@ class MockCallableDeque(MockCallable):
         """
         Assert that a list of calls with expected arguments are present in the deque.
 
-        :param expected_arguments_list: A list of arguments this mock is expected to be called 
+        :param expected_arguments_list: A list of arguments this mock is expected to be called
             with and found in the deque.
         """
         for expected_argument in expected_arguments_list:
@@ -650,7 +650,7 @@ class MockCallableDeque(MockCallable):
         otherwise it will return `True`.
 
         :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
-       """
+        """
         # Try to match our expected args one at a time.
         for expected_argument in expected_arguments_list:
             # Check if the expected key is somewhere in the deque.

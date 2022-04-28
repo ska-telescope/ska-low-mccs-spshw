@@ -594,40 +594,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.COMPLETED, result="Off command completed")
 
-    @check_communicating
-    def turn_off_tpm(self: SubrackComponentManager, logical_tpm_id: int) -> bool | None:
-        """
-        Turn off a TPM.
-
-        TODO: This method is implemented with a temporary measure to
-        handle a common race condition. When ``MccsController.Off()`` is
-        called, both ``MccsTile`` and ``MccsSubrack`` may end up being
-        told to turn off at roughly the same time. This can result in
-        ``MccsTile`` telling its subrack to turn off its TPM when the
-        subrack has itself just been turned off. For now, we handle this
-        by accepting the command (and doing nothing) when the subrack is
-        off. In future, we should review this behaviour in case there is
-        a better way to handle it.
-
-        :param logical_tpm_id: this subrack's internal id for the
-            TPM to be turned off
-
-        :return: whether successful, or None if there was nothing to do
-
-        :raises ConnectionError: if the subrack is neither off not on
-            (when on, we can turn the TPM off, when off, there's nothing
-            to do here.)
-        """
-        if self.power_state == PowerState.OFF:
-            return None
-        elif self.power_state == PowerState.ON:
-            return cast(
-                SwitchingSubrackComponentManager,
-                self._hardware_component_manager,
-            ).turn_off_tpm(logical_tpm_id)
-        else:
-            raise ConnectionError("Component is not turned on.")
-
     def __getattr__(
         self: SubrackComponentManager,
         name: str,
@@ -748,10 +714,50 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a ResultCode and a response message
         """
-        task_status, unique_id = self.submit_task(
+        return self.submit_task(
             self._turn_on_tpm, args=[tpm_id], task_callback=task_callback
         )
-        return task_status, unique_id
+
+    def _turn_on_tpm(
+        self: SubrackComponentManager,
+        tpm_id: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Turn on the tpm using slow command.
+
+        :param tpm_id: id of antenna to turn on
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingSubrackComponentManager,
+                self._hardware_component_manager,
+            ).turn_on_tpm(tpm_id)
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The turn tpm on task aborted"
+                )
+            return
+
+        if task_callback:
+            self.logger.warning("I'm here11")
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The turn tpm on on task has completed",
+            )
+            return
 
     def turn_on_tpms(
         self: SubrackComponentManager,
@@ -768,6 +774,118 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         return self.submit_task(self._turn_on_tpms, task_callback=task_callback)
 
+    def _turn_on_tpms(
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Turn on the tpm using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingSubrackComponentManager,
+                self._hardware_component_manager,
+            ).turn_on_tpms()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The turn tpm on task aborted"
+                )
+            return
+
+        if task_callback:
+            self.logger.warning("I'm here11")
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The turn tpm on on task has completed",
+            )
+            return
+
+    def turn_off_tpm(
+        self: SubrackComponentManager,
+        tpm_id: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Submit the turn_off_tpm slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param tpm_id: the tpm to turn on
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(
+            self._turn_off_tpm, args=[tpm_id], task_callback=task_callback
+        )
+
+    def _turn_off_tpm(
+        self: SubrackComponentManager,
+        tpm_id: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        " Turn on the tpm using slow command.
+
+        TODO: This method is implemented with a temporary measure to
+        handle a common race condition. When ``MccsController.Off()`` is
+        called, both ``MccsTile`` and ``MccsSubrack`` may end up being
+        told to turn off at roughly the same time. This can result in
+        ``MccsTile`` telling its subrack to turn off its TPM when the
+        subrack has itself just been turned off. For now, we handle this
+        by accepting the command (and doing nothing) when the subrack is
+        off. In future, we should review this behaviour in case there is
+        a better way to handle it.
+
+        :param tpm_id: id of antenna to turn on
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        :return: None
+        """
+        if self.power_state == PowerState.OFF:
+            return None
+        elif self.power_state == PowerState.ON:
+            if task_callback:
+                task_callback(status=TaskStatus.IN_PROGRESS)
+            try:
+                cast(
+                    SwitchingSubrackComponentManager,
+                    self._hardware_component_manager,
+                ).turn_off_tpm(tpm_id)
+            except Exception as ex:
+                self.logger.error(f"error {ex}")
+                if task_callback:
+                    task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+                return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The turn tpm on task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The turn tpm on on task has completed",
+            )
+            return
+
     def turn_off_tpms(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
@@ -782,3 +900,41 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: A tuple containing a ResultCode and a response message
         """
         return self.submit_task(self._turn_off_tpms, task_callback=task_callback)
+
+    def _turn_off_tpms(
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Turn off the tpm using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingSubrackComponentManager,
+                self._hardware_component_manager,
+            ).turn_off_tpms()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The turn tpm off task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The turn tpm off task has completed",
+            )
+            return

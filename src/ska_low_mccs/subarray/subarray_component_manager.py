@@ -885,7 +885,7 @@ class SubarrayComponentManager(
 
         This method returns immediately after it is submitted for execution.
 
-        :param argin: list of arguments
+        :param argin: list of requested segments.
         :param task_callback: Update task state. Defaults to None.
 
         :return: Task status and response message.
@@ -906,7 +906,7 @@ class SubarrayComponentManager(
         """
         Send the transient buffer.
 
-        :param argin: list of arguments
+        :param argin: list of list of requested segment.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """

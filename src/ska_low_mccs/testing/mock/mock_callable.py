@@ -534,7 +534,8 @@ class MockCallableDeque(MockCallable):
         """
         Assert that a list of calls with expected arguments are present in the deque.
 
-        :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
+        :param expected_arguments_list: A list of arguments this mock is expected to be called 
+            with and found in the deque.
         """
         for expected_argument in expected_arguments_list:
             self.assert_in_deque(expected_argument)
@@ -561,15 +562,14 @@ class MockCallableDeque(MockCallable):
     def assert_ordered_in_deque(
         self: MockCallableDeque,
         expected_arguments_list: list[Any],
-    ) -> bool:
+    ) -> None:
         """
         Assert the mock is called with the provided arguments in the order specified.
 
-        :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
+        :param expected_arguments_list: A list of ordered arguments this mock is expected
+            to have been called with.
 
         :raises AssertionError: if any argument is not found or they are in a different order.
-
-        :return: `True` if all arguments were found in the deque in the order provided else raises AssertionError.
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
@@ -593,14 +593,13 @@ class MockCallableDeque(MockCallable):
         # If expected_arguments_list is not empty then we didn't find everything or it wasn't in the order we wanted.
         if len(expected_arguments_list) > 0:
             raise AssertionError(
-                f"Could not find some arguments in the call queue or they were in the incorrect order: {expected_arguments_list}"
+                f"Could not find some arguments"
+                f"in the call queue or they were in the incorrect order: {expected_arguments_list}"
             )
-
         # Clear found items in ***reverse order***
         indices_to_remove.sort(reverse=True)
         self._remove_elements(indices_to_remove)
         # Found all entries in specified order.
-        return True
 
     def assert_next_call_with_key(
         self: MockCallableDeque, expected_argument: dict[str, Any]
@@ -651,7 +650,7 @@ class MockCallableDeque(MockCallable):
         otherwise it will return `True`.
 
         :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
-        """
+       """
         # Try to match our expected args one at a time.
         for expected_argument in expected_arguments_list:
             # Check if the expected key is somewhere in the deque.
@@ -718,9 +717,6 @@ class MockComponentStateChangedCallback(MockCallableDeque):
     ) -> tuple[Any] | None:
         """
         Get the next state change with specific keys.
-
-        Get the next state change with specific keys that
-        component_state_change_callback was called with.
 
         This method searches the deque for the *next* call to component_state_change_callback where
         the keys of its state_change argument match the specified keys, and the value of its fqdn

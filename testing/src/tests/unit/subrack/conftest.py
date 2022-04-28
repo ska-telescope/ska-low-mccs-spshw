@@ -153,9 +153,9 @@ def subrack_simulator_component_manager(
 @pytest.fixture()
 def switching_subrack_component_manager(
     logger: logging.Logger,
+    max_workers,
     subrack_ip: str,
     subrack_port: int,
-    max_workers,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingSubrackComponentManager:
@@ -179,9 +179,9 @@ def switching_subrack_component_manager(
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
         logger,
+        max_workers,
         subrack_ip,
         subrack_port,
-        max_workers,
         communication_status_changed_callback,
         component_state_changed_callback,
     )
@@ -191,9 +191,9 @@ def switching_subrack_component_manager(
 def subrack_driver(
     monkeypatch: pytest.MonkeyPatch,
     logger: logging.Logger,
+    max_workers,
     subrack_ip: str,
     subrack_port: int,
-    max_workers,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubrackDriver:
@@ -218,7 +218,7 @@ def subrack_driver(
 
     class MockResponse:
         """A mock class to replace requests.Response."""
-
+        status_code = 200
         ATTRIBUTE_VALUES = {
             "tpm_on_off": [False, False, False],
             "backplane_temperatures": SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
@@ -256,7 +256,7 @@ def subrack_driver(
                 to be returned in this response.
             """
             self._json: dict[str, Any] = {}
-
+            
             if params is not None:
                 if params["type"] == "command":
                     self._json = {
@@ -312,9 +312,9 @@ def subrack_driver(
 
     return SubrackDriver(
         logger,
+        max_workers,
         subrack_ip,
         subrack_port,
-        max_workers,
         communication_status_changed_callback,
         component_state_changed_callback,
     )
@@ -323,9 +323,9 @@ def subrack_driver(
 @pytest.fixture()
 def subrack_component_manager(
     logger: logging.Logger,
+    max_workers: int,
     subrack_ip: str,
     subrack_port: int,
-    max_workers: int,
     communication_status_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
     initial_power_state: PowerState,
@@ -352,9 +352,9 @@ def subrack_component_manager(
     return SubrackComponentManager(
         SimulationMode.TRUE,
         logger,
+        max_workers,
         subrack_ip,
         subrack_port,
-        max_workers,
         communication_status_changed_callback,
         component_state_changed_callback,
         initial_power_state,

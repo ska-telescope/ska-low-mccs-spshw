@@ -44,7 +44,7 @@ class TestSubrackSimulatorCommon:
     Therefore this class contains common tests, parametrised to test
     against each class.
     """
-
+    
     @pytest.fixture(
         params=[
             "switching_subrack_component_manager",
@@ -91,6 +91,7 @@ class TestSubrackSimulatorCommon:
             return switching_subrack_component_manager
         elif request.param == "subrack_component_manager":
             subrack_component_manager.start_communicating()
+            time.sleep(0.1)
             subrack_component_manager.on()
             time.sleep(0.1)
             return subrack_component_manager
@@ -195,7 +196,7 @@ class TestSubrackSimulatorCommon:
             "turn_off_tpms",
         ),
     )
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+   # @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_command(
         self: TestSubrackSimulatorCommon,
         subrack: Union[
@@ -228,7 +229,7 @@ class TestSubrackSimulatorCommon:
             ("set_power_supply_fan_speed", 2),
         ),
     )
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+   # @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_command_numeric(
         self: TestSubrackSimulatorCommon,
         subrack: Union[
@@ -515,7 +516,7 @@ class TestSubrackDriverCommon:
             ),
         ),
     )
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+   # @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_read_attribute(
         self: TestSubrackDriverCommon,
         subrack: Union[
@@ -549,7 +550,7 @@ class TestSubrackDriverCommon:
             "turn_off_tpms",
         ),
     )
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+  #  @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_command(
         self: TestSubrackDriverCommon,
         subrack: Union[
@@ -581,7 +582,7 @@ class TestSubrackDriverCommon:
             ("set_power_supply_fan_speed", 2),
         ),
     )
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+  #  @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_command_numeric(
         self: TestSubrackDriverCommon,
         subrack: Union[

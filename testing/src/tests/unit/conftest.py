@@ -99,7 +99,12 @@ def mock_callback_deque_factory(
     mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallableDeque]:
     """
+<<<<<<< HEAD
     Return a factory that returns a new mock callback using a deque each time it is called.
+=======
+    Return a factory that returns a new mock callback using a deque each time it is
+    called.
+>>>>>>> mccs-1008
 
     Use this fixture in tests that need more than one mock_callback. If
     your tests only needs a single mock callback, it is simpler to use
@@ -120,6 +125,36 @@ def mock_callback_deque_factory(
 
 
 @pytest.fixture()
+<<<<<<< HEAD
+=======
+def mock_component_state_changed_callback_factory(
+    mock_callback_called_timeout: float,
+    mock_callback_not_called_timeout: float,
+) -> Callable[[], MockComponentStateChangedCallback]:
+    """
+    Return a factory that returns a new mock callback using a deque each time it is
+    called.
+
+    Use this fixture in tests that need more than one mock_callback. If
+    your tests only needs a single mock callback, it is simpler to use
+    the :py:func:`mock_callback` fixture.
+
+    :param mock_callback_called_timeout: the time to wait for a mock
+        callback to be called when a call is expected
+    :param mock_callback_not_called_timeout: the time to wait for a mock
+        callback to be called when a call is unexpected
+
+    :return: a factory that returns a new mock callback each time it is
+        called.
+    """
+    return lambda: MockComponentStateChangedCallback(
+        called_timeout=mock_callback_called_timeout,
+        not_called_timeout=mock_callback_not_called_timeout,
+    )
+
+
+@pytest.fixture()
+>>>>>>> mccs-1008
 def device_state_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:

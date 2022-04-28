@@ -18,7 +18,7 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 from tango import DevState
-
+from ska_tango_base.executor import TaskStatus
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.subrack import SubrackSimulator
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -99,7 +99,7 @@ class TestMccsSubrack:
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+    # @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_attributes(
         self: TestMccsSubrack,
         device_under_test: MccsDeviceProxy,
@@ -123,19 +123,21 @@ class TestMccsSubrack:
             "longRunningCommandResult".casefold()
             in device_under_test._change_event_subscription_ids
         )
-        initial_lrc_result = ("", "", "")
+        initial_lrc_result = ("", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         device_under_test.adminMode = AdminMode.ONLINE
-        [[result_code], [unique_id]] = device_under_test.On()
+        ([result_code], [unique_id]) = device_under_test.On()
         assert result_code == ResultCode.QUEUED
-        assert "_OnCommand" in unique_id
-        lrc_result_changed_callback.assert_long_running_command_result_change_event(
-            unique_id=unique_id,
-            expected_result_code=ResultCode.OK,
-            expected_message="On command completed OK",
-        )
+        assert "_On" in unique_id
+
+        message ='"On command has completed"'
+        lrc_result = (
+            unique_id,
+            message,
+            )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         assert (
             list(device_under_test.backplaneTemperatures)
@@ -179,7 +181,7 @@ class TestMccsSubrack:
             [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * device_under_test.tpmCount
         )
 
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+    # @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_PowerOnTpm(
         self: TestMccsSubrack,
         device_under_test: MccsDeviceProxy,
@@ -203,19 +205,21 @@ class TestMccsSubrack:
             "longRunningCommandResult".casefold()
             in device_under_test._change_event_subscription_ids
         )
-        initial_lrc_result = ("", "", "")
+        initial_lrc_result = ("", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         device_under_test.adminMode = AdminMode.ONLINE
-        [[result_code], [unique_id]] = device_under_test.On()
+        ([result_code], [unique_id]) = device_under_test.On()
         assert result_code == ResultCode.QUEUED
-        assert "_OnCommand" in unique_id
-        lrc_result_changed_callback.assert_long_running_command_result_change_event(
-            unique_id=unique_id,
-            expected_result_code=ResultCode.OK,
-            expected_message="On command completed OK",
-        )
+        assert "_On" in unique_id
+
+        message ='"On command has completed"'
+        lrc_result = (
+            unique_id,
+            message,
+            )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         tpm_id = 1
         [[result_code], [unique_id]] = device_under_test.PowerOnTpm(tpm_id)
@@ -237,7 +241,7 @@ class TestMccsSubrack:
             expected_message=f"Subrack TPM {tpm_id} power-on is redundant",
         )
 
-    @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
+    # @pytest.mark.skip(reason="needs fixing for base class version 0.12.0")
     def test_PowerOffTpm(
         self: TestMccsSubrack,
         device_under_test: MccsDeviceProxy,
@@ -261,20 +265,21 @@ class TestMccsSubrack:
             "longRunningCommandResult".casefold()
             in device_under_test._change_event_subscription_ids
         )
-        initial_lrc_result = ("", "", "")
+        initial_lrc_result = ("", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         device_under_test.adminMode = AdminMode.ONLINE
-        [[result_code], [unique_id]] = device_under_test.On()
+        ([result_code], [unique_id]) = device_under_test.On()
         assert result_code == ResultCode.QUEUED
-        assert "_OnCommand" in unique_id
-        lrc_result_changed_callback.assert_long_running_command_result_change_event(
-            unique_id=unique_id,
-            expected_result_code=ResultCode.OK,
-            expected_message="On command completed OK",
-        )
+        assert "_On" in unique_id
 
+        message ='"On command has completed"'
+        lrc_result = (
+            unique_id,
+            message,
+            )
+        lrc_result_changed_callback.assert_last_change_event(lrc_result)
         tpm_id = 1
         [[result_code], [unique_id]] = device_under_test.PowerOffTpm(tpm_id)
         assert result_code == ResultCode.QUEUED

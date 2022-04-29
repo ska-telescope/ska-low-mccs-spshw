@@ -732,7 +732,7 @@ class TestSubrackComponentManager:
     def test_component_progress_changed_callback(
         self: TestSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
-        component_progress_changed_callback: MockCallableDeque,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test that the callback is called when we change the progress.
@@ -741,14 +741,17 @@ class TestSubrackComponentManager:
 
         :param subrack_component_manager: the subrack component manager under
             test
-        :param component_progress_changed_callback: callback to be
+        :param component_state_changed_callback: callback to be
             called when the progress value of a tpm command changes
         """
         subrack_component_manager.start_communicating()
+        time.sleep(0.1)
         subrack_component_manager.on()
-
         time.sleep(0.1)
 
+        expected_arguments = {"power_state": PowerState.ON}
+        component_state_changed_callback.assert_in_deque(expected_arguments)
+        subrack_component_manager.power_state = PowerState.ON
         subrack_component_manager.turn_on_tpm(1)
-        component_progress_changed_callback.assert_next_call(0)
-        component_progress_changed_callback.assert_next_call(100)
+        component_state_changed_callback.assert_next_call_with_key({"progress": 0})
+        component_state_changed_callback.assert_next_call_with_key({"progress": 100})

@@ -114,9 +114,6 @@ class DeviceComponentManager(MccsComponentManager):
             ) from dev_failed
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
 
-        print(f"Connected to '{self._fqdn}'")
-        print(self.power_state)
-
         # TODO: Determine if we need this IF
         # if self._health_changed_callback is not None:
         for event, callback in event_callbacks.items():

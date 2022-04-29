@@ -334,12 +334,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
-        Tell the APIU simulator to turn on.
+        Tell the APIU to turn on.
 
         This is implemented in the super-class to tell the upstream
-        power supply proxy to turn the APIU hardware off. Here we
-        overrule it so that, should the APIU hardware be turned on
-        again, the antennas will be turned off.
+        power supply proxy to turn the APIU hardware on.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: abort callback
@@ -359,7 +357,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         if task_callback:
             task_callback(
-                status=TaskStatus.COMPLETED, result="Off command has completed"
+                status=TaskStatus.COMPLETED, result="On command has completed"
             )
 
     def off(
@@ -367,7 +365,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
-        Submit the off slow task.
+        Tell the apiu to turn off.
 
         This method returns immediately after it is submitted for execution.
 

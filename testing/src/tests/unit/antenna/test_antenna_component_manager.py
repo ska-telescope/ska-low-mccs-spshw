@@ -15,6 +15,7 @@ import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
@@ -365,15 +366,16 @@ class TestAntennaComponentManager:
         #     CommunicationStatus.ESTABLISHED
         # )
         communication_status_changed_callback.assert_in_deque(
-            [CommunicationStatus.ESTABLISHED]
+            CommunicationStatus.ESTABLISHED
         )
 
-        assert antenna_component_manager.on() == ResultCode.QUEUED
+        task_status, message = antenna_component_manager.on()
+        assert (task_status, message) == (TaskStatus.QUEUED, 'Task queued')
 
         # no action taken initially because the APIU is switched off
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()
 
-        antenna_component_manager._apiu_state_changed({"power_state": PowerState.ON})
+        antenna_component_manager._apiu_power_state_changed(PowerState.ON)
 
         # now that the antenna has been notified that the APIU is on,
         # it tells it to turn on its antenna

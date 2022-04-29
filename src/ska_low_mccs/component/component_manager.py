@@ -137,7 +137,6 @@ class MccsComponentManager(
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""
-        print("MccsComponentManager.start_communicating()")
         if self.communication_status == CommunicationStatus.ESTABLISHED:
             return
         if self.communication_status == CommunicationStatus.DISABLED:
@@ -167,14 +166,11 @@ class MccsComponentManager(
         :param communication_status: the new communication status of the
             component manager.
         """
-        print("MccsComponentManager.update_communication_status()")
         if self._communication_status != communication_status:
             with self.__communication_lock:
                 self._communication_status = communication_status
                 if self._communication_status_changed_callback is not None:
                     self._communication_status_changed_callback(communication_status)
-                    print(f"communication_status_changed_callback({communication_status})")
-                    print(f"{self._communication_status_changed_callback}")
 
     @property
     def is_communicating(self: MccsComponentManager) -> bool:

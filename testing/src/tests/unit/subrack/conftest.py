@@ -15,6 +15,7 @@ from typing import Any, Callable, Optional
 import pytest
 import requests
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
+from ska_low_mccs.testing.mock import MockCallableDeque
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -28,19 +29,19 @@ from ska_low_mccs.subrack import (
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for when the state of a component changes.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the state of a
         component changes.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()

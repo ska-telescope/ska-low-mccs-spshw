@@ -194,7 +194,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             return self._get_from_component(name)
         return default_value
 
-    @check_communicating
+    # @check_communicating
     def _get_from_component(
         self: BaseSubrackSimulatorComponentManager,
         name: str,
@@ -752,7 +752,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_callback:
-            self.logger.warning("I'm here11")
             task_callback(
                 status=TaskStatus.COMPLETED,
                 result="The turn tpm on on task has completed",

@@ -67,10 +67,7 @@ class TestMccsSubrack:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert device_under_test.state() == DevState.DISABLE  # DevState.UNKNOWN ?
-        assert (
-            device_under_test.status() == "The device is in DISABLE state."
-        )  # "The device is in UNKNOWN state."?
+        assert device_under_test.adminMode == AdminMode.OFFLINE
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE
@@ -125,9 +122,10 @@ class TestMccsSubrack:
         )
         initial_lrc_result = ("", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
-
         device_under_test.adminMode = AdminMode.ONLINE
+        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+        assert device_under_test.adminMode == AdminMode.ONLINE
+
         ([result_code], [unique_id]) = device_under_test.On()
         assert result_code == ResultCode.QUEUED
         assert "_On" in unique_id
@@ -207,9 +205,9 @@ class TestMccsSubrack:
         )
         initial_lrc_result = ("", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
+        device_under_test.adminMode = AdminMode.ONLINE
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
-        device_under_test.adminMode = AdminMode.ONLINE
         ([result_code], [unique_id]) = device_under_test.On()
         assert result_code == ResultCode.QUEUED
         assert "_On" in unique_id

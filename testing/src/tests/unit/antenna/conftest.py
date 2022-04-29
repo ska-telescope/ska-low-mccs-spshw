@@ -94,6 +94,22 @@ def component_state_changed_callback(
     """
     return mock_callback_factory()
 
+@pytest.fixture()
+def communication_status_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for communication change.
+
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the communication status
+        of a component manager changed.
+    """
+    return mock_callback_deque_factory()
+
 
 @pytest.fixture()
 def antenna_apiu_proxy(

@@ -405,8 +405,11 @@ class AntennaComponentManager(MccsComponentManager):
 
     def start_communicating(self: AntennaComponentManager) -> None:
         """Establish communication with the component, then start monitoring."""
+        print("super().start_communicating()")
         super().start_communicating()
+        print("apiu_proxy.start_communicating()")
         self._apiu_proxy.start_communicating()
+        print("tile_proxy.start_communicating()")
         self._tile_proxy.start_communicating()
 
     def stop_communicating(self: AntennaComponentManager) -> None:

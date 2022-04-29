@@ -82,7 +82,7 @@ class TestAntennaApiuProxy:
         ):
             antenna_apiu_proxy.on()
 
-        assert antenna_apiu_proxy.power_mode is None
+        assert antenna_apiu_proxy.power_state is PowerState.UNKNOWN
 
         antenna_apiu_proxy.start_communicating()
         time.sleep(0.1)
@@ -100,16 +100,16 @@ class TestAntennaApiuProxy:
         antenna_apiu_proxy._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        assert antenna_apiu_proxy.power_mode == PowerState.ON
+        assert antenna_apiu_proxy.power_state == PowerState.ON
 
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.OFF
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
         time.sleep(0.1)
         assert antenna_apiu_proxy.power_on() == ResultCode.OK
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
         # The antenna power mode won't update until an event confirms that the antenna is on.
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.OFF
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
         # Fake an event that tells this proxy that the antenna is now on as requested
         are_antennas_on = initial_are_antennas_on
@@ -117,28 +117,28 @@ class TestAntennaApiuProxy:
         antenna_apiu_proxy._antenna_power_state_changed(
             "areAntennasOn", are_antennas_on, tango.AttrQuality.ATTR_VALID
         )
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.ON
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.ON
 
         assert antenna_apiu_proxy.power_on() is None
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.ON
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.ON
 
         assert antenna_apiu_proxy.power_off() == ResultCode.OK
         mock_apiu_device_proxy.PowerDownAntenna.assert_next_call(apiu_antenna_id)
 
         # The power mode won't update until an event confirms that the antenna is on.
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.ON
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.ON
 
         # Fake an event that tells this proxy that the antenna is now off as requested
         are_antennas_on[apiu_antenna_id - 1] = False
         antenna_apiu_proxy._antenna_power_state_changed(
             "areAntennasOn", are_antennas_on, tango.AttrQuality.ATTR_VALID
         )
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.OFF
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
         assert antenna_apiu_proxy.power_off() is None
         mock_apiu_device_proxy.PowerDownAntenna.assert_not_called()
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.OFF
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
     def test_reset(self: TestAntennaApiuProxy, antenna_apiu_proxy: _ApiuProxy) -> None:
         """
@@ -277,7 +277,7 @@ class TestAntennaComponentManager:
         :param apiu_antenna_id: the id of the antenna in its APIU
             device.
         """
-        assert antenna_component_manager.power_state is None
+        assert antenna_component_manager.power_state is PowerState.UNKNOWN
 
         antenna_component_manager.start_communicating()
         time.sleep(0.1)
@@ -361,8 +361,11 @@ class TestAntennaComponentManager:
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
-            CommunicationStatus.ESTABLISHED
+        # communication_status_changed_callback.assert_next_call(
+        #     CommunicationStatus.ESTABLISHED
+        # )
+        communication_status_changed_callback.assert_in_deque(
+            [CommunicationStatus.ESTABLISHED]
         )
 
         assert antenna_component_manager.on() == ResultCode.QUEUED

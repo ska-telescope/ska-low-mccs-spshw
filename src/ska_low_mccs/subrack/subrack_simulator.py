@@ -32,6 +32,8 @@ import threading
 from time import sleep
 from typing import Any, Callable, Optional
 
+from ska_tango_base.control_model import PowerState
+
 from ska_low_mccs.component import ObjectComponent
 from ska_low_mccs.subrack.subrack_data import FanMode, SubrackData
 
@@ -145,7 +147,6 @@ class SubrackSimulator(ObjectComponent):
         self._power_supply_currents = list(power_supply_currents)
         self._power_supply_voltages = list(power_supply_voltages)
         self._power_supply_fan_speeds = list(power_supply_fan_speeds)
-
         self._tpm_data_lock = threading.RLock()
         with self._tpm_data_lock:
             self._tpm_data = _tpm_data or [
@@ -208,6 +209,15 @@ class SubrackSimulator(ObjectComponent):
 
         This is a helper method that calls the callback if it exists.
         """
+        tpm_power_states = [
+            PowerState.ON if tpm_data["is_on"] else PowerState.OFF
+            for tpm_data in self._tpm_data
+        ]
+        with self._tpm_data_lock:
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(
+                    {"tpm_power_states": tpm_power_states}
+                )
         if self._are_tpms_on_changed_callback is not None:
             self._are_tpms_on_changed_callback(self.are_tpms_on)
 
@@ -577,8 +587,7 @@ class SubrackSimulator(ObjectComponent):
 
         :return: whether each TPM is on
         """
-        with self._tpm_data_lock:
-            return [tpm_data["is_on"] for tpm_data in self._tpm_data]
+        return [tpm_data["is_on"] for tpm_data in self._tpm_data]
 
     def turn_off_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
         """

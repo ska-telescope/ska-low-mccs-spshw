@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 from typing import Any
+import time
 
 import pytest
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
 from ska_low_mccs.testing.mock import MockCallable
+from ska_tango_base.executor import TaskStatus
 
 
 class TestStationBeamComponentManager:
@@ -187,7 +189,7 @@ class TestStationBeamComponentManager:
         :param station_beam_component_manager: the station beam component class object under
             test.
         """
-        beam_id = 1
+        beam_id = 2
         station_id = 1
         update_rate = 3.14
         channels = [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]]
@@ -207,9 +209,14 @@ class TestStationBeamComponentManager:
 
         config_dict = json.dumps(config)
 
+        # Queueing of configure works fine but _configure is never executed.
+        # This test passes if _configure is called directly.
         task_status, response = station_beam_component_manager.configure(config_dict)
-        print(task_status, response)
+        assert task_status == TaskStatus.QUEUED
+        assert response == "Task queued"
+        time.sleep(0.1)
 
+        # Not getting into _configure where the following are set.
         assert station_beam_component_manager.beam_id == beam_id
         assert station_beam_component_manager.station_id == station_id
         assert station_beam_component_manager.update_rate == pytest.approx(update_rate)

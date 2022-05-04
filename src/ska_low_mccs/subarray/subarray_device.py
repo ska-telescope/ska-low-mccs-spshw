@@ -19,6 +19,7 @@ from ska_tango_base.commands import (  # FastCommand,
     SubmittedSlowCommand,
 )
 from ska_tango_base.control_model import CommunicationStatus, HealthState
+from ska_tango_base.executor import TaskStatus
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
 
@@ -140,6 +141,9 @@ class MccsSubarray(SKASubarray):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
+        #print("IN CALLBACK")
+        #print(f"state change: {state_change}")
+        #print(f"fqdn: {fqdn}")
         # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
         # valid_device_types = {"station": "station_health_changed",
         #                     "beam": "station_beam_health_changed",
@@ -152,7 +156,7 @@ class MccsSubarray(SKASubarray):
             # If all health states use "health_state" and overwrite each other
             # then the below code should fix it.
             # if fqdn is None:
-            #     # Do regular health update.
+            #     # Do regular health update. This device called the callback.
             #    if self._health_state != health:
             #         self._health_state = health
             #         self.push_change_event("healthState", health)
@@ -524,7 +528,7 @@ class MccsSubarray(SKASubarray):
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SendTransientBuffer(
         self: MccsSubarray, argin: list[int]
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Cause the subarray to send the requested segment of the transient buffer to SDP.
 
@@ -551,8 +555,19 @@ class MccsSubarray(SKASubarray):
         :return: ASCII String that indicates status, for information
             purposes only
         """
+        result_code= TaskStatus.NOT_FOUND
+        method="SendTransientBuffer"
+        print(f"{method}: IN TRANSIENT BUFFER TANGO CMD")
         handler = self.get_command_object("SendTransientBuffer")
+        print(f"{method}: handler: {handler}")
+        #print(f"{method}:(FAKE) tango rc: {result_code}")
+        #print(f"{method}:(FAKE) tango rc type: {type(result_code)}")
         (result_code, unique_id) = handler(argin)
+        # This result_code is a ResultCode rather than a TaskStatus?
+        # Shouldn't this be the same thing that's returned by send_transient_buffer?
+        print(f"{method}: tango rc: {result_code}")
+        print(f"{method}: tango rc type: {type(result_code)}")
+        print(f"{method}: tango uid: {unique_id}")
         return ([result_code], [unique_id])
 
 

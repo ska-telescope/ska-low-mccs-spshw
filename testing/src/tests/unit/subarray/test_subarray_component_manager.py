@@ -348,7 +348,7 @@ class TestSubarrayComponentManager:
         )
         expected_arguments = {"power_state": PowerState.ON}
         time.sleep(0.1)
-        component_state_changed_callback.assert_in_deque(expected_arguments)
+        component_state_changed_callback.assert_next_call_with_keys(expected_arguments)
         # There are a few (unavoidable) nasty hacks like the following line scattered around as a result of the changes to the callbacks during the update to v0.13.
         subarray_component_manager.power_state = PowerState.ON
 
@@ -380,7 +380,6 @@ class TestSubarrayComponentManager:
                     {"low-mccs/beam/02"},]},
             ]
         time.sleep(0.1)
-        #assert component_state_changed_callback.assert_in_deque(expected_arguments)
         component_state_changed_callback.assert_next_calls_with_keys(expected_arguments)
 
         with pytest.raises(
@@ -690,8 +689,26 @@ class TestSubarrayComponentManager:
                     {"low-mccs/subarraybeam/03"},
                     {"low-mccs/beam/03"},]},
             ]
+        # subarray connects to stations, subscribes to change events on power mode,
+        # doesn't consider resource assignment to be complete until it has received an
+        # event from each one. So let's fake that.
         time.sleep(0.1)
-        component_state_changed_callback.assert_all_in_deque(expected_arguments)
+        subarray_component_manager._station_power_state_changed(
+            station_on_fqdn, PowerState.ON
+        )
+        component_state_changed_callback.assert_next_calls_with_keys(expected_arguments)
+
+        for fqdn,proxy in subarray_component_manager._stations.items():
+            if fqdn == station_on_fqdn:
+                proxy.power_state = PowerState.ON
+
+        for fqdn,proxy in subarray_component_manager._subarray_beams.items():
+            if fqdn == subarray_beam_on_fqdn:
+                proxy.power_state = PowerState.ON
+
+        for fqdn,proxy in subarray_component_manager._station_beams.items():
+            if fqdn == station_beam_on_fqdn:
+                proxy.power_state = PowerState.ON
 
         task_status, response = subarray_component_manager.configure(
             {
@@ -710,17 +727,16 @@ class TestSubarrayComponentManager:
         
         time.sleep(0.1)
         assert subarray_component_manager.scan_id == scan_id
-        
+
+
         mock_subarray_beam_on.Scan.assert_next_call(
             json.dumps({"scan_id": scan_id, "start_time": start_time})
         )
         time.sleep(0.1)
-        component_state_changed_callback.assert_in_deque({"scanning_changed": True})
-        # scanning_changed_callback.assert_next_call(True)
+        component_state_changed_callback.assert_next_call_with_keys({"scanning_changed": True})
 
         task_status, response = subarray_component_manager.end_scan()
         assert task_status == TaskStatus.QUEUED
         assert response == "Task queued"
         time.sleep(0.1)
-        component_state_changed_callback.assert_in_deque({"scanning_changed": False})
-        # scanning_changed_callback.assert_next_call(False)
+        component_state_changed_callback.assert_next_call_with_keys({"scanning_changed": False})

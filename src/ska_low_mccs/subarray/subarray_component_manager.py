@@ -43,7 +43,6 @@ class _StationProxy(ObsDeviceComponentManager):
 
         :return: A task status and response message.
         """
-        print("In station proxy configure.")
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
         (result_code, unique_id) = self._proxy.Configure(configuration_str)
@@ -84,7 +83,6 @@ class _SubarrayBeamProxy(ObsDeviceComponentManager):
 
         :return: A task status and response message.
         """
-        print("IN SCAN")
         assert self._proxy is not None
         scan_arg = json.dumps({"scan_id": scan_id, "start_time": start_time})
         ([result_code], unique_id) = self._proxy.Scan(scan_arg)
@@ -245,7 +243,6 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code and response message.
         """
-        print("QUEUEING ASSIGN")
         return self.submit_task(
             self._assign,
             args=[resource_spec],
@@ -278,7 +275,6 @@ class SubarrayComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
-        print("IN _ASSIGN")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -558,7 +554,6 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        print("In _configure")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -569,15 +564,12 @@ class SubarrayComponentManager(
             subarray_beam["subarray_beam_id"]: subarray_beam
             for subarray_beam in subarray_beams
         }
-        print("Before station config")
+
         result_code = self._configure_stations(station_configuration)
-        print("After station config")
-        print(result_code)
         if result_code != ResultCode.FAILED:
             result_code = self._configure_subarray_beams(subarray_beam_configuration)
         self._configured_changed_callback({"configured_changed": True})
 
-        print(result_code)
         if result_code == ResultCode.OK:
             self._configure_completed_callback({"configure_completed": None})
 
@@ -598,17 +590,11 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        print("in _config stations")
         result_code = ResultCode.OK
         for (station_id, configuration) in station_configuration.items():
             station_fqdn = f"low-mccs/station/{station_id:03d}"
             station_proxy = self._stations[station_fqdn]
-            print(f"-- before configure call for {station_fqdn}")
-            print(station_proxy.communication_status)
-            print(station_proxy.power_state)
-            print(f"config: {configuration}")
             proxy_result_code, response = station_proxy.configure(configuration)
-            print("-- after configure call")
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
             elif proxy_result_code == ResultCode.QUEUED:
@@ -772,7 +758,6 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        print("IN DECONFIG")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
         for station_proxy in self._stations.values():
@@ -780,9 +765,6 @@ class SubarrayComponentManager(
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
-        print("AFTER DECONFIG")
-        # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
-        # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="End/Deconfigure has completed."
@@ -879,6 +861,7 @@ class SubarrayComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
 
+    @check_communicating
     def send_transient_buffer(
         self: SubarrayComponentManager,
         argin: list[int],
@@ -894,11 +877,18 @@ class SubarrayComponentManager(
 
         :return: Task status and response message.
         """
-        return self.submit_task(
+        method = "send_transient_buffer"
+        print(f"{method}: QUEUEING TRANS BUFFER")
+        rc, uid = self.submit_task(
             self._send_transient_buffer,
-            args=[argin],
+            args=argin,
             task_callback=task_callback,
         )
+        # These rc/uids seem to be correct at this point in the code.
+        print(f"{method}: rc: {rc}")
+        print(f"{method}: type of rc: {type(rc)}")
+        print(f"{method}: uid: {uid}")
+        return (rc, uid)
 
     @check_communicating
     def _send_transient_buffer(

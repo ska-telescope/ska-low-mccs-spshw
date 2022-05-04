@@ -17,7 +17,6 @@ from ska_low_mccs.testing.mock import (
     MockCallableDeque,
     MockChangeEventCallback,
 )
-from ska_low_mccs.testing.mock.mock_callable import MockComponentStateChangedCallback
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, DeviceToLoadType
 
 
@@ -148,32 +147,6 @@ def mock_callback_deque_factory(
         called.
     """
     return lambda: MockCallableDeque(
-        called_timeout=mock_callback_called_timeout,
-        not_called_timeout=mock_callback_not_called_timeout,
-    )
-
-@pytest.fixture()
-def mock_component_state_changed_callback_factory(
-    mock_callback_called_timeout: float,
-    mock_callback_not_called_timeout: float,
-) -> Callable[[], MockComponentStateChangedCallback]:
-    """
-    Return a factory that returns a new mock callback using a deque each time it is
-    called.
-
-    Use this fixture in tests that need more than one mock_callback. If
-    your tests only needs a single mock callback, it is simpler to use
-    the :py:func:`mock_callback` fixture.
-
-    :param mock_callback_called_timeout: the time to wait for a mock
-        callback to be called when a call is expected
-    :param mock_callback_not_called_timeout: the time to wait for a mock
-        callback to be called when a call is unexpected
-
-    :return: a factory that returns a new mock callback each time it is
-        called.
-    """
-    return lambda: MockComponentStateChangedCallback(
         called_timeout=mock_callback_called_timeout,
         not_called_timeout=mock_callback_not_called_timeout,
     )

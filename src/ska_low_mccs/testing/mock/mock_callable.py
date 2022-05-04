@@ -19,7 +19,6 @@ __all__ = [
     "MockCallable",
     "MockChangeEventCallback",
     "MockCallableDeque",
-    "MockComponentStateChangedCallback",
 ]
 
 
@@ -716,7 +715,11 @@ class MockCallableDeque(MockCallable):
         for expected_argument in expected_arguments_list:
             # Check if the expected key is somewhere in the deque.
             # If not found this method will raise an exception.
-            state_change, fqdn = expected_argument
+            if len(expected_argument) == 1:
+                state_change = expected_argument
+                fqdn = None
+            else:
+                state_change, fqdn = expected_argument
             self.assert_next_call_with_keys(state_change, fqdn=fqdn)
 
     def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:

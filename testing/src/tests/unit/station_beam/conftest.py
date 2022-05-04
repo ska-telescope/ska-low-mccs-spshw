@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Callable, Any
 
 import pytest
 import tango
@@ -18,24 +18,26 @@ import tango
 from ska_low_mccs.station_beam import StationBeamComponentManager
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[['dict[str, Any]'], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
 
     To be called when the subarray's state changes.
+    A side effect function is passed in to update the DUT's state
 
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        factory which uses a double-ended queue (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the subarray's state changes.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -108,7 +110,7 @@ def station_beam_component_manager(
     logger: logging.Logger,
     max_workers: int,
     communication_status_changed_callback: MockCallable,
-    component_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> StationBeamComponentManager:
     """
     Return a station beam component manager.
@@ -212,4 +214,4 @@ def max_workers() -> int:
 
     :return: maximum number of workers in thread pool.
     """
-    return 1
+    return 2

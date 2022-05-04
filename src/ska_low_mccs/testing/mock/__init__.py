@@ -14,7 +14,6 @@ __all__ = [
     "MockDeviceBuilder",
     "MockSubarrayBuilder",
     "MockCallableDeque",
-    "MockComponentStateChangedCallback",
     # "MockGroupBuilder",
 ]
 
@@ -23,7 +22,6 @@ from .mock_callable import (
     MockCallable,
     MockChangeEventCallback,
     MockCallableDeque,
-    MockComponentStateChangedCallback,
 )
 from .mock_device import MockDeviceBuilder
 

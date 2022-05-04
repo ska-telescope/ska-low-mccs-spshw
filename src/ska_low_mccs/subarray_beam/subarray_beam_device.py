@@ -48,9 +48,8 @@ class MccsSubarrayBeam(SKAObsDevice):
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
         self._obs_state_model = SubarrayBeamObsStateModel(
-                self.logger,
-                self.component_state_changed_callback
-            )
+            self.logger, self.component_state_changed_callback
+        )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubarrayBeamHealthModel(
             self.component_state_changed_callback

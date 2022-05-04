@@ -215,7 +215,6 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
 
     def get_fndh_info(
         self: PasdBusComponentManager,
-        fndh: int,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
@@ -223,7 +222,6 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
 
         This method returns immediately after it is submitted for execution.
 
-        :param fndh: the fndh to get info from
         :param task_callback: Update task state, defaults to None
 
         :return: A tuple containing a task status and a unique id string to identify the command

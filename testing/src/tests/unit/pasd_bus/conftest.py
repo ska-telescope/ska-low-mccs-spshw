@@ -30,7 +30,7 @@ from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
 def max_workers() -> int:
     """
     Return the number of worker threads.
-    
+
     :return: number of worker threads
     """
     return 1

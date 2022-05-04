@@ -129,6 +129,7 @@ class TestMccsPasdBus:
     ) -> None:
         """
         Test for healthState.
+
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.

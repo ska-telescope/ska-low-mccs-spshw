@@ -56,7 +56,7 @@ def is_configured_changed_callback(
 def max_workers() -> int:
     """
     Return the number of worker threads.
-    
+
     :return: number of worker threads
     """
     return 1

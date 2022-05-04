@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
-from ska_tango_base.control_model import CommunicationStatus
 from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import ObjectComponent
 
@@ -33,6 +33,12 @@ class SubarrayBeam(ObjectComponent):
         Initialise a new instance.
 
         :param logger: a logger for this component to use
+        :param max_workers: no of worker threads
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         self._logger = logger
 

@@ -15,7 +15,12 @@ from typing import Any, Optional, Sequence, Tuple
 
 import tango
 
-__all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque", "MockComponentStateChangedCallback"]
+__all__ = [
+    "MockCallable",
+    "MockChangeEventCallback",
+    "MockCallableDeque",
+    "MockComponentStateChangedCallback",
+]
 
 
 class MockCallable:
@@ -752,7 +757,7 @@ class MockComponentStateChangedCallback(MockCallableDeque):
         )
         if index is not None:
             raise AssertionError(
-                f"Expected call with keys {state_change_keys} for device fqdn {fqdn} to be missing "\
+                f"Expected call with keys {state_change_keys} for device fqdn {fqdn} to be missing "
                 "from deque, but was found at index: {index} with call: {actual_state_change}"
             )
 
@@ -779,7 +784,8 @@ class MockComponentStateChangedCallback(MockCallableDeque):
             )
 
     def assert_next_calls_with_state_params(
-        self: MockComponentStateChangedCallback, expected_arguments_list: list[(dict[str, Any], str)]
+        self: MockComponentStateChangedCallback,
+        expected_arguments_list: list[(dict[str, Any], str)],
     ):
         """
         Assert that for the next sequence of calls to this mock where the state_change

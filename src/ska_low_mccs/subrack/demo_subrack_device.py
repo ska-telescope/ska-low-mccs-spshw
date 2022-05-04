@@ -53,8 +53,8 @@ class DemoSubrack(MccsSubrack):
             information purpose only.
         """
         handler = self.get_command_object("PowerOnTpm")
-        (return_code, message) = handler(1)
-        return ([return_code], [message])
+        result_code, message = handler(1)
+        return ([result_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
     def PowerOnTpm2(self: DemoSubrack) -> DevVarLongStringArrayType:

@@ -416,7 +416,7 @@ class TileOrchestrator:
         except KeyError:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
-        self._logger.debug(f"TileOrchestrator: {key} ==> {actions}")
+        self._logger.warning(f"TileOrchestrator: {key} ==> {actions}")
         # print(f"TileOrchestrator: {key} ==> {actions}")
 
         result_code = None

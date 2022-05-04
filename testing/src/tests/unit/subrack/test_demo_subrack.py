@@ -85,8 +85,10 @@ class TestDemoSubrack:
         assert_powered([False, False, False, False])
 
         device_under_test.PowerOnTpm1()
-        time.sleep(0.1)
-        assert_powered([True, False, False, False])
+        time.sleep(0.2)
+        expected_tpm_power_states = [True, False, False, False]
+        time.sleep(0.2)
+        assert_powered(expected_tpm_power_states)
 
         device_under_test.PowerOnTpm2()
         time.sleep(0.1)

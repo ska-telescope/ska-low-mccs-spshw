@@ -76,7 +76,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
 
         super().start_communicating()
         cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(
-            self._component_state_changed_callback
+            self._are_tpms_on_changed
         )
         cast(SubrackSimulator, self._component).set_progress_changed_callback(
             self._component_state_changed_callback
@@ -194,7 +194,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             return self._get_from_component(name)
         return default_value
 
-    @check_communicating
+    # @check_communicating
     def _get_from_component(
         self: BaseSubrackSimulatorComponentManager,
         name: str,
@@ -752,12 +752,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_callback:
-            self.logger.warning("I'm here11")
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm on on task has completed",
+                result=f"Subrack TPM {tpm_id} turn on tpm task has completed",
             )
-            return
 
     def turn_on_tpms(
         self: SubrackComponentManager,
@@ -801,15 +799,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The turn tpm on task aborted"
+                    status=TaskStatus.ABORTED, result="The turn tpms on task aborted"
                 )
             return
 
         if task_callback:
-            self.logger.warning("I'm here11")
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm on on task has completed",
+                result="The turn tpms on task has completed",
             )
             return
 
@@ -875,14 +872,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The turn tpm on task aborted"
+                    status=TaskStatus.ABORTED, result="The turn tpm off task aborted"
                 )
             return
 
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm on on task has completed",
+                result=f"Subrack TPM {tpm_id} turn off tpm task has completed",
             )
             return
 
@@ -928,13 +925,13 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The turn tpm off task aborted"
+                    status=TaskStatus.ABORTED, result="The turn tpms off task aborted"
                 )
             return
 
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm off task has completed",
+                result="The turn tpms off task has completed",
             )
             return

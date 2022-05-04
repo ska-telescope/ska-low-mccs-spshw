@@ -196,7 +196,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         )
         super().__init__(None, pasd_bus_simulator, initial_simulation_mode)
 
-    '''def reload_database(
+    def reload_database(
         self: PasdBusComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
@@ -451,4 +451,4 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         task_status, unique_id = self.submit_task(
             self._turn_antenna_off, args=[], task_callback=task_callback
         )
-        return task_status, unique_id'''
+        return task_status, unique_id

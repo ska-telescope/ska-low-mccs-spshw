@@ -552,6 +552,7 @@ class MockCallableDeque(MockCallable):
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
+        print(call_arguments)
         if expected_argument in call_arguments:
             # Found the argument in the deque so we remove the entry.
             self._remove_element(call_arguments.index(expected_argument))

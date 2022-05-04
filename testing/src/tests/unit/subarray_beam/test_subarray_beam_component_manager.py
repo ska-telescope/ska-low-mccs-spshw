@@ -167,7 +167,7 @@ class TestSubarrayBeam:
 
         if isinstance(subarray_beam, SubarrayBeam):
 
-            #assert component_state_changed_callback.assert_in_deque([{"configured_changed": False}])
+            #component_state_changed_callback.assert_in_deque({"configured_changed": False})
             
             subarray_beam.configure(
                 subarray_beam_id,
@@ -179,7 +179,7 @@ class TestSubarrayBeam:
                 phase_centre,
             )
 
-            #assert component_state_changed_callback.assert_in_deque([{"configured_changed": True}])
+            #component_state_changed_callback.assert_in_deque({"configured_changed": True})
 
             assert subarray_beam.subarray_beam_id == subarray_beam_id
             assert subarray_beam.station_ids == station_ids
@@ -202,11 +202,11 @@ class TestSubarrayBeam:
 
             config_dict = json.dumps(config)
 
-            assert component_state_changed_callback.assert_in_deque([{"configured_changed": False}])
+            component_state_changed_callback.assert_in_deque({"configured_changed": False})
 
             task_status, unique_id = subarray_beam.configure(config_dict)
             time.sleep(0.2)
-            assert component_state_changed_callback.assert_in_deque([{"configured_changed": True}])
+            component_state_changed_callback.assert_in_deque({"configured_changed": True})
 
             assert task_status == TaskStatus.QUEUED
             assert unique_id == "Task queued"

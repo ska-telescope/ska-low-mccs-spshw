@@ -15,7 +15,12 @@ from typing import Any, Optional, Sequence, Tuple
 
 import tango
 
-__all__ = ["MockCallable", "MockChangeEventCallback", "MockCallableDeque"]
+__all__ = [
+    "MockCallable",
+    "MockChangeEventCallback",
+    "MockCallableDeque",
+    "MockComponentStateChangedCallback",
+]
 
 
 class MockCallable:
@@ -177,6 +182,53 @@ class MockCallable:
         assert called_mock is not None, "Callback has not been called."
         return called_mock.call_args
 
+    def get_whole_queue(
+        self: MockCallable,
+    ) -> list[Tuple[Sequence[Any], Sequence[Any]]]:
+        """
+        Return the arguments of all calls to this mock callback currently in the queue.
+
+        This is useful for situations where you do not know exactly what order
+        the calls will happen but you do know what the arguments will be.
+        Instead you want to assert that your call is somewhere in the queue.
+
+        If the call has not been made, this method will wait up to the
+        specified timeout for a call to arrive.
+
+        :return: a list of (args, kwargs) tuple
+        """
+        arg_list = []
+        while True:
+            called_mock = self._fetch_call(self._not_called_timeout)
+            if called_mock is None:
+                break
+            arg_list.append(called_mock.call_args)
+        return arg_list
+
+    def calls_in_queue(
+        self: MockCallable,
+        expected_arguments_list: list[Any],
+    ) -> bool:
+        """
+        Docstring.
+
+        :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the queue.
+
+        :returns: True if all arguments provided were found in the queue else returns False.
+        """
+        callbacks_found = 0
+        callbacks_to_find = len(expected_arguments_list)
+        call_list = self.get_whole_queue()
+        for call in call_list:
+            if call[0][0] in expected_arguments_list:
+                # A callback has been found in the queue.
+                callbacks_found += 1
+                # When we have found the number of listed callbacks we're done.
+                # We assume that we're not expecting exact duplicates.
+                if callbacks_found >= callbacks_to_find:
+                    break
+        return callbacks_found == callbacks_to_find
+
     def assert_last_call(self: MockCallable, *args: Any, **kwargs: Any) -> None:
         """
         Assert the arguments of the last call to this mock callback.
@@ -282,6 +334,7 @@ class MockChangeEventCallback(MockCallable):
         assert some specific properties on the arguments.
 
         :raises AssertionError: if the callback has not been called
+
         :return: an (args, kwargs) tuple
         """
         call_data = self._fetch_change_event(self._called_timeout)
@@ -519,7 +572,8 @@ class MockCallableDeque(MockCallable):
         """
         Assert that the mock has been called with the provided arguments in order.
 
-        :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
+        :param expected_arguments_list: A list of ordered arguments this mock is expected
+            to have been called with.
 
         :raises AssertionError: if any argument is not found or they are in a different order.
         """
@@ -545,9 +599,9 @@ class MockCallableDeque(MockCallable):
         # If expected_arguments_list is not empty then we didn't find everything or it wasn't in the order we wanted.
         if len(expected_arguments_list) > 0:
             raise AssertionError(
-                f"Could not find some arguments in the call queue or they were in the incorrect order: {expected_arguments_list}"
+                f"Could not find some arguments"
+                f"in the call queue or they were in the incorrect order: {expected_arguments_list}"
             )
-
         # Clear found items in ***reverse order***
         indices_to_remove.sort(reverse=True)
         self._remove_elements(indices_to_remove)
@@ -586,7 +640,7 @@ class MockCallableDeque(MockCallable):
         self: MockCallableDeque,
         *state_change_keys: str,
         fqdn: str = None,
-    ):
+    ) -> tuple[Any] | None:
         """
         Get the next state change with specific keys that this mock was called with.
 

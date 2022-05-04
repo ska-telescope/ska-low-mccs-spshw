@@ -601,6 +601,8 @@ class SubarrayComponentManager(
             station_fqdn = f"low-mccs/station/{station_id:03d}"
             station_proxy = self._stations[station_fqdn]
             print(f"-- before configure call for {station_fqdn}")
+            print(station_proxy.communication_status)
+            print(station_proxy.power_state)
             proxy_result_code, response = station_proxy.configure(configuration)
             print("-- after configure call")
             if proxy_result_code == ResultCode.FAILED:
@@ -689,7 +691,6 @@ class SubarrayComponentManager(
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
         self._scanning_changed_callback({"scanning_changed": True})
-        # TODO: Scan may not have actually completed by this point, check.
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
         return result_code
@@ -876,30 +877,36 @@ class SubarrayComponentManager(
 
     def send_transient_buffer(
         self: SubarrayComponentManager,
+        argin: list[int],
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the send_transient_buffer slow task.
 
         This method returns immediately after it is submitted for execution.
 
+        :param argin: list of requested segments.
         :param task_callback: Update task state. Defaults to None.
 
         :return: Task status and response message.
         """
         return self.submit_task(
-            self._send_transient_buffer, args=[], task_callback=task_callback
+            self._send_transient_buffer,
+            args=[argin],
+            task_callback=task_callback,
         )
 
     @check_communicating
     def _send_transient_buffer(
         self: SubarrayComponentManager,
+        argin: list[int],
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
     ) -> None:
         """
         Send the transient buffer.
 
+        :param argin: list of list of requested segment.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -945,7 +952,6 @@ class SubarrayComponentManager(
         power_mode: PowerState,
     ) -> None:
         self._station_power_modes[fqdn] = power_mode
-
         if self._is_assigning and all(
             power_mode is not None for power_mode in self._station_power_modes.values()
         ):

@@ -447,6 +447,6 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_antenna_off, args=[], task_callback=task_callback
+            self._turn_antenna_off, args=[antenna], task_callback=task_callback
         )
         return task_status, unique_id

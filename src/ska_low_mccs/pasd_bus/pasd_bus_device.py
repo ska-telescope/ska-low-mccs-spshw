@@ -705,7 +705,9 @@ class MccsPasdBus(SKABaseDevice):
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOff(self: MccsPasdBus, argin) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOff(
+        self: MccsPasdBus, argin
+    ) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox's blue service LED.
 

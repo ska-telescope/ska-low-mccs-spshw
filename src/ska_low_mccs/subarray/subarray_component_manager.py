@@ -766,8 +766,6 @@ class SubarrayComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -777,7 +775,8 @@ class SubarrayComponentManager(
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
 
-        # TODO: Will need to wait here until all subservient devices indicate they've finished and then call the task_callback indicating the results.
+        # TODO: Will need to wait here until all subservient devices indicate
+        # they've finished and then call the task_callback indicating the results.
         # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
             task_callback(
@@ -827,8 +826,6 @@ class SubarrayComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -867,8 +864,6 @@ class SubarrayComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -907,8 +902,6 @@ class SubarrayComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)

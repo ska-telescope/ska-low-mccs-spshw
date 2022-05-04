@@ -407,6 +407,8 @@ class MockChangeEventCallback(MockCallable):
 
 class MockCallableDeque(MockCallable):
     """
+    An extension to the MockCallable class to allow the queue to be interrogated.
+
     This class alters MockCallable to use a deque instead of a queue and adds the
     `assert_in_deque` method which checks the deque for calls to this mock with specific
     arguments.
@@ -567,8 +569,8 @@ class MockCallableDeque(MockCallable):
         :param state_change_keys: keys to match the state_change argument keys
         :param fqdn: fqdn to be matched
 
-        :return actual_state_change: matching state_change dictionary
-        :return index: index of the call found in the queue
+        :return: actual_state_change: matching state_change dictionary
+        :return: index: index of the call found in the queue
         """
         for queue_item in self._queue:
             args, kwargs = queue_item.call_args
@@ -639,8 +641,7 @@ class MockCallableDeque(MockCallable):
         fqdn: str = None,
     ) -> None:
         """
-        Assert that the next call to this mock with a given key also has the given
-        value.
+        Assert that the call to this mock with a given key also has the given value.
 
         This method searches the deque for the *next* call to the mock with the specified key while ignoring other keys.
         If a match to the key is found then the value must also match.
@@ -667,8 +668,7 @@ class MockCallableDeque(MockCallable):
         self: MockCallableDeque, expected_arguments_list: list[(dict[str, Any], str)]
     ) -> None:
         """
-        Assert that the next calls to this mock with given keys also have the given
-        values.
+        Assert that the calls to this mock with given keys also have the given values.
 
         This method searches the deque for the *next* calls to the mock with the specified key while ignoring other keys.
         If a match to the key is found then the value must also match.

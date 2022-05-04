@@ -478,24 +478,26 @@ class MockCallableDeque(MockCallable):
         expected_arguments_list: list[Any],
     ) -> None:
         """
-        Assert that a list of calls to the callback with the expected arguments are
-        present in the deque.
+        Assert multiple calls with arguments have been made to this mock.
+
+        Assert that a list of calls to the mocked callback with the expected arguments are
+        present anywhere in the deque.
 
         :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
-
-        :raises: AssertionError if any argument was not found.
         """
         for expected_argument in expected_arguments_list:
             self.assert_in_deque(expected_argument)
 
     def assert_in_deque(self: MockCallableDeque, expected_argument: Any) -> None:
         """
+        Assert a single call with argument has been made to this mock.
+
         Assert that a single call to the callback with the expected argument is present
         in the deque.
 
         :param expected_argument: An argument this mock is expected to be called with and found in the deque.
 
-        :raises: AssertionError if the expected argument was not found.
+        :raises AssertionError: if the expected argument was not found.
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
@@ -513,13 +515,11 @@ class MockCallableDeque(MockCallable):
         expected_arguments_list: list[Any],
     ) -> None:
         """
-        Assert that the mock has been called with the provided arguments in the order
-        specified.
+        Assert that the mock has been called with the provided arguments in order.
 
         :param expected_arguments_list: A list of ordered arguments this mock is expected to have been called with.
 
-        :return: `True` if all arguments were found in the deque in the order provided else raises AssertionError.
-        :raises: AssertionError if any argument is not found or they are in a different order.
+        :raises AssertionError: if any argument is not found or they are in a different order.
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
@@ -557,16 +557,16 @@ class MockCallableDeque(MockCallable):
         fqdn: str = None,
     ):
         """
-        Find the next state change with specific keys that
-        component_state_change_callback was called with.
+        Find the next state change with specific keys that this mock was called with.
 
-        This method searches the deque for the *next* call to component_state_change_callback where
+        This method searches the deque for the *next* call to the mock where
         the keys of its state_change argument match the specified keys, and the value of its fqdn
-        keyword-argmment match the specified fqdn. If found, the full state_change argument is returned
+        keyword-argument match the specified fqdn. If found, the full state_change argument is returned
         along with its index in the deque.
 
         :param state_change_keys: keys to match the state_change argument keys
         :param fqdn: fqdn to be matched
+
         :return actual_state_change: matching state_change dictionary
         :return index: index of the call found in the queue
         """
@@ -586,16 +586,16 @@ class MockCallableDeque(MockCallable):
         fqdn: str = None,
     ):
         """
-        Get the next state change with specific keys that
-        component_state_change_callback was called with.
+        Get the next state change with specific keys that this mock was called with.
 
-        This method searches the deque for the *next* call to component_state_change_callback where
+        This method searches the deque for the *next* call to this mock where
         the keys of its state_change argument match the specified keys, and the value of its fqdn
         keyword-argument match the specified fqdn. If a match is found, the corresponding call is removed
         from the deque, and the dictionary values of the state_change argument with matching keys is returned.
 
         :param state_change_keys: state_change keys to be searched for in the queue
         :param fqdn: fqdn to be searched for in the queue
+
         :return: tuple containing the values of the state_change dictionary with matching keys (or None)
         """
         index, actual_state_change = self._find_next_call_with_keys(
@@ -612,9 +612,18 @@ class MockCallableDeque(MockCallable):
         *state_change_keys: str,
         fqdn: str = None,
     ):
-        """Assert that no call to this mock has been made where its state_change
+        """
+        Assert that this mock has not been called with the given key and fqdn.
+
+        Assert that no call to this mock has been made where its state_change
         argument has the given key(s) and its fqdn keyword-argument matches the
-        specified fqdn."""
+        specified fqdn.
+
+        :param state_change_keys: state_change keys to be searched for in the queue
+        :param fqdn: fqdn to be searched for in the queue
+
+        :raises AssertionError: If a key is not found or a value does not match an expected value.
+        """
         index, actual_state_change = self._find_next_call_with_keys(
             *state_change_keys, fqdn=fqdn
         )
@@ -630,14 +639,15 @@ class MockCallableDeque(MockCallable):
         fqdn: str = None,
     ) -> None:
         """
-        Assert that the next call to this mock with a given key also has the specified
+        Assert that the next call to this mock with a given key also has the given
         value.
 
         This method searches the deque for the *next* call to the mock with the specified key while ignoring other keys.
         If a match to the key is found then the value must also match.
-        If the key is not found or the value does not match the expected value this method will raise an AssertionError otherwise it will return `True`.
+        If the key is not found or the value does not match the expected value this method will raise an AssertionError.
 
         :param expected_argument: A dict containing the key-value argument this mock is expected to be called with.
+        :param fqdn: fqdn to be searched for in the queue
 
         :raises AssertionError: If the key is not found or the value does not match the expected value.
         """
@@ -657,7 +667,7 @@ class MockCallableDeque(MockCallable):
         self: MockCallableDeque, expected_arguments_list: list[(dict[str, Any], str)]
     ) -> None:
         """
-        Assert that the next calls to this mock with given keys also have the specified
+        Assert that the next calls to this mock with given keys also have the given
         values.
 
         This method searches the deque for the *next* calls to the mock with the specified key while ignoring other keys.
@@ -679,7 +689,7 @@ class MockCallableDeque(MockCallable):
 
     def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:
         """
-        Remove the calls at the index contained in `indices_to_remove`.
+        Remove the calls at the indices contained in `indices_to_remove`.
 
         This method is used to clear found calls to the mock.
         :param indices_to_remove: An integer list of indices to be removed from the deque.
@@ -689,9 +699,10 @@ class MockCallableDeque(MockCallable):
 
     def _remove_element(self: MockCallableDeque, index: int) -> None:
         """
-        Remove the calls at the index contained in `indices_to_remove`.
+        Remove the calls at the index contained in `index`.
 
-        This method is used to clear found calls to the mock.
-        :param indices_to_remove: An integer list of indices to be removed from the deque.
+        This method is used to clear a found call to the mock.
+
+        :param index: An integer index to be removed from the deque.
         """
         self._queue.remove(self._queue[index])

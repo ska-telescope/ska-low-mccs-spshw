@@ -495,7 +495,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            #self._hardware_component_manager.turn_on_antenna(antenna)
+            # self._hardware_component_manager.turn_on_antenna(antenna)
             time.sleep(10)
         except Exception as ex:
             if task_callback:
@@ -530,7 +530,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            #self._hardware_component_manager.turn_off_antenna(antenna)
+            # self._hardware_component_manager.turn_off_antenna(antenna)
             time.sleep(10)
         except Exception as ex:
             if task_callback:

@@ -10,10 +10,11 @@ from __future__ import annotations  # allow forward references in type hints
 
 import unittest.mock
 
-from ska_tango_base.commands import ResultCode
-
-from ska_low_mccs import MccsSubarray
+# from ska_low_mccs import MccsSubarray
 from ska_low_mccs.testing.mock import MockDeviceBuilder
+
+# from ska_tango_base.commands import ResultCode
+
 
 __all__ = ["MockSubarrayBuilder"]
 

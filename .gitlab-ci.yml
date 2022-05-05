@@ -71,4 +71,4 @@ python-build-for-development:
 
 python-build-for-publication:
   image: $SKA_PYTHON_PYTANGO_BUILDER_IMAGE
-    
+

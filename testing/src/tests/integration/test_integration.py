@@ -370,7 +370,7 @@ class TestMccsIntegration:
 
     # TODO This test is an extension from the test above, which is only
     #      half working due to an obs state issue with subarray.
-    @pytest.mark.xfail
+    @pytest.mark.xfail(reason="obs state issue with subarray")
     def test_controller_release_subarray(
         self: TestMccsIntegration,
         tango_harness: TangoHarness,

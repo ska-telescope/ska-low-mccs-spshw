@@ -968,7 +968,7 @@ class MccsTile(SKABaseDevice):
             """
             Implement :py:meth:`.MccsTile.GetRegisterList` command functionality.
 
-            :return:a list of firmware & cpld registers
+            :return: a list of firmware & cpld registers
             """
             return self._component_manager.register_list
 

@@ -83,7 +83,7 @@ class TestControllerComponentManager:
         :param subrack_proxies: list of proxies to MCCS subrack devices
         """
         controller_component_manager.start_communicating()
-        time.sleep(0.1)
+        time.sleep(0.25)
         controller_component_manager.on()
         for proxy in subrack_proxies:
             proxy.On.assert_next_call()
@@ -122,8 +122,13 @@ class TestControllerComponentManager:
             called when the component state changes
         """
         controller_component_manager.start_communicating()
+<<<<<<< HEAD
         time.sleep(0.1)
         component_state_changed_callback.assert_in_deque({"power_state": PowerState.UNKNOWN})
+=======
+        time.sleep(0.25)
+        component_power_mode_changed_callback.assert_next_call(PowerState.UNKNOWN)
+>>>>>>> 3e5bb3e2c5592293d3fe8ba7d203bbed8cc499e8
         assert controller_component_manager.power_mode == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():
@@ -177,7 +182,7 @@ class TestControllerComponentManager:
             subarrays.
         """
         controller_component_manager.start_communicating()
-        time.sleep(0.2)
+        time.sleep(0.25)
 
         # Subarray is an always-on device, so this should always be received after we
         # establish communication with it.
@@ -315,7 +320,7 @@ class TestControllerComponentManager:
             [3, 4],
         )
 
-        time.sleep(0.1)
+        time.sleep(0.25)
         subarray_proxies[
             "low-mccs/subarray/01"
         ].AssignResources.assert_called_once_with(
@@ -330,7 +335,7 @@ class TestControllerComponentManager:
         )
 
         controller_component_manager.deallocate_all(1)
-        time.sleep(0.2)
+        time.sleep(0.25)
         subarray_proxies[
             "low-mccs/subarray/01"
         ].ReleaseAllResources.assert_called_once_with()
@@ -342,7 +347,7 @@ class TestControllerComponentManager:
             [3, 4],
         )
 
-        time.sleep(0.1)
+        time.sleep(0.25)
         subarray_proxies[
             "low-mccs/subarray/02"
         ].AssignResources.assert_called_once_with(
@@ -358,7 +363,7 @@ class TestControllerComponentManager:
 
         controller_component_manager.deallocate_all(1)
         controller_component_manager.deallocate_all(2)
-        time.sleep(0.1)
+        time.sleep(0.25)
         controller_component_manager.allocate(
             1,
             [["low-mccs/station/001"]],
@@ -368,7 +373,7 @@ class TestControllerComponentManager:
 
         # Now all 48 channel blocks of station 1 are assigned to subarray 1,
         # assigning any more to subarray 2 should fail
-        time.sleep(0.1)
+        time.sleep(0.25)
         with pytest.raises(
             ValueError, match="No free resources of type: channel_blocks."
         ):
@@ -380,5 +385,5 @@ class TestControllerComponentManager:
             )
 
         controller_component_manager.restart_subarray("low-mccs/subarray/02")
-        time.sleep(0.1)
+        time.sleep(0.25)
         subarray_proxies["low-mccs/subarray/02"].Restart.assert_called_once_with()

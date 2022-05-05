@@ -207,25 +207,6 @@ def apiu_component_manager(
 
 
 @pytest.fixture()
-def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[['dict[str, Any]'], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback.
-
-    To be called when the subarray's state changes.
-    A side effect function is passed in to update the DUT's state
-
-    :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory which uses a double-ended queue (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the subarray's state changes.
-    """
-    return mock_callback_deque_factory()
-
-
-@pytest.fixture()
 def random_current() -> Callable[[], float]:
     """
     Return a callable that returns a random current value.

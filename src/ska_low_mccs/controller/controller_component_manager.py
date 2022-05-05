@@ -318,6 +318,9 @@ class ControllerComponentManager(MccsComponentManager):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
+        self._communication_status_changed_callback = (
+            communication_status_changed_callback
+        )
         self._component_state_changed_callback = component_state_changed_callback
 
         self.__communication_status_lock = threading.Lock()
@@ -729,10 +732,10 @@ class ControllerComponentManager(MccsComponentManager):
                 break
         if completed:
             task_callback(
-                status=TaskStatus.COMPLETED, result="The Off command has completed"
+                status=TaskStatus.COMPLETED, result="The On command has completed"
             )
         else:
-            task_callback(status=TaskStatus.FAILED, result="The Off command has failed")
+            task_callback(status=TaskStatus.FAILED, result="The On command has failed")
 
     def allocate(
         self: ControllerComponentManager,

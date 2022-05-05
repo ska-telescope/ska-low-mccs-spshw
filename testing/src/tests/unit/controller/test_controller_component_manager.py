@@ -111,19 +111,19 @@ class TestControllerComponentManager:
     def test_power_events(
         self: TestControllerComponentManager,
         controller_component_manager: ControllerComponentManager,
-        component_power_mode_changed_callback: MockCallable,
+        component_state_changed_callback: MockComponentStateChangedCallback,
     ) -> None:
         """
         Test the controller component manager's management of power mode.
 
         :param controller_component_manager: the controller component
             manager under test.
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         controller_component_manager.start_communicating()
         time.sleep(0.1)
-        component_power_mode_changed_callback.assert_next_call(PowerState.UNKNOWN)
+        component_state_changed_callback.assert_in_deque({"power_state": PowerState.UNKNOWN})
         assert controller_component_manager.power_mode == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():
@@ -131,12 +131,12 @@ class TestControllerComponentManager:
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
             assert controller_component_manager.power_mode == PowerState.UNKNOWN
-            component_power_mode_changed_callback.assert_not_called()
+            component_state_changed_callback.assert_not_called()
         for subrack_proxy in controller_component_manager._subracks.values():
             subrack_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
+        component_state_changed_callback.assert_next_call({"power_state": PowerState.OFF})
         assert controller_component_manager.power_mode == PowerState.OFF
 
     def test_subarray_allocation(

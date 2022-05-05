@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -494,7 +495,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_on_antenna(antenna)
+            #self._hardware_component_manager.turn_on_antenna(antenna)
+            time.sleep(10)
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -528,7 +530,8 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_off_antenna(antenna)
+            #self._hardware_component_manager.turn_off_antenna(antenna)
+            time.sleep(10)
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -561,6 +564,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             self._hardware_component_manager.turn_on_antennas()
+            time.sleep(10)
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -592,7 +596,13 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        self._hardware_component_manager.turn_off_antennas()
+        try:
+            self._hardware_component_manager.turn_off_antennas()
+            time.sleep(10)
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
 
         if task_abort_event and task_abort_event.is_set():
             if task_callback:

@@ -17,7 +17,6 @@ from ska_low_mccs.testing.mock import (
     MockCallableDeque,
     MockChangeEventCallback,
 )
-from ska_low_mccs.testing.mock.mock_callable import MockComponentStateChangedCallback
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, DeviceToLoadType
 
 
@@ -129,7 +128,7 @@ def mock_callback_deque_factory(
 def mock_component_state_changed_callback_factory(
     mock_callback_called_timeout: float,
     mock_callback_not_called_timeout: float,
-) -> Callable[[], MockComponentStateChangedCallback]:
+) -> Callable[[], MockCallableDeque]:
     """
     Return a factory that returns a new mock callback using a deque each time it is
     called.
@@ -146,7 +145,7 @@ def mock_component_state_changed_callback_factory(
     :return: a factory that returns a new mock callback each time it is
         called.
     """
-    return lambda: MockComponentStateChangedCallback(
+    return lambda: MockCallableDeque(
         called_timeout=mock_callback_called_timeout,
         not_called_timeout=mock_callback_not_called_timeout,
     )

@@ -122,13 +122,8 @@ class TestControllerComponentManager:
             called when the component state changes
         """
         controller_component_manager.start_communicating()
-<<<<<<< HEAD
         time.sleep(0.1)
         component_state_changed_callback.assert_in_deque({"power_state": PowerState.UNKNOWN})
-=======
-        time.sleep(0.25)
-        component_power_mode_changed_callback.assert_next_call(PowerState.UNKNOWN)
->>>>>>> 3e5bb3e2c5592293d3fe8ba7d203bbed8cc499e8
         assert controller_component_manager.power_mode == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():

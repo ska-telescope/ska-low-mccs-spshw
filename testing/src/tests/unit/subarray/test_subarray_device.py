@@ -318,8 +318,8 @@ class TestMccsSubarray:
                 }
             )
         )
-        assert result_code == TaskStatus.QUEUED
-        assert response == "Task queued"
+        assert result_code == ResultCode.QUEUED
+        assert "AssignResources" in str(response).rsplit("_", maxsplit=1)[-1].rstrip("']")
         time.sleep(0.1)
         assert device_under_test.assignedResources == json.dumps(
             {
@@ -342,18 +342,19 @@ class TestMccsSubarray:
             in device_under_test._change_event_subscription_ids
         )
         time.sleep(0.1)  # allow event system time to run
-        initial_lrc_result = ("", "", "")
+        initial_lrc_result = ("", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
         ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
         assert result_code == ResultCode.QUEUED
-        assert "ReleaseAllResourcesCommand" in unique_id
+        assert "ReleaseAllResources" in unique_id
 
         lrc_result = (
             unique_id,
             str(ResultCode.OK.value),
             "ReleaseAllResources command completed OK",
         )
+        # Callback not being called. When it is the value will probably be wrong but that's a tractable problem
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
         assert device_under_test.assignedResources == json.dumps(
             {
@@ -421,7 +422,7 @@ class TestMccsSubarray:
             )
         )
 
-        assert result_code == ResultCode.OK
+        assert result_code == ResultCode.QUEUED
         time.sleep(0.1)
         assert device_under_test.obsState == ObsState.IDLE
 
@@ -470,15 +471,10 @@ class TestMccsSubarray:
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         segment_spec: list[int] = []
-        method = "test_send_transient_buffer"
-        print(f"{method}: EXECUTING SENDTRANSBUFFER")
         result_code, response = device_under_test.sendTransientBuffer(segment_spec)
-        # Getting a numpy array back instead of a ResultCode/TaskStatus
-        print(f"{method}: result code type: {type(result_code)}")
-        print(f"{method}: result code: {result_code}")
-        print(f"{method}: response: {response}")
-        assert result_code == TaskStatus.QUEUED
-        assert response == "Task queued"
+
+        assert result_code == ResultCode.QUEUED
+        assert "SendTransientBuffer" in str(response).rsplit("_", maxsplit=1)[-1].rstrip("']")
 
 
     # # This will input all possible PowerState values for this test.

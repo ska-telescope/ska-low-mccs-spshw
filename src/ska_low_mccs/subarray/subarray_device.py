@@ -180,6 +180,7 @@ class MccsSubarray(SKASubarray):
 
         # resources should be passed in the dict's value as a list of sets to be extracted here.
         if "resources_changed" in state_change.keys():
+            print("IN CALLBACK RESOURCES CHANGED")
             resources = state_change.get("resources_changed")
             station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
@@ -285,13 +286,19 @@ class MccsSubarray(SKASubarray):
         :param station_beam_fqdns: the FQDNs of station beams assigned
             to this subarray
         """
+        print("IN _RESOURCES CHANGED")
         if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
+            print("ACTION 1")
             self.obs_state_model.perform_action("component_resourced")
         else:
+            print("ACTION 2")
             self.obs_state_model.perform_action("component_unresourced")
+            print("AFTER ACTION 2")
+        print("AFTER IF")
         self._health_model.resources_changed(
             station_fqdns, subarray_beam_fqdns, station_beam_fqdns
         )
+        print("DONE RES CHANGE")
 
     # def health_changed(self: MccsSubarray, health: HealthState) -> None:
     #     """
@@ -406,6 +413,7 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
+        print("RELEASEALLRESOURCES")
         handler = self.get_command_object("ReleaseAllResources")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
@@ -555,19 +563,8 @@ class MccsSubarray(SKASubarray):
         :return: ASCII String that indicates status, for information
             purposes only
         """
-        result_code= TaskStatus.NOT_FOUND
-        method="SendTransientBuffer"
-        print(f"{method}: IN TRANSIENT BUFFER TANGO CMD")
         handler = self.get_command_object("SendTransientBuffer")
-        print(f"{method}: handler: {handler}")
-        #print(f"{method}:(FAKE) tango rc: {result_code}")
-        #print(f"{method}:(FAKE) tango rc type: {type(result_code)}")
         (result_code, unique_id) = handler(argin)
-        # This result_code is a ResultCode rather than a TaskStatus?
-        # Shouldn't this be the same thing that's returned by send_transient_buffer?
-        print(f"{method}: tango rc: {result_code}")
-        print(f"{method}: tango rc type: {type(result_code)}")
-        print(f"{method}: tango uid: {unique_id}")
         return ([result_code], [unique_id])
 
 

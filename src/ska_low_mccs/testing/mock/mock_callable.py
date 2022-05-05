@@ -618,8 +618,11 @@ class MockCallableDeque(MockCallable):
 
         :return: index of the call found in the queue and  matching state_change dictionary
         """
+        print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ", self._queue)
         for queue_item in self._queue:
+            print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ2", queue_item)
             args, kwargs = queue_item.call_args
+            print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ3", args, kwargs)
             (actual_state_change,) = args
             actual_state_change_keys = tuple(actual_state_change.keys())
             device_fqdn = None if kwargs == {} else kwargs["fqdn"]

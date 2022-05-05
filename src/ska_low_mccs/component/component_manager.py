@@ -114,7 +114,6 @@ class MccsComponentManager(
         :param kwargs: other keyword args
         """
         self.logger = logger
-        max_workers = 1
 
         self.__communication_lock = threading.Lock()
         self._communication_status = CommunicationStatus.DISABLED

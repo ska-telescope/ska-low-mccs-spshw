@@ -243,6 +243,7 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code and response message.
         """
+        print("SUBMITTING ASSIGN")
         return self.submit_task(
             self._assign,
             args=[resource_spec],
@@ -275,6 +276,7 @@ class SubarrayComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
+        print("IN _ASSIGN")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -352,7 +354,7 @@ class SubarrayComponentManager(
             task_callback(
                 status=TaskStatus.COMPLETED, result="AssignResources has completed."
             )
-
+        print("_ASSIGN DONE")
         return ResultCode.OK
 
     def _flatten_new_station_groups(
@@ -468,6 +470,7 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
+        print("SUBMITTING RELEASE ALL")
         return self.submit_task(
             self._release_all,
             args=[],
@@ -488,9 +491,10 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
+        print("IN RELEASE ALL")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
-
+        print("IN RELEASE ALL STILL")
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
             self._station_groups.clear()
@@ -499,6 +503,7 @@ class SubarrayComponentManager(
             self._channel_blocks.clear()
             self._device_communication_statuses.clear()
             self._device_obs_states.clear()
+            print("RELEASE ALL IF BLOCK")
 
             self._resources_changed_callback(
                 {
@@ -509,13 +514,15 @@ class SubarrayComponentManager(
                     ]
                 }
             )
+            print("RELEASE ALL EVAL COMMS")
             self._evaluate_communication_status()
         self._release_completed_callback({"release_completed": None})
-
+        print("STILL IN RELEASE ALL")
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."
             )
+        print("DONE RELEASE ALL")
         return ResultCode.OK
 
     @check_communicating
@@ -877,18 +884,11 @@ class SubarrayComponentManager(
 
         :return: Task status and response message.
         """
-        method = "send_transient_buffer"
-        print(f"{method}: QUEUEING TRANS BUFFER")
-        rc, uid = self.submit_task(
+        return self.submit_task(
             self._send_transient_buffer,
             args=argin,
             task_callback=task_callback,
         )
-        # These rc/uids seem to be correct at this point in the code.
-        print(f"{method}: rc: {rc}")
-        print(f"{method}: type of rc: {type(rc)}")
-        print(f"{method}: uid: {uid}")
-        return (rc, uid)
 
     @check_communicating
     def _send_transient_buffer(

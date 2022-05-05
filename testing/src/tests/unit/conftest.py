@@ -153,7 +153,7 @@ def mock_callback_deque_factory(
 
 
 @pytest.fixture()
-def device_state_changed_callback(
+def device_health_state_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -161,7 +161,7 @@ def device_state_changed_callback(
 
     :param mock_change_event_callback_factory: fixture that provides a
         mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
+        mock callbacks whMockCallableen called).
 
     :return: a mock change event callback to be registered with the
         device via a change event subscription, so that it gets called
@@ -220,23 +220,6 @@ def communication_status_changed_callback(
 
     :return: a mock callback to be called when the communication status
         of a component manager changed.
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def component_power_mode_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for component power mode change.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the component manager
-        detects that the power mode of its component has changed.
     """
     return mock_callback_factory()
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode

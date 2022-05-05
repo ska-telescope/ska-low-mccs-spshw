@@ -629,32 +629,34 @@ class TileComponentManager(MccsComponentManager):
 
         This contains the actual communication logic that is enqueued to
         be run asynchronously.
+
+        :raises ConnectionError: Connection to subrack failed
         """
         # Don't set comms NOT_ESTABLISHED here. It should already have been handled
         # synchronously by the orchestator.
         # Check if it was already connected.
-        #         unconnected = self._subrack_proxy is None
-        #         if unconnected:
-        #             self._subrack_proxy = MccsDeviceProxy(
-        #                 self._subrack_fqdn, self._logger, connect=False
-        #             )
-        #             try:
-        #                 self._subrack_proxy.connect()
-        #             except tango.DevFailed as dev_failed:
-        #                 self._subrack_proxy = None
-        #                 raise ConnectionError(
-        #                     f"Could not connect to '{self._subrack_fqdn}'"
-        #                 ) from dev_failed
-        #
-        #         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-        #             f"tpm{self._subrack_tpm_id}PowerState",
-        #             self._tpm_power_state_change_event_received,
-        #         )
-        #
-        #         if unconnected:
-        self._tile_orchestrator.update_subrack_communication_status(
-            CommunicationStatus.ESTABLISHED
+        unconnected = self._subrack_proxy is None
+        if unconnected:
+            self._subrack_proxy = MccsDeviceProxy(
+                self._subrack_fqdn, self._logger, connect=False
+            )
+            try:
+                self._subrack_proxy.connect()
+            except tango.DevFailed as dev_failed:
+                self._subrack_proxy = None
+                raise ConnectionError(
+                    f"Could not connect to '{self._subrack_fqdn}'"
+                ) from dev_failed
+
+        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
+            f"tpm{self._subrack_tpm_id}PowerState",
+            self._tpm_power_state_change_event_received,
         )
+
+        if unconnected:
+            self._tile_orchestrator.update_subrack_communication_status(
+                CommunicationStatus.ESTABLISHED
+            )
 
     def _tpm_power_state_change_event_received(
         self: TileComponentManager,
@@ -741,7 +743,7 @@ class TileComponentManager(MccsComponentManager):
             f"power state: {self.power_state}, communication status: {self.communication_status}"
         )
         if self.communication_status == CommunicationStatus.ESTABLISHED:
-            if power_state == PowerState.ON:
+            if power_state["power_state"] == PowerState.ON:
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
@@ -1019,6 +1021,43 @@ class TileComponentManager(MccsComponentManager):
         """
         return self.submit_task(self._initialiase, task_callback=task_callback)
 
+    def _initialiase(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Initialise the tpm using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).initialiase()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Initialise tpm task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Initialise tpm task has completed",
+            )
+            return
+
     def download_firmware(
         self: TileComponentManager,
         argin: str,
@@ -1040,6 +1079,44 @@ class TileComponentManager(MccsComponentManager):
             self._download_firmware, args=[argin], task_callback=task_callback
         )
 
+    def _download_firmware(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Download tpm firmware using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).download_firmware()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="Download tpm firmware task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Download tpm firmware has completed",
+            )
+            return
+
     def arp_table(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1054,6 +1131,41 @@ class TileComponentManager(MccsComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         return self.submit_task(self._arp_table, task_callback=task_callback)
+
+    def _arp_table(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Get arp table using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(SwitchingTpmComponentManager, self._tpm_component_manager).arp_table()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Arp table task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Arp table has completed",
+            )
+            return
 
     def start_acquisition(
         self: TileComponentManager,
@@ -1075,6 +1187,43 @@ class TileComponentManager(MccsComponentManager):
             self._start_acquisition, args=[argin], task_callback=task_callback
         )
 
+    def _start_acquisition(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Start acquisition using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).start_acquisition()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Start acquisition task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Start acquisition has completed",
+            )
+            return
+
     def cpld_flash_write(
         self: TileComponentManager,
         argin: str,
@@ -1094,6 +1243,43 @@ class TileComponentManager(MccsComponentManager):
             self._cpld_flash_write, args=[argin], task_callback=task_callback
         )
 
+    def _cpld_flash_write(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Cpld flash write using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).cpld_flash_write()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Cpld flash write task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Cpld flash write has completed",
+            )
+            return
+
     def post_synchronisation(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1109,6 +1295,44 @@ class TileComponentManager(MccsComponentManager):
         """
         return self.submit_task(self._post_synchronisation, task_callback=task_callback)
 
+    def _post_synchronisation(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Post synchronisation using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).post_synchronisation()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="Post synchronisation task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Post synchronisation has completed",
+            )
+            return
+
     def sync_fpgas(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1123,6 +1347,42 @@ class TileComponentManager(MccsComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         return self.submit_task(self._sync_fpgas, task_callback=task_callback)
+
+    def _sync_fpgas(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Fpgas synchronization using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(SwitchingTpmComponentManager, self._tpm_component_manager).sync_fpgas()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="Fpgas synchronization task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Fpgas synchronization has completed",
+            )
+            return
 
     def set_power_state(self: TileComponentManager, power_state: PowerState) -> None:
         """

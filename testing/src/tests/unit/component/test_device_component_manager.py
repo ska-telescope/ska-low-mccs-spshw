@@ -27,7 +27,7 @@ def component_manager(
     fqdn: str,
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_state_changed_callback: MockCallable,
 ) -> DeviceComponentManager:
     """
@@ -38,7 +38,7 @@ def component_manager(
         manager.
     :param logger: a logger for the component manager to use.
     :param max_workers: nos. of threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -50,7 +50,7 @@ def component_manager(
         fqdn,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -61,31 +61,31 @@ class TestDeviceComponentManager:
     def test_communication(
         self: TestDeviceComponentManager,
         component_manager: DeviceComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the component manager's communication with the device.
 
         :param component_manager: the component manager under test
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
-        assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        assert component_manager.communication_state == CommunicationStatus.ESTABLISHED
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
 
     @pytest.mark.parametrize(
         ("component_manager_command", "device_command"),

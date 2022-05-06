@@ -37,7 +37,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         antenna_count: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -46,7 +46,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         :param antenna_count: the number of antennas managed by this APIU
         :param logger: a logger for this object to use
         :param max_workers: Nos of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -56,7 +56,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
             ApiuSimulator(antenna_count, component_state_changed_callback),
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         self._component_state_changed_callback = component_state_changed_callback
@@ -145,7 +145,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         antenna_count: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -156,7 +156,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         :param antenna_count: number of antennas managed by this APIU
         :param logger: a logger for this object to use
         :param max_workers: Nos. of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -166,7 +166,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
             antenna_count,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         super().__init__(None, apiu_simulator, initial_simulation_mode)
@@ -181,7 +181,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         antenna_count: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         _initial_power_mode: PowerState = PowerState.OFF,
     ) -> None:
@@ -194,7 +194,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             APIU
         :param logger: a logger for this object to use
         :param max_workers: nos. of worker threads
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -209,13 +209,13 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             antenna_count,
             logger,
             max_workers,
-            self._hardware_communication_status_changed,
+            self._hardware_communication_state_changed,
             component_state_changed_callback,
         )
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
             max_workers,
-            self._power_supply_communication_status_changed,
+            self._power_supply_communication_state_changed,
             component_state_changed_callback,
             _initial_power_mode,
         )
@@ -224,7 +224,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             power_supply_component_manager,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 

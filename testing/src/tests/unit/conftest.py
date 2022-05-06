@@ -208,7 +208,7 @@ def device_health_state_changed_callback(
 
 
 @pytest.fixture()
-def communication_status_changed_callback(
+def communication_state_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """

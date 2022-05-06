@@ -99,7 +99,7 @@ class MccsSubrack(SKABaseDevice):
             self._max_workers,
             self.SubrackIp,
             self.SubrackPort,
-            self._component_communication_status_changed,
+            self._component_communication_state_changed,
             self.component_state_changed_callback,
         )
 
@@ -156,9 +156,9 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_status_changed(
+    def _component_communication_state_changed(
         self: MccsSubrack,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -167,7 +167,7 @@ class MccsSubrack(SKABaseDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -182,10 +182,10 @@ class MccsSubrack(SKABaseDevice):
             PowerState.ON: "component_on",
         }
         self.logger.debug(
-            "Component communication status changed to " + str(communication_status)
+            "Component communication status changed to " + str(communication_state)
         )
 
-        action = action_map[communication_status]
+        action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
         else:
@@ -211,7 +211,7 @@ class MccsSubrack(SKABaseDevice):
                 self.logger.debug("Power supply status unknown")
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
         power_status = self.component_manager.power_state
         self.logger.debug(

@@ -26,7 +26,7 @@ class TestStationBeamComponentManager:
     def test_communication(
         self: TestStationBeamComponentManager,
         station_beam_component_manager: StationBeamComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         mock_station_off_fqdn: str,
         mock_station_on_fqdn: str,
     ) -> None:
@@ -37,7 +37,7 @@ class TestStationBeamComponentManager:
 
         :param station_beam_component_manager: the station beam
             component manager under test.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param mock_station_off_fqdn: the FQDN of a mock station in OFF
@@ -46,50 +46,50 @@ class TestStationBeamComponentManager:
             state.
         """
         station_beam_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         station_beam_component_manager.station_fqdn = mock_station_off_fqdn
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         station_beam_component_manager.station_fqdn = mock_station_on_fqdn
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         station_beam_component_manager.station_fqdn = None
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
@@ -190,7 +190,9 @@ class TestStationBeamComponentManager:
             test.
         """
         station_beam_component_manager.start_communicating()
-        assert station_beam_component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        assert station_beam_component_manager.communication_state == CommunicationStatus.ESTABLISHED
+        import pdb
+        pdb.set_trace()
         station_beam_component_manager.on()
         #assert station_beam_component_manager.power_state == PowerState.ON
 

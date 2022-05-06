@@ -120,17 +120,17 @@ class TestTileOrchestrator:
             ),
             "report_communication_disabled": (
                 {},
-                {"communication_status_changed": [CommunicationStatus.DISABLED]},
+                {"communication_state_changed": [CommunicationStatus.DISABLED]},
                 None,
             ),
             "report_communication_not_established": (
                 {},
-                {"communication_status_changed": [CommunicationStatus.NOT_ESTABLISHED]},
+                {"communication_state_changed": [CommunicationStatus.NOT_ESTABLISHED]},
                 None,
             ),
             "report_communication_established": (
                 {},
-                {"communication_status_changed": [CommunicationStatus.ESTABLISHED]},
+                {"communication_state_changed": [CommunicationStatus.ESTABLISHED]},
                 None,
             ),
             "report_tpm_off": (
@@ -161,22 +161,22 @@ class TestTileOrchestrator:
             "set_desired_on": ({"operator_desire": True}, {}, None),
             "set_no_desire": ({"operator_desire": None}, {}, None),
             "set_subrack_communication_established": (
-                {"subrack_communication_status": CommunicationStatus.ESTABLISHED},
+                {"subrack_communication_state": CommunicationStatus.ESTABLISHED},
                 {},
                 None,
             ),
             "set_subrack_communication_not_established": (
-                {"subrack_communication_status": CommunicationStatus.NOT_ESTABLISHED},
+                {"subrack_communication_state": CommunicationStatus.NOT_ESTABLISHED},
                 {},
                 None,
             ),
             "set_tpm_communication_established": (
-                {"tpm_communication_status": CommunicationStatus.ESTABLISHED},
+                {"tpm_communication_state": CommunicationStatus.ESTABLISHED},
                 {},
                 None,
             ),
             "set_tpm_communication_not_established": (
-                {"tpm_communication_status": CommunicationStatus.NOT_ESTABLISHED},
+                {"tpm_communication_state": CommunicationStatus.NOT_ESTABLISHED},
                 {},
                 None,
             ),
@@ -186,7 +186,7 @@ class TestTileOrchestrator:
                 None,
             ),
             "stop_communicating_with_subrack": (
-                {"subrack_communication_status": CommunicationStatus.DISABLED},
+                {"subrack_communication_state": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_subrack": []},
                 None,
             ),
@@ -196,7 +196,7 @@ class TestTileOrchestrator:
                 None,
             ),
             "stop_communicating_with_tpm": (
-                {"tpm_communication_status": CommunicationStatus.DISABLED},
+                {"tpm_communication_state": CommunicationStatus.DISABLED},
                 {"stop_communicating_with_tpm": []},
                 None,
             ),
@@ -508,7 +508,7 @@ class TestTileOrchestrator:
             callbacks["stop_communicating_with_tpm"],
             callbacks["turn_tpm_off"],
             callbacks["turn_tpm_on"],
-            callbacks["communication_status_changed"],
+            callbacks["communication_state_changed"],
             callbacks["component_power_state_changed"],
             logger,
             _initial_state=state,
@@ -632,10 +632,10 @@ class TestTileOrchestrator:
                 Stimulus.DESIRE_OFFLINE: lambda tc: tc.desire_offline(),
                 Stimulus.DESIRE_ON: lambda tc: tc.desire_on(),
                 Stimulus.DESIRE_OFF: lambda tc: tc.desire_off(),
-                Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_subrack_communication_status(
+                Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_subrack_communication_state(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
-                Stimulus.SUBRACK_COMMS_ESTABLISHED: lambda tc: tc.update_subrack_communication_status(
+                Stimulus.SUBRACK_COMMS_ESTABLISHED: lambda tc: tc.update_subrack_communication_state(
                     CommunicationStatus.ESTABLISHED
                 ),
                 Stimulus.SUBRACK_SAYS_TPM_UNKNOWN: lambda tc: tc.update_tpm_power_state(
@@ -650,10 +650,10 @@ class TestTileOrchestrator:
                 Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_state(
                     PowerState.ON
                 ),
-                Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
+                Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_state(
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
-                Stimulus.TPM_COMMS_ESTABLISHED: lambda tc: tc.update_tpm_communication_status(
+                Stimulus.TPM_COMMS_ESTABLISHED: lambda tc: tc.update_tpm_communication_state(
                     CommunicationStatus.ESTABLISHED
                 ),
             }[stimulus](tile_orchestrator)
@@ -674,8 +674,8 @@ class TestTileOrchestrator:
                 specify state values that should have changed.
             """
             assert (
-                tile_orchestrator._subrack_communication_status
-                == expected_state_changes.get("subrack_communication_status", state[0])
+                tile_orchestrator._subrack_communication_state
+                == expected_state_changes.get("subrack_communication_state", state[0])
             )
             if len(state) > 1:
                 assert tile_orchestrator._operator_desire == expected_state_changes.get(
@@ -687,9 +687,9 @@ class TestTileOrchestrator:
                 )
             if len(state) > 3:
                 assert (
-                    tile_orchestrator._tpm_communication_status
+                    tile_orchestrator._tpm_communication_state
                     == expected_state_changes.get(
-                        "tpm_communication_status", state[3]  # type: ignore[misc]
+                        "tpm_communication_state", state[3]  # type: ignore[misc]
                     )
                 )
 

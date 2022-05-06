@@ -125,7 +125,7 @@ def subrack_simulator(
 def subrack_simulator_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubrackSimulatorComponentManager:
     """
@@ -135,7 +135,7 @@ def subrack_simulator_component_manager(
 
     :param logger: the logger to be used by this object
     :param max_workers: nos of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -146,7 +146,7 @@ def subrack_simulator_component_manager(
     return SubrackSimulatorComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -157,7 +157,7 @@ def switching_subrack_component_manager(
     max_workers,
     subrack_ip: str,
     subrack_port: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingSubrackComponentManager:
     """
@@ -169,7 +169,7 @@ def switching_subrack_component_manager(
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param max_workers: nos. of worker threads
-    :param communication_status_changed_callback: callback  to be
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be called when the
@@ -183,7 +183,7 @@ def switching_subrack_component_manager(
         max_workers,
         subrack_ip,
         subrack_port,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -195,7 +195,7 @@ def subrack_driver(
     max_workers,
     subrack_ip: str,
     subrack_port: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubrackDriver:
     """
@@ -208,7 +208,7 @@ def subrack_driver(
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param max_workers: nos of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -316,7 +316,7 @@ def subrack_driver(
         max_workers,
         subrack_ip,
         subrack_port,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -327,7 +327,7 @@ def subrack_component_manager(
     max_workers: int,
     subrack_ip: str,
     subrack_port: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
     initial_power_state: PowerState,
 ) -> SubrackComponentManager:
@@ -340,7 +340,7 @@ def subrack_component_manager(
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
     :param max_workers: nos. of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -356,7 +356,7 @@ def subrack_component_manager(
         max_workers,
         subrack_ip,
         subrack_port,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
         initial_power_state,
     )

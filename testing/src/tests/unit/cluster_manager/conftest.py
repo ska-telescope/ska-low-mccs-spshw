@@ -60,7 +60,7 @@ def cluster_simulator() -> ClusterSimulator:
 def cluster_simulator_component_manager(
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
     component_shadow_master_pool_node_health_changed_callback: Callable[
@@ -73,7 +73,7 @@ def cluster_simulator_component_manager(
     :param logger: the logger to be used by this object.
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_power_mode_changed_callback: callback to be
@@ -89,7 +89,7 @@ def cluster_simulator_component_manager(
     return ClusterSimulatorComponentManager(
         logger,
         lrc_result_changed_callback,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
         component_shadow_master_pool_node_health_changed_callback,
@@ -100,7 +100,7 @@ def cluster_simulator_component_manager(
 def cluster_component_manager(
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
     component_shadow_master_pool_node_health_changed_callback: Callable[
@@ -113,7 +113,7 @@ def cluster_component_manager(
     :param logger: the logger to be used by this object.
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_power_mode_changed_callback: callback to be
@@ -131,7 +131,7 @@ def cluster_component_manager(
         logger,
         lrc_result_changed_callback,
         SimulationMode.TRUE,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
         component_shadow_master_pool_node_health_changed_callback,

@@ -64,7 +64,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         tpm_simulator: BaseTpmSimulator,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -74,7 +74,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
             this component manager
         :param logger: a logger for this object to use
         :param max_workers: Nos of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -84,7 +84,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
             tpm_simulator,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
             None,
         )
@@ -243,7 +243,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         self: StaticTpmSimulatorComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -251,7 +251,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
 
         :param logger: a logger for this object to use
         :param max_workers: Nos of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -263,7 +263,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             ),
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -277,7 +277,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         self: DynamicTpmSimulatorComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -285,7 +285,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
 
         :param logger: a logger for this object to use
         :param max_workers: Nos of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -297,7 +297,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             ),
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -322,7 +322,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -338,7 +338,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param max_workers: Nos. of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -351,21 +351,21 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
             tpm_ip,
             tpm_cpld_port,
             tpm_version,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
         dynamic_tpm_simulator_component_manager = DynamicTpmSimulatorComponentManager(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
         static_tpm_simulator_component_manager = StaticTpmSimulatorComponentManager(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -473,7 +473,7 @@ class TileComponentManager(MccsComponentManager):
         tpm_version: str,
         subrack_fqdn: str,
         subrack_tpm_id: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
@@ -493,7 +493,7 @@ class TileComponentManager(MccsComponentManager):
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -507,8 +507,8 @@ class TileComponentManager(MccsComponentManager):
         self._power_state_lock = threading.RLock()
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
-        self._subrack_communication_status = CommunicationStatus.DISABLED
-        self._tpm_communication_status = CommunicationStatus.DISABLED
+        self._subrack_communication_state = CommunicationStatus.DISABLED
+        self._tpm_communication_state = CommunicationStatus.DISABLED
 
         self._tpm_component_manager = (
             _tpm_component_manager
@@ -521,7 +521,7 @@ class TileComponentManager(MccsComponentManager):
                 tpm_ip,
                 tpm_cpld_port,
                 tpm_version,
-                self._tpm_communication_status_changed,
+                self._tpm_communication_state_changed,
                 component_state_changed_callback,
             )
         )
@@ -533,7 +533,7 @@ class TileComponentManager(MccsComponentManager):
             self._stop_communicating_with_tpm,
             self._turn_off_tpm,
             self._turn_on_tpm,
-            self.update_communication_status,
+            self.update_communication_state,
             self.update_tpm_power_state,
             logger,
         )
@@ -543,7 +543,7 @@ class TileComponentManager(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -590,18 +590,18 @@ class TileComponentManager(MccsComponentManager):
     #     if self._component_progress_changed_callback is not None:
     #         self._component_progress_changed_callback(progress)
 
-    def _subrack_communication_status_changed(
+    def _subrack_communication_state_changed(
         self: TileComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the antenna via the APIU.
         """
-        self._tile_orchestrator.update_subrack_communication_status(
-            communication_status
+        self._tile_orchestrator.update_subrack_communication_state(
+            communication_state
         )
 
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
@@ -654,7 +654,7 @@ class TileComponentManager(MccsComponentManager):
         )
 
         if unconnected:
-            self._tile_orchestrator.update_subrack_communication_status(
+            self._tile_orchestrator.update_subrack_communication_state(
                 CommunicationStatus.ESTABLISHED
             )
 
@@ -712,17 +712,17 @@ class TileComponentManager(MccsComponentManager):
     ) -> None:
         self._tile_orchestrator.update_tpm_power_state(power_state)
 
-    def _tpm_communication_status_changed(
+    def _tpm_communication_state_changed(
         self: TileComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the tpm.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the tpm.
         """
-        self._tile_orchestrator.update_tpm_communication_status(communication_status)
+        self._tile_orchestrator.update_tpm_communication_state(communication_state)
 
     def update_tpm_power_state(
         self: TileComponentManager, power_state: Optional[PowerState]
@@ -740,9 +740,9 @@ class TileComponentManager(MccsComponentManager):
         """
         # self.update_component_power_state(power_state)
         self.logger.debug(
-            f"power state: {self.power_state}, communication status: {self.communication_status}"
+            f"power state: {self.power_state}, communication status: {self.communication_state}"
         )
-        if self.communication_status == CommunicationStatus.ESTABLISHED:
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
             if power_state["power_state"] == PowerState.ON:
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
@@ -810,7 +810,7 @@ class TileComponentManager(MccsComponentManager):
             status = TpmStatus.UNKNOWN
         elif self.power_state != PowerState.ON:
             status = TpmStatus.OFF
-        elif self.communication_status != CommunicationStatus.ESTABLISHED:
+        elif self.communication_state != CommunicationStatus.ESTABLISHED:
             status = TpmStatus.UNCONNECTED
         else:
             status = cast(

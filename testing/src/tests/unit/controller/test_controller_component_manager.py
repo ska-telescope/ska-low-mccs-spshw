@@ -27,40 +27,40 @@ class TestControllerComponentManager:
     def test_communication(
         self: TestControllerComponentManager,
         controller_component_manager: ControllerComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the controller component manager's management of communication.
 
         :param controller_component_manager: the controller component
             manager under test.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
         assert (
-            controller_component_manager.communication_status
+            controller_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
 
         controller_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            controller_component_manager.communication_status
+            controller_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         controller_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
         assert (
-            controller_component_manager.communication_status
+            controller_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
 

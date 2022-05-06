@@ -183,7 +183,7 @@ class PowerSupplyProxySimulator(
         self: PowerSupplyProxySimulator,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Optional[
             Callable[[dict[str, Any]], None]
         ] = None,
@@ -194,7 +194,7 @@ class PowerSupplyProxySimulator(
 
         :param logger: a logger for this object to use
         :param max_workers: nos of worker threads for async commands
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -208,7 +208,7 @@ class PowerSupplyProxySimulator(
             self._Component(initial_supplied_power_state),
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -271,7 +271,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         power_supply_component_manager: PowerSupplyProxyComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
@@ -283,7 +283,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
             manager that manages supply of power to the hardware.
         :param logger: a logger for this object to use
         :param max_workers: nos of worker threads for async commands
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -292,8 +292,8 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._target_power_state: Optional[PowerState] = None
         self._power_state_lock = threading.RLock()
 
-        self._power_supply_communication_status = CommunicationStatus.DISABLED
-        self._hardware_communication_status = CommunicationStatus.DISABLED
+        self._power_supply_communication_state = CommunicationStatus.DISABLED
+        self._hardware_communication_state = CommunicationStatus.DISABLED
 
         self._power_supply_component_manager = power_supply_component_manager
         self._hardware_component_manager = hardware_component_manager
@@ -301,7 +301,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -312,7 +312,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         super().start_communicating()
 
         if (
-            self._power_supply_component_manager.communication_status
+            self._power_supply_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         ):
             self._hardware_component_manager.start_communicating()
@@ -327,42 +327,42 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self._hardware_component_manager.stop_communicating()
         self._power_supply_component_manager.stop_communicating()
 
-    def _power_supply_communication_status_changed(
+    def _power_supply_communication_state_changed(
         self: ComponentManagerWithUpstreamPowerSupply,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the antenna via the APIU.
         """
-        self._power_supply_communication_status = communication_status
-        self._evaluate_communication_status()
+        self._power_supply_communication_state = communication_state
+        self._evaluate_communication_state()
 
-    def _hardware_communication_status_changed(
+    def _hardware_communication_state_changed(
         self: ComponentManagerWithUpstreamPowerSupply,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the hardware.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the hardware.
         """
-        self._hardware_communication_status = communication_status
-        self._evaluate_communication_status()
+        self._hardware_communication_state = communication_state
+        self._evaluate_communication_state()
 
-    def _evaluate_communication_status(
+    def _evaluate_communication_state(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> None:
-        if self._power_supply_communication_status == CommunicationStatus.ESTABLISHED:
-            if self._hardware_communication_status == CommunicationStatus.DISABLED:
-                self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        if self._power_supply_communication_state == CommunicationStatus.ESTABLISHED:
+            if self._hardware_communication_state == CommunicationStatus.DISABLED:
+                self.update_communication_state(CommunicationStatus.ESTABLISHED)
             else:
-                self.update_communication_status(self._hardware_communication_status)
+                self.update_communication_state(self._hardware_communication_state)
         else:
-            self.update_communication_status(self._power_supply_communication_status)
+            self.update_communication_state(self._power_supply_communication_state)
 
     def component_progress_changed(
         self: ComponentManagerWithUpstreamPowerSupply, progress: int

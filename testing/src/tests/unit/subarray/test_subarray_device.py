@@ -67,8 +67,8 @@ def patched_subarray_device_class(subarray_component_manager: unittest.mock.Mock
 
             :return: a mock component manager
             """
-            # mock_component_manager._communication_status_changed_callback = (
-            #     self._communication_status_changed_callback
+            # mock_component_manager._communication_state_changed_callback = (
+            #     self._communication_state_changed_callback
             # )
             cpt_mgr = super().create_component_manager()
             cpt_mgr._component_state_changed_callback = (

@@ -69,7 +69,7 @@ class SubrackDriver(MccsComponentManager):
         max_workers: int,
         ip: str,
         port: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         tpm_present: Optional[list[bool]] = None,
     ) -> None:
@@ -80,7 +80,7 @@ class SubrackDriver(MccsComponentManager):
         :param max_workers: Nos. of worker threads for async commands.
         :param ip: IP address for hardware tile
         :param port: IP address for hardware control
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -114,7 +114,7 @@ class SubrackDriver(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -146,7 +146,7 @@ class SubrackDriver(MccsComponentManager):
         connected = self._client.connect()
         target_connection = f"{self._ip}:{str(self._port)}"
         if connected:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
             message = f"Connected to {target_connection}"
             self.logger.info(message)
             return ResultCode.OK, message

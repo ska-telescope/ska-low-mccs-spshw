@@ -141,9 +141,9 @@ class MccsSubarray(SKASubarray):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
-        #print("IN CALLBACK")
-        #print(f"state change: {state_change}")
-        #print(f"fqdn: {fqdn}")
+        # print("IN CALLBACK")
+        # print(f"state change: {state_change}")
+        # print(f"fqdn: {fqdn}")
         # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
         # valid_device_types = {"station": "station_health_changed",
         #                     "beam": "station_beam_health_changed",
@@ -287,7 +287,7 @@ class MccsSubarray(SKASubarray):
             to this subarray
         """
         print("IN _RESOURCES CHANGED")
-        
+
         if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
             print("ACTION 1")
             print(self.obs_state_model.obs_state)

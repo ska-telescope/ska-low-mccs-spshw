@@ -37,7 +37,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         logical_antenna_id: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -48,7 +48,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -68,7 +68,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             fqdn,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -234,7 +234,7 @@ class _TileProxy(DeviceComponentManager):
         logical_antenna_id: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[[dict[str, Any]]], None],
     ) -> None:
         """
@@ -245,7 +245,7 @@ class _TileProxy(DeviceComponentManager):
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -261,7 +261,7 @@ class _TileProxy(DeviceComponentManager):
             fqdn,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -345,7 +345,7 @@ class AntennaComponentManager(MccsComponentManager):
         tile_antenna_id: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -360,7 +360,7 @@ class AntennaComponentManager(MccsComponentManager):
         :param logger: a logger for this object to use
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -370,10 +370,10 @@ class AntennaComponentManager(MccsComponentManager):
         self._apiu_power_state = PowerState.UNKNOWN
         self._target_power_state: Optional[PowerState] = None
 
-        self._apiu_communication_status: CommunicationStatus = (
+        self._apiu_communication_state: CommunicationStatus = (
             CommunicationStatus.DISABLED
         )
-        self._tile_communication_status: CommunicationStatus = (
+        self._tile_communication_state: CommunicationStatus = (
             CommunicationStatus.DISABLED
         )
         self._antenna_faulty_via_apiu = False
@@ -384,7 +384,7 @@ class AntennaComponentManager(MccsComponentManager):
             apiu_antenna_id,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         self._tile_proxy = _TileProxy(
@@ -392,14 +392,14 @@ class AntennaComponentManager(MccsComponentManager):
             tile_antenna_id,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -415,33 +415,33 @@ class AntennaComponentManager(MccsComponentManager):
         self._apiu_proxy.stop_communicating()
         self._tile_proxy.stop_communicating()
 
-    def _apiu_communication_status_changed(
+    def _apiu_communication_state_changed(
         self: AntennaComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the antenna via the APIU.
         """
-        self._apiu_communication_status = communication_status
-        self._update_joint_communication_status()
+        self._apiu_communication_state = communication_state
+        self._update_joint_communication_state()
 
-    def _tile_communication_status_changed(
+    def _tile_communication_state_changed(
         self: AntennaComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the tile.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the antenna via the tile.
         """
-        self._tile_communication_status = communication_status
-        self._update_joint_communication_status()
+        self._tile_communication_state = communication_state
+        self._update_joint_communication_state()
 
-    def _update_joint_communication_status(
+    def _update_joint_communication_state(
         self: AntennaComponentManager,
     ) -> None:
         """
@@ -450,17 +450,17 @@ class AntennaComponentManager(MccsComponentManager):
         The update takes into account communication via both tile and
         APIU.
         """
-        for communication_status in [
+        for communication_state in [
             CommunicationStatus.DISABLED,
             CommunicationStatus.ESTABLISHED,
         ]:
             if (
-                self._apiu_communication_status == communication_status
-                and self._tile_communication_status == communication_status
+                self._apiu_communication_state == communication_state
+                and self._tile_communication_state == communication_state
             ):
-                self.update_communication_status(communication_status)
+                self.update_communication_state(communication_state)
                 return
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
     def _apiu_power_state_changed(
         self: AntennaComponentManager,

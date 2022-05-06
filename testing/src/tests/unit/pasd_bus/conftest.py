@@ -188,7 +188,7 @@ def pasd_bus_simulator_component_manager(
     mock_pasd_bus_simulator: unittest.mock.Mock,
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
 ) -> PasdBusSimulatorComponentManager:
     """
@@ -201,7 +201,7 @@ def pasd_bus_simulator_component_manager(
     :param logger: the logger to be used by this object.
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
@@ -212,7 +212,7 @@ def pasd_bus_simulator_component_manager(
     return PasdBusSimulatorComponentManager(
         logger,
         lrc_result_changed_callback,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_fault_callback,
         _simulator=mock_pasd_bus_simulator,
     )
@@ -223,7 +223,7 @@ def pasd_bus_component_manager(
     pasd_bus_simulator_component_manager: PasdBusSimulatorComponentManager,
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: MockCallable,
 ) -> PasdBusComponentManager:
     """
@@ -235,7 +235,7 @@ def pasd_bus_component_manager(
     :param logger: the logger to be used by this object.
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_fault_callback: callback to be called when the
@@ -247,7 +247,7 @@ def pasd_bus_component_manager(
         SimulationMode.TRUE,
         logger,
         lrc_result_changed_callback,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_fault_callback,
         _simulator_component_manager=pasd_bus_simulator_component_manager,
     )

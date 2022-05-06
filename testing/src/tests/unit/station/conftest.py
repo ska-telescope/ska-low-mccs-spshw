@@ -255,7 +255,7 @@ def station_component_manager(
     tile_fqdns: list[str],
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     apiu_health_changed_callback: MockCallable,
     antenna_health_changed_callback: MockCallable,
@@ -276,7 +276,7 @@ def station_component_manager(
     :param logger: the logger to be used by this object.
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_power_mode_changed_callback: callback to be called
@@ -299,7 +299,7 @@ def station_component_manager(
         tile_fqdns,
         logger,
         lrc_result_changed_callback,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_power_mode_changed_callback,
         apiu_health_changed_callback,
         antenna_health_changed_callback,

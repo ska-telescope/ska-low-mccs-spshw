@@ -36,11 +36,11 @@ class MockCallable:
     .. code-block:: python
 
         antenna_apiu_proxy.start_communicating()
-        communication_status_changed_callback.assert_called_once_with(
+        communication_state_changed_callback.assert_called_once_with(
             CommunicationStatus.NOT_ESTABLISHED
         )
         time.sleep(0.1)
-        communication_status_changed_callback.assert_called_once_with(
+        communication_state_changed_callback.assert_called_once_with(
             CommunicationStatus.ESTABLISHED
         )
 
@@ -57,10 +57,10 @@ class MockCallable:
     .. code-block:: python
 
         antenna_apiu_proxy.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
     """

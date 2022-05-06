@@ -106,7 +106,7 @@ def apiu_simulator_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> ApiuSimulatorComponentManager:
     """
@@ -117,7 +117,7 @@ def apiu_simulator_component_manager(
     :param apiu_antenna_count: the number of antennas in the APIU
     :param logger: the logger to be used by this object.
     :param max_workers: nos of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -129,7 +129,7 @@ def apiu_simulator_component_manager(
         apiu_antenna_count,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -139,7 +139,7 @@ def switching_apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
     max_workers,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingApiuComponentManager:
     """
@@ -150,7 +150,7 @@ def switching_apiu_component_manager(
     :param apiu_antenna_count: the number of antennas in the APIU
     :param logger: the logger to be used by this object.
     :param max_workers: nos. of worker threads
-    :param communication_status_changed_callback: callback  to be
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be called when the
@@ -163,7 +163,7 @@ def switching_apiu_component_manager(
         apiu_antenna_count,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -173,7 +173,7 @@ def apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
     initial_power_mode: PowerState,
 ) -> ApiuComponentManager:
@@ -185,7 +185,7 @@ def apiu_component_manager(
     :param apiu_antenna_count: the number of antennas in the APIU
     :param logger: the logger to be used by this object.
     :param max_workers: nos. of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -200,7 +200,7 @@ def apiu_component_manager(
         apiu_antenna_count,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
         initial_power_mode,
     )

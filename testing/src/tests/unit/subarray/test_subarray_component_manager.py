@@ -27,7 +27,7 @@ class TestSubarrayComponentManager:
     def test_communication(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         station_on_fqdn: str,
         subarray_beam_on_fqdn: str,
         station_beam_on_fqdn: str,
@@ -38,7 +38,7 @@ class TestSubarrayComponentManager:
 
         :param subarray_component_manager: the subarray component
             manager under test.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
 
@@ -51,14 +51,14 @@ class TestSubarrayComponentManager:
         :param channel_blocks: a mock list of channel blocks
         """
         subarray_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            subarray_component_manager.communication_status
+            subarray_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
@@ -73,35 +73,35 @@ class TestSubarrayComponentManager:
         assert result_code == TaskStatus.QUEUED
         assert response == "Task queued"
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            subarray_component_manager.communication_status
+            subarray_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         subarray_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
         assert (
-            subarray_component_manager.communication_status
+            subarray_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
 
         subarray_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            subarray_component_manager.communication_status
+            subarray_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
@@ -298,7 +298,7 @@ class TestSubarrayComponentManager:
         station_beam_off_fqdn: str,
         channel_blocks: list[int],
         component_state_changed_callback: MockCallableDeque,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the component manager's handling of configuration.
@@ -343,7 +343,7 @@ class TestSubarrayComponentManager:
         subarray_component_manager.start_communicating()
 
         assert (
-            subarray_component_manager.communication_status
+            subarray_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
         expected_arguments = {"power_state": PowerState.ON}

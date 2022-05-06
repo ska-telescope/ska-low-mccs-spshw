@@ -214,7 +214,7 @@ def station_beam_health_changed_callback(
 
 
 # @pytest.fixture()
-# def communication_status_changed_callback(
+# def communication_state_changed_callback(
 #     mock_component_state_changed_callback_factory: Callable[[], unittest.mock.Mock],
 # ) -> unittest.mock.Mock:
 #     """
@@ -269,7 +269,7 @@ def controller_component_manager(
     station_beam_fqdns: Iterable[str],
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_state_changed_callback: MockCallable,
 ) -> ControllerComponentManager:
     """
@@ -283,7 +283,7 @@ def controller_component_manager(
     :param station_beam_fqdns: FQDNS of all station beam devices
     :param logger: the logger to be used by this object.
     :param max_workers: nos of threads
-    :param communication_status_changed_callback: callback to be called
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_state_changed_callback: callback to be called
@@ -299,7 +299,7 @@ def controller_component_manager(
         station_beam_fqdns,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -469,8 +469,8 @@ def mock_component_manager(
 
     def _start_communicating(mock: unittest.mock.Mock) -> None:
         mock.is_communicating = True
-        mock._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
-        mock._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
+        mock._communication_state_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
+        mock._communication_state_changed_callback(CommunicationStatus.ESTABLISHED)
         mock._component_state_changed_callback({"power_state": PowerState.OFF})
 
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
@@ -505,11 +505,11 @@ def patched_controller_device_class(
 
             :return: a mock component manager
             """
-            self._communication_status: Optional[CommunicationStatus] = None
+            self._communication_state: Optional[CommunicationStatus] = None
 #             self._component_power_state: Optional[PowerState] = None
 
-            mock_component_manager._communication_status_changed_callback = (
-                self._communication_status_changed_callback
+            mock_component_manager._communication_state_changed_callback = (
+                self._communication_state_changed_callback
             )
             mock_component_manager._component_state_changed_callback = (
                 self._component_state_changed_callback

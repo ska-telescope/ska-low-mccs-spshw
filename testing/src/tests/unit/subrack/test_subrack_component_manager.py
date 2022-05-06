@@ -436,10 +436,10 @@ class TestSubrackDriverCommon:
         """
         setattr(subrack_driver, "_client", web_hardware_client_mock)
         web_hardware_client_mock.connect.return_value = True
-        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        assert subrack_driver.communication_state == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
         assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+            subrack_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         # Wait for the message to execute
@@ -448,7 +448,7 @@ class TestSubrackDriverCommon:
         # assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
         # assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
         # assert "Connected to " in subrack_driver._queue_manager._task_result[2]
-        assert subrack_driver.communication_status == CommunicationStatus.ESTABLISHED
+        assert subrack_driver.communication_state == CommunicationStatus.ESTABLISHED
 
     def test_communication_fails(
         self: TestSubrackDriverCommon,
@@ -466,10 +466,10 @@ class TestSubrackDriverCommon:
         """
         setattr(subrack_driver, "_client", web_hardware_client_mock)
         web_hardware_client_mock.connect.return_value = False
-        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        assert subrack_driver.communication_state == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
         assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+            subrack_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         # Wait for the message to execute
@@ -481,7 +481,7 @@ class TestSubrackDriverCommon:
         # )
         # assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
         assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+            subrack_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
     @pytest.mark.parametrize(

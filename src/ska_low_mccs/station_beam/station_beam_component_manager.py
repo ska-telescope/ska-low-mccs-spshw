@@ -52,7 +52,7 @@ class StationBeamComponentManager(MccsComponentManager):
         beam_id: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -60,7 +60,7 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :param beam_id: the beam id of this station beam
         :param logger: the logger to be used by this object.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: a callback to be called
@@ -97,7 +97,7 @@ class StationBeamComponentManager(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -106,7 +106,7 @@ class StationBeamComponentManager(MccsComponentManager):
         super().start_communicating()
 
         if self._station_proxy is None:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
         else:
             self._station_proxy.start_communicating()
 
@@ -117,14 +117,14 @@ class StationBeamComponentManager(MccsComponentManager):
         if self._station_proxy is not None:
             self._station_proxy.stop_communicating()
 
-    def _device_communication_status_changed(
+    def _device_communication_state_changed(
         self: StationBeamComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
-        if communication_status == CommunicationStatus.ESTABLISHED:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
         else:
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
     @property
     def station_fqdn(self: StationBeamComponentManager) -> Optional[str]:
@@ -146,7 +146,7 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :param value: the new station FQDN, or the empty string
         """
-        communicating = self.communication_status != CommunicationStatus.DISABLED
+        communicating = self.communication_state != CommunicationStatus.DISABLED
 
         if self._station_fqdn != value:
             self._station_fqdn = value
@@ -155,13 +155,13 @@ class StationBeamComponentManager(MccsComponentManager):
                 self._station_proxy.stop_communicating()
                 self._station_proxy = None
                 if self._station_fqdn is None:
-                    self.update_communication_status(CommunicationStatus.ESTABLISHED)
+                    self.update_communication_state(CommunicationStatus.ESTABLISHED)
             if self._station_fqdn is not None:
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
                     self.logger,
                     self._max_workers,
-                    self._device_communication_status_changed,
+                    self._device_communication_state_changed,
                     self._component_state_changed_callback,
                 )
                 if communicating:

@@ -26,7 +26,7 @@ class TestPowerSupplyProxySimulator:
         self: TestPowerSupplyProxySimulator,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         component_state_changed_callback: MockCallableDeque,
     ) -> PowerSupplyProxySimulator:
         """
@@ -34,7 +34,7 @@ class TestPowerSupplyProxySimulator:
 
         :param logger: a logger for the component manager to use
         :param max_workers: nos of worker threads
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -45,94 +45,94 @@ class TestPowerSupplyProxySimulator:
         return PowerSupplyProxySimulator(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
     def test_communication(
         self: TestPowerSupplyProxySimulator,
         component_manager: PowerSupplyProxySimulator,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test communication from the component manager to its component.
 
         :param component_manager: a component manager for the component object.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called
             when the state of the component changes
         """
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
-        assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        assert component_manager.communication_state == CommunicationStatus.ESTABLISHED
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
         time.sleep(0.1)
         expected_arguments = {"power_state": PowerState.OFF}
         component_state_changed_callback.assert_in_deque(expected_arguments)
 
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
 
     def test_communication_failure(
         self: TestPowerSupplyProxySimulator,
         component_manager: PowerSupplyProxySimulator,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test handling of communication failure between component manager and component.
 
         :param component_manager: a component manager for the component object.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
         component_manager.simulate_communication_failure(True)
 
         with pytest.raises(ConnectionError, match="Failed to connect"):
             component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         assert (
-            component_manager.communication_status
+            component_manager.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
 
         component_manager.simulate_communication_failure(False)
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
-        assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        assert component_manager.communication_state == CommunicationStatus.ESTABLISHED
 
         component_manager.simulate_communication_failure(True)
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         assert (
-            component_manager.communication_status
+            component_manager.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
@@ -140,10 +140,10 @@ class TestPowerSupplyProxySimulator:
             component_manager.start_communicating()
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
 
     @pytest.mark.parametrize(
         ("command", "expected_supplied_power_state"),

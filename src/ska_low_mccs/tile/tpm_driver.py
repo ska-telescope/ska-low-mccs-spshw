@@ -78,7 +78,7 @@ class TpmDriver(MccsComponentManager):
         ip: str,
         port: int,
         tpm_version: str,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -90,7 +90,7 @@ class TpmDriver(MccsComponentManager):
         :param ip: IP address for hardware tile
         :param port: IP address for hardware tile control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -150,7 +150,7 @@ class TpmDriver(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -168,10 +168,10 @@ class TpmDriver(MccsComponentManager):
     def start_communicating(self) -> None:
         """Establish communication with the TPM."""
         self.logger.debug("Start communication with the TPM...")
-        if self.communication_status == CommunicationStatus.ESTABLISHED:
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
             return
-        if self.communication_status == CommunicationStatus.DISABLED:
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        if self.communication_state == CommunicationStatus.DISABLED:
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         self._start_polling_event.set()
 
     def stop_communicating(self) -> None:
@@ -182,7 +182,7 @@ class TpmDriver(MccsComponentManager):
             disconnect() method that we can call here?
         """
         self.logger.debug("Stop communication with the TPM...")
-        if self.communication_status == CommunicationStatus.DISABLED:
+        if self.communication_state == CommunicationStatus.DISABLED:
             return
         self._stop_polling_event.set()
 
@@ -209,7 +209,7 @@ class TpmDriver(MccsComponentManager):
 
         :return: None
         """
-        if self.communication_status == CommunicationStatus.ESTABLISHED:
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
             if self._hardware_lock.acquire(timeout=0.5):
                 try:
                     self.tile[int(0x30000000)]
@@ -237,7 +237,7 @@ class TpmDriver(MccsComponentManager):
         :return: None
         """
         while not (
-            (self.communication_status == CommunicationStatus.ESTABLISHED)
+            (self.communication_state == CommunicationStatus.ESTABLISHED)
             | (self._stop_polling_event.is_set())
         ):
             self.logger.debug("Trying to connect to tpm...")
@@ -266,7 +266,7 @@ class TpmDriver(MccsComponentManager):
                 f"Connection to tile failed after {timeout*3} seconds. Waiting for "
                 f"instruction..."
             )
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             self.update_component_state({"fault": True})
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
@@ -285,7 +285,7 @@ class TpmDriver(MccsComponentManager):
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
-        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self.update_communication_state(CommunicationStatus.ESTABLISHED)
         self.update_component_state({"fault": False})
         self.logger.debug("Tpm connected to tile.")
         self._tpm_status = TpmStatus.UNPROGRAMMED
@@ -299,7 +299,7 @@ class TpmDriver(MccsComponentManager):
     def tpm_disconnected(self: TpmDriver) -> None:
         """Tile disconnected to tpm."""
         self._tpm_status = TpmStatus.UNCONNECTED
-        self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         while True:
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
@@ -326,7 +326,7 @@ class TpmDriver(MccsComponentManager):
             # try to determine the status. Successive tests until one fails
             # if self.power_state != PowerState.ON:
             #     self._tpm_status = TpmStatus.OFF
-            if self.communication_status != CommunicationStatus.ESTABLISHED:
+            if self.communication_state != CommunicationStatus.ESTABLISHED:
                 self._tpm_status = TpmStatus.UNCONNECTED
             else:
                 if self._hardware_lock.acquire(timeout=0.2):

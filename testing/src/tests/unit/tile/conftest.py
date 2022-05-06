@@ -263,7 +263,7 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 def static_tpm_simulator_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> StaticTpmSimulatorComponentManager:
     """
@@ -273,7 +273,7 @@ def static_tpm_simulator_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: nos of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -284,7 +284,7 @@ def static_tpm_simulator_component_manager(
     return StaticTpmSimulatorComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -293,7 +293,7 @@ def static_tpm_simulator_component_manager(
 def dynamic_tpm_simulator_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> DynamicTpmSimulatorComponentManager:
     """
@@ -303,7 +303,7 @@ def dynamic_tpm_simulator_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: nos of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -314,7 +314,7 @@ def dynamic_tpm_simulator_component_manager(
     return DynamicTpmSimulatorComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -329,7 +329,7 @@ def switching_tpm_component_manager(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingTpmComponentManager:
     """
@@ -346,7 +346,7 @@ def switching_tpm_component_manager(
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param max_workers: nos. of worker threads
     :param tile_id: the unique ID for the tile
-    :param communication_status_changed_callback: callback  to be
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be called when the
@@ -364,7 +364,7 @@ def switching_tpm_component_manager(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -382,7 +382,7 @@ def tile_component_manager(
     tpm_version: str,
     subrack_fqdn: str,
     subrack_tpm_id: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> TileComponentManager:
     """
@@ -403,7 +403,7 @@ def tile_component_manager(
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -422,7 +422,7 @@ def tile_component_manager(
         tpm_version,
         subrack_fqdn,
         subrack_tpm_id,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 

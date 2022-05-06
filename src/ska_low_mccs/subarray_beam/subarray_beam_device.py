@@ -67,7 +67,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         return SubarrayBeamComponentManager(
             self.logger,
             self._max_workers,
-            self._component_communication_status_changed,
+            self._component_communication_state_changed,
             self.component_state_changed_callback,
         )
 
@@ -123,9 +123,9 @@ class MccsSubarrayBeam(SKAObsDevice):
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_status_changed(
+    def _component_communication_state_changed(
         self: MccsSubarrayBeam,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -134,7 +134,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -143,12 +143,12 @@ class MccsSubarrayBeam(SKAObsDevice):
             CommunicationStatus.ESTABLISHED: "component_on",  # always-on device
         }
 
-        action = action_map[communication_status]
+        action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
     def component_state_changed_callback(

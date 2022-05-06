@@ -25,7 +25,6 @@ PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R,E1101,E1136,E0611,E0603,E1121,E1120
 
 DOCS_SPHINXOPTS = -n -W --keep-going
 
-
 include .make/oci.mk
 include .make/k8s.mk
 include .make/helm.mk
@@ -52,4 +51,4 @@ python-do-publish:
 	poetry config repositories.skao $(PYTHON_PUBLISH_URL)
 	poetry publish --repository skao --username $(PYTHON_PUBLISH_USERNAME) --password $(PYTHON_PUBLISH_PASSWORD)
 
-.PHONY: python-post-format poetry_do_build poetry-do-publish # python-post-lint
+.PHONY: python-post-format python-post-lint poetry-do-build poetry-do-publish

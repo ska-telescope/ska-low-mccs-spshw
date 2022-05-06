@@ -294,7 +294,7 @@ class SubarrayComponentManager(
         fqdns_to_add = station_fqdns_to_add.union(
             subarray_beam_fqdns_to_add, station_beam_fqdns_to_add
         )
-
+        print("IN ASSIGN 2")
         if fqdns_to_add:
             self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
             for fqdn in fqdns_to_add:
@@ -332,6 +332,7 @@ class SubarrayComponentManager(
                         self._component_state_changed_callback, fqdn=fqdn
                     ),
                 )
+            print("IN ASSIGN 3")
             self._resources_changed_callback(
                 {
                     "resources_changed": [
@@ -341,7 +342,7 @@ class SubarrayComponentManager(
                     ]
                 }
             )
-
+            print("IN ASSIGN 4")
             self._is_assigning = True
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn].start_communicating()
@@ -351,6 +352,7 @@ class SubarrayComponentManager(
                 self._station_beams[fqdn].start_communicating()
 
         if task_callback is not None:
+            print("IN ASSIGN 5")
             task_callback(
                 status=TaskStatus.COMPLETED, result="AssignResources has completed."
             )

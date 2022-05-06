@@ -287,13 +287,18 @@ class MccsSubarray(SKASubarray):
             to this subarray
         """
         print("IN _RESOURCES CHANGED")
+        
         if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
             print("ACTION 1")
+            print(self.obs_state_model.obs_state)
             self.obs_state_model.perform_action("component_resourced")
+            print("AFTER ACTION 1")
         else:
             print("ACTION 2")
+            print(self.obs_state_model.obs_state)
             self.obs_state_model.perform_action("component_unresourced")
             print("AFTER ACTION 2")
+
         print("AFTER IF")
         self._health_model.resources_changed(
             station_fqdns, subarray_beam_fqdns, station_beam_fqdns

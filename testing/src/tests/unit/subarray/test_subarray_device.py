@@ -35,7 +35,7 @@ from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def patched_subarray_device_class() -> Type[MccsSubarray]:
+def patched_subarray_device_class(subarray_component_manager: unittest.mock.Mock,) -> Type[MccsSubarray]:
     """
     Return a subarray device class, patched with extra methods for testing.
 
@@ -58,6 +58,23 @@ def patched_subarray_device_class() -> Type[MccsSubarray]:
             obs_state = ObsState(obs_state)
             for fqdn in self.component_manager._device_obs_states:
                 self.component_manager._device_obs_state_changed(fqdn, obs_state)
+
+        def create_component_manager(
+            self: PatchedSubarrayDevice,
+        ) -> unittest.mock.Mock:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            # mock_component_manager._communication_status_changed_callback = (
+            #     self._communication_status_changed_callback
+            # )
+            cpt_mgr = super().create_component_manager()
+            cpt_mgr._component_state_changed_callback = (
+                self._component_state_changed_callback
+            )
+            return cpt_mgr
 
     return PatchedSubarrayDevice
 
@@ -164,6 +181,8 @@ class TestMccsSubarray:
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
+
+    pytest.mark.skip("GetVersionInfo is no longer a long running command and merely returns a string.")
     def test_GetVersionInfo(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
@@ -292,7 +311,6 @@ class TestMccsSubarray:
             "adminMode",
             device_admin_mode_changed_callback,
         )
-        # TODO: Getting 2 change events for adminMode=OFFLINE before receiving the ONLINE one.
 
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
@@ -318,9 +336,12 @@ class TestMccsSubarray:
                 }
             )
         )
+        print(f"0 LRC STATUS: {device_under_test.longRunningCommandStatus}")
         assert result_code == ResultCode.QUEUED
         assert "AssignResources" in str(response).rsplit("_", maxsplit=1)[-1].rstrip("']")
+        print(f"1 LRC STATUS: {device_under_test.longRunningCommandStatus}")
         time.sleep(0.1)
+        print(f"2 LRC STATUS: {device_under_test.longRunningCommandStatus}")
         assert device_under_test.assignedResources == json.dumps(
             {
                 "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
@@ -331,7 +352,6 @@ class TestMccsSubarray:
         )
 
         assert device_under_test.state() == DevState.ON
-
         # Subscribe to controller's LRC result attribute
         device_under_test.add_change_event_callback(
             "longRunningCommandResult",
@@ -341,6 +361,7 @@ class TestMccsSubarray:
             "longRunningCommandResult".casefold()
             in device_under_test._change_event_subscription_ids
         )
+
         time.sleep(0.1)  # allow event system time to run
         initial_lrc_result = ("", "")
         assert device_under_test.longRunningCommandResult == initial_lrc_result
@@ -355,6 +376,12 @@ class TestMccsSubarray:
             "ReleaseAllResources command completed OK",
         )
         # Callback not being called. When it is the value will probably be wrong but that's a tractable problem
+        # Turns out it's not being called 'cause Assign is failing somewhere in the obs state model
+        print(f"LRC STATUS: {device_under_test.longRunningCommandStatus}")
+        print(f"LRCs IN QUEUE: {device_under_test.longRunningCommandInQueue}")
+        print(f"LRC PROGRESS: {device_under_test.longRunningCommandProgress}")
+        print(f"LRC RESULT: {device_under_test.longRunningCommandResult}")
+
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
         assert device_under_test.assignedResources == json.dumps(
             {

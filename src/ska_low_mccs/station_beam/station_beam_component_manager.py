@@ -344,7 +344,7 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         return self._phase_centre
 
-
+    @check_on
     def configure(
         self: StationBeamComponentManager,
         argin: str,

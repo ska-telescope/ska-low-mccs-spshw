@@ -272,7 +272,6 @@ def station_beam_health_changed_callback(
 
 @pytest.fixture()
 def subarray_component_manager(
-    tango_harness: TangoHarness,
     logger: logging.Logger,
     max_workers: int,
     communication_status_changed_callback: MockCallable,

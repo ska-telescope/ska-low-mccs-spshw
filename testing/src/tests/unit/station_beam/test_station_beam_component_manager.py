@@ -189,6 +189,11 @@ class TestStationBeamComponentManager:
         :param station_beam_component_manager: the station beam component class object under
             test.
         """
+        station_beam_component_manager.start_communicating()
+        assert station_beam_component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        station_beam_component_manager.on()
+        #assert station_beam_component_manager.power_state == PowerState.ON
+
         beam_id = 2
         station_id = 1
         update_rate = 3.14
@@ -211,6 +216,7 @@ class TestStationBeamComponentManager:
 
         # Queueing of configure works fine but _configure is never executed.
         # This test passes if _configure is called directly.
+        # Probably failing due to comms/power states.
         task_status, response = station_beam_component_manager.configure(config_dict)
         assert task_status == TaskStatus.QUEUED
         assert response == "Task queued"

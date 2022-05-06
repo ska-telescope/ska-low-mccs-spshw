@@ -84,6 +84,7 @@ class SubarrayHealthModel(HealthModel):
         :param station_beam_fqdns: the FQDNs of station beams assigned
             to this subarray
         """
+        print("IN RESOURCES CHANGED HEALTH MODEL")
         self._station_healths = {
             fqdn: self._station_healths.get(fqdn, HealthState.UNKNOWN)
             for fqdn in station_fqdns

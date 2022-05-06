@@ -51,9 +51,9 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
+        max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        max_workers: int,
     ) -> None:
         """
         Initialise a new instance.
@@ -344,6 +344,7 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         return self._phase_centre
 
+    @check_on
     def configure(
         self: StationBeamComponentManager,
         argin: str,
@@ -374,19 +375,20 @@ class StationBeamComponentManager(MccsComponentManager):
 
         task_status, response = self.submit_task(
             self._configure,
-            args=(
+            args=[
                 config_dict.get("beam_id"),
-                config_dict.get("station_ids", []),
+                config_dict.get("station_ids"),
                 config_dict.get("update_rate"),
                 config_dict.get("channels", []),
                 config_dict.get("desired_pointing", []),
                 config_dict.get("antenna_weights", []),
                 config_dict.get("phase_centre", []),
-            ),
+            ],
             task_callback=task_callback,
         )
-
+        print("Config queued")
         return task_status, response
+
 
     def _configure(
         self: StationBeamComponentManager,
@@ -398,7 +400,7 @@ class StationBeamComponentManager(MccsComponentManager):
         antenna_weights: list[float],
         phase_centre: list[float],
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> None:
         """
         Configure this station beam for scanning.
 
@@ -431,9 +433,9 @@ class StationBeamComponentManager(MccsComponentManager):
                 status=TaskStatus.COMPLETED, result="Configure has completed."
             )
 
-        return ResultCode.OK
+        #return ResultCode.OK
 
-    @check_communicating
+
     def apply_pointing(
         self: StationBeamComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:

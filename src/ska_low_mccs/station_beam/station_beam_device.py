@@ -68,9 +68,9 @@ class MccsStationBeam(SKAObsDevice):
         return StationBeamComponentManager(
             self.BeamId,
             self.logger,
+            self._max_workers,
             self._communication_status_changed,
             self.component_state_changed_callback,
-            self._max_workers,
         )
 
     def init_command_objects(self: MccsStationBeam) -> None:

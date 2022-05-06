@@ -13,6 +13,7 @@ PROJECT = ska-low-mccs
 
 HELM_CHARTS_TO_PUBLISH = ska-low-mccs
 
+PYTHON_RUNNER = poetry run
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = testing/src/tests/unit/pasd_bus/test_pasd_bus_device.py#::TestMccsPasdBus::test_healthState#::TestMccsPasdBus::test_command
@@ -21,8 +22,8 @@ PYTHON_LINT_TARGET = src/ska_low_mccs #testing/src/tests  ## Paths containing py
 # Disable errors: E1101 (no-member), E1136 (unsubscriptable-object), E0611 (no-name-in-module), E0603 (undefined-all-variable),
     # E1121 (too-many-function-args), E1120 (no-value-for-parameter)
 PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R,E1101,E1136,E0611,E0603,E1121,E1120
-DOCS_SOURCEDIR=./docs/src
 
+DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk
 include .make/k8s.mk
@@ -43,4 +44,11 @@ python-post-format:
 #	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/
 #testing/src/
 
-.PHONY: python-post-format # python-post-lint
+python-do-build:
+	poetry build
+
+python-do-publish:
+	poetry config repositories.skao $(PYTHON_PUBLISH_URL)
+	poetry publish --repository skao --username $(PYTHON_PUBLISH_USERNAME) --password $(PYTHON_PUBLISH_PASSWORD)
+
+.PHONY: python-post-format python-post-lint poetry-do-build poetry-do-publish

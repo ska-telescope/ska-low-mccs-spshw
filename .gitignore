@@ -60,4 +60,4 @@ testing/results/*
 **/charts/*.tgz
 
 # sphinx
-docs/source/_build
+docs/src/_build

@@ -14,10 +14,9 @@ import unittest.mock
 
 import pytest
 import tango
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.controller import ControllerComponentManager
 from ska_low_mccs.testing.mock import MockCallable
 
@@ -84,7 +83,7 @@ class TestControllerComponentManager:
         :param subrack_proxies: list of proxies to MCCS subrack devices
         """
         controller_component_manager.start_communicating()
-        time.sleep(0.1)
+        time.sleep(0.25)
         controller_component_manager.on()
         for proxy in subrack_proxies:
             proxy.On.assert_next_call()
@@ -112,19 +111,19 @@ class TestControllerComponentManager:
     def test_power_events(
         self: TestControllerComponentManager,
         controller_component_manager: ControllerComponentManager,
-        component_power_mode_changed_callback: MockCallable,
+        component_state_changed_callback: MockComponentStateChangedCallback,
     ) -> None:
         """
         Test the controller component manager's management of power mode.
 
         :param controller_component_manager: the controller component
             manager under test.
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         controller_component_manager.start_communicating()
         time.sleep(0.1)
-        component_power_mode_changed_callback.assert_next_call(PowerState.UNKNOWN)
+        component_state_changed_callback.assert_in_deque({"power_state": PowerState.UNKNOWN})
         assert controller_component_manager.power_mode == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():
@@ -132,12 +131,12 @@ class TestControllerComponentManager:
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
             assert controller_component_manager.power_mode == PowerState.UNKNOWN
-            component_power_mode_changed_callback.assert_not_called()
+            component_state_changed_callback.assert_not_called()
         for subrack_proxy in controller_component_manager._subracks.values():
             subrack_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
+        component_state_changed_callback.assert_next_call({"power_state": PowerState.OFF})
         assert controller_component_manager.power_mode == PowerState.OFF
 
     def test_subarray_allocation(
@@ -178,7 +177,7 @@ class TestControllerComponentManager:
             subarrays.
         """
         controller_component_manager.start_communicating()
-        time.sleep(0.2)
+        time.sleep(0.25)
 
         # Subarray is an always-on device, so this should always be received after we
         # establish communication with it.
@@ -316,7 +315,7 @@ class TestControllerComponentManager:
             [3, 4],
         )
 
-        time.sleep(0.1)
+        time.sleep(0.25)
         subarray_proxies[
             "low-mccs/subarray/01"
         ].AssignResources.assert_called_once_with(
@@ -331,7 +330,7 @@ class TestControllerComponentManager:
         )
 
         controller_component_manager.deallocate_all(1)
-        time.sleep(0.2)
+        time.sleep(0.25)
         subarray_proxies[
             "low-mccs/subarray/01"
         ].ReleaseAllResources.assert_called_once_with()
@@ -343,7 +342,7 @@ class TestControllerComponentManager:
             [3, 4],
         )
 
-        time.sleep(0.1)
+        time.sleep(0.25)
         subarray_proxies[
             "low-mccs/subarray/02"
         ].AssignResources.assert_called_once_with(
@@ -359,7 +358,7 @@ class TestControllerComponentManager:
 
         controller_component_manager.deallocate_all(1)
         controller_component_manager.deallocate_all(2)
-        time.sleep(0.1)
+        time.sleep(0.25)
         controller_component_manager.allocate(
             1,
             [["low-mccs/station/001"]],
@@ -369,7 +368,7 @@ class TestControllerComponentManager:
 
         # Now all 48 channel blocks of station 1 are assigned to subarray 1,
         # assigning any more to subarray 2 should fail
-        time.sleep(0.1)
+        time.sleep(0.25)
         with pytest.raises(
             ValueError, match="No free resources of type: channel_blocks."
         ):
@@ -381,5 +380,5 @@ class TestControllerComponentManager:
             )
 
         controller_component_manager.restart_subarray("low-mccs/subarray/02")
-        time.sleep(0.1)
+        time.sleep(0.25)
         subarray_proxies["low-mccs/subarray/02"].Restart.assert_called_once_with()

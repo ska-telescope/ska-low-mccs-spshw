@@ -13,7 +13,7 @@ import threading
 from typing import Any, Callable, Optional
 
 import tango
-from ska_tango_base.commands import ResultCode, SlowCommand
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     CommunicationStatus,
@@ -79,7 +79,6 @@ class DeviceComponentManager(MccsComponentManager):
         This is a public method that enqueues the work to be done.
         """
         super().start_communicating()
-        print("submitting _connect_to_device")
         task_status, response = self.submit_task(
            self._connect_to_device, args=[self._event_callbacks], task_callback=None
         )
@@ -110,7 +109,6 @@ class DeviceComponentManager(MccsComponentManager):
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        #print("in _connect_to_device")
         self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
         try:
             self._proxy.connect()
@@ -119,18 +117,64 @@ class DeviceComponentManager(MccsComponentManager):
             raise ConnectionError(
                 f"Could not connect to '{self._fqdn}'"
             ) from dev_failed
-
         self.update_communication_status(CommunicationStatus.ESTABLISHED)
-        self._proxy.add_change_event_callback("state", self._device_state_changed)
 
-        if self._health_changed_callback is not None:
-            for event, callback in event_callbacks.items():
-                self._proxy.add_change_event_callback(event, callback)
+        # TODO: Determine if we need this IF
+        # if self._health_changed_callback is not None:
+        for event, callback in event_callbacks.items():
+            self._proxy.add_change_event_callback(event, callback)
 
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED, result=f"Connected to '{self._fqdn}'"
             )
+
+    # class ConnectToDeviceBase(SlowCommand):
+    #     """Base command class for connection to be enqueued."""
+
+    #     def do(  # type: ignore[override]
+    #         self: DeviceComponentManager.ConnectToDeviceBase,
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Establish communication with the component, then start monitoring.
+
+    #         This contains the actual communication logic that is enqueued to
+    #         be run asynchronously.
+
+    #         :raises ConnectionError: if the attempt to establish
+    #             communication with the channel fails.
+    #         :return: a result code and message
+    #         """
+    #         self._proxy = MccsDeviceProxy(self._fqdn, self._logger, connect=False)
+    #         try:
+    #             self._proxy.connect()
+    #         except tango.DevFailed as dev_failed:
+    #             self._proxy = None
+    #             raise ConnectionError(
+    #                 f"Could not connect to '{self._fqdn}'"
+    #             ) from dev_failed
+
+    #         self.update_communication_status(CommunicationStatus.ESTABLISHED)
+    #         self._proxy.add_change_event_callback("state", self._device_state_changed)
+
+    #         if self._health_changed_callback is not None:
+    #             self._proxy.add_change_event_callback(
+    #                 "healthState", self._device_health_state_changed
+    #             )
+    #             self._proxy.add_change_event_callback(
+    #                 "adminMode", self._device_admin_mode_changed
+    #             )
+    #         return ResultCode.OK, f"Connected to '{self._fqdn}'"
+
+    # class ConnectToDevice(ConnectToDeviceBase):
+    #     """
+    #     General connection command class.
+
+    #     Class that can be overridden by a derived class or instantiated
+    #     at the DeviceComponentManager level.
+    #     """
+
+    #     pass
 
     def stop_communicating(self: DeviceComponentManager) -> None:
         """Cease monitoring the component, and break off all communication with it."""
@@ -141,79 +185,74 @@ class DeviceComponentManager(MccsComponentManager):
         self._proxy = None
 
     @check_communicating
-    def on(self: DeviceComponentManager) -> ResultCode | None:
+    def on(self: DeviceComponentManager) -> tuple[ResultCode, str]:
         """
         Turn the device on.
 
-        :return: a result code, or None if there was nothing to do.
+        :return: a result code and message
         """
+        return self.submit_task(self._on, task_callback=None)
+
+    def _on(
+        self: DeviceComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        On command implementation that simply calls On, on its proxy.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         if self.power_state == PowerState.ON:
-            return None  # already on
-        # on_command = self.DeviceProxyOnCommand()
-        # Enqueue the on command.
-        # This is a fire and forget command, so we don't need to keep unique ID.
-        # _, result_code = self.enqueue(on_command)
-        # return result_code
-
-    class DeviceProxyOnCommand(SlowCommand):
-        """Base command class for the on command to be enqueued."""
-
-        def do(  # type: ignore[override]
-            self: DeviceComponentManager.DeviceProxyOnCommand,
-        ) -> ResultCode:
-            """
-            On command implementation that simply calls On, on its proxy.
-
-            :return: a result code.
-            """
-            try:
-                assert self._proxy is not None  # for the type checker
-                ([result_code], _) = self._proxy.On()  # Fire and forget
-            except TypeError as type_error:
-                self.target._logger.fatal(
-                    f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="PowerState already on"
                 )
-                result_code = ResultCode.FAILED
-            return result_code
+        else:
+            assert self._proxy is not None  # for the type checker
+            self._proxy.On()  # Fire and forget
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="PowerState on completed"
+                )
 
     @check_communicating
-    def off(self: DeviceComponentManager) -> ResultCode | None:
+    def off(self: DeviceComponentManager) -> tuple(ResultCode, str):
         """
         Turn the device off.
 
-        :return: a result code, or None if there was nothing to do.
+        :return: a result code & message
         """
+        return self.submit_task(self._off, task_callback=None)
+
+    def _off(
+        self: DeviceComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Off command implementation that simply calls Off, on its proxy.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         if self.power_state == PowerState.OFF:
-            return None  # already off
-        # off_command = self.DeviceProxyOffCommand(target=self)
-        # Enqueue the off command.
-        # This is a fire and forget command, so we don't need to keep unique ID.
-        # _, result_code = self.enqueue(off_command)
-        # return result_code
-
-    class DeviceProxyOffCommand(SlowCommand):
-        """Base command class for the off command to be enqueued."""
-
-        def do(  # type: ignore[override]
-            self: DeviceComponentManager.DeviceProxyOffCommand,
-        ) -> ResultCode:
-            """
-            Off command implementation that simply calls Off, on its proxy.
-
-            :return: a result code.
-            """
-            try:
-                assert self._proxy is not None  # for the type checker
-                (
-                    [result_code],
-                    _,
-                ) = self._proxy.Off()  # Fire and forget
-            except TypeError as type_error:
-                self._logger.fatal(
-                    f"Typeerror: FQDN is {self.target._fqdn}, type_error={type_error}"
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="PowerState already off"
                 )
-                result_code = ResultCode.FAILED
-            return result_code
+        else:
+            assert self._proxy is not None  # for the type checker
+            self._proxy.Off()  # Fire and forget
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="PowerState off completed"
+                )
 
     @check_communicating
     def standby(self: DeviceComponentManager) -> ResultCode | None:

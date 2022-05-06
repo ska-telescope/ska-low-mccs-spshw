@@ -16,7 +16,7 @@ import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
-from tango.server import command, device_property
+from tango.server import attribute, command, device_property
 
 import ska_low_mccs.release as release
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
@@ -53,6 +53,8 @@ class MccsController(SKABaseDevice):
         self._power_state_lock = threading.RLock()
         self._communication_status: Optional[CommunicationStatus] = None
         self._component_power_state: Optional[PowerState] = None
+        self._mccs_build_state = release.get_release_info()
+        self._mccs_version_id = release.version
         super().init_device()
 
     def _init_state_model(self: MccsController) -> None:
@@ -127,8 +129,8 @@ class MccsController(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._device._build_state = release.get_release_info()
-            self._device._version_id = release.version
+            self._device._mccs_build_state = release.get_release_info()
+            self._device._mccs_version_id = release.version
 
             return (ResultCode.OK, "Initialisation complete")
 
@@ -245,6 +247,23 @@ class MccsController(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="str")
+    def buildState(self: MccsController) -> str:
+        """
+        Read the Build State of the device.
+
+        :return: the build state of the device
+        """
+        return f"MCCS build state: {self._mccs_build_state}"
+
+    @attribute(dtype="str")
+    def versionId(self: MccsController) -> str:
+        """
+        Read the Version Id of the device.
+
+        :return: the version id of the device
+        """
+        return self._mccs_version_id
 
     # --------
     # Commands

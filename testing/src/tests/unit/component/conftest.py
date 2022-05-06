@@ -21,22 +21,22 @@ from ska_low_mccs.testing.mock import MockDeviceBuilder
 
 
 @pytest.fixture()
-def health_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for a device component manager.
 
-    To call when the health state of its device changes.
+    To call when the state of its device changes.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback for a device component manager to call when
-        the health state of its device changes.
+        the state of its device changes.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -50,11 +50,23 @@ def mock_factory() -> MockDeviceBuilder:
     :return: a factory for device proxy mocks
     """
     builder = MockDeviceBuilder()
-    builder.add_result_command("Off", result_code=ResultCode.OK)
+    builder.add_result_command("Off", result_code=ResultCode.QUEUED)
     builder.add_result_command("Standby", result_code=ResultCode.OK)
-    builder.add_result_command("On", result_code=ResultCode.OK)
+    builder.add_result_command("On", result_code=ResultCode.QUEUED)
     builder.add_result_command("Reset", result_code=ResultCode.OK)
     return builder
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+
+    (This is a pytest fixture.)
+
+    :return: the number of worker threads
+    """
+    return 1
 
 
 @pytest.fixture()
@@ -98,36 +110,19 @@ def pool_member_communication_status_changed_callback(
 
 
 @pytest.fixture()
-def pool_member_component_power_mode_changed_callback(
+def pool_member_component_state_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback for pool member component power mode change.
+    Return a mock callback for pool member component state change.
 
     :param mock_callback_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when a member of a pool
-        component manager detects that the power mode of its component
+        component manager detects that the state of its component
         has changed.
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def pool_member_component_fault_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for pool member component fault change.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when a member of a pool
-        component manager detects that its component has faulted.
     """
     return mock_callback_factory()
 

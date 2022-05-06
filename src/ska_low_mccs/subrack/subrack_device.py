@@ -674,8 +674,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerOnTpm")
-        unique_id, return_code = handler(argin)
-        return ([return_code], [unique_id])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     @command(
         dtype_in="DevULong",
@@ -696,8 +696,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerOffTpm")
-        unique_id, return_code = handler(argin)
-        return ([return_code], [unique_id])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -715,8 +715,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerUpTpms")
-        unique_id, return_code = handler()
-        return ([return_code], [unique_id])
+        result_code, message = handler()
+        return ([result_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
     def PowerDownTpms(self: MccsSubrack) -> DevVarLongStringArrayType:
@@ -732,8 +732,8 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("PowerDownTpms")
-        unique_id, return_code = handler()
-        return ([return_code], [unique_id])
+        result_code, message = handler()
+        return ([result_code], [message])
 
     class SetSubrackFanSpeedCommand(FastCommand):
         """

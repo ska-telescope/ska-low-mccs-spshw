@@ -15,10 +15,9 @@ from typing import Callable, Iterable, Optional
 import pytest
 import pytest_mock
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.controller import (
     ControllerComponentManager,
     ControllerResourceManager,
@@ -214,6 +213,52 @@ def station_beam_health_changed_callback(
     return mock_callback_factory()
 
 
+# @pytest.fixture()
+# def communication_status_changed_callback(
+#     mock_component_state_changed_callback_factory: Callable[[], unittest.mock.Mock],
+# ) -> unittest.mock.Mock:
+#     """
+#     Return a mock callback for communication change.
+# 
+#     :param mock_callback_deque_factory: fixture that provides a mock callback
+#         factory (i.e. an object that returns mock callbacks when
+#         called).
+# 
+#     :return: a mock callback to be called when the communication status
+#         of a component manager changed.
+#     """
+#     return mock_component_state_changed_callback_factory()
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_component_state_changed_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for a change in state.
+
+    :param mock_component_state_changed_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that state has changed.
+    """
+    return mock_component_state_changed_callback_factory()
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of MockCallableworker threads.
+
+    (This is a pytest fixture.)
+
+    :return: the number of worker threads
+    """
+    return 1
+
+
 @pytest.fixture()
 def controller_component_manager(
     tango_harness: TangoHarness,
@@ -223,13 +268,9 @@ def controller_component_manager(
     subarray_beam_fqdns: Iterable[str],
     station_beam_fqdns: Iterable[str],
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    subrack_health_changed_callback: MockCallable,
-    station_health_changed_callback: MockCallable,
-    subarray_beam_health_changed_callback: MockCallable,
-    station_beam_health_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallable,
 ) -> ControllerComponentManager:
     """
     Return a controller component manager in simulation mode.
@@ -241,21 +282,12 @@ def controller_component_manager(
     :param subarray_beam_fqdns: FQDNS of all subarray beam devices
     :param station_beam_fqdns: FQDNS of all station beam devices
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: nos of threads
     :param communication_status_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be called
-        when the component power mode changes
-    :param subrack_health_changed_callback: callback to be called when
-        the health of a subrack changes
-    :param station_health_changed_callback: callback to be called when
-        the health of a station changes
-    :param subarray_beam_health_changed_callback: callback to be called
-        when the health of a subarray beam changes
-    :param station_beam_health_changed_callback: callback to be called
-        when the health of a station beam changes
+    :param component_state_changed_callback: callback to be called
+        when the component state changes
 
     :return: a component manager for the MCCS controller device
     """
@@ -266,13 +298,9 @@ def controller_component_manager(
         subarray_beam_fqdns,
         station_beam_fqdns,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        subrack_health_changed_callback,
-        station_health_changed_callback,
-        subarray_beam_health_changed_callback,
-        station_beam_health_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -298,8 +326,8 @@ def mock_station_factory() -> MockDeviceBuilder:
     :return: a factory for device proxy mocks
     """
     builder = MockDeviceBuilder()
-    builder.add_result_command("Off", result_code=ResultCode.OK)
-    builder.add_result_command("On", result_code=ResultCode.OK)
+    builder.add_result_command("Off", result_code=ResultCode.QUEUED)
+    builder.add_result_command("On", result_code=ResultCode.QUEUED)
     return builder
 
 
@@ -315,8 +343,8 @@ def mock_subrack_factory() -> MockDeviceBuilder:
     :return: a factory for device proxy mocks
     """
     builder = MockDeviceBuilder()
-    builder.add_result_command("Off", result_code=ResultCode.OK)
-    builder.add_result_command("On", result_code=ResultCode.OK)
+    builder.add_result_command("Off", result_code=ResultCode.QUEUED)
+    builder.add_result_command("On", result_code=ResultCode.QUEUED)
     return builder
 
 
@@ -443,11 +471,11 @@ def mock_component_manager(
         mock.is_communicating = True
         mock._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
         mock._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
-        mock._component_power_mode_changed_callback(PowerState.OFF)
+        mock._component_state_changed_callback({"power_state": PowerState.OFF})
 
     mock.start_communicating.side_effect = lambda: _start_communicating(mock)
 
-    mock.enqueue.return_value = unique_id, ResultCode.QUEUED
+    mock.return_value = unique_id, ResultCode.QUEUED
 
     return mock
 
@@ -478,25 +506,13 @@ def patched_controller_device_class(
             :return: a mock component manager
             """
             self._communication_status: Optional[CommunicationStatus] = None
-            self._component_power_mode: Optional[PowerState] = None
+#             self._component_power_state: Optional[PowerState] = None
 
             mock_component_manager._communication_status_changed_callback = (
-                self._communication_status_changed
+                self._communication_status_changed_callback
             )
-            mock_component_manager._component_power_mode_changed_callback = (
-                self._component_power_mode_changed
-            )
-            mock_component_manager._subrack_health_changed_callback = (
-                self._health_model.subrack_health_changed
-            )
-            mock_component_manager._station_health_changed_changed_callback = (
-                self._health_model.station_health_changed
-            )
-            mock_component_manager._subarray_beam_health_changed_callback = (
-                self._health_model.subarray_beam_health_changed
-            )
-            mock_component_manager._station_beam_health_changed_callback = (
-                self._health_model.station_beam_health_changed
+            mock_component_manager._component_state_changed_callback = (
+                self._component_state_changed_callback
             )
             return mock_component_manager
 

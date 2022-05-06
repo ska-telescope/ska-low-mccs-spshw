@@ -118,7 +118,7 @@ class ObjectComponentManager(MccsComponentManager):
 
     @check_communicating
     def off(
-        self: ObjectComponentManager, task_callback: Callable
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn the component off.
@@ -127,11 +127,11 @@ class ObjectComponentManager(MccsComponentManager):
 
         :return: a taskstatus and message.
         """
-        return self._component.off()
+        return self._component.off(task_callback)
 
     @check_communicating
     def standby(
-        self: ObjectComponentManager, task_callback: Callable
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
@@ -140,11 +140,11 @@ class ObjectComponentManager(MccsComponentManager):
 
         :return: a taskstatus and message
         """
-        return self._component.standby()
+        return self._component.standby(task_callback)
 
     @check_communicating
     def on(
-        self: ObjectComponentManager, task_callback: Callable
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn the component on.
@@ -153,11 +153,11 @@ class ObjectComponentManager(MccsComponentManager):
 
         :return: a taskstatus and message
         """
-        return self._component.on()
+        return self._component.on(task_callback)
 
     @check_communicating
     def reset(
-        self: ObjectComponentManager, task_callback: Callable
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
@@ -166,4 +166,4 @@ class ObjectComponentManager(MccsComponentManager):
 
         :return: a taskstatus and message
         """
-        return self._component.reset()
+        return self._component.reset(task_callback)

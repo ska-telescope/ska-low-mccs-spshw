@@ -14,11 +14,11 @@ import unittest.mock
 
 import pytest
 import tango
-from ska_tango_base.control_model import AdminMode, HealthState
+from ska_tango_base.control_model import AdminMode, CommunicationStatus, HealthState
 
-from ska_low_mccs.component import CommunicationStatus, DeviceComponentManager
+from ska_low_mccs.component import DeviceComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable
 
 
 @pytest.fixture()
@@ -26,11 +26,9 @@ def component_manager(
     tango_harness: TangoHarness,
     fqdn: str,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    health_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallable,
 ) -> DeviceComponentManager:
     """
     Return a device component manager for testing.
@@ -39,31 +37,21 @@ def component_manager(
     :param fqdn: the FQDN of the device to be managed by this component
         manager.
     :param logger: a logger for the component manager to use.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: nos. of threads
     :param communication_status_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be
-        called when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param health_changed_callback: callback to be called when the
-        health state of the device changes. The value it is called
-        with will normally be a HealthState, but may be None if the
-        admin mode of the device indicates that the device's health
-        should not be included in upstream health rollup.
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
 
     :return: a device component manager for testing.
     """
     return DeviceComponentManager(
         fqdn,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
-        health_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -142,13 +130,13 @@ class TestDeviceComponentManager:
     def test_health(
         self: TestDeviceComponentManager,
         component_manager: DeviceComponentManager,
-        health_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the component managers handling of health.
 
         :param component_manager: the component manager under test
-        :param health_changed_callback: callback to be called when the
+        :param component_state_changed_callback: callback to be called when the
             health status of the device changes
         """
         assert component_manager.health is None
@@ -157,22 +145,28 @@ class TestDeviceComponentManager:
             "adminMode", AdminMode.ONLINE, tango.AttrQuality.ATTR_VALID
         )
         assert component_manager.health == HealthState.UNKNOWN
-        health_changed_callback.assert_next_call(HealthState.UNKNOWN)
+        component_state_changed_callback.assert_next_call(
+            {"health_state": HealthState.UNKNOWN}
+        )
 
         component_manager._device_health_state_changed(
             "healthState", HealthState.DEGRADED, tango.AttrQuality.ATTR_VALID
         )
         assert component_manager.health == HealthState.DEGRADED
-        health_changed_callback.assert_next_call(HealthState.DEGRADED)
+        component_state_changed_callback.assert_next_call(
+            {"health_state": HealthState.DEGRADED}
+        )
 
         component_manager._device_admin_mode_changed(
             "adminMode", AdminMode.RESERVED, tango.AttrQuality.ATTR_VALID
         )
         assert component_manager.health is None
-        health_changed_callback.assert_next_call(None)
+        component_state_changed_callback.assert_next_call({"health_state": None})
 
         component_manager._device_admin_mode_changed(
             "adminMode", AdminMode.ONLINE, tango.AttrQuality.ATTR_VALID
         )
         assert component_manager.health == HealthState.DEGRADED
-        health_changed_callback.assert_next_call(HealthState.DEGRADED)
+        component_state_changed_callback.assert_next_call(
+            {"health_state": HealthState.DEGRADED}
+        )

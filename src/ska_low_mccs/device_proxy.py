@@ -275,18 +275,11 @@ class MccsDeviceProxy:
             feature
         """
         attribute_key = attribute_name.lower()
-        print("attribute_key is: ", attribute_key)
         if attribute_key not in self._change_event_subscription_ids:
-            print("attribute_key not in self._change_event_subscription_ids")
             self._change_event_callbacks[attribute_key] = [callback]
-            print("self._change_event_callbacks is: ", self._change_event_callbacks)
             self._change_event_subscription_ids[
                 attribute_key
             ] = self._subscribe_change_event(attribute_name, stateless=stateless)
-            print(
-                "self._change_event_subscription_ids is: ",
-                self._change_event_subscription_ids,
-            )
         else:
             self._change_event_callbacks[attribute_key].append(callback)
             self._call_callback(callback, self._read(attribute_name))

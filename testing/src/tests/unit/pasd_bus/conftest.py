@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Callable, Optional
 
 import pytest
 import pytest_mock
 import yaml
-from ska_tango_base.control_model import CommunicationStatus, SimulationMode
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, SimulationMode, PowerState
+from ska_low_mccs import MccsPasdBus
 
 from ska_low_mccs.pasd_bus import (
     PasdBusComponentManager,
@@ -249,3 +251,75 @@ def pasd_bus_component_manager(
         component_fault_callback,
         _simulator_component_manager=pasd_bus_simulator_component_manager,
     )
+
+@pytest.fixture()
+def mock_component_manager(
+    mocker: pytest_mock.mocker,  # type: ignore[valid-type]
+    unique_id: str,
+) -> unittest.mock.Mock:
+    """
+    Return a mock component manager.
+
+    The mock component manager is a simple mock except for one bit of
+    extra functionality: when we call start_communicating() on it, it
+    makes calls to callbacks signaling that communication is established
+    and the component is off.
+
+    :param mocker: pytest wrapper for unittest.mock
+    :param unique_id: a unique id used to check Tango layer functionality
+
+    :return: a mock component manager
+    """
+    mock = mocker.Mock()  # type: ignore[attr-defined]
+    mock.is_communicating = False
+
+    def _start_communicating(mock: unittest.mock.Mock) -> None:
+        mock.is_communicating = True
+        mock._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
+        mock._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
+        mock._component_state_changed_callback({"power_state": PowerState.OFF})
+
+    mock.start_communicating.side_effect = lambda: _start_communicating(mock)
+
+    mock.return_value = unique_id, ResultCode.QUEUED
+
+    return mock
+
+
+@pytest.fixture()
+def patched_pasd_bus_device_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsPasdBus]:
+    """
+    Return a pasd bus device that is patched with a mock component manager.
+
+    :param mock_component_manager: the mock component manager with
+        which to patch the device
+
+    :return: a pasd bus device that is patched with a mock component
+        manager.
+    """
+
+    class PatchedMccsPasdBus(MccsPasdBus):
+        """A pasd bus device patched with a mock component manager."""
+
+        def create_component_manager(
+            self: PatchedMccsPasdBus,
+        ) -> unittest.mock.Mock:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            self._communication_status: Optional[CommunicationStatus] = None
+#             self._component_power_state: Optional[PowerState] = None
+
+            mock_component_manager._communication_status_changed_callback = (
+                self._communication_status_changed_callback
+            )
+            mock_component_manager._component_state_changed_callback = (
+                self._component_state_changed_callback
+            )
+            return mock_component_manager
+
+    return PatchedMccsPasdBus

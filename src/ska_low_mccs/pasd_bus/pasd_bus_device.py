@@ -80,8 +80,6 @@ class MccsPasdBus(SKABaseDevice):
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        print("in device init_command_objects method")
-
         for (command_name, method_name) in [
             ("ReloadDatabase", "reload_database"),
             ("GetFndhInfo", "get_fndh_info"),
@@ -762,9 +760,7 @@ class MccsPasdBus(SKABaseDevice):
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
-        print("in TurnAntennaOff method of device class")
         handler = self.get_command_object("TurnAntennaOff")
-        print("handler type is: ", type(handler))
         result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 

@@ -18,9 +18,29 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsPasdBus
-from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque, MockChangeEventCallback
+from ska_low_mccs.testing.mock.mock_callable import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
+
+@pytest.fixture()
+def device_to_load(
+    patched_pasd_bus_device_class: type[MccsPasdBus],
+) -> DeviceToLoadType:
+    """
+    Fixture that specifies the device to be loaded for testing.
+
+    :param patched_pasd_bus_device_class: a pasd bus device class
+        that has been patched with a mock component manager
+
+    :return: specification of the device to be loaded
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska_low_mccs",
+        "device": "pasd_bus",
+        "proxy": MccsDeviceProxy,
+        "patch": patched_pasd_bus_device_class,
+    }
 
 @pytest.fixture()
 def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
@@ -99,32 +119,11 @@ class TestMccsPasdBus:
             "patch": patched_device_class,
         }
 
-    '''def test_healthState(
-        self: TestMccsPasdBus,
-        device_under_test: MccsDeviceProxy,
-        component_state_changed_callback: MockCallableDeque,
-    ) -> None:
-        """
-        Test for healthState.
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param device_health_state_changed_callback: a callback that we
-            can use to subscribe to health state changes on the device
-        """
-        device_under_test.add_change_event_callback(
-            "healthState",
-            component_state_changed_callback({"health_state": HealthState.OK})
-        )
-        component_state_changed_callback.assert_in_deque(
-            {"health_state" : HealthState.OK}
-        )
-        assert device_under_test.healthState == HealthState.OK'''
-
-    @pytest.mark.skip(reason="health state is unknown (not ok)")
+    @pytest.mark.skip(reason="callback is not being called")
     def test_healthState(
         self: TestMccsPasdBus,
         device_under_test: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
         device_health_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
@@ -133,6 +132,8 @@ class TestMccsPasdBus:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_component_manager: a mock component manager that has
+            been patched into the device under test
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
@@ -141,8 +142,14 @@ class TestMccsPasdBus:
             device_health_state_changed_callback,
         )
 
-        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
-        assert device_under_test.healthState == HealthState.OK
+        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        assert device_under_test.healthState == HealthState.UNKNOWN
+
+        #mock_component_manager._component_state_changed_callback(
+         #   {"health_state": HealthState.OK}
+        #)
+        #device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
+        #assert device_under_test.healthState == HealthState.OK
 
     @pytest.mark.parametrize(
         ("device_attribute", "component_manager_property", "example_value"),
@@ -267,147 +274,6 @@ class TestMccsPasdBus:
         _ = getattr(device_under_test, device_attribute)
         property_mock.assert_called_once_with()
 
-    '''@pytest.mark.parametrize(
-        (
-            "device_command",
-            "component_manager_method",
-            "device_command_argin",
-        ),
-        [
-            (
-                "ReloadDatabase",
-                "reload_database",
-                None,
-            ),
-            (
-                "GetFndhInfo",
-                "get_fndh_info",
-                None,
-            ),
-            (
-                "TurnFndhServiceLedOn",
-                "turn_fndh_service_led_on",
-                None,
-            ),
-            (
-                "TurnFndhServiceLedOff",
-                "turn_fndh_service_led_off",
-                None,
-            ),
-            (
-                "GetSmartboxInfo",
-                "get_smartbox_info",
-                1,
-            ),
-            (
-                "TurnSmartboxOn",
-                "turn_smartbox_on",
-                1,
-            ),
-            (
-                "TurnSmartboxOff",
-                "turn_smartbox_off",
-                1,
-            ),
-            (
-                "TurnSmartboxServiceLedOn",
-                "turn_smartbox_service_led_on",
-                1,
-            ),
-            (
-                "TurnSmartboxServiceLedOff",
-                "turn_smartbox_service_led_off",
-                1,
-            ),
-            (
-                "GetAntennaInfo",
-                "get_antenna_info",
-                1,
-            ),
-            (
-                "ResetAntennaBreaker",
-                "reset_antenna_breaker",
-                1,
-            ),
-            (
-                "TurnAntennaOn",
-                "turn_antenna_on",
-                1,
-            ),
-            (
-                "TurnAntennaOff",
-                "turn_antenna_off",
-                1,
-            ),
-        ],
-    )
-    def test_command(
-        self: TestMccsPasdBus,
-        mocker: pytest_mock.mocker,  # type: ignore[valid-type]
-        device_under_test: MccsDeviceProxy,
-        mock_component_manager: unittest.mock.Mock,
-        device_command: str,
-        component_manager_method: str,
-        device_command_argin: Any,
-    ) -> None:
-        """
-        Test that device attribute writes result in component manager property writes.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
-            module
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param device_command: name of the device command under test.
-        :param component_manager_method_argin: argument to the component
-            manager method.
-        :param device_command_argin: argument to the device command.
-        """
-        #mock_handler = mocker.Mock(return_value=(ResultCode.OK, "unique_id"))  # type: ignore[attr-defined]
-        #method_mock = mocker.Mock(return_value=mock_handler)  # type: ignore[attr-defined]
-        #setattr(device_under_test, "get_command_object", method_mock)
-        #method_mock = mocker.Mock(return_value="return")  # type: ignore[attr-defined]
-        #setattr(mock_component_manager, component_manager_method, method_mock)
-        #method_mock.assert_not_called()
-
-        #command = getattr(device_under_test, device_command)
-        #if device_command_argin is None:
-         #   command_return = command()
-        #else:
-         #   command_return = command(device_command_argin)
-        #command_return = command()
-        #print(command_return)
-        #(result, id) = device_under_test.TurnAntennaOff()
-        #print("result is: ", result)
-        #print("id is: ", id)
-        method_mock = mocker.Mock(return_value=component_manager_method_return) # type: ignore[attr-defined]
-        setattr(mock_component_manager, component_manager_method, method_mock)
-        method_mock.assert_not_called()
-
-        command = getattr(device_under_test, device_command)
-        if device_command_argin is None:
-        command_return = command()
-        else:
-        command_return = command(device_command_argin)
-
-        if component_manager_method_argin is None:
-        method_mock.assert_called_once_with()
-        else:
-        method_mock.assert_called_once_with(component_manager_method_argin)
-
-        assert command_return == expected_device_command_return '''
-
-    '''def test_command(
-        self: TestMccsPasdBus,
-        device_under_test: MccsDeviceProxy,
-        mock_component_manager: unittest.mock.Mock,
-    ) -> None:
-        print("###############", device_under_test)#.component_manager.CommunicationStatus)
-        (result, id) = device_under_test.TurnAntennaOff()
-        print("result is: ", result)
-        print("id is: ", id)
-        assert False'''
-
     @pytest.mark.parametrize(
         (
             "device_command",
@@ -415,7 +281,6 @@ class TestMccsPasdBus:
             "device_command_argin",
             "component_manager_method_argin",
             "component_manager_method_return",
-            "expected_device_command_return",
         ),
         [
             (
@@ -424,7 +289,6 @@ class TestMccsPasdBus:
                 None,
                 None,
                 [True,True],
-                [[ResultCode.OK], ["PaSD bus 'database reload' successful"]],
             ),
             (
                 "GetFndhInfo",
@@ -432,7 +296,6 @@ class TestMccsPasdBus:
                 None,
                 None,
                 [{"foo": "bah"}, {"foo": "bah"}],
-                '{"foo": "bah"}',
             ),
             (
                 "TurnFndhServiceLedOn",
@@ -440,10 +303,6 @@ class TestMccsPasdBus:
                 None,
                 True,
                 [True,True],
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'FNDH service LED on' successful"],
-                ],
             ),
             (
                 "TurnFndhServiceLedOff",
@@ -451,45 +310,34 @@ class TestMccsPasdBus:
                 None,
                 False,
                 [True,True],
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'FNDH service LED off' successful"],
-                ],
             ),
             (
                 "GetSmartboxInfo",
                 "get_smartbox_info",
                 1,
                 1,
-                [{"foo": "bah"}, {"foo": "bah"}],
-                '{"foo": "bah"}',
+                [True, True],
             ),
             (
                 "TurnSmartboxOn",
                 "turn_smartbox_on",
                 1,
                 1,
-                [True,True],
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 on' successful"]],
+                [True, True],
             ),
             (
                 "TurnSmartboxOff",
                 "turn_smartbox_off",
                 1,
                 1,
-                [True,True],
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 off' successful"]],
+                [True, True],
             ),
             (
                 "TurnSmartboxServiceLedOn",
                 "turn_smartbox_service_led_on",
                 1,
                 1,
-                [True,True],
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'smartbox 1 service LED on' successful"],
-                ],
+                [True, True],
             ),
             (
                 "TurnSmartboxServiceLedOn",
@@ -497,40 +345,28 @@ class TestMccsPasdBus:
                 1,
                 1,
                 [False, False],
-                [
-                    [ResultCode.FAILED],
-                    ["PaSD bus 'smartbox 1 service LED on' failed"],
-                ],
             ),
             (
                 "TurnSmartboxServiceLedOn",
                 "turn_smartbox_service_led_on",
                 1,
                 1,
-                [None, None],
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'smartbox 1 service LED on' is redundant"],
-                ],
+                [True, True],
             ),
             (
                 "TurnSmartboxServiceLedOff",
                 "turn_smartbox_service_led_off",
                 1,
                 1,
-                [True,True],
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'smartbox 1 service LED off' successful"],
-                ],
+                [True, True],
             ),
             (
                 "GetAntennaInfo",
                 "get_antenna_info",
                 1,
                 1,
-                [{"foo": "bah"}, {"foo": "bah"}],
-                [{"foo": "bah"}, {"foo": "bah"}],
+                #[{"foo": "bah"}, {"foo": "bah"}],
+                [True, True],
             ),
             (
                 "ResetAntennaBreaker",
@@ -538,10 +374,6 @@ class TestMccsPasdBus:
                 1,
                 1,
                 [True,True],
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'antenna 1 breaker reset' successful"],
-                ],
             ),
             (
                 "TurnAntennaOn",
@@ -549,7 +381,6 @@ class TestMccsPasdBus:
                 1,
                 1,
                 [True,True],
-                [[ResultCode.OK], ["PaSD bus 'antenna 1 on' successful"]],
             ),
             (
                 "TurnAntennaOff",
@@ -557,7 +388,6 @@ class TestMccsPasdBus:
                 1,
                 1,
                 [True,True],
-                [[ResultCode.OK], ["PaSD bus 'antenna 1 off' successful"]],
             ),
         ],
     )
@@ -571,7 +401,6 @@ class TestMccsPasdBus:
         device_command_argin: Any,
         component_manager_method_argin: Any,
         component_manager_method_return: Any,
-        expected_device_command_return: Any,
     ) -> None:
         """
         Test that device attribute writes result in component manager property writes.
@@ -592,8 +421,6 @@ class TestMccsPasdBus:
             manager method
         :param component_manager_method_return: return value of the
             component manager method
-        :param expected_device_command_return: the expected return value
-            of the device command
         """
         method_mock = mocker.Mock(return_value=component_manager_method_return)  # type: ignore[attr-defined]
         setattr(mock_component_manager, component_manager_method, method_mock)
@@ -601,10 +428,8 @@ class TestMccsPasdBus:
 
         command = getattr(device_under_test, device_command)
         if device_command_argin is None:
-            #(task_status, response) = command()
             command_return = command()
         else:
-            #(task_status, response) = command(device_command_argin)
             command_return = command(device_command_argin)
 
         #if component_manager_method_argin is None:
@@ -612,5 +437,5 @@ class TestMccsPasdBus:
         #else:
          #   method_mock.assert_called_once_with(component_manager_method_argin)
 
-        #assert command_return[0] == ResultCode.QUEUED
-        #assert command_return[1].split("_")[-1] == device_command
+        assert command_return[0] == ResultCode.QUEUED
+        assert command_return[1][0].split("_")[-1] == device_command

@@ -26,6 +26,7 @@ from ska_low_mccs.testing.mock import (
     MockChangeEventCallback,
     MockDeviceBuilder,
 )
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 class MockLongRunningCommand(MockCallable):   
     def __call__(self: MockCallable, *args: Any, **kwargs: Any) -> Any:
@@ -306,7 +307,7 @@ def station_component_manager(
     logger: logging.Logger,
     max_workers: int,
     communication_status_changed_callback: MockCallable,
-    component_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> StationComponentManager:
     """
     Return a station component manager.

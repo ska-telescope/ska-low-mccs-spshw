@@ -47,132 +47,23 @@ class TestStationComponentManager:
             station_component_manager.communication_status
             == CommunicationStatus.DISABLED
         )
-        print("1 component manager comms status = ", station_component_manager._communication_status)
 
         station_component_manager.start_communicating()
-        time.sleep(1)
+
+        # allow some time for device communication to start before testing
+        time.sleep(0.1) 
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
-        print("1 component manager comms status = ", station_component_manager._communication_status)
         assert (
             station_component_manager.communication_status
             == CommunicationStatus.ESTABLISHED
         )
 
-        component_state_changed_callback({'power_state': PowerState.ON, 'is_configured': True}, fqdn='low-mccs/tile/0002')
-        print("next call: ", component_state_changed_callback.get_next_call_with_keys('power_state', 'is_configured', fqdn='low-mccs/tile/0002'))
-        # >> next call:  (<PowerState.ON: 4>, True)
-
-        component_state_changed_callback({'power_state': PowerState.ON, 'is_configured': False}, fqdn='low-mccs/tile/0002')
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.ON, 'is_configured': False}, fqdn='low-mccs/tile/0002')
-
-        component_state_changed_callback({'power_state': PowerState.ON}, fqdn='low-mccs/tile/0003')
-        component_state_changed_callback.assert_not_called_with_keys('power_state', 'is_configured', fqdn='low-mccs/tile/0002')
-
-        component_state_changed_callback.assert_not_called_with_keys('is_configured', fqdn='low-mccs/tile/0002')
-
-        component_state_changed_callback({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
-        component_state_changed_callback({'power_state': PowerState.ON}, fqdn='low-mccs/antenna/000002')
-        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000002')
-        component_state_changed_callback({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
-        state_change_list = [
-            ({'power_state': PowerState.UNKNOWN}, 'low-mccs/antenna/000002'),
-            ({'power_state': PowerState.OFF}, 'low-mccs/antenna/000002'),
-            ({'power_state': PowerState.ON}, 'low-mccs/antenna/000002'),
-            ({'power_state': PowerState.UNKNOWN}, 'low-mccs/antenna/000002'),
-            ({'power_state': PowerState.OFF}, 'low-mccs/antenna/000002'),
-        ]
-        #component_state_changed_callback.assert_next_calls_with_keys(state_change_list)
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000002')
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.ON}, fqdn='low-mccs/antenna/000002')
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000002')
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.OFF}, fqdn='low-mccs/antenna/000002')
-
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        #print(component_state_changed_callback.get_next_call())
-        #print(component_state_changed_callback.get_next_call())
-        #print(component_state_changed_callback.get_next_call())
-        #is_configured_changed_callback.assert_next_call(False)
-
-        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/tile/0002') # deque index 0
-        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/tile/0001') # deque index 1
-        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/apiu/001') # deque index 2
-        component_state_changed_callback({'power_state': PowerState.OFF}) # deque index 3
-        component_state_changed_callback({'is_configured': False}) # deque index 4
-        component_state_changed_callback({'power_state': PowerState.UNKNOWN}, fqdn='low-mccs/antenna/000001') # deque index 5
-        component_state_changed_callback({'power_state': PowerState.UNKNOWN, 'is_configured': False}, fqdn='low-mccs/apiu/001') # deque index 6
-        component_state_changed_callback({'power_state': PowerState.ON}, fqdn='low-mccs/apiu/001') # deque index 7
-        component_state_changed_callback({'power_state': PowerState.OFF}, fqdn='low-mccs/apiu/001') # deque index 8
-
-        print('------------ clear --------------')
-        print(component_state_changed_callback._find_next_call_with_keys('power_state', fqdn='low-mccs/apiu/001'))
-        print(component_state_changed_callback._find_next_call_with_keys('power_state'))
-        print(component_state_changed_callback._find_next_call_with_keys('power_state', 'is_configured', fqdn='low-mccs/apiu/001'))
-        print(component_state_changed_callback._find_next_call_with_keys('power_state', fqdn='low-mccs/apiu/999'))
-        print(component_state_changed_callback._find_next_call_with_keys('is_configured', fqdn='low-mccs/apiu/001'))
-        print('------------ done 1 --------------')
-        print(component_state_changed_callback.get_next_call_with_keys('power_state', fqdn='low-mccs/apiu/001'))
-        print(component_state_changed_callback.get_next_call_with_keys('power_state'))
-        print(component_state_changed_callback.get_next_call_with_keys('power_state', 'is_configured', fqdn='low-mccs/apiu/001'))
-        print(component_state_changed_callback.get_next_call_with_keys('power_state', fqdn='low-mccs/apiu/001'))
-        print(component_state_changed_callback.get_next_call_with_keys('power_state', fqdn='low-mccs/apiu/001'))
-        print(component_state_changed_callback.get_next_call_with_keys('power_state', fqdn='low-mccs/apiu/001'))
-        print('------------ done 2 --------------')
-        # test assert_not_called_with_keys
-        # the following assertions will pass
-        component_state_changed_callback.assert_not_called_with_keys('health_state')
-        component_state_changed_callback.assert_not_called_with_keys('power_state', fqdn='low-mccs/apiu/999')
-        # whereas these would fail
-        #component_state_changed_callback.assert_not_called_with_keys('power_state', fqdn='low-mccs/tile/0002')
-        #component_state_changed_callback.assert_not_called_with_keys('is_configured')
-        print('------------ done 3 --------------') 
-        component_state_changed_callback({'power_state': PowerState.OFF})
-        component_state_changed_callback({'power_state': PowerState.ON})
-        component_state_changed_callback({'power_state': PowerState.UNKNOWN})
-        component_state_changed_callback({'power_state': PowerState.OFF})
-
-        # test assert_next_call_with_keys
-        # the following assertion would fail
-        #component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.UNKNOWN})
-        # whereas these will pass
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.OFF})
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.ON})
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.UNKNOWN})
-        component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.OFF})
-        print('------------ done 4 --------------')
-
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-        print(component_state_changed_callback.get_next_call())
-
-
-
-        component_state_changed_callback.assert_next_call_with_keys([{'is_configured': True}])
+        component_state_changed_callback.assert_next_call_with_keys({'is_configured': False})
 
         station_component_manager.stop_communicating()
         communication_status_changed_callback.assert_next_call(

@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 from typing import Any
+import time
 
 import pytest
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
 from ska_low_mccs.testing.mock import MockCallable
+from ska_tango_base.executor import TaskStatus
 
 
 class TestStationBeamComponentManager:
@@ -24,7 +26,7 @@ class TestStationBeamComponentManager:
     def test_communication(
         self: TestStationBeamComponentManager,
         station_beam_component_manager: StationBeamComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         mock_station_off_fqdn: str,
         mock_station_on_fqdn: str,
     ) -> None:
@@ -35,7 +37,7 @@ class TestStationBeamComponentManager:
 
         :param station_beam_component_manager: the station beam
             component manager under test.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param mock_station_off_fqdn: the FQDN of a mock station in OFF
@@ -44,50 +46,50 @@ class TestStationBeamComponentManager:
             state.
         """
         station_beam_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         station_beam_component_manager.station_fqdn = mock_station_off_fqdn
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         station_beam_component_manager.station_fqdn = mock_station_on_fqdn
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         station_beam_component_manager.station_fqdn = None
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_beam_component_manager.communication_status
+            station_beam_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
@@ -187,7 +189,14 @@ class TestStationBeamComponentManager:
         :param station_beam_component_manager: the station beam component class object under
             test.
         """
-        beam_id = 1
+        station_beam_component_manager.start_communicating()
+        assert station_beam_component_manager.communication_state == CommunicationStatus.ESTABLISHED
+        import pdb
+        pdb.set_trace()
+        station_beam_component_manager.on()
+        #assert station_beam_component_manager.power_state == PowerState.ON
+
+        beam_id = 2
         station_id = 1
         update_rate = 3.14
         channels = [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]]
@@ -207,9 +216,15 @@ class TestStationBeamComponentManager:
 
         config_dict = json.dumps(config)
 
+        # Queueing of configure works fine but _configure is never executed.
+        # This test passes if _configure is called directly.
+        # Probably failing due to comms/power states.
         task_status, response = station_beam_component_manager.configure(config_dict)
-        print(task_status, response)
+        assert task_status == TaskStatus.QUEUED
+        assert response == "Task queued"
+        time.sleep(0.1)
 
+        # Not getting into _configure where the following are set.
         assert station_beam_component_manager.beam_id == beam_id
         assert station_beam_component_manager.station_id == station_id
         assert station_beam_component_manager.update_rate == pytest.approx(update_rate)

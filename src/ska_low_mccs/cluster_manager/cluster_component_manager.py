@@ -34,7 +34,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
         self: ClusterSimulatorComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Optional[
+        communication_state_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
@@ -46,7 +46,7 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
             cluster_simulator,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -173,7 +173,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         logger: logging.Logger,
         max_workers: int,
         initial_simulation_mode: SimulationMode,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -183,7 +183,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         :param max_workers: the maximum number of workers
         :param initial_simulation_mode: the simulation mode that the
             component should start in
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -192,7 +192,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         cluster_simulator = ClusterSimulatorComponentManager(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         super().__init__(None, cluster_simulator, initial_simulation_mode)

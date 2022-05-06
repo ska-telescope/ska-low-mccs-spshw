@@ -57,9 +57,7 @@ class MccsAPIU(SKABaseDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         self._power_state_lock = threading.RLock()
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
         super().init_device()
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2")
 
     def _init_state_model(self: MccsAPIU) -> None:
         super()._init_state_model()
@@ -80,7 +78,7 @@ class MccsAPIU(SKABaseDevice):
             len(self.AntennaFQDNs),
             self.logger,
             self._max_workers,
-            self._component_communication_status_changed,
+            self._component_communication_state_changed,
             self.component_state_changed_callback,
         )
 
@@ -134,9 +132,9 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_status_changed(
+    def _component_communication_state_changed(
         self: MccsAPIU,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -145,7 +143,7 @@ class MccsAPIU(SKABaseDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -154,12 +152,12 @@ class MccsAPIU(SKABaseDevice):
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
 
-        action = action_map[communication_status]
+        action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
     def component_state_changed_callback(

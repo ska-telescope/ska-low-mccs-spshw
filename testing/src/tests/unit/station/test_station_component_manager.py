@@ -28,7 +28,7 @@ class TestStationComponentManager:
     def test_communication(
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         is_configured_changed_callback: MockCallable,
     ) -> None:
         """
@@ -36,44 +36,44 @@ class TestStationComponentManager:
 
         :param station_component_manager: the station component manager
             under test.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param is_configured_changed_callback: callback to be called
             when whether the station is configured changes
         """
         assert (
-            station_component_manager.communication_status
+            station_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
 
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            station_component_manager.communication_status
+            station_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         is_configured_changed_callback.assert_next_call(False)
 
         station_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
         assert (
-            station_component_manager.communication_status
+            station_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
 
     def test_power_commands(
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         apiu_proxy: unittest.mock.Mock,
         tile_fqdns: list[str],
         tile_proxies: list[unittest.mock.Mock],
@@ -85,7 +85,7 @@ class TestStationComponentManager:
 
         :param station_component_manager: the station component manager
             under test.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param apiu_proxy: proxy to this station's APIU device
@@ -97,10 +97,10 @@ class TestStationComponentManager:
             antenna devices
         """
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_last_call(
+        communication_state_changed_callback.assert_last_call(
             CommunicationStatus.ESTABLISHED
         )
         station_component_manager.on()
@@ -170,7 +170,7 @@ class TestStationComponentManager:
         station_id: int,
         tile_fqdns: list[str],
         logger: logging.Logger,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -185,15 +185,15 @@ class TestStationComponentManager:
         :param tile_fqdns: FQDNs of the Tango devices that manage this
             station's tiles.
         :param logger: a logger
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
 
@@ -215,7 +215,7 @@ class TestStationComponentManager:
         tile_fqdns: list[str],
         logger: logging.Logger,
         pointing_delays: unittest.mock.Mock,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         component_power_mode_changed_callback: MockCallable,
     ) -> None:
         """
@@ -231,7 +231,7 @@ class TestStationComponentManager:
             station's tiles.
         :param logger: a logger
         :param pointing_delays: some mock pointing delays
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_power_mode_changed_callback: callback to be
@@ -239,10 +239,10 @@ class TestStationComponentManager:
         """
         station_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
 
@@ -276,7 +276,7 @@ class TestStationComponentManager:
     def test_configure(
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         is_configured_changed_callback: MockCallable,
         station_id: int,
     ) -> None:
@@ -289,7 +289,7 @@ class TestStationComponentManager:
 
         :param station_component_manager: the station component manager
             under test.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param is_configured_changed_callback: callback to be called
@@ -297,10 +297,10 @@ class TestStationComponentManager:
         :param station_id: the id of the station
         """
         station_component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
 

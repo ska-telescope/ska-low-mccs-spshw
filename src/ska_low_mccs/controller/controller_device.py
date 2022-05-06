@@ -16,7 +16,7 @@ import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
-from tango.server import command, device_property
+from tango.server import attribute, command, device_property
 
 import ska_low_mccs.release as release
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
@@ -51,8 +51,10 @@ class MccsController(SKABaseDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         self._power_state_lock = threading.RLock()
-        self._communication_status: Optional[CommunicationStatus] = None
+        self._communication_state: Optional[CommunicationStatus] = None
         self._component_power_state: Optional[PowerState] = None
+        self._mccs_build_state = release.get_release_info()
+        self._mccs_version_id = release.version
         super().init_device()
 
     def _init_state_model(self: MccsController) -> None:
@@ -84,7 +86,7 @@ class MccsController(SKABaseDevice):
             self.MccsStationBeams,
             self.logger,
             self._max_workers,
-            self._communication_status_changed_callback,
+            self._communication_state_changed_callback,
             self._component_state_changed_callback,
         )
 
@@ -127,17 +129,17 @@ class MccsController(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._device._build_state = release.get_release_info()
-            self._device._version_id = release.version
+            self._device._mccs_build_state = release.get_release_info()
+            self._device._mccs_version_id = release.version
 
             return (ResultCode.OK, "Initialisation complete")
 
     # ----------
     # Callbacks
     # ----------
-    def _communication_status_changed_callback(
+    def _communication_state_changed_callback(
         self: MccsController,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -146,7 +148,7 @@ class MccsController(SKABaseDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         # TODO: This method and the next are implemented to work around
@@ -164,11 +166,11 @@ class MccsController(SKABaseDevice):
         # comms is established. This leads to problems.
         # Eventually we should figure out a more elegant way to handle
         # this.
-        self._communication_status = communication_status
+        self._communication_state = communication_state
 
-        if communication_status == CommunicationStatus.DISABLED:
+        if communication_state == CommunicationStatus.DISABLED:
             self.op_state_model.perform_action("component_disconnected")
-        elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
+        elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
             self.op_state_model.perform_action("component_unknown")
         elif self._component_power_state == PowerState.OFF:
             self.op_state_model.perform_action("component_off")
@@ -182,7 +184,7 @@ class MccsController(SKABaseDevice):
             pass  # wait for a power mode update
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
     def _component_state_changed_callback(
@@ -210,7 +212,7 @@ class MccsController(SKABaseDevice):
                 power_state = state_change.get("power_state")
                 self.component_manager.power_state = power_state
 
-        if self._communication_status == CommunicationStatus.ESTABLISHED:
+        if self._communication_state == CommunicationStatus.ESTABLISHED:
             self.op_state_model.perform_action(action_map[power_state])
 
         if "health_state" in state_change.keys():
@@ -218,17 +220,6 @@ class MccsController(SKABaseDevice):
             if self._health_state != health:
                 self._health_state = cast(HealthState, health)
                 self.push_change_event("healthState", health)
-
-        if "fault" in state_change.keys():
-            is_fault = state_change.get("fault")
-            if is_fault:
-                self.op_state_model.perform_action("component_fault")
-                self._health_model.component_fault(True)
-            else:
-                self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_state]
-                )
-                self._health_model.component_fault(False)
 
         if "station_health_state" in state_change.keys():
             station_health = state_change.get("station_health_state")
@@ -242,9 +233,37 @@ class MccsController(SKABaseDevice):
             subarray_beam_health = state_change.get("subarray_beam_health_state")
             self._health_model.subarray_beam_health_changed(fqdn, subarray_beam_health)
 
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                self.op_state_model.perform_action(
+                    action_map[self.component_manager.power_state]
+                )
+                self._health_model.component_fault(False)
+
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="str")
+    def buildState(self: MccsController) -> str:
+        """
+        Read the Build State of the device.
+
+        :return: the build state of the device
+        """
+        return f"MCCS build state: {self._mccs_build_state}"
+
+    @attribute(dtype="str")
+    def versionId(self: MccsController) -> str:
+        """
+        Read the Version Id of the device.
+
+        :return: the version id of the device
+        """
+        return self._mccs_version_id
 
     # --------
     # Commands

@@ -29,7 +29,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
         self: PasdBusSimulatorComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         _simulator: Optional[PasdBusSimulator] = None,
         # TODO callbacks for changes to antenna power, smartbox power, etc
@@ -39,7 +39,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
 
         :param logger: a logger for this object to use
         :param max_workers: no of worker threads
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -56,7 +56,7 @@ class PasdBusSimulatorComponentManager(ObjectComponentManager):
             pasd_bus_simulator,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
             None,
         )
@@ -163,7 +163,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         _simulator_component_manager: Optional[PasdBusSimulatorComponentManager] = None,
     ) -> None:
@@ -176,7 +176,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param max_workers: no of worker threads
         :param initial_simulation_mode: the simulation mode that the
             component should start in
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -190,7 +190,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
             or PasdBusSimulatorComponentManager(
                 logger,
                 max_workers,
-                communication_status_changed_callback,
+                communication_state_changed_callback,
                 component_state_changed_callback,
             )
         )

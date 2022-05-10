@@ -1562,7 +1562,7 @@ class MccsTile(SKABaseDevice):
         >>>    }
         """
         handler = self.get_command_object("GetArpTable")
-        unique_id, return_code = handler()
+        return_code, unique_id = handler()
         return ([return_code], [unique_id])
 
     class SetChanneliserTruncationCommand(FastCommand):
@@ -1570,7 +1570,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SetChanneliserTruncationCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1582,11 +1582,9 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "SetChanneliserTruncation command completed OK"
-
         def do(  # type: ignore[override]
             self: MccsTile.SetChanneliserTruncationCommand, argin: list[int]
-        ) -> Tuple[ResultCode, str]:
+        ) -> Any:
             """
             Implement :py:meth:`.MccsTile.SetChanneliserTruncation` commands.
 
@@ -1607,8 +1605,7 @@ class MccsTile(SKABaseDevice):
             arr = np.array(argin[2:])
             np.reshape(arr, (nb_chan, nb_freq))
 
-            self._component_manager.set_channeliser_truncation(arr)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.set_channeliser_truncation(arr)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SetChanneliserTruncation(
@@ -1638,8 +1635,8 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("SetChanneliserTruncation", argin)
         """
         handler = self.get_command_object("SetChanneliserTruncation")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     class SetBeamFormerRegionsCommand(FastCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""

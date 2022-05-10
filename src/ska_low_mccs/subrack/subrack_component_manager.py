@@ -232,7 +232,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            SubrackSimulator(),
+            SubrackSimulator(component_state_changed_callback),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -455,24 +455,24 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
 
-    # def component_power_mode_changed(
-    #     self: SubrackComponentManager, power_mode: PowerState
-    # ) -> None:
-    #     """
-    #     Handle a change in power mode of the hardware.
+    def component_power_state_changed(
+        self: SubrackComponentManager, power_state: PowerState
+    ) -> None:
+        """
+        Handle a change in power state of the hardware.
 
-    #     :param power_mode: the power mode of the hardware
-    #     """
-    #     if power_mode == PowerState.UNKNOWN:
-    #         self._update_tpm_power_states(
-    #             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-    #         )
-    #     elif power_mode == PowerState.OFF:
-    #         self._update_tpm_power_states(
-    #             [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
-    #         )
+        :param power_state: the power state of the hardware
+        """
+        if power_state == PowerState.UNKNOWN:
+            self._update_tpm_power_states(
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            )
+        elif power_state == PowerState.OFF:
+            self._update_tpm_power_states(
+                [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+            )
 
-    #     super().component_power_mode_changed(power_mode)
+        super().component_power_state_changed(power_state)
 
     @property
     def simulation_mode(self: SubrackComponentManager) -> SimulationMode:

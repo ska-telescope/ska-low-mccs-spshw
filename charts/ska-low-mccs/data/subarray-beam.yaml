@@ -1,14 +1,14 @@
 name: "subarraybeam-{{.Release.Name}}"
 function: ska-low-mccs-subarraybeam
 domain: ska-low-mccs
-instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
+instances: ["subarraybeam-01", "subarraybeam-02", "subarraybeam-03", "subarraybeam-04"]
 entrypoints:
   - name: "subarraybeam.MccsSubarrayBeam"
     path: "/app/src/ska_low_mccs/subarray_beam/subarray_beam_device.py"
 server: 
   name: "MccsSubarrayBeam"
   instances:
-    - name: "subarraybeam_01"
+    - name: "subarraybeam-01"
       classes:
       - name: "MccsSubarrayBeam"
         devices:
@@ -20,7 +20,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "subarraybeam_02"
+    - name: "subarraybeam-02"
       classes:
       - name: "MccsSubarrayBeam"
         devices:
@@ -32,7 +32,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "subarraybeam_03"
+    - name: "subarraybeam-03"
       classes:
       - name: "MccsSubarrayBeam"
         devices:
@@ -44,7 +44,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "subarraybeam_04"
+    - name: "subarraybeam-04"
       classes:
       - name: "MccsSubarrayBeam"
         devices:

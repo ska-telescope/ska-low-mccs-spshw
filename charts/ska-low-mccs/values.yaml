@@ -55,19 +55,19 @@ deviceServers:
     file: "data/controller.yaml"
   subarrays:
     # subarray instances have to be 0-padded to two digits
-    instances: ["subarray_01", "subarray_02"]
+    instances: ["subarray-01", "subarray-02"]
     file: "data/subarray.yaml"
   stations:
     # station instances have to be 0-padded to three digits
-    instances: ["station_001", "station_002"]
+    instances: ["station-001", "station-002"]
     file: "data/station.yaml"
   subracks:
     # subrack instances have to be 0-padded to two digits
-    instances: ["subrack_01"]
+    instances: ["subrack-01"]
     file: "data/subrack.yaml"
   tiles:
     # tile instances have to be 0-padded to four digits
-    instances: ["tile_0001", "tile_0002", "tile_0003", "tile_0004"]
+    instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004"]
     file: "data/tile.yaml"
     resources:
       requests:
@@ -76,20 +76,20 @@ deviceServers:
         memory: 512Mi
   apius:
     # apiu instances have to be 0-padded to three digits
-    instances: ["apiu_001", "apiu_002"]
+    instances: ["apiu-001", "apiu-002"]
     file: "data/apiu.yaml"
   antennas:
     # antenna instances have to be 0-padded to six digits
-    instances: ["antenna_000001", "antenna_000002", "antenna_000003", "antenna_000004",
-                "antenna_000005", "antenna_000006", "antenna_000007", "antenna_000008"]
+    instances: ["antenna-000001", "antenna-000002", "antenna-000003", "antenna-000004",
+                "antenna-000005", "antenna-000006", "antenna-000007", "antenna-000008"]
     file: "data/antenna.yaml"     
   station-beams:
     # beam instances have to be 0-padded to three digits
-    instances: ["beam_01", "beam_02", "beam_03", "beam_04"]
+    instances: ["beam-01", "beam-02", "beam-03", "beam-04"]
     file: "data/station-beam.yaml"
   subarray-beams:
     # subarray beam instances have to be 0-padded to two digits
-    instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
+    instances: ["subarraybeam-01", "subarraybeam-02", "subarraybeam-03", "subarraybeam-04"]
     file: "data/subarray-beam.yaml"
 
 mccs_cli:

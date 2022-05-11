@@ -1,14 +1,14 @@
 name: "station-{{.Release.Name}}"
 function: ska-low-mccs-station
 domain: ska-low-mccs
-instances: ["station_001", "station_002"]
+instances: ["station-001", "station-002"]
 entrypoints:
   - name: "station.MccsStation"
     path: "/app/src/ska_low_mccs/station/station_device.py"
 server: 
   name: "MccsStation"
   instances:
-    - name: "station_001"
+    - name: "station-001"
       classes:
       - name: "MccsStation"
         devices:
@@ -33,7 +33,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "station_002"
+    - name: "station-002"
       classes:
       - name: "MccsStation"
         devices:

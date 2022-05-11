@@ -259,12 +259,12 @@ def initial_are_antennas_on(
 @pytest.fixture()
 def mock_apiu(initial_are_antennas_on: list[bool]) -> unittest.mock.Mock:
     """
-    Fixture that provides a mock MccsApiu device.
+    Fixture that provides a mock MccsAPIU device.
 
     :param initial_are_antennas_on: whether each antenna is initially on
         in the APIU
 
-    :return: a mock MccsApiu device.
+    :return: a mock MccsAPIU device.
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.OFF)
@@ -283,7 +283,7 @@ def mock_tile() -> unittest.mock.Mock:
 
     This has no tile-specific functionality at present.
 
-    :return: a mock MccsApiu device.
+    :return: a mock MccsAPIU device.
     """
     builder = MockDeviceBuilder()
     return builder()
@@ -299,7 +299,7 @@ def initial_mocks(
     """
     Return a dictionary of pre-registered device proxy mocks.
 
-    The default fixture is overridden here to provide an MccsApiu mock
+    The default fixture is overridden here to provide an MccsAPIU mock
     and an MccsTile mock..
 
     :param apiu_fqdn: FQDN of the APIU device

@@ -33,7 +33,7 @@ spec:
     - name: TANGO_HOST
       value: {{ $tango_host }}
   containers:
-  - name: mccs_cli
+  - name: mccs-cli
     image: "{{ .Values.low_mccs.image.registry }}/{{ .Values.low_mccs.image.image }}:{{ .Values.low_mccs.image.tag }}"
     imagePullPolicy: {{ .Values.low_mccs.image.pullPolicy }}
     command:

@@ -75,6 +75,7 @@ class PowerSupplyProxyComponentManager(MccsComponentManager):
         self: PowerSupplyProxyComponentManager,
         supplied_power_state: Optional[PowerState],
     ) -> None:
+        print("here03", supplied_power_state)
         if self._supplied_power_state != supplied_power_state:
             self._supplied_power_state = supplied_power_state
             if self._supplied_power_state is not None:
@@ -132,6 +133,7 @@ class PowerSupplyProxySimulator(
 
             :param supplied_power_state_changed: set the new power state
             """
+            print("here09")
             self._supplied_power_state_changed_callback = supplied_power_state_changed
             if self._supplied_power_state_changed_callback is not None:
                 self._supplied_power_state_changed_callback(self._supplied_power_state)
@@ -188,6 +190,9 @@ class PowerSupplyProxySimulator(
             Callable[[dict[str, Any]], None]
         ] = None,
         initial_supplied_power_state: PowerState = PowerState.OFF,
+        component_power_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -202,7 +207,9 @@ class PowerSupplyProxySimulator(
         :param initial_supplied_power_state: the initial supplied power
             mode of the simulated component
         """
+        print("here01")
         self._component_state_changed_callback = component_state_changed_callback
+        self._component_power_state_changed_callback = component_power_state_changed_callback
         self._supplied_power_state = PowerState.OFF
         super().__init__(
             self._Component(initial_supplied_power_state),
@@ -214,7 +221,9 @@ class PowerSupplyProxySimulator(
 
     def start_communicating(self: PowerSupplyProxySimulator) -> None:
         """Establish communication with the component, then start monitoring."""
+        print("here06.1")
         super().start_communicating()
+        print("here066")
         cast(
             PowerSupplyProxySimulator._Component, self._component
         ).set_component_state_changed_callback(self._supplied_power_state_changed)
@@ -249,7 +258,10 @@ class PowerSupplyProxySimulator(
         self: PowerSupplyProxySimulator,
         supplied_power_state: PowerState,
     ) -> None:
+        print("here08", supplied_power_state)
         self.update_supplied_power_state(supplied_power_state)
+        if self._component_power_state_changed_callback is not None:
+                self._component_power_state_changed_callback(supplied_power_state)
 
 
 class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
@@ -386,6 +398,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
 
         :param power_state: the power state of the hardware
         """
+        print("here04", power_state)
         if power_state == PowerState.OFF:
             self._hardware_component_manager.stop_communicating()
         elif power_state == PowerState.ON:
@@ -422,10 +435,11 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> tuple[TaskStatus, str]:
         """
-        Tell the upstream power supply proxy to turn the hardware off.
+        Tell the upstream power supply proxy to turn the hardware on.
 
         :return: a task status and message.
         """
+        print("on1")
         with self._power_state_lock:
             self._target_power_state = PowerState.ON
         self._review_power()
@@ -436,6 +450,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
     def _review_power(
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> ResultCode | None:
+        print("on2", self.power_state, self._target_power_state)
         with self._power_state_lock:
             if self._target_power_state is None:
                 return None

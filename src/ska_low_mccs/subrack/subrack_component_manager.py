@@ -375,13 +375,13 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component_state_changed_callback,
             # self._tpm_power_changed,
         )
-
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
             max_workers,
             self._power_supply_communication_state_changed,
             component_state_changed_callback,
             _initial_power_state,
+            self.component_power_state_changed,
         )
         super().__init__(
             hardware_component_manager,
@@ -463,6 +463,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param power_state: the power state of the hardware
         """
+        print("here05", power_state)
         if power_state == PowerState.UNKNOWN:
             self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
@@ -525,7 +526,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
+            print("A")
             super().on()
+            print("B")
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")

@@ -293,22 +293,22 @@ class TestMccsPasdBus:
             (
                 "GetFndhInfo",
                 "get_fndh_info",
-                None,
-                None,
-                [{"foo": "bah"}, {"foo": "bah"}],
+                1,
+                1,
+                [True,True],
             ),
             (
                 "TurnFndhServiceLedOn",
-                "set_fndh_service_led_on",
-                None,
-                True,
+                "turn_fndh_service_led_on",
+                1,
+                1,
                 [True,True],
             ),
             (
                 "TurnFndhServiceLedOff",
-                "set_fndh_service_led_on",
-                None,
-                False,
+                "turn_fndh_service_led_off",
+                1,
+                1,
                 [True,True],
             ),
             (
@@ -340,20 +340,6 @@ class TestMccsPasdBus:
                 [True, True],
             ),
             (
-                "TurnSmartboxServiceLedOn",
-                "turn_smartbox_service_led_on",
-                1,
-                1,
-                [False, False],
-            ),
-            (
-                "TurnSmartboxServiceLedOn",
-                "turn_smartbox_service_led_on",
-                1,
-                1,
-                [True, True],
-            ),
-            (
                 "TurnSmartboxServiceLedOff",
                 "turn_smartbox_service_led_off",
                 1,
@@ -365,7 +351,6 @@ class TestMccsPasdBus:
                 "get_antenna_info",
                 1,
                 1,
-                #[{"foo": "bah"}, {"foo": "bah"}],
                 [True, True],
             ),
             (
@@ -435,7 +420,7 @@ class TestMccsPasdBus:
         #if component_manager_method_argin is None:
          #   method_mock.assert_called_once_with()
         #else:
-         #   method_mock.assert_called_once_with(component_manager_method_argin)
+            #method_mock.assert_called_once_with(component_manager_method_argin)
 
         assert command_return[0] == ResultCode.QUEUED
         assert command_return[1][0].split("_")[-1] == device_command

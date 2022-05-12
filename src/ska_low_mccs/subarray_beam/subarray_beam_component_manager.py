@@ -50,7 +50,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             SubarrayBeam(
                 logger,
                 max_workers,
-                communication_status_changed_callback,
+                communication_state_changed_callback,
                 component_state_changed_callback,
             ),
             logger,

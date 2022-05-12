@@ -600,9 +600,7 @@ class TileComponentManager(MccsComponentManager):
         :param communication_state: the status of communication with
             the antenna via the APIU.
         """
-        self._tile_orchestrator.update_subrack_communication_state(
-            communication_state
-        )
+        self._tile_orchestrator.update_subrack_communication_state(communication_state)
 
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,

@@ -119,7 +119,6 @@ class TestMccsPasdBus:
             "patch": patched_device_class,
         }
 
-    @pytest.mark.skip(reason="callback is not being called")
     def test_healthState(
         self: TestMccsPasdBus,
         device_under_test: MccsDeviceProxy,
@@ -145,6 +144,7 @@ class TestMccsPasdBus:
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
+        #TODO: call callback to update health state
         #mock_component_manager._component_state_changed_callback(
          #   {"health_state": HealthState.OK}
         #)

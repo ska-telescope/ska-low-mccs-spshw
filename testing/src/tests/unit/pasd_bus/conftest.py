@@ -27,6 +27,7 @@ from ska_low_mccs.pasd_bus import (
     PasdBusSimulatorComponentManager,
 )
 from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 @pytest.fixture()
 def max_workers() -> int:
@@ -187,9 +188,9 @@ def mock_pasd_bus_simulator(
 def pasd_bus_simulator_component_manager(
     mock_pasd_bus_simulator: unittest.mock.Mock,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_state_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> PasdBusSimulatorComponentManager:
     """
     Return a PaSD bus simulator component manager.
@@ -211,9 +212,9 @@ def pasd_bus_simulator_component_manager(
     """
     return PasdBusSimulatorComponentManager(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_state_changed_callback,
-        component_fault_callback,
+        component_state_changed_callback,
         _simulator=mock_pasd_bus_simulator,
     )
 
@@ -222,9 +223,9 @@ def pasd_bus_simulator_component_manager(
 def pasd_bus_component_manager(
     pasd_bus_simulator_component_manager: PasdBusSimulatorComponentManager,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_fault_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> PasdBusComponentManager:
     """
     Return a PaSD bus component manager.
@@ -233,22 +234,21 @@ def pasd_bus_component_manager(
         PaSD bus simulator component manager to be used by the PaSD bus
         component manager
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: number of worker threads
     :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be called when the
+        component state changes
 
     :return: a PaSD bus component manager
     """
     return PasdBusComponentManager(
         SimulationMode.TRUE,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_state_changed_callback,
-        component_fault_callback,
+        component_state_changed_callback,
         _simulator_component_manager=pasd_bus_simulator_component_manager,
     )
 

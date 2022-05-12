@@ -145,9 +145,19 @@ class TestStationComponentManager:
         :param component_power_state_changed_callback: callback to be
             called when the component power mode changes
         """
+        print("apiu power mode = ", station_component_manager._apiu_proxy._power_state)
         station_component_manager.start_communicating()
+        time.sleep(1) # wait for events to come through
+        print("now apiu power mode = ", station_component_manager._apiu_proxy._power_state)
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
         #component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
-        component_state_changed_callback.assert_next_call_with_keys([{"power_state": PowerState.UNKNOWN}])
+        component_state_changed_callback.assert_next_call_with_keys({"power_state": PowerState.UNKNOWN})
         assert station_component_manager.power_state == PowerState.UNKNOWN
 
         time.sleep(0.1)  # to let the UNKNOWN events subside

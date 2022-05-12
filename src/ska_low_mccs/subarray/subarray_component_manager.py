@@ -881,6 +881,7 @@ class SubarrayComponentManager(
 
         This method returns immediately after it is submitted for execution.
 
+        :param argin: list of requested segments.
         :param task_callback: Update task state. Defaults to None.
 
         :return: Task status and response message.

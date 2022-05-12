@@ -143,7 +143,6 @@ class TestSubarrayComponentManager:
             subarray's resources change
         :param component_state_changed_callback: Callback to call when the component's state changes.
         """
-        # TODO: There's a race condition in this test somewhere. It will sporadically fail when callbacks are called in a different order.
         subarray_component_manager.start_communicating()
         component_state_changed_callback.assert_next_call(
             {"power_state": PowerState.ON}
@@ -382,6 +381,7 @@ class TestSubarrayComponentManager:
         time.sleep(0.1)
         component_state_changed_callback.assert_next_calls_with_keys(expected_arguments)
 
+
         with pytest.raises(
             ConnectionError, match="Component is not turned on."
         ):
@@ -602,7 +602,6 @@ class TestSubarrayComponentManager:
         mock_subarray_beam_off.Configure.assert_not_called()
         mock_subarray_beam_on.Configure.assert_next_call(json.dumps({}))
         
-        #component_state_changed_callback.assert_next_call({"configured_changed": False})
         expected_arguments = {"configured_changed": False}
         time.sleep(0.1)
         component_state_changed_callback.assert_in_deque(expected_arguments)

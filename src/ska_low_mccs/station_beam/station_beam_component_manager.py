@@ -411,8 +411,6 @@ class StationBeamComponentManager(MccsComponentManager):
         :param antenna_weights: weights to use for the antennas
         :param phase_centre: the phase centre
         :param task_callback: Update task state, defaults to None
-
-        :return: a result code
         """
         print("In Config")
         if task_callback is not None:

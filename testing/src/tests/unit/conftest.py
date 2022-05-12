@@ -153,7 +153,7 @@ def mock_callback_deque_factory(
 
 
 @pytest.fixture()
-def device_health_state_changed_callback(
+def device_state_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """

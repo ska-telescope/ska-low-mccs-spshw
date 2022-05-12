@@ -13,6 +13,7 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
+import pytest_mock
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
@@ -56,6 +57,14 @@ def test_mode() -> TestMode:
     """
     return TestMode.TEST
 
+@pytest.fixture
+def unique_id() -> str:
+    """
+    Return a unique ID used to test Tango layer infrastructure.
+
+    :return: a unique ID
+    """
+    return "a unique id"
 
 @pytest.fixture()
 def subrack_fqdn() -> str:
@@ -146,19 +155,19 @@ def mock_subrack_device_proxy(
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for when the state of a component changes.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the state of a
         component changes.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -426,9 +435,30 @@ def tile_component_manager(
         component_state_changed_callback,
     )
 
+@pytest.fixture()
+def mock_component_manager(
+    mocker: pytest_mock.mocker,  # type: ignore[valid-type]
+    unique_id: str,
+) -> unittest.mock.Mock:
+    """
+    Return a mock component manager.
+
+    The mock component manager is a simple mock.
+
+    :param mocker: pytest wrapper for unittest.mock
+    :param unique_id: a unique id used to check Tango layer functionality
+
+    :return: a mock component manager
+    """
+    mock = mocker.Mock()  # type: ignore[attr-defined]
+    mock.return_value = unique_id, ResultCode.QUEUED
+
+    return mock
 
 @pytest.fixture()
-def patched_tile_device_class() -> MccsTile:
+def patched_tile_device_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 
@@ -450,6 +480,24 @@ def patched_tile_device_class() -> MccsTile:
         implementation dependent. If an implementation change breaks
         this, we only want to fix it in this one place.
         """
+
+        def create_component_manager(
+            self: PatchedTileDevice,
+        ) -> unittest.mock.Mock:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            # self._communication_state: Optional[CommunicationStatus] = None
+
+            # mock_component_manager._communication_state_changed_callback = (
+            #     self._communication_state_changed_callback
+            # )
+            mock_component_manager.component_state_changed_callback = (
+                self.component_state_changed_callback
+            )
+            return mock_component_manager
 
         @command()
         def MockTpmOff(self: PatchedTileDevice) -> None:
@@ -474,6 +522,6 @@ def patched_tile_device_class() -> MccsTile:
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
-            self.component_manager._tpm_power_state_changed(PowerState.ON)
+            mock_component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice

@@ -167,6 +167,8 @@ class TestSubarrayBeam:
 
         if isinstance(subarray_beam, SubarrayBeam):
 
+            #TODO: assert that callback is called
+
             #component_state_changed_callback.assert_in_deque({"configured_changed": False})
             
             subarray_beam.configure(

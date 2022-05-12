@@ -555,7 +555,6 @@ class MockCallableDeque(MockCallable):
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
-        print(call_arguments)
         if expected_argument in call_arguments:
             # Found the argument in the deque so we remove the entry.
             self._remove_element(call_arguments.index(expected_argument))
@@ -579,7 +578,6 @@ class MockCallableDeque(MockCallable):
         """
         # Extract a list of all the call arguments currently in the deque.
         call_arguments = [queue_item.call_args[0][0] for queue_item in self._queue]
-        print(call_arguments)
         indices_to_remove = []
         for actual_argument in call_arguments:
             try:
@@ -627,11 +625,8 @@ class MockCallableDeque(MockCallable):
         :return: actual_state_change: matching state_change dictionary
         :return: index: index of the call found in the queue
         """
-        print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ", self._queue)
         for queue_item in self._queue:
-            print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ2", queue_item)
             args, kwargs = queue_item.call_args
-            print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ3", args, kwargs)
             (actual_state_change,) = args
             actual_state_change_keys = tuple(actual_state_change.keys())
             device_fqdn = None if kwargs == {} else kwargs["fqdn"]

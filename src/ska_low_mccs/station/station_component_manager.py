@@ -164,7 +164,8 @@ class StationComponentManager(MccsComponentManager):
             functools.partial(self._device_communication_status_changed, apiu_fqdn),
             functools.partial(self.component_state_changed_callback, fqdn=apiu_fqdn),
         )
-        self._antenna_proxies = [
+        #self._antenna_proxies = [
+        self._antenna_proxies = {antenna_fqdn:
             DeviceComponentManager(
                 antenna_fqdn,
                 logger,
@@ -177,8 +178,10 @@ class StationComponentManager(MccsComponentManager):
                 ),
             )
             for antenna_fqdn in antenna_fqdns
-        ]
-        self._tile_proxies = [
+        }
+        #]
+        #self._tile_proxies = [
+        self._tile_proxies = {tile_fqdn:
             _TileProxy(
                 tile_fqdn,
                 station_id,
@@ -191,7 +194,8 @@ class StationComponentManager(MccsComponentManager):
                 ),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
-        ]
+        }
+        #]
 
         super().__init__(
             logger,
@@ -205,18 +209,18 @@ class StationComponentManager(MccsComponentManager):
         super().start_communicating()
 
         self._apiu_proxy.start_communicating()
-        for tile_proxy in self._tile_proxies:
+        for tile_proxy in self._tile_proxies.values():
             tile_proxy.start_communicating()
-        for antenna_proxy in self._antenna_proxies:
+        for antenna_proxy in self._antenna_proxies.values():
             antenna_proxy.start_communicating()
 
     def stop_communicating(self: StationComponentManager) -> None:
         """Break off communication with the station components."""
         super().stop_communicating()
 
-        for antenna_proxy in self._antenna_proxies:
+        for antenna_proxy in self._antenna_proxies.values():
             antenna_proxy.stop_communicating()
-        for tile_proxy in self._tile_proxies:
+        for tile_proxy in self._tile_proxies.values():
             tile_proxy.stop_communicating()
         self._apiu_proxy.stop_communicating()
 
@@ -320,6 +324,42 @@ class StationComponentManager(MccsComponentManager):
             )
             self.update_component_state({"power_state": evaluated_power_state})
 
+    def set_power_state(
+        self: StationComponentManager,
+        power_state: PowerState,
+        fqdn: Optional[str] = None,
+    ) -> None:
+        """
+        Set the power_state of the component.
+
+        :param power_state: the value of PowerState to be set.
+        :param fqdn: the fqdn of the component's device.
+        """
+        # Note: this setter was, prior to V0.13 of the base classes, in 
+        # MccsComponentManager.update_component_power_mode
+        with self._power_state_lock:
+            if fqdn is None:
+                self.power_state = power_state
+            elif fqdn in self._antenna_proxies.keys():
+                self.antenna_proxies[fqdn].power_state = power_state
+            elif fqdn in self._tile_proxies.keys():
+                self.tile_proxies[fqdn].power_state = power_state
+            elif fqdn == self.APIUFQDN:
+                self.apiu_proxy.power_state = power_state
+            else:
+                raise ValueError(
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                )
+        
+    @property
+    def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
+        """
+        Return the power state lock of this component manager.
+
+        :return: the power state lock of this component manager.
+        """
+        return self._power_state_lock   
+
     def off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -349,7 +389,7 @@ class StationComponentManager(MccsComponentManager):
         :return: a result code
         """
         task_callback(status=TaskStatus.IN_PROGRESS)
-        results = [proxy.off() for proxy in self._tile_proxies] + [
+        results = [proxy.off() for proxy in self._tile_proxies.values()] + [
             self._apiu_proxy.off()
         ]  # Never mind antennas, turning off APIU suffices
 
@@ -420,7 +460,7 @@ class StationComponentManager(MccsComponentManager):
                 for power_state in self._tile_power_states.values()
             ):
                 results = []
-                for proxy in self._tile_proxies:
+                for proxy in self._tile_proxies.values():
                     result_code = proxy.on()
                     results.append(result_code)
                 if ResultCode.FAILED in results:
@@ -429,7 +469,7 @@ class StationComponentManager(MccsComponentManager):
                 power_state == PowerState.ON
                 for power_state in self._antenna_power_states.values()
             ):
-                results = [proxy.on() for proxy in self._antenna_proxies]
+                results = [proxy.on() for proxy in self._antenna_proxies.values()]
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
             return ResultCode.QUEUED
@@ -472,7 +512,7 @@ class StationComponentManager(MccsComponentManager):
         :return: a result code
         """
         results = [
-            tile_proxy.set_pointing_delay(delays) for tile_proxy in self._tile_proxies
+            tile_proxy.set_pointing_delay(delays) for tile_proxy in self._tile_proxies.values()
         ]
         if ResultCode.FAILED in results:
             return ResultCode.FAILED

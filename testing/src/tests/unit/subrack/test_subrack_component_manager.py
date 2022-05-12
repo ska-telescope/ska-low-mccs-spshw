@@ -672,54 +672,49 @@ class TestSubrackComponentManager:
         component_state_changed_callback.assert_next_call_with_keys(
             {"tpm_power_states": expected_tpm_power_states}
         )
+        time.sleep(0.2)
 
-        subrack_component_manager.on()
-        component_state_changed_callback.assert_in_deque(
+        subrack_component_manager._on()
+        component_state_changed_callback.assert_next_call_with_keys(
             {"power_state": PowerState.ON}
         )
         subrack_component_manager.power_state = PowerState.ON
         assert subrack_component_manager.power_state == PowerState.ON
-
+        
         expected_tpm_power_states = [PowerState.OFF] * SubrackData.TPM_BAY_COUNT
         component_state_changed_callback.assert_next_call_with_keys({"tpm_power_states": expected_tpm_power_states})
         subrack_component_manager._tpm_power_states = expected_tpm_power_states
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
         assert subrack_component_manager.turn_on_tpm(tpm_id)
-        expected_tpm_power_states[tpm_id - 1] = PowerState.ON
-        component_state_changed_callback.assert_next_call_with_keys({"tpm_power_states": expected_tpm_power_states})
         time.sleep(0.2)
+        expected_tpm_power_states[tpm_id - 1] = PowerState.ON
+        component_state_changed_callback.assert_in_deque({"tpm_power_states": expected_tpm_power_states})
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
-        # assert subrack_component_manager.turn_on_tpm(tpm_id)  is None
-        # component_state_changed_callback.assert_not_called()
-
-        # assert subrack_component_manager.turn_off_tpm(tpm_id) is True
         assert subrack_component_manager.turn_off_tpm(tpm_id)
+        time.sleep(0.2)
         expected_tpm_power_states[tpm_id - 1] = PowerState.OFF
         component_state_changed_callback.assert_next_call_with_keys({"tpm_power_states": expected_tpm_power_states})
-        time.sleep(0.2)
-        #subrack_component_manager._tpm_power_states = expected_tpm_power_states
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
-        # assert subrack_component_manager.turn_off_tpm(tpm_id) is None
-        # component_state_changed_callback.assert_not_called()
-        #assert subrack_component_manager.off() == ResultCode.OK
-        assert subrack_component_manager.off()
+        subrack_component_manager._off()
+        time.sleep(0.2)
         component_state_changed_callback.assert_next_call_with_keys(
             {"power_state": PowerState.OFF}
         )
         subrack_component_manager.power_state = PowerState.OFF
         assert subrack_component_manager.power_state == PowerState.OFF
-
+        time.sleep(0.3)
         expected_tpm_power_states = [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
-        component_state_changed_callback.assert_next_call_with_keys(
+        component_state_changed_callback.assert_in_deque(
             {"tpm_power_states": expected_tpm_power_states}
         )
+
         expected_tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         subrack_component_manager.stop_communicating()
         time.sleep(0.2)
-        component_state_changed_callback.assert_next_call_with_keys(
+        component_state_changed_callback.assert_in_deque(
             {"tpm_power_states": expected_tpm_power_states}
         )
 
@@ -747,5 +742,6 @@ class TestSubrackComponentManager:
         component_state_changed_callback.assert_in_deque(expected_arguments)
         subrack_component_manager.power_state = PowerState.ON
         subrack_component_manager.turn_on_tpm(1)
+        time.sleep(0.3)
         component_state_changed_callback.assert_next_call_with_keys({"progress": 0})
         component_state_changed_callback.assert_next_call_with_keys({"progress": 100})

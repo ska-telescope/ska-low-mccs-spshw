@@ -86,8 +86,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         """Break off communication with the subrack simulator."""
         if self.communication_state == CommunicationStatus.DISABLED:
             return
-
-        cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(None)
+        # cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(None)
         cast(SubrackSimulator, self._component).set_progress_changed_callback(None)
         super().stop_communicating()
 
@@ -463,7 +462,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param power_state: the power state of the hardware
         """
-        print("here05", power_state)
         if power_state == PowerState.UNKNOWN:
             self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
@@ -526,9 +524,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            print("A")
             super().on()
-            print("B")
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -579,7 +575,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
-                SwitchingSubrackComponentManager, self._hardware_component_manager
+                SwitchingSubrackComponentManager,
+                self._hardware_component_manager,
             ).turn_off_tpms()
             super().off()
         except Exception as ex:
@@ -759,6 +756,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 status=TaskStatus.COMPLETED,
                 result=f"Subrack TPM {tpm_id} turn on tpm task has completed",
             )
+            return
 
     def turn_on_tpms(
         self: SubrackComponentManager,

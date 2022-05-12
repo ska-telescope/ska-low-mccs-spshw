@@ -389,7 +389,6 @@ class StationBeamComponentManager(MccsComponentManager):
         print("Config queued")
         return task_status, response
 
-
     def _configure(
         self: StationBeamComponentManager,
         beam_id: int,
@@ -412,8 +411,6 @@ class StationBeamComponentManager(MccsComponentManager):
         :param antenna_weights: weights to use for the antennas
         :param phase_centre: the phase centre
         :param task_callback: Update task state, defaults to None
-
-        :return: a result code
         """
         print("In Config")
         if task_callback is not None:
@@ -433,8 +430,7 @@ class StationBeamComponentManager(MccsComponentManager):
                 status=TaskStatus.COMPLETED, result="Configure has completed."
             )
 
-        #return ResultCode.OK
-
+        # return ResultCode.OK
 
     def apply_pointing(
         self: StationBeamComponentManager, task_callback: Optional[Callable] = None

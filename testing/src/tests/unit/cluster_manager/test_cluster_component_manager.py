@@ -471,7 +471,7 @@ class TestClusterComponentManager:
             shadow pool) changes
         """
         cluster_component_manager.start_communicating()
-        component_state_changed_callback.assert_next_call(
+        component_state_changed_callback.assert_in_deque(
             {
                 "shadow_master_pool_node_healths": [
                     HealthState.OK,
@@ -483,7 +483,7 @@ class TestClusterComponentManager:
         )
 
         cluster_component_manager._component.simulate_node_failure(1, True)
-        component_state_changed_callback.assert_next_call(
+        component_state_changed_callback.assert_in_deque(
             {
                 "shadow_master_pool_node_healths": [
                     HealthState.FAILED,

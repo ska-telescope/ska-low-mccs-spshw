@@ -28,34 +28,34 @@ class TestAntennaApiuProxy:
     def test_communication(
         self: TestAntennaApiuProxy,
         antenna_apiu_proxy: _ApiuProxy,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test this antenna APIU proxy's communication with the antenna.
 
         :param antenna_apiu_proxy: a proxy to the antenna's APIU device.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert antenna_apiu_proxy.communication_status == CommunicationStatus.DISABLED
+        assert antenna_apiu_proxy.communication_state == CommunicationStatus.DISABLED
         antenna_apiu_proxy.start_communicating()
 
         # communication status is NOT_ESTABLISHED because establishing
         # a connection to MccsAPIU has been enqueued but not yet run
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
         # communication status is ESTABLISHED because MccsAPIU's state
         # is OFF, from which we can infer that the antenna is powered
         # off.
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
 
         antenna_apiu_proxy.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
 
@@ -160,27 +160,27 @@ class TestAntennaTileProxy:
     def test_communication(
         self: TestAntennaTileProxy,
         antenna_tile_proxy: _TileProxy,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test that this proxy refuses to try to invoke power commands on the antenna.
 
         :param antenna_tile_proxy: a proxy to the antenna's tile device.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert antenna_tile_proxy.communication_status == CommunicationStatus.DISABLED
+        assert antenna_tile_proxy.communication_state == CommunicationStatus.DISABLED
         antenna_tile_proxy.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
 
         antenna_tile_proxy.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
 
@@ -221,41 +221,41 @@ class TestAntennaComponentManager:
     def test_communication(
         self: TestAntennaComponentManager,
         antenna_component_manager: AntennaComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test communication between the antenna component manager and its antenna.
 
         :param antenna_component_manager: the antenna component manager
             under test
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
         assert (
-            antenna_component_manager.communication_status
+            antenna_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
 
         antenna_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (
-            antenna_component_manager.communication_status
+            antenna_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         antenna_component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
         assert (
-            antenna_component_manager.communication_status
+            antenna_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
 
@@ -336,7 +336,7 @@ class TestAntennaComponentManager:
     def test_eventual_consistency_of_on_command(
         self: TestAntennaComponentManager,
         antenna_component_manager: AntennaComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         apiu_antenna_id: int,
         mock_apiu_device_proxy: unittest.mock.Mock,
     ) -> None:
@@ -350,7 +350,7 @@ class TestAntennaComponentManager:
 
         :param antenna_component_manager: the antenna component manager
             under test
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param apiu_antenna_id: This antenna's position in its APIU
@@ -359,7 +359,7 @@ class TestAntennaComponentManager:
         """
         antenna_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         # communication_status_changed_callback.assert_next_call(

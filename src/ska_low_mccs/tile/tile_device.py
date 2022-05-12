@@ -96,7 +96,7 @@ class MccsTile(SKABaseDevice):
             self.TpmVersion,
             self.SubrackFQDN,
             self.SubrackBay,
-            self._component_communication_status_changed,
+            self._component_communication_state_changed,
             self.component_state_changed_callback,
         )
 
@@ -274,9 +274,9 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_status_changed(
+    def _component_communication_state_changed(
         self: MccsTile,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -285,7 +285,7 @@ class MccsTile(SKABaseDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -305,21 +305,21 @@ class MccsTile(SKABaseDevice):
         admin_mode = self.admin_mode_model.admin_mode
         power_state = self.component_manager.power_state
         self.logger.debug(
-            f"communication_status: {communication_status}, adminMode: {admin_mode}, powerMode: {power_state}"
+            f"communication_state: {communication_state}, adminMode: {admin_mode}, powerMode: {power_state}"
         )
-        action = action_map[communication_status]
-        # if communication_status == CommunicationStatus.ESTABLISHED:
+        action = action_map[communication_state]
+        # if communication_state == CommunicationStatus.ESTABLISHED:
         #     action = action_map_established[adminMode]
         if action is not None:
             self.op_state_model.perform_action(action)
         # if communication has been established, update power mode
-        if (communication_status == CommunicationStatus.ESTABLISHED) and (
+        if (communication_state == CommunicationStatus.ESTABLISHED) and (
             admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
         ):
             self._component_state_changed({"power_state": power_state})
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
     def component_state_changed_callback(
@@ -968,7 +968,7 @@ class MccsTile(SKABaseDevice):
             """
             Implement :py:meth:`.MccsTile.GetRegisterList` command functionality.
 
-            :return:a list of firmware & cpld registers
+            :return: a list of firmware & cpld registers
             """
             return self._component_manager.register_list
 
@@ -1562,7 +1562,7 @@ class MccsTile(SKABaseDevice):
         >>>    }
         """
         handler = self.get_command_object("GetArpTable")
-        unique_id, return_code = handler()
+        return_code, unique_id = handler()
         return ([return_code], [unique_id])
 
     class SetChanneliserTruncationCommand(FastCommand):
@@ -1570,7 +1570,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SetChanneliserTruncationCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1582,11 +1582,9 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "SetChanneliserTruncation command completed OK"
-
         def do(  # type: ignore[override]
             self: MccsTile.SetChanneliserTruncationCommand, argin: list[int]
-        ) -> Tuple[ResultCode, str]:
+        ) -> Any:
             """
             Implement :py:meth:`.MccsTile.SetChanneliserTruncation` commands.
 
@@ -1607,8 +1605,7 @@ class MccsTile(SKABaseDevice):
             arr = np.array(argin[2:])
             np.reshape(arr, (nb_chan, nb_freq))
 
-            self._component_manager.set_channeliser_truncation(arr)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.set_channeliser_truncation(arr)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SetChanneliserTruncation(
@@ -1638,8 +1635,8 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("SetChanneliserTruncation", argin)
         """
         handler = self.get_command_object("SetChanneliserTruncation")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        result_code, message = handler(argin)
+        return ([result_code], [message])
 
     class SetBeamFormerRegionsCommand(FastCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""

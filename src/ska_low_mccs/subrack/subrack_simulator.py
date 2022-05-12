@@ -32,6 +32,8 @@ import threading
 from time import sleep
 from typing import Any, Callable, Optional
 
+from ska_tango_base.control_model import PowerState
+
 from ska_low_mccs.component import ObjectComponent
 from ska_low_mccs.subrack.subrack_data import FanMode, SubrackData
 
@@ -96,6 +98,7 @@ class SubrackSimulator(ObjectComponent):
 
     def __init__(
         self: SubrackSimulator,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURES,
         board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
         board_current: float = DEFAULT_BOARD_CURRENT,
@@ -131,6 +134,8 @@ class SubrackSimulator(ObjectComponent):
             used. This is for testing purposes only, allowing us to
             inject our own bays instead of letting this simulator create
             them.
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         self._backplane_temperatures = list(backplane_temperatures)
         self._board_temperatures = list(board_temperatures)
@@ -140,7 +145,6 @@ class SubrackSimulator(ObjectComponent):
         self._power_supply_currents = list(power_supply_currents)
         self._power_supply_voltages = list(power_supply_voltages)
         self._power_supply_fan_speeds = list(power_supply_fan_speeds)
-
         self._tpm_data_lock = threading.RLock()
         with self._tpm_data_lock:
             self._tpm_data = _tpm_data or [
@@ -161,6 +165,9 @@ class SubrackSimulator(ObjectComponent):
         self._are_tpms_on_changed_callback: Optional[
             Callable[[dict[str, Any]], None]
         ] = None
+        self._component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = component_state_changed_callback
 
     def set_are_tpms_on_changed_callback(
         self: SubrackSimulator,
@@ -182,15 +189,15 @@ class SubrackSimulator(ObjectComponent):
 
     def set_progress_changed_callback(
         self: SubrackSimulator,
-        component_progress_changed_callback: Optional[Callable[[int], None]],
+        component_state_changed_callback: Optional[Callable[[int], None]],
     ) -> None:
         """
         Set the callback to be called when the progress value changes.
 
-        :param component_progress_changed_callback: callback to be called when the
+        :param component_state_changed_callback: callback to be called when the
             component command progress values changes
         """
-        self._component_progress_changed_callback = component_progress_changed_callback
+        self._component_state_changed_callback = component_state_changed_callback
 
     def check_tpm_power_states(self: SubrackSimulator) -> None:
         """Check TPM power states, calling the relevant callback."""
@@ -202,6 +209,15 @@ class SubrackSimulator(ObjectComponent):
 
         This is a helper method that calls the callback if it exists.
         """
+        tpm_power_states = [
+            PowerState.ON if tpm_data["is_on"] else PowerState.OFF
+            for tpm_data in self._tpm_data
+        ]
+        with self._tpm_data_lock:
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(
+                    {"tpm_power_states": tpm_power_states}
+                )
         if self._are_tpms_on_changed_callback is not None:
             self._are_tpms_on_changed_callback(self.are_tpms_on)
 
@@ -571,8 +587,7 @@ class SubrackSimulator(ObjectComponent):
 
         :return: whether each TPM is on
         """
-        with self._tpm_data_lock:
-            return [tpm_data["is_on"] for tpm_data in self._tpm_data]
+        return [tpm_data["is_on"] for tpm_data in self._tpm_data]
 
     def turn_off_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
         """
@@ -603,8 +618,8 @@ class SubrackSimulator(ObjectComponent):
             return
 
         for i in range(1, 5):
-            if self._component_progress_changed_callback:
-                self._component_progress_changed_callback(i * 20)
+            if self._component_state_changed_callback:
+                self._component_state_changed_callback({"progress": (i * 20)})
             sleep(1.0)
 
     def turn_on_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
@@ -620,10 +635,10 @@ class SubrackSimulator(ObjectComponent):
         with self._tpm_data_lock:
             tpm_data = self._tpm_data[logical_tpm_id - 1]
             if not tpm_data["is_on"]:
-                if self._component_progress_changed_callback:
-                    self._component_progress_changed_callback(0)
+                if self._component_state_changed_callback:
+                    self._component_state_changed_callback({"progress": 0})
                     self._emulate_hardware_delay()  # TODO: we're still holding the lock
-                    self._component_progress_changed_callback(100)
+                    self._component_state_changed_callback({"progress": 100})
                 tpm_data["is_on"] = True
                 self._are_tpms_on_changed()
                 return True

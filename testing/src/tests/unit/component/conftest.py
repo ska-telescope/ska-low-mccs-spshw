@@ -93,7 +93,7 @@ def mock_proxy(fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def pool_member_communication_status_changed_callback(
+def pool_member_communication_state_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """

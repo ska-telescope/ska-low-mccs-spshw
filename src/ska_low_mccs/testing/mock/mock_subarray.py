@@ -10,10 +10,11 @@ from __future__ import annotations  # allow forward references in type hints
 
 import unittest.mock
 
-from ska_tango_base.commands import ResultCode
-
-from ska_low_mccs import MccsSubarray
+# from ska_low_mccs import MccsSubarray
 from ska_low_mccs.testing.mock import MockDeviceBuilder
+
+# from ska_tango_base.commands import ResultCode
+
 
 __all__ = ["MockSubarrayBuilder"]
 
@@ -33,29 +34,30 @@ class MockSubarrayBuilder(MockDeviceBuilder):
         """
         super().__init__(from_factory=from_factory)
 
-        for (command_name, succeeded_message) in [
-            ("On", "Subarray On command completed OK"),
-            ("Off", "Subarray Off command completed OK"),
-            ("AssignResources", "AssignResources command completed OK"),
-            ("ReleaseResources", "ReleaseResources command completed OK"),
-            (
-                "ReleaseAllResources",
-                "ReleaseAllResources command completed OK",
-            ),
-            (
-                "Configure",
-                MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK],
-            ),
-            (
-                "Restart",
-                MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK],
-            ),
-            (
-                "SendTransientBuffer",
-                MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],
-            ),
-        ]:
-            self._configuration[f"{command_name}.return_value"] = [
-                [ResultCode.OK],
-                [succeeded_message],
-            ]
+
+#         for (command_name, succeeded_message) in [
+#             ("On", "Subarray On command completed OK"),
+#             ("Off", "Subarray Off command completed OK"),
+#             ("AssignResources", "AssignResources command completed OK"),
+#             ("ReleaseResources", "ReleaseResources command completed OK"),
+#             (
+#                 "ReleaseAllResources",
+#                 "ReleaseAllResources command completed OK",
+#             ),
+#             (
+#                 "Configure",
+#                 MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK],
+#             ),
+#             (
+#                 "Restart",
+#                 MccsSubarray.ConfigureCommand.RESULT_MESSAGES[ResultCode.OK],
+#             ),
+#             (
+#                 "SendTransientBuffer",
+#                 MccsSubarray.SendTransientBufferCommand.RESULT_MESSAGES[ResultCode.OK],
+#             ),
+#         ]:
+#             self._configuration[f"{command_name}.return_value"] = [
+#                 [ResultCode.OK],
+#                 [succeeded_message],
+#             ]

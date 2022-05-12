@@ -37,7 +37,7 @@ class MccsComponentManagerProtocol(Protocol):
     """
 
     @property
-    def communication_status(
+    def communication_state(
         self: MccsComponentManagerProtocol,
     ) -> CommunicationStatus:
         """Return the status of communication with the component."""
@@ -93,7 +93,7 @@ class MccsComponentManager(
         self: MccsComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Optional[
+        communication_state_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
         component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
@@ -105,7 +105,7 @@ class MccsComponentManager(
 
         :param logger: a logger for this instance to use
         :param max_workers: nos of worker threads
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of communications between the
             component manager and its component changes.
         :param component_state_changed_callback: callback to be
@@ -114,12 +114,11 @@ class MccsComponentManager(
         :param kwargs: other keyword args
         """
         self.logger = logger
-        max_workers = 1
 
         self.__communication_lock = threading.Lock()
-        self._communication_status = CommunicationStatus.DISABLED
-        self._communication_status_changed_callback = (
-            communication_status_changed_callback
+        self._communication_state = CommunicationStatus.DISABLED
+        self._communication_state_changed_callback = (
+            communication_state_changed_callback
         )
 
         self._power_state_lock = threading.RLock()
@@ -131,62 +130,62 @@ class MccsComponentManager(
         super().__init__(
             logger=logger,
             max_workers=max_workers,
-            communication_state_callback=communication_status_changed_callback,
+            communication_state_callback=communication_state_changed_callback,
             component_state_callback=component_state_changed_callback,
         )
 
     def start_communicating(self: MccsComponentManager) -> None:
         """Start communicating with the component."""
-        if self.communication_status == CommunicationStatus.ESTABLISHED:
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
             return
-        if self.communication_status == CommunicationStatus.DISABLED:
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+        if self.communication_state == CommunicationStatus.DISABLED:
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         # It's up to subclasses to set communication status to ESTABLISHED via a call
-        # to update_communication_status()
+        # to update_communication_state()
 
     def stop_communicating(self: MccsComponentManager) -> None:
         """Break off communicating with the component."""
-        if self.communication_status == CommunicationStatus.DISABLED:
+        if self.communication_state == CommunicationStatus.DISABLED:
             return
 
-        self.update_communication_status(CommunicationStatus.DISABLED)
+        self.update_communication_state(CommunicationStatus.DISABLED)
         state = {"power_state": None, "fault": None}
         self.update_component_state(state)
 
     @threadsafe
-    def update_communication_status(
+    def update_communication_state(
         self: MccsComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in communication status.
 
         This is a helper method for use by subclasses.
 
-        :param communication_status: the new communication status of the
+        :param communication_state: the new communication status of the
             component manager.
         """
-        if self._communication_status != communication_status:
+        if self._communication_state != communication_state:
             with self.__communication_lock:
-                self._communication_status = communication_status
-                if self._communication_status_changed_callback is not None:
-                    self._communication_status_changed_callback(communication_status)
+                self._communication_state = communication_state
+                if self._communication_state_changed_callback is not None:
+                    self._communication_state_changed_callback(communication_state)
 
     @property
     def is_communicating(self: MccsComponentManager) -> bool:
         """
         Return communication with the component is established.
 
-        MCCS uses the more expressive :py:attr:`communication_status`
+        MCCS uses the more expressive :py:attr:`communication_state`
         for this, but this is still needed as a base classes hook.
 
         :return: whether communication with the component is
             established.
         """
-        return self.communication_status == CommunicationStatus.ESTABLISHED
+        return self.communication_state == CommunicationStatus.ESTABLISHED
 
     @property
-    def communication_status(
+    def communication_state(
         self: MccsComponentManager,
     ) -> CommunicationStatus:
         """
@@ -197,7 +196,7 @@ class MccsComponentManager(
 
         :return: status of the communication channel with the component.
         """
-        return self._communication_status
+        return self._communication_state
 
     def component_state_changed_callback(
         self: MccsComponentManager, state_change: dict[str, Any]

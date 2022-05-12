@@ -68,9 +68,9 @@ class MccsStationBeam(SKAObsDevice):
         return StationBeamComponentManager(
             self.BeamId,
             self.logger,
-            self._communication_status_changed,
-            self.component_state_changed_callback,
             self._max_workers,
+            self._communication_state_changed,
+            self.component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsStationBeam) -> None:
@@ -149,9 +149,9 @@ class MccsStationBeam(SKAObsDevice):
             beam_locked = cast(bool, state_change.get("beam_locked"))
             self._health_model.is_beam_locked_changed(beam_locked)
 
-    def _communication_status_changed(
+    def _communication_state_changed(
         self: MccsStationBeam,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -160,7 +160,7 @@ class MccsStationBeam(SKAObsDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -169,9 +169,9 @@ class MccsStationBeam(SKAObsDevice):
             CommunicationStatus.ESTABLISHED: "component_on",  # it's an always-on device
         }
 
-        self.op_state_model.perform_action(action_map[communication_status])
+        self.op_state_model.perform_action(action_map[communication_state])
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
     # ----------

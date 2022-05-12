@@ -164,7 +164,7 @@ class TileOrchestrator:
         stop_communicating_with_tpm_callback: Callable[[], None],
         turn_tpm_off_callback: Callable[[], Any],
         turn_tpm_on_callback: Callable[[], Any],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         logger: logging.Logger,
         _initial_state: Optional[StateTupleType] = None,
@@ -184,7 +184,7 @@ class TileOrchestrator:
             turn off the TPM
         :param turn_tpm_on_callback: callback to be called in order to
             turn on the TPM
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called in order to indicate a change in the status of
             communication between the component manager and its TPM
         :param component_state_changed_callback: callback to be
@@ -210,14 +210,14 @@ class TileOrchestrator:
         self._turn_tpm_off = turn_tpm_off_callback
         self._turn_tpm_on = turn_tpm_on_callback
 
-        self._communication_status_changed_callback = (
-            communication_status_changed_callback
+        self._communication_state_changed_callback = (
+            communication_state_changed_callback
         )
         self._component_state_changed_callback = component_state_changed_callback
 
         self._logger = logger
 
-        self._subrack_communication_status = (
+        self._subrack_communication_state = (
             _initial_state[0]
             if _initial_state is not None and len(_initial_state) > 0
             else CommunicationStatus.DISABLED
@@ -232,7 +232,7 @@ class TileOrchestrator:
             if _initial_state is not None and len(_initial_state) > 2
             else PowerState.UNKNOWN
         )
-        self._tpm_communication_status = (
+        self._tpm_communication_state = (
             _initial_state[3]  # type: ignore[misc]
             if _initial_state is not None and len(_initial_state) > 3
             else CommunicationStatus.DISABLED
@@ -315,14 +315,14 @@ class TileOrchestrator:
             self._tpm_power_state_on = PowerState.STANDBY
             return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
 
-    def update_subrack_communication_status(
+    def update_subrack_communication_state(
         self: TileOrchestrator,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Update status of communications between the component manager and the subrack.
 
-        :param communication_status: the new current status of
+        :param communication_state: the new current status of
             communications between the component manager and the
             subrack.
 
@@ -330,42 +330,42 @@ class TileOrchestrator:
             is unsupported.
         """
         with self.__lock:
-            if communication_status == CommunicationStatus.DISABLED:
+            if communication_state == CommunicationStatus.DISABLED:
                 pass
                 # This will only occur as a result of the orchestrator calling
                 # stop_communicating_with_subrack, which is synchronous and
                 # deterministic, so the orchestrator already knows that communication
                 # has been disabled.
-            elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
+            elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
                 self._act(Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED)
-            elif communication_status == CommunicationStatus.ESTABLISHED:
+            elif communication_state == CommunicationStatus.ESTABLISHED:
                 self._act(Stimulus.SUBRACK_COMMS_ESTABLISHED)
             else:
                 raise NotImplementedError()
 
-    def update_tpm_communication_status(
+    def update_tpm_communication_state(
         self: TileOrchestrator,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Update status of communications between the component manager and the TPM.
 
-        :param communication_status: the new current status of
+        :param communication_state: the new current status of
             communications between the component manager and the TPM.
 
         :raises NotImplementedError: if the provided communication status
             is unsupported.
         """
         with self.__lock:
-            if communication_status == CommunicationStatus.DISABLED:
+            if communication_state == CommunicationStatus.DISABLED:
                 pass
                 # This will only occur as a result of the orchestrator calling
                 # stop_communicating_with_tpm, which is synchronous and deterministic,
                 # so the orchestrator already knows that # communication has been
                 # disabled.
-            elif communication_status == CommunicationStatus.NOT_ESTABLISHED:
+            elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
                 self._act(Stimulus.TPM_COMMS_NOT_ESTABLISHED)
-            elif communication_status == CommunicationStatus.ESTABLISHED:
+            elif communication_state == CommunicationStatus.ESTABLISHED:
                 self._act(Stimulus.TPM_COMMS_ESTABLISHED)
             else:
                 raise NotImplementedError()
@@ -395,8 +395,8 @@ class TileOrchestrator:
                 raise NotImplementedError()
 
     def _get_state(self: TileOrchestrator) -> list:
-        state: list[Any] = [self._subrack_communication_status]
-        if self._subrack_communication_status == CommunicationStatus.DISABLED:
+        state: list[Any] = [self._subrack_communication_state]
+        if self._subrack_communication_state == CommunicationStatus.DISABLED:
             return state
 
         state = state + [self._operator_desire, self._tpm_power_state]
@@ -406,7 +406,7 @@ class TileOrchestrator:
         ]:
             return state
 
-        state = state + [self._tpm_communication_status]
+        state = state + [self._tpm_communication_state]
         return state
 
     def _act(self: TileOrchestrator, stimulus: Stimulus) -> Optional[ResultCode]:
@@ -416,7 +416,7 @@ class TileOrchestrator:
         except KeyError:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
-        self._logger.debug(f"TileOrchestrator: {key} ==> {actions}")
+        self._logger.warning(f"TileOrchestrator: {key} ==> {actions}")
         # print(f"TileOrchestrator: {key} ==> {actions}")
 
         result_code = None
@@ -432,13 +432,13 @@ class TileOrchestrator:
         raise ConnectionError("TPM cannot be turned off / on when not online.")
 
     def _report_communication_disabled(self: TileOrchestrator) -> None:
-        self._communication_status_changed_callback(CommunicationStatus.DISABLED)
+        self._communication_state_changed_callback(CommunicationStatus.DISABLED)
 
     def _report_communication_not_established(self: TileOrchestrator) -> None:
-        self._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
+        self._communication_state_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
 
     def _report_communication_established(self: TileOrchestrator) -> None:
-        self._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
+        self._communication_state_changed_callback(CommunicationStatus.ESTABLISHED)
 
     def _report_tpm_no_power_supply(
         self: TileOrchestrator,
@@ -472,25 +472,25 @@ class TileOrchestrator:
     def _stop_communicating_with_subrack(
         self: TileOrchestrator,
     ) -> None:
-        self._subrack_communication_status = CommunicationStatus.DISABLED
+        self._subrack_communication_state = CommunicationStatus.DISABLED
         self._stop_communicating_with_subrack_callback()
 
     def _set_subrack_communication_established(
         self: TileOrchestrator,
     ) -> None:
-        self._subrack_communication_status = CommunicationStatus.ESTABLISHED
+        self._subrack_communication_state = CommunicationStatus.ESTABLISHED
 
     def _set_subrack_communication_not_established(
         self: TileOrchestrator,
     ) -> None:
-        self._subrack_communication_status = CommunicationStatus.NOT_ESTABLISHED
+        self._subrack_communication_state = CommunicationStatus.NOT_ESTABLISHED
 
     def _stop_communicating_with_tpm(self: TileOrchestrator) -> None:
-        self._tpm_communication_status = CommunicationStatus.DISABLED
+        self._tpm_communication_state = CommunicationStatus.DISABLED
         self._stop_communicating_with_tpm_callback()
 
     def _set_tpm_communication_not_established(self: TileOrchestrator) -> None:
-        self._tpm_communication_status = CommunicationStatus.NOT_ESTABLISHED
+        self._tpm_communication_state = CommunicationStatus.NOT_ESTABLISHED
 
     def _set_tpm_communication_established(self: TileOrchestrator) -> None:
-        self._tpm_communication_status = CommunicationStatus.ESTABLISHED
+        self._tpm_communication_state = CommunicationStatus.ESTABLISHED

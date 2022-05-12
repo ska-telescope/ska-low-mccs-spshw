@@ -42,7 +42,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         subrack_simulator: SubrackSimulator,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -51,7 +51,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         :param subrack_simulator: a subrack simulator object to use
         :param logger: a logger for this object to use
         :param max_workers: Nos of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -61,7 +61,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             subrack_simulator,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         self._component_state_changed_callback = component_state_changed_callback
@@ -71,12 +71,12 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         self: BaseSubrackSimulatorComponentManager,
     ) -> None:
         """Establish communication with the subrack simulator."""
-        if self.communication_status != CommunicationStatus.DISABLED:
+        if self.communication_state != CommunicationStatus.DISABLED:
             return
 
         super().start_communicating()
         cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(
-            self._component_state_changed_callback
+            self._are_tpms_on_changed
         )
         cast(SubrackSimulator, self._component).set_progress_changed_callback(
             self._component_state_changed_callback
@@ -84,10 +84,9 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
 
     def stop_communicating(self: BaseSubrackSimulatorComponentManager) -> None:
         """Break off communication with the subrack simulator."""
-        if self.communication_status == CommunicationStatus.DISABLED:
+        if self.communication_state == CommunicationStatus.DISABLED:
             return
-
-        cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(None)
+        # cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(None)
         cast(SubrackSimulator, self._component).set_progress_changed_callback(None)
         super().stop_communicating()
 
@@ -194,7 +193,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
             return self._get_from_component(name)
         return default_value
 
-    @check_communicating
+    # @check_communicating
     def _get_from_component(
         self: BaseSubrackSimulatorComponentManager,
         name: str,
@@ -217,7 +216,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         self: SubrackSimulatorComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -225,17 +224,17 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
 
         :param logger: a logger for this object to use
         :param max_workers: Nos of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
             component state changes.
         """
         super().__init__(
-            SubrackSimulator(),
+            SubrackSimulator(component_state_changed_callback),
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -250,7 +249,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         max_workers: int,
         subrack_ip: str,
         subrack_port: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -264,7 +263,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         :param initial_simulation_mode: the simulation mode that the
             component should start in
         :param max_workers: Nos. of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -275,13 +274,13 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             max_workers,
             subrack_ip,
             subrack_port,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         subrack_simulator = SubrackSimulatorComponentManager(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         super().__init__(
@@ -338,7 +337,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         max_workers: int,
         subrack_ip: str,
         subrack_port: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         _initial_power_state: PowerState = PowerState.OFF,
     ) -> None:
@@ -351,7 +350,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param subrack_ip: the IP address of the subrack
         :param subrack_port: the subrack port
         :param max_workers: nos. of worker threads
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -371,24 +370,24 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             max_workers,
             subrack_ip,
             subrack_port,
-            self._hardware_communication_status_changed,
+            self._hardware_communication_state_changed,
             component_state_changed_callback,
             # self._tpm_power_changed,
         )
-
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
             max_workers,
-            self._power_supply_communication_status_changed,
+            self._power_supply_communication_state_changed,
             component_state_changed_callback,
             _initial_power_state,
+            self.component_power_state_changed,
         )
         super().__init__(
             hardware_component_manager,
             power_supply_component_manager,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -439,40 +438,40 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._tpm_power_states = list(tpm_power_states)
         self._component_state_changed_callback({"tpm_power_states": tpm_power_states})
 
-    def _power_supply_communication_status_changed(
+    def _power_supply_communication_state_changed(
         self: SubrackComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the hardware.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the hardware.
         """
-        super()._power_supply_communication_status_changed(communication_status)
-        if communication_status == CommunicationStatus.DISABLED:
+        super()._power_supply_communication_state_changed(communication_state)
+        if communication_state == CommunicationStatus.DISABLED:
             self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
 
-    # def component_power_mode_changed(
-    #     self: SubrackComponentManager, power_mode: PowerState
-    # ) -> None:
-    #     """
-    #     Handle a change in power mode of the hardware.
+    def component_power_state_changed(
+        self: SubrackComponentManager, power_state: PowerState
+    ) -> None:
+        """
+        Handle a change in power state of the hardware.
 
-    #     :param power_mode: the power mode of the hardware
-    #     """
-    #     if power_mode == PowerState.UNKNOWN:
-    #         self._update_tpm_power_states(
-    #             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-    #         )
-    #     elif power_mode == PowerState.OFF:
-    #         self._update_tpm_power_states(
-    #             [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
-    #         )
+        :param power_state: the power state of the hardware
+        """
+        if power_state == PowerState.UNKNOWN:
+            self._update_tpm_power_states(
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            )
+        elif power_state == PowerState.OFF:
+            self._update_tpm_power_states(
+                [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+            )
 
-    #     super().component_power_mode_changed(power_mode)
+        super().component_power_state_changed(power_state)
 
     @property
     def simulation_mode(self: SubrackComponentManager) -> SimulationMode:
@@ -576,7 +575,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
-                SwitchingSubrackComponentManager, self._hardware_component_manager
+                SwitchingSubrackComponentManager,
+                self._hardware_component_manager,
             ).turn_off_tpms()
             super().off()
         except Exception as ex:
@@ -752,10 +752,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_callback:
-            self.logger.warning("I'm here11")
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm on on task has completed",
+                result=f"Subrack TPM {tpm_id} turn on tpm task has completed",
             )
             return
 
@@ -801,15 +800,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The turn tpm on task aborted"
+                    status=TaskStatus.ABORTED, result="The turn tpms on task aborted"
                 )
             return
 
         if task_callback:
-            self.logger.warning("I'm here11")
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm on on task has completed",
+                result="The turn tpms on task has completed",
             )
             return
 
@@ -875,14 +873,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The turn tpm on task aborted"
+                    status=TaskStatus.ABORTED, result="The turn tpm off task aborted"
                 )
             return
 
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm on on task has completed",
+                result=f"Subrack TPM {tpm_id} turn off tpm task has completed",
             )
             return
 
@@ -928,13 +926,13 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The turn tpm off task aborted"
+                    status=TaskStatus.ABORTED, result="The turn tpms off task aborted"
                 )
             return
 
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The turn tpm off task has completed",
+                result="The turn tpms off task has completed",
             )
             return

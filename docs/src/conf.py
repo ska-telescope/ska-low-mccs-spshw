@@ -72,7 +72,6 @@ def setup(app):
     Initialise app.
     """
     app.add_css_file("css/custom.css")
-    app.add_js_file("js/gitlab.js")
 
 
 # -- Project information -----------------------------------------------------
@@ -170,20 +169,13 @@ html_theme = "sphinx_rtd_theme"
 # documentation.
 #
 html_theme_options = {
-    # 'logo_only' : False,
-    # 'logo_only' : 'ska_logo.jpg',
-    # 'logo' : 'ska_logo.jpg',
 }
 
 html_context = {
     "display_gitlab": True,  # Integrate GitHub
     "favicon": "img/favicon.ico",
-    "logo": "img/logo.jpg",
+    "logo": "img/logo.png",
     "theme_logo_only": True,
-    "gitlab_user": "ska-telescope",  # Username
-    "gitlab_repo": "ska-low-mccs",  # Repo name
-    "gitlab_version": "master",  # Version
-    "conf_py_path": "/docs/source/",  # Path in the checkout to the docs root
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

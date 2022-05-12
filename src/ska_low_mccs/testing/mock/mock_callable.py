@@ -19,7 +19,6 @@ __all__ = [
     "MockCallable",
     "MockChangeEventCallback",
     "MockCallableDeque",
-    "MockComponentStateChangedCallback",
 ]
 
 
@@ -37,11 +36,11 @@ class MockCallable:
     .. code-block:: python
 
         antenna_apiu_proxy.start_communicating()
-        communication_status_changed_callback.assert_called_once_with(
+        communication_state_changed_callback.assert_called_once_with(
             CommunicationStatus.NOT_ESTABLISHED
         )
         time.sleep(0.1)
-        communication_status_changed_callback.assert_called_once_with(
+        communication_state_changed_callback.assert_called_once_with(
             CommunicationStatus.ESTABLISHED
         )
 
@@ -58,10 +57,10 @@ class MockCallable:
     .. code-block:: python
 
         antenna_apiu_proxy.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
     """
@@ -460,10 +459,11 @@ class MockChangeEventCallback(MockCallable):
 
 class MockCallableDeque(MockCallable):
     """
-    This class alters MockCallable to use a deque instead of a queue.
+    An extension to the MockCallable class to allow the queue to be interrogated.
 
-    It adds the `assert_in_deque` method which checks the deque for calls to
-    this mock with specific arguments.
+    This class alters MockCallable to use a deque instead of a queue and adds the
+    `assert_in_deque` method which checks the deque for calls to this mock with specific
+    arguments.
 
     It is a special case of a :py:class:`MockCallable` where the
     callable will be called in a non-deterministic order.
@@ -532,17 +532,22 @@ class MockCallableDeque(MockCallable):
         expected_arguments_list: list[Any],
     ) -> None:
         """
-        Assert that a list of calls with expected arguments are present in the deque.
+        Assert multiple calls with arguments have been made to this mock.
 
-        :param expected_arguments_list: A list of arguments this mock is expected to be called
-            with and found in the deque.
+        Assert that a list of calls to the mocked callback with the expected arguments are
+        present anywhere in the deque.
+
+        :param expected_arguments_list: A list of arguments this mock is expected to be called with and found in the deque.
         """
         for expected_argument in expected_arguments_list:
             self.assert_in_deque(expected_argument)
 
     def assert_in_deque(self: MockCallableDeque, expected_argument: Any) -> None:
         """
-        Assert that a single call with the expected argument is present in the deque.
+        Assert a single call with argument has been made to this mock.
+
+        Assert that a single call to the callback with the expected argument is present
+        in the deque.
 
         :param expected_argument: An argument this mock is expected to be called with and found in the deque.
 
@@ -564,7 +569,7 @@ class MockCallableDeque(MockCallable):
         expected_arguments_list: list[Any],
     ) -> None:
         """
-        Assert the mock is called with the provided arguments in the order specified.
+        Assert that the mock has been called with the provided arguments in order.
 
         :param expected_arguments_list: A list of ordered arguments this mock is expected
             to have been called with.
@@ -601,107 +606,30 @@ class MockCallableDeque(MockCallable):
         self._remove_elements(indices_to_remove)
         # Found all entries in specified order.
 
-    def assert_next_call_with_key(
-        self: MockCallableDeque, expected_argument: dict[str, Any]
-    ) -> None:
-        """
-        Assert the next call to this mock with a given key has the specified value.
-
-        This method searches the deque for the *next* call to the mock with the specified key while ignoring other keys.
-        If a match to the key is found then the value must also match.
-        If the key is not found or the value does not match the expected value this method will raise an AssertionError
-        otherwise it will return `True`.
-
-        :param expected_argument: A dict containing the key-value argument this mock is expected to be called with.
-
-        :raises AssertionError: If the key is not found or the value does not match the expected value.
-        """
-        call_arguments: list(dict) = [
-            dict(queue_item.call_args[0][0]) for queue_item in self._queue
-        ]
-        expected_key = list(expected_argument.keys())
-        expected_val = list(expected_argument.values())
-        # Check if the expected key is somewhere in the deque.
-        for call_arg in call_arguments:
-            # Should usually be just a single key. This method will require updating if multiple keys occur.
-            call_key = list(call_arg.keys())
-            call_val = list(call_arg.values())
-            # Check if we've found the key we're looking for. We're only considering the first match.
-            if expected_key == call_key:
-                if expected_val == call_val:
-                    # We have an exact match. Remove the entry.
-                    self._remove_element(call_arguments.index(call_arg))
-                else:
-                    # We have matched the key but not the value.
-                    raise AssertionError(
-                        f"First call with expected key: {expected_key} had actual value: {call_val} "
-                        f"not equal to expected value: {expected_val}"
-                    )
-
-    def assert_next_calls_with_keys(
-        self: MockCallableDeque, expected_arguments_list: list[dict[str, Any]]
-    ) -> None:
-        """
-        Assert the next calls to this mock with a given key have the specified values.
-
-        This method searches the deque for the *next* calls to the mock with the specified key while ignoring other keys.
-        If a match to the key is found then the value must also match.
-        If the key is not found or the value does not match the expected value this method will raise an AssertionError
-        otherwise it will return `True`.
-
-        :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
-        """
-        # Try to match our expected args one at a time.
-        for expected_argument in expected_arguments_list:
-            # Check if the expected key is somewhere in the deque.
-            # If not found this method will raise an exception.
-            self.assert_next_call_with_key(expected_argument)
-
-    def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:
-        """
-        Remove the calls at the index contained in `indices_to_remove`.
-
-        This method is used to clear found calls to the mock.
-
-        :param indices_to_remove: An integer list of indices to be removed from the deque.
-        """
-        for index in indices_to_remove:
-            self._remove_element(index)
-
-    def _remove_element(self: MockCallableDeque, index: int) -> None:
-        """
-        Remove the call at the index specified.
-
-        This method is used to clear found calls to the mock.
-
-        :param index: An integer index to be removed from the deque.
-        """
-        self._queue.remove(self._queue[index])
-
-
-class MockComponentStateChangedCallback(MockCallableDeque):
-    """A class used to mock calls to component_state_changed_callback."""
-
-    def _find_next_call_with_state_params(
-        self: MockComponentStateChangedCallback,
+    def _find_next_call_with_keys(
+        self: MockCallableDeque,
         *state_change_keys: str,
         fqdn: str = None,
     ):
         """
-        Find the next state change with specific keys.
+        Find the next state change with specific keys that this mock was called with.
 
-        This method searches the deque for the *next* call to component_state_change_callback where
+        This method searches the deque for the *next* call to the mock where
         the keys of its state_change argument match the specified keys, and the value of its fqdn
-        keyword-argmment match the specified fqdn. If found, the full state_change argument is returned
+        keyword-argument match the specified fqdn. If found, the full state_change argument is returned
         along with its index in the deque.
 
         :param state_change_keys: keys to match the state_change argument keys
         :param fqdn: fqdn to be matched
 
-        :return: index of the call found in the queue and  matching state_change dictionary
+        :return: actual_state_change: matching state_change dictionary
+        :return: index: index of the call found in the queue
         """
+        print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ", self._queue)
         for queue_item in self._queue:
+            print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ2", queue_item)
             args, kwargs = queue_item.call_args
+            print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ3", args, kwargs)
             (actual_state_change,) = args
             actual_state_change_keys = tuple(actual_state_change.keys())
             device_fqdn = None if kwargs == {} else kwargs["fqdn"]
@@ -710,97 +638,126 @@ class MockComponentStateChangedCallback(MockCallableDeque):
                 return index, actual_state_change
         return None, None
 
-    def get_next_call_with_state_params(
-        self: MockComponentStateChangedCallback,
+    def get_next_call_with_keys(
+        self: MockCallableDeque,
         *state_change_keys: str,
         fqdn: str = None,
     ) -> tuple[Any] | None:
         """
-        Get the next state change with specific keys.
+        Get the next state change with specific keys that this mock was called with.
 
-        This method searches the deque for the *next* call to component_state_change_callback where
+        This method searches the deque for the *next* call to this mock where
         the keys of its state_change argument match the specified keys, and the value of its fqdn
         keyword-argument match the specified fqdn. If a match is found, the corresponding call is removed
         from the deque, and the dictionary values of the state_change argument with matching keys is returned.
 
-        :param state_change_keys: state_change keys to be seached for in the queue
-        :param fqdn: fqdn to be seached for in the queue
-
+        :param state_change_keys: state_change keys to be searched for in the queue
+        :param fqdn: fqdn to be searched for in the queue
         :return: tuple containing the values of the state_change dictionary with matching keys (or None)
         """
-        index, actual_state_change = self._find_next_call_with_state_params(
+        index, actual_state_change = self._find_next_call_with_keys(
             *state_change_keys, fqdn=fqdn
         )
         if index:
-            self._queue.remove(self._queue[index])
-            return tuple(actual_state_change.values())
+            self._remove_element(index)
+            return actual_state_change
         else:
             return None
 
-    def assert_not_called_with_state_params(
-        self: MockComponentStateChangedCallback,
+    def assert_not_called_with_keys(
+        self: MockCallableDeque,
         *state_change_keys: str,
         fqdn: str = None,
-    ) -> None:
+    ):
         """
-        Assert that no call to this mock has been made.
+        Assert that this mock has not been called with the given key and fqdn.
 
         Assert that no call to this mock has been made where its state_change
-        argument has the given key(s) and its fqdn keword-argument matches the specified
-        fqdn.
+        argument has the given key(s) and its fqdn keyword-argument matches the
+        specified fqdn.
 
-        :param state_change_keys: list of keys.
-        :param fqdn: string specifying fqdn this mock is expected to be called with.
+        :param state_change_keys: state_change keys to be searched for in the queue
+        :param fqdn: fqdn to be searched for in the queue
 
-        :raises AssertionError: if the key-value argument this mock is expected to be called with is not found.
+        :raises AssertionError: If a key is not found or a value does not match an expected value.
         """
-        index, actual_state_change = self._find_next_call_with_state_params(
+        index, actual_state_change = self._find_next_call_with_keys(
             *state_change_keys, fqdn=fqdn
         )
         if index is not None:
             raise AssertionError(
                 f"Expected call with keys {state_change_keys} for device fqdn {fqdn} to be missing "
-                "from deque, but was found at index: {index} with call: {actual_state_change}"
+                f"from deque, but was found at index: {index} with call: {actual_state_change}"
             )
 
-    def assert_next_call_with_state_params(
-        self: MockComponentStateChangedCallback,
-        state_change: dict[str, Any],
+    def assert_next_call_with_keys(
+        self: MockCallableDeque,
+        expected_argument: dict[str, Any],
         fqdn: str = None,
     ) -> None:
         """
-        Assert the next call with state_change argument.
+        Assert that the call to this mock with a given key also has the given value.
 
-        Assert that for the next call to this mock where the state_change argument has
-        the given key(s) it also has the specified value(s).
+        This method searches the deque for the *next* call to the mock with the specified key while ignoring other keys.
+        If a match to the key is found then the value must also match.
+        If the key is not found or the value does not match the expected value this method will raise an AssertionError.
 
-        :param state_change: dict containing the key-value arguments this mock is expected to be called with.
-        :param fqdn: string specifying fqdn this mock is expected to be called with.
+        :param expected_argument: A dict containing the key-value argument this mock is expected to be called with.
+        :param fqdn: fqdn to be searched for in the queue
 
-        :raises AssertionError: if the key-value argument this mock is expected to be called with is not found.
+        :raises AssertionError: If the key is not found or the value does not match the expected value.
         """
-        call_values = self.get_next_call_with_state_params(
-            *state_change.keys(), fqdn=fqdn
+        expected_key = list(expected_argument.keys())
+        index, actual_state_change = self._find_next_call_with_keys(
+            *expected_key, fqdn=fqdn
         )
-        if call_values != tuple(state_change.values()):
+        if actual_state_change == expected_argument:
+            self._remove_element(index)
+        else:
+            # We have matched the key but not the value.
             raise AssertionError(
-                f"First call with expected key: {state_change.keys()} and fqdn: {fqdn} had actual "
-                "value: {call_values} not equal to expected value: {tuple(state_change.values())}"
+                f"First call with expected arg: {expected_argument} had actual argument: {actual_state_change}"
             )
 
-    def assert_next_calls_with_state_params(
-        self: MockComponentStateChangedCallback,
-        expected_arguments_list: list[(dict[str, Any], str)],
+    def assert_next_calls_with_keys(
+        self: MockCallableDeque, expected_arguments_list: list[(dict[str, Any], str)]
     ) -> None:
         """
-        Assert the next sequence of calls with state_change arguments.
+        Assert that the calls to this mock with given keys also have the given values.
 
-        Assert that for the next sequence of calls to this mock where the state_change
-        argument has the given key(s) it also has the specified value(s).
+        This method searches the deque for the *next* calls to the mock with the specified key while ignoring other keys.
+        If a match to the key is found then the value must also match.
+        If the key is not found or the value does not match the expected value this method will raise an AssertionError
 
-        :param expected_arguments_list: list of tuples containing state_change,
-            fqdn this mock is expected to be called with.
+        :param expected_arguments_list: A list of dicts containing the key-value arguments this mock is expected to be called with.
         """
+        # Try to match our expected args one at a time.
         for expected_argument in expected_arguments_list:
-            state_change, fqdn = expected_argument
-            self.assert_next_call_with_state_params(state_change, fqdn=fqdn)
+            # Check if the expected key is somewhere in the deque.
+            # If not found this method will raise an exception.
+            if len(expected_argument) == 1:
+                state_change = expected_argument
+                fqdn = None
+            else:
+                state_change, fqdn = expected_argument
+            self.assert_next_call_with_keys(state_change, fqdn=fqdn)
+
+    def _remove_elements(self: MockCallableDeque, indices_to_remove: list[int]) -> None:
+        """
+        Remove the calls at the indices contained in `indices_to_remove`.
+
+        This method is used to clear found calls to the mock.
+        :param indices_to_remove: An integer list of indices to be removed from the deque.
+        """
+        for index in indices_to_remove:
+            self._remove_element(index)
+
+    def _remove_element(self: MockCallableDeque, index: int) -> None:
+        """
+        Remove the calls at the index contained in `index`.
+
+        This method is used to clear a found call to the mock.
+
+        :param index: An integer index to be removed from the deque.
+        """
+        self._queue.remove(self._queue[index])

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
@@ -344,11 +345,11 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         return self._phase_centre
 
-    @check_on
     def configure(
         self: StationBeamComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `configure` slow task.
@@ -356,6 +357,7 @@ class StationBeamComponentManager(MccsComponentManager):
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         :param argin: Configuration specification dict as a json
                 string
                 {
@@ -370,10 +372,9 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :return: A return code and a unique command ID.
         """
-        print("In Config Submit")
         config_dict = json.loads(argin)
 
-        task_status, response = self.submit_task(
+        return self.submit_task(
             self._configure,
             args=[
                 config_dict.get("beam_id"),
@@ -386,8 +387,6 @@ class StationBeamComponentManager(MccsComponentManager):
             ],
             task_callback=task_callback,
         )
-        print("Config queued")
-        return task_status, response
 
     def _configure(
         self: StationBeamComponentManager,
@@ -399,6 +398,7 @@ class StationBeamComponentManager(MccsComponentManager):
         antenna_weights: list[float],
         phase_centre: list[float],
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> None:
         """
         Configure this station beam for scanning.
@@ -411,8 +411,8 @@ class StationBeamComponentManager(MccsComponentManager):
         :param antenna_weights: weights to use for the antennas
         :param phase_centre: the phase centre
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
-        print("In Config")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -430,10 +430,10 @@ class StationBeamComponentManager(MccsComponentManager):
                 status=TaskStatus.COMPLETED, result="Configure has completed."
             )
 
-        # return ResultCode.OK
-
     def apply_pointing(
-        self: StationBeamComponentManager, task_callback: Optional[Callable] = None
+        self: StationBeamComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the apply_pointing slow task.
@@ -441,23 +441,25 @@ class StationBeamComponentManager(MccsComponentManager):
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: Task status and response message
         """
-        task_status, response = self.submit_task(
+        return self.submit_task(
             self._apply_pointing, args=[], task_callback=task_callback
         )
-        return (task_status, response)
 
     @check_communicating
     def _apply_pointing(
         self: StationBeamComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Apply the configured pointing to this station beam's station.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
         if task_callback is not None:

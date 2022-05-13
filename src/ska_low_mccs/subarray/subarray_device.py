@@ -13,11 +13,7 @@ import json
 from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import (  # FastCommand,
-    DeviceInitCommand,
-    ResultCode,
-    SubmittedSlowCommand,
-)
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.executor import TaskStatus
 from ska_tango_base.subarray import SKASubarray
@@ -78,17 +74,11 @@ class MccsSubarray(SKASubarray):
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
+        # The below has commands commented out because it seems they've already been
+        # registered by the base classes along with a hook so we don't need to do it
+        # again here.
         for (command_name, method_name) in [
             ("SendTransientBuffer", "send_transient_buffer"),
-            ("AssignResources", "assign"),
-            ("ReleaseResources", "release"),
-            ("ReleaseAllResources", "release_all"),
-            ("Configure", "configure"),
-            ("Scan", "scan"),
-            ("EndScan", "end_scan"),
-            ("End", "deconfigure"),
-            ("ObsReset", "obsreset"),
-            ("Restart", "restart"),
         ]:
             self.register_command_object(
                 command_name,
@@ -141,9 +131,6 @@ class MccsSubarray(SKASubarray):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
-        # print("IN CALLBACK")
-        # print(f"state change: {state_change}")
-        # print(f"fqdn: {fqdn}")
         # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
         # valid_device_types = {"station": "station_health_changed",
         #                     "beam": "station_beam_health_changed",
@@ -180,7 +167,6 @@ class MccsSubarray(SKASubarray):
 
         # resources should be passed in the dict's value as a list of sets to be extracted here.
         if "resources_changed" in state_change.keys():
-            print("IN CALLBACK RESOURCES CHANGED")
             resources = state_change.get("resources_changed")
             station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
@@ -286,24 +272,14 @@ class MccsSubarray(SKASubarray):
         :param station_beam_fqdns: the FQDNs of station beams assigned
             to this subarray
         """
-        print("IN _RESOURCES CHANGED")
-
         if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
-            print("ACTION 1")
-            print(self.obs_state_model.obs_state)
             self.obs_state_model.perform_action("component_resourced")
-            print("AFTER ACTION 1")
         else:
-            print("ACTION 2")
-            print(self.obs_state_model.obs_state)
             self.obs_state_model.perform_action("component_unresourced")
-            print("AFTER ACTION 2")
 
-        print("AFTER IF")
         self._health_model.resources_changed(
             station_fqdns, subarray_beam_fqdns, station_beam_fqdns
         )
-        print("DONE RES CHANGE")
 
     # def health_changed(self: MccsSubarray, health: HealthState) -> None:
     #     """
@@ -418,7 +394,6 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-        print("RELEASEALLRESOURCES")
         handler = self.get_command_object("ReleaseAllResources")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
@@ -426,7 +401,7 @@ class MccsSubarray(SKASubarray):
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Configure(
         self: MccsSubarray,
-        argin: dict,
+        argin: str,
     ) -> tuple[ResultCode, str]:
         """
         Configure this subarray.
@@ -436,8 +411,9 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
+        configuration = json.loads(argin)
         handler = self.get_command_object("Configure")
-        (return_code, unique_id) = handler(argin)
+        (return_code, unique_id) = handler(configuration)
         return ([return_code], [unique_id])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -483,36 +459,6 @@ class MccsSubarray(SKASubarray):
         handler = self.get_command_object("End")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
-
-    #     class AbortCommand(FastCommand):
-    #         """Class for handling the Abort() command."""
-    #
-    #         RESULT_MESSAGES = {
-    #             ResultCode.OK: "Abort command started",  # Base classes return this
-    #             ResultCode.FAILED: "Abort command failed",
-    #         }
-    #
-    #         def do(  # type: ignore[override]
-    #             self: MccsSubarray.AbortCommand,
-    #         ) -> tuple[ResultCode, str]:
-    #             """
-    #             Implement the functionality of the AbortCommand.
-    #
-    #             :py:meth:`ska_tango_base.FastCommand` command for this
-    #             :py:class:`.MccsSubarray` device.
-    #
-    #             An abort command will leave the system in an ABORTED state.
-    #             Output to CSP is stopped, as is the beamformer and all running
-    #             jobs. The system can then be inspected in the ABORTED state
-    #             before it's de-configured and returned to the IDLE state by the
-    #             ObsReset command.
-    #
-    #             :return: A tuple containing a return code and a string
-    #                 message indicating status. The message is for
-    #                 information purpose only.
-    #             """
-    #             result_code = self.component_manager.abort()
-    #             return (result_code, self.RESULT_MESSAGES[result_code])
 
     @command(dtype_out="DevVarLongStringArray")
     def ObsReset(self: MccsSubarray) -> tuple[ResultCode, str]:

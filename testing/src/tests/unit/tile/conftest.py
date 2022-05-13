@@ -57,6 +57,7 @@ def test_mode() -> TestMode:
     """
     return TestMode.TEST
 
+
 @pytest.fixture
 def unique_id() -> str:
     """
@@ -65,6 +66,7 @@ def unique_id() -> str:
     :return: a unique ID
     """
     return "a unique id"
+
 
 @pytest.fixture()
 def subrack_fqdn() -> str:
@@ -435,6 +437,7 @@ def tile_component_manager(
         component_state_changed_callback,
     )
 
+
 @pytest.fixture()
 def mock_component_manager(
     mocker: pytest_mock.mocker,  # type: ignore[valid-type]
@@ -455,12 +458,15 @@ def mock_component_manager(
 
     return mock
 
+
 @pytest.fixture()
 def patched_tile_device_class(
     mock_component_manager: unittest.mock.Mock,
 ) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
+
+    :param mock_component_manager: A mock component manager.
 
     :return: a tile device class patched with extra methods for testing.
 

@@ -138,6 +138,9 @@ class SubarrayComponentManager(
         # Not used *yet*. Below self._callbacks to be removed eventually.
         self._component_state_changed_callback = component_state_changed_callback
 
+        # TODO: Replace the below callbacks with component_state_changed_callback
+        # and remove references throughout.
+        # Some obsState issues were seen in testing and the above replacement fixed it.
         self._assign_completed_callback = component_state_changed_callback
         self._release_completed_callback = component_state_changed_callback
         self._configure_completed_callback = component_state_changed_callback
@@ -243,7 +246,6 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code and response message.
         """
-        print("SUBMITTING ASSIGN")
         return self.submit_task(
             self._assign,
             args=[resource_spec],
@@ -276,7 +278,6 @@ class SubarrayComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
-        print("IN _ASSIGN")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -294,7 +295,7 @@ class SubarrayComponentManager(
         fqdns_to_add = station_fqdns_to_add.union(
             subarray_beam_fqdns_to_add, station_beam_fqdns_to_add
         )
-        print("IN ASSIGN 2")
+
         if fqdns_to_add:
             self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             for fqdn in fqdns_to_add:
@@ -332,8 +333,8 @@ class SubarrayComponentManager(
                         self._component_state_changed_callback, fqdn=fqdn
                     ),
                 )
-            print("IN ASSIGN 3")
-            self._resources_changed_callback(
+            # self._resources_changed_callback(
+            self._component_state_changed_callback(
                 {
                     "resources_changed": [
                         set(self._stations.keys()),
@@ -342,7 +343,7 @@ class SubarrayComponentManager(
                     ]
                 }
             )
-            print("IN ASSIGN 4")
+
             self._is_assigning = True
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn].start_communicating()
@@ -352,11 +353,9 @@ class SubarrayComponentManager(
                 self._station_beams[fqdn].start_communicating()
 
         if task_callback is not None:
-            print("IN ASSIGN 5")
             task_callback(
                 status=TaskStatus.COMPLETED, result="AssignResources has completed."
             )
-        print("_ASSIGN DONE")
         return ResultCode.OK
 
     def _flatten_new_station_groups(
@@ -472,7 +471,6 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        print("SUBMITTING RELEASE ALL")
         return self.submit_task(
             self._release_all,
             args=[],
@@ -493,10 +491,9 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        print("IN RELEASE ALL")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        print("IN RELEASE ALL STILL")
+
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
             self._station_groups.clear()
@@ -505,9 +502,9 @@ class SubarrayComponentManager(
             self._channel_blocks.clear()
             self._device_communication_statees.clear()
             self._device_obs_states.clear()
-            print("RELEASE ALL IF BLOCK")
 
-            self._resources_changed_callback(
+            # self._resources_changed_callback(
+            self._component_state_changed_callback(
                 {
                     "resources_changed": [
                         set(self._stations.keys()),
@@ -516,15 +513,14 @@ class SubarrayComponentManager(
                     ]
                 }
             )
-            print("RELEASE ALL EVAL COMMS")
+
             self._evaluate_communication_state()
         self._release_completed_callback({"release_completed": None})
-        print("STILL IN RELEASE ALL")
+
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."
             )
-        print("DONE RELEASE ALL")
         return ResultCode.OK
 
     @check_communicating
@@ -565,7 +561,6 @@ class SubarrayComponentManager(
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
-
         stations = configuration["stations"]
         station_configuration = {station["station_id"]: station for station in stations}
         subarray_beams = configuration["subarray_beams"]
@@ -573,14 +568,16 @@ class SubarrayComponentManager(
             subarray_beam["subarray_beam_id"]: subarray_beam
             for subarray_beam in subarray_beams
         }
-
         result_code = self._configure_stations(station_configuration)
+
         if result_code != ResultCode.FAILED:
             result_code = self._configure_subarray_beams(subarray_beam_configuration)
-        self._configured_changed_callback({"configured_changed": True})
+        # self._configured_changed_callback
+        self._component_state_changed_callback({"configured_changed": True})
 
         if result_code == ResultCode.OK:
-            self._configure_completed_callback({"configure_completed": None})
+            # self._configure_completed_callback
+            self._component_state_changed_callback({"configure_completed": None})
 
         if task_callback is not None:
             task_callback(
@@ -689,7 +686,8 @@ class SubarrayComponentManager(
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
-        self._scanning_changed_callback({"scanning_changed": True})
+        # self._scanning_changed_callback
+        self._component_state_changed_callback({"scanning_changed": True})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
         return result_code
@@ -732,7 +730,8 @@ class SubarrayComponentManager(
 
         # Stuff goes here. This should tell the subarray beam device to
         # stop scanning, but that device doesn't support it yet.
-        self._scanning_changed_callback({"scanning_changed": False})
+        # self._scanning_changed_callback
+        self._component_state_changed_callback({"scanning_changed": False})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="EndScan has completed.")
         return ResultCode.OK
@@ -773,7 +772,8 @@ class SubarrayComponentManager(
             proxy_task_status, response = station_proxy.configure({})
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
-        self._configured_changed_callback({"configured_changed": False})
+        # self._configured_changed_callback
+        self._component_state_changed_callback({"configured_changed": False})
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="End/Deconfigure has completed."
@@ -963,4 +963,4 @@ class SubarrayComponentManager(
         if obs_state == ObsState.READY and fqdn in self._configuring_resources:
             self._configuring_resources.remove(fqdn)
             if not self._configuring_resources:
-                self._configure_completed_callback({"configure_completed": None})
+                self._component_state_changed_callback({"configure_completed": None})

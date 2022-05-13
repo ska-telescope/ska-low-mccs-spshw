@@ -10,12 +10,10 @@ from __future__ import annotations
 
 from typing import Any, Type
 
-import json
 import unittest
 
 import pytest
 import tango
-from tango.server import command
 
 from ska_tango_base.control_model import AdminMode, HealthState
 
@@ -36,9 +34,7 @@ def patched_subarray_beam_device_class(
     """
 
     class PatchedSubarrayBeamDevice(MccsSubarrayBeam):
-        """
-        MccsSubarrayBeam patched with extra commands for testing purposes.
-        """
+        """MccsSubarrayBeam patched with extra commands for testing purposes."""
 
         def create_component_manager(
             self: PatchedSubarrayBeamDevice,
@@ -59,9 +55,14 @@ def patched_subarray_beam_device_class(
     return PatchedSubarrayBeamDevice
 
 @pytest.fixture()
-def device_to_load(patched_subarray_beam_device_class: type[MccsSubarrayBeam]) -> DeviceToLoadType:
+def device_to_load(
+    patched_subarray_beam_device_class: type[MccsSubarrayBeam]
+) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
+
+    :param patched_pasd_bus_device_class: a pasd bus device class
+        that has been patched with a mock component manager
 
     :return: specification of the device to be loaded
     """

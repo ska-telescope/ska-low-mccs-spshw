@@ -8,19 +8,20 @@
 """This module contains the tests for MccsSubarrayBeam."""
 from __future__ import annotations
 
-from typing import Any, Type
-
 import unittest
+from typing import Any, Type
 
 import pytest
 import tango
-
 from ska_tango_base.control_model import AdminMode, HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsSubarrayBeam
-from ska_low_mccs.subarray_beam.subarray_beam_component_manager import SubarrayBeamComponentManager
+from ska_low_mccs.subarray_beam.subarray_beam_component_manager import (
+    SubarrayBeamComponentManager,
+)
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
+
 
 @pytest.fixture()
 def patched_subarray_beam_device_class(
@@ -28,6 +29,9 @@ def patched_subarray_beam_device_class(
 ) -> Type[MccsSubarrayBeam]:
     """
     Return a subarray beam device class, patched with extra methods for testing.
+
+    :param subarray_beam_component_manager: mocked component manager
+        which has access to the component_state_changed_callback
 
     :return: a patched subarray beam device class, patched with extra methods
         for testing
@@ -54,15 +58,16 @@ def patched_subarray_beam_device_class(
 
     return PatchedSubarrayBeamDevice
 
+
 @pytest.fixture()
 def device_to_load(
-    patched_subarray_beam_device_class: type[MccsSubarrayBeam]
+    patched_subarray_beam_device_class: type[MccsSubarrayBeam],
 ) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
 
-    :param patched_pasd_bus_device_class: a pasd bus device class
-        that has been patched with a mock component manager
+    :param patched_subarray_beam_device_class: a subarray beam
+        device class that has been patched with a mock component manager
 
     :return: specification of the device to be loaded
     """
@@ -73,6 +78,7 @@ def device_to_load(
         "proxy": MccsDeviceProxy,
         "patch": patched_subarray_beam_device_class,
     }
+
 
 class TestMccsSubarrayBeam(object):
     """Test class for MccsSubarrayBeam tests."""
@@ -105,6 +111,8 @@ class TestMccsSubarrayBeam(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
+        :param subarray_beam_component_manager: mocked component manager
+            which has access to the component_state_changed_callback
         """
         device_under_test.add_change_event_callback(
             "healthState",
@@ -115,11 +123,11 @@ class TestMccsSubarrayBeam(object):
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-        subarray_beam_component_manager._component_state_changed_callback({"health_state": HealthState.OK})
-
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.OK
+        subarray_beam_component_manager._component_state_changed_callback(
+            {"health_state": HealthState.OK}
         )
+
+        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK
 
     @pytest.mark.parametrize(

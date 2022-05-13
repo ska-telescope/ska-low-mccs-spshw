@@ -16,7 +16,6 @@ import pytest
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
-from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -52,6 +51,7 @@ def is_configured_changed_callback(
     """
     return mock_callback_factory()
 
+
 @pytest.fixture()
 def max_workers() -> int:
     """
@@ -61,6 +61,7 @@ def max_workers() -> int:
     """
     return 1
 
+
 @pytest.fixture()
 def component_state_changed_callback(
     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
@@ -68,12 +69,12 @@ def component_state_changed_callback(
     """
     Return a mock callback for a change in the subarray beam state.
 
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        deque factory (i.e. an object that returns mock callback deques when
         called).
 
-    :return: a mock callback to be called when the component manager
-        detects that the beam state has changed
+    :return: a mock callback deque to be called when the component manager
+        detects that the subarray beam state has changed
     """
     return mock_callback_deque_factory()
 
@@ -104,6 +105,7 @@ def subarray_beam_component(
         communication_state_changed_callback,
         component_state_changed_callback,
     )
+
 
 @pytest.fixture()
 def subarray_beam_component_manager(

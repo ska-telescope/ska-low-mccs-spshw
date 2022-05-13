@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import unittest.mock
 from typing import Any
-import functools
 
 import pytest
 import pytest_mock
@@ -19,7 +18,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsPasdBus
-from ska_low_mccs.testing.mock.mock_callable import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock.mock_callable import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
@@ -42,6 +41,7 @@ def device_to_load(
         "proxy": MccsDeviceProxy,
         "patch": patched_pasd_bus_device_class,
     }
+
 
 @pytest.fixture()
 def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
@@ -146,7 +146,9 @@ class TestMccsPasdBus:
             device_health_state_changed_callback,
         )
 
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
         mock_component_manager._component_state_changed_callback(
@@ -290,25 +292,25 @@ class TestMccsPasdBus:
                 "ReloadDatabase",
                 "reload_database",
                 None,
-                [True,True],
+                [True, True],
             ),
             (
                 "GetFndhInfo",
                 "get_fndh_info",
                 1,
-                [True,True],
+                [True, True],
             ),
             (
                 "TurnFndhServiceLedOn",
                 "turn_fndh_service_led_on",
                 1,
-                [True,True],
+                [True, True],
             ),
             (
                 "TurnFndhServiceLedOff",
                 "turn_fndh_service_led_off",
                 1,
-                [True,True],
+                [True, True],
             ),
             (
                 "GetSmartboxInfo",
@@ -350,19 +352,19 @@ class TestMccsPasdBus:
                 "ResetAntennaBreaker",
                 "reset_antenna_breaker",
                 1,
-                [True,True],
+                [True, True],
             ),
             (
                 "TurnAntennaOn",
                 "turn_antenna_on",
                 1,
-                [True,True],
+                [True, True],
             ),
             (
                 "TurnAntennaOff",
                 "turn_antenna_off",
                 1,
-                [True,True],
+                [True, True],
             ),
         ],
     )

@@ -17,7 +17,6 @@ from _pytest.fixtures import SubRequest
 from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
-from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
@@ -167,10 +166,10 @@ class TestSubarrayBeam:
 
         if isinstance(subarray_beam, SubarrayBeam):
 
-            #TODO: assert that callback is called
+            # TODO: assert that callback is called
 
-            #component_state_changed_callback.assert_in_deque({"configured_changed": False})
-            
+            # component_state_changed_callback.assert_in_deque({"configured_changed": False})
+
             subarray_beam.configure(
                 subarray_beam_id,
                 station_ids,
@@ -181,7 +180,7 @@ class TestSubarrayBeam:
                 phase_centre,
             )
 
-            #component_state_changed_callback.assert_in_deque({"configured_changed": True})
+            # component_state_changed_callback.assert_in_deque({"configured_changed": True})
 
             assert subarray_beam.subarray_beam_id == subarray_beam_id
             assert subarray_beam.station_ids == station_ids
@@ -190,7 +189,7 @@ class TestSubarrayBeam:
             assert subarray_beam.desired_pointing == pytest.approx(desired_pointing)
             assert subarray_beam.antenna_weights == pytest.approx(antenna_weights)
             assert subarray_beam.phase_centre == pytest.approx(phase_centre)
-            
+
         if isinstance(subarray_beam, SubarrayBeamComponentManager):
             config = {
                 "subarray_beam_id": subarray_beam_id,
@@ -204,11 +203,15 @@ class TestSubarrayBeam:
 
             config_dict = json.dumps(config)
 
-            component_state_changed_callback.assert_in_deque({"configured_changed": False})
+            component_state_changed_callback.assert_in_deque(
+                {"configured_changed": False}
+            )
 
             task_status, unique_id = subarray_beam.configure(config_dict)
             time.sleep(0.2)
-            component_state_changed_callback.assert_in_deque({"configured_changed": True})
+            component_state_changed_callback.assert_in_deque(
+                {"configured_changed": True}
+            )
 
             assert task_status == TaskStatus.QUEUED
             assert unique_id == "Task queued"

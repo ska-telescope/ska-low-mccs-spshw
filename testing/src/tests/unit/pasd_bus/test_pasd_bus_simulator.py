@@ -747,7 +747,7 @@ class TestPasdBusSimulator:
         Test the ``get_fndh_info`` method.
 
         :param pasd_bus_simulator: the PaSD Bus simulator under test.
-        :param fndh: the fndh to get info from
+        :param fndh_id: the fndh to get info from
         """
         fndh_info = pasd_bus_simulator.get_fndh_info(fndh_id)
         assert (
@@ -1248,14 +1248,11 @@ class TestPasdBusSimulator:
         }
 
     @pytest.mark.parametrize(
-        (
-            "smartbox_id", 
-            "fndh_id"
-        ),
+        ("smartbox_id", "fndh_id"),
         [
-            (1,1),
+            (1, 1),
         ],
-        )
+    )
     def test_update_status(
         self: TestPasdBusSimulator,
         pasd_bus_simulator: PasdBusSimulator,
@@ -1266,9 +1263,8 @@ class TestPasdBusSimulator:
         Test the ``update_status`` method.
 
         :param pasd_bus_simulator: the PaSD Bus simulator under test.
-        :param smartbox_id: number of a smartbox to use to check the
-            result of updating
-        : param fndh_id: number of fndh to use
+        :param smartbox_id: number of a smartbox to use
+        :param fndh_id: number of fndh to use
         """
         smartbox_info = pasd_bus_simulator.get_smartbox_info(smartbox_id)
         fndh_info = pasd_bus_simulator.get_fndh_info(fndh_id)

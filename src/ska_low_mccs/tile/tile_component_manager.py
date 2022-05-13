@@ -7,20 +7,21 @@
 # See LICENSE for more info.
 """This module implements component management for tiles."""
 from __future__ import annotations
-import time
+
 import logging
 import threading
+import time
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.executor import TaskStatus
 from ska_tango_base.control_model import (
     CommunicationStatus,
     PowerState,
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
@@ -35,12 +36,10 @@ from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
     StaticTpmSimulator,
-    TileTime,
     TpmDriver,
 )
-
-from ska_low_mccs.tile.time_util import TileTime
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
+from ska_low_mccs.tile.time_util import TileTime
 from ska_low_mccs.tile.tpm_status import TpmStatus
 
 __all__ = [
@@ -736,7 +735,7 @@ class TileComponentManager(MccsComponentManager):
             callback is called next time a real value is pushed.
         """
         self.set_power_state(power_state["power_state"])
-        #self._component_state_changed_callback(power_state)
+        # self._component_state_changed_callback(power_state)
         self.logger.debug(
             f"power state: {self.power_state}, communication status: {self.communication_state}"
         )
@@ -1033,9 +1032,7 @@ class TileComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).initialise()
+            cast(SwitchingTpmComponentManager, self._tpm_component_manager).initialise()
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1086,8 +1083,11 @@ class TileComponentManager(MccsComponentManager):
         """
         Download tpm firmware using slow command.
 
+        :param argin: can either be the design name returned or a path to a file
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1143,11 +1143,15 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(SwitchingTpmComponentManager, self._tpm_component_manager).get_arp_table()
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).get_arp_table()
         except NotImplementedError:
             raise NotImplementedError
         except Exception as ex:
@@ -1201,6 +1205,9 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param argin: JSON string
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1260,6 +1267,9 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param bitfile: bitfile name
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1314,6 +1324,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1369,6 +1381,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)

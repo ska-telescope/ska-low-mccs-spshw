@@ -188,6 +188,9 @@ class PowerSupplyProxySimulator(
             Callable[[dict[str, Any]], None]
         ] = None,
         initial_supplied_power_state: PowerState = PowerState.OFF,
+        component_power_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -201,8 +204,13 @@ class PowerSupplyProxySimulator(
             called when the state of the component changes
         :param initial_supplied_power_state: the initial supplied power
             mode of the simulated component
+        :param component_power_state_changed_callback: callback to be
+            called when the power state of the hardware changes
         """
         self._component_state_changed_callback = component_state_changed_callback
+        self._component_power_state_changed_callback = (
+            component_power_state_changed_callback
+        )
         self._supplied_power_state = PowerState.OFF
         super().__init__(
             self._Component(initial_supplied_power_state),
@@ -250,6 +258,8 @@ class PowerSupplyProxySimulator(
         supplied_power_state: PowerState,
     ) -> None:
         self.update_supplied_power_state(supplied_power_state)
+        if self._component_power_state_changed_callback is not None:
+            self._component_power_state_changed_callback(supplied_power_state)
 
 
 class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
@@ -310,7 +320,6 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
     ) -> None:
         """Establish communication with the hardware and the upstream power supply."""
         super().start_communicating()
-
         if (
             self._power_supply_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
@@ -422,7 +431,7 @@ class ComponentManagerWithUpstreamPowerSupply(MccsComponentManager):
         self: ComponentManagerWithUpstreamPowerSupply,
     ) -> tuple[TaskStatus, str]:
         """
-        Tell the upstream power supply proxy to turn the hardware off.
+        Tell the upstream power supply proxy to turn the hardware on.
 
         :return: a task status and message.
         """

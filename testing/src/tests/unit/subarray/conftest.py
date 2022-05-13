@@ -16,14 +16,14 @@ import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 
-from ska_low_mccs.subarray import SubarrayComponentManager, MccsSubarray
+from ska_low_mccs.subarray import SubarrayComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockCallableDeque
+from ska_low_mccs.testing.mock import MockCallable, MockCallableDeque, MockDeviceBuilder
 
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[['dict[str, Any]'], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[["dict[str, Any]"], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
@@ -272,6 +272,7 @@ def station_beam_health_changed_callback(
 
 @pytest.fixture()
 def subarray_component_manager(
+    tango_harness: TangoHarness,
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: MockCallable,
@@ -280,7 +281,43 @@ def subarray_component_manager(
     """
     Return a subarray component manager.
 
+    This fixture is identical to `mock_subarray_component_manager` except for the inclusion of `tango_harness`.
+    Without `tango_harness` the component manager tests experience errors.
+    This fixture is used to test subarray_component_manager.
+
     :param tango_harness: a test harness for MCCS tango devices
+    :param logger: the logger to be used by this object.
+    :param max_workers: Maximum number of workers in the thread pool.
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be called when the
+        component's state changes.
+
+    :return: a subarray component manager
+    """
+    return SubarrayComponentManager(
+        logger,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
+
+
+@pytest.fixture()
+def mock_subarray_component_manager(
+    logger: logging.Logger,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
+) -> SubarrayComponentManager:
+    """
+    Return a subarray component manager.
+
+    This fixture is identical to the `subarray_component_manager` fixture except for the `tango_harness`
+    which is omitted here to avoid a circular reference.
+    This fixture is used to test subarray_device.
+
     :param logger: the logger to be used by this object.
     :param max_workers: Maximum number of workers in the thread pool.
     :param communication_state_changed_callback: callback to be

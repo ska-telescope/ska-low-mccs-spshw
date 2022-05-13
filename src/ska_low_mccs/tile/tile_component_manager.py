@@ -10,37 +10,36 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
-from ska_tango_base.commands import ResultCode, TaskStatus
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
     PowerState,
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
+    MccsComponentManager,
     MccsComponentManagerProtocol,
     ObjectComponentManager,
     SwitchingComponentManager,
     check_communicating,
     check_on,
 )
-from ska_low_mccs.component.component_manager import MccsComponentManager
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
     StaticTpmSimulator,
-    TileTime,
     TpmDriver,
 )
-
-# from ska_low_mccs.tile.tpm_driver import TpmDriver
-# from ska_low_mccs.tile.time_util import TileTime
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
+from ska_low_mccs.tile.time_util import TileTime
 from ska_low_mccs.tile.tpm_status import TpmStatus
 
 __all__ = [
@@ -86,13 +85,12 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
             max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
-            None,
         )
         self._component_state_changed_callback = component_state_changed_callback
 
     __PASSTHROUGH = [
         "adc_rms",
-        "arp_table",
+        "get_arp_table",
         "board_temperature",
         "calculate_delay",
         "check_pending_data_requests",
@@ -506,7 +504,7 @@ class TileComponentManager(MccsComponentManager):
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
-
+        self._component_state_changed_callback = component_state_changed_callback
         self._subrack_communication_state = CommunicationStatus.DISABLED
         self._tpm_communication_state = CommunicationStatus.DISABLED
 
@@ -600,9 +598,7 @@ class TileComponentManager(MccsComponentManager):
         :param communication_state: the status of communication with
             the antenna via the APIU.
         """
-        self._tile_orchestrator.update_subrack_communication_state(
-            communication_state
-        )
+        self._tile_orchestrator.update_subrack_communication_state(communication_state)
 
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,
@@ -652,7 +648,7 @@ class TileComponentManager(MccsComponentManager):
             f"tpm{self._subrack_tpm_id}PowerState",
             self._tpm_power_state_change_event_received,
         )
-
+        time.sleep(0.1)
         if unconnected:
             self._tile_orchestrator.update_subrack_communication_state(
                 CommunicationStatus.ESTABLISHED
@@ -738,7 +734,8 @@ class TileComponentManager(MccsComponentManager):
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        # self.update_component_power_state(power_state)
+        self.set_power_state(power_state["power_state"])
+        # self._component_state_changed_callback(power_state)
         self.logger.debug(
             f"power state: {self.power_state}, communication status: {self.communication_state}"
         )
@@ -867,7 +864,7 @@ class TileComponentManager(MccsComponentManager):
 
     __PASSTHROUGH = [
         "adc_rms",
-        "arp_table",
+        "get_arp_table",
         "board_temperature",
         "calculate_delay",
         "check_pending_data_requests",
@@ -1019,9 +1016,9 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        return self.submit_task(self._initialiase, task_callback=task_callback)
+        return self.submit_task(self._initialise, task_callback=task_callback)
 
-    def _initialiase(
+    def _initialise(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -1035,9 +1032,7 @@ class TileComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).initialiase()
+            cast(SwitchingTpmComponentManager, self._tpm_component_manager).initialise()
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1081,21 +1076,27 @@ class TileComponentManager(MccsComponentManager):
 
     def _download_firmware(
         self: TileComponentManager,
+        argin: str,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Download tpm firmware using slow command.
 
+        :param argin: can either be the design name returned or a path to a file
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
-            ).download_firmware()
+            ).download_firmware(argin)
+        except NotImplementedError:
+            raise NotImplementedError
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1117,12 +1118,12 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
-    def arp_table(
+    def get_arp_table(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
-        Submit the arp_table slow task.
+        Submit the get arp_table slow task.
 
         This method returns immediately after it is submitted for execution.
 
@@ -1130,9 +1131,9 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        return self.submit_task(self._arp_table, task_callback=task_callback)
+        return self.submit_task(self._get_arp_table, task_callback=task_callback)
 
-    def _arp_table(
+    def _get_arp_table(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -1142,11 +1143,17 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(SwitchingTpmComponentManager, self._tpm_component_manager).arp_table()
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).get_arp_table()
+        except NotImplementedError:
+            raise NotImplementedError
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1189,6 +1196,7 @@ class TileComponentManager(MccsComponentManager):
 
     def _start_acquisition(
         self: TileComponentManager,
+        argin: str,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -1197,13 +1205,18 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param argin: JSON string
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
-            ).start_acquisition()
+            ).start_acquisition(argin)
+        except NotImplementedError:
+            raise NotImplementedError
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1245,6 +1258,7 @@ class TileComponentManager(MccsComponentManager):
 
     def _cpld_flash_write(
         self: TileComponentManager,
+        bitfile: str,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -1253,13 +1267,18 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param bitfile: bitfile name
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
-            ).cpld_flash_write()
+            ).cpld_flash_write(bitfile)
+        except NotImplementedError:
+            raise NotImplementedError
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1305,6 +1324,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1312,6 +1333,8 @@ class TileComponentManager(MccsComponentManager):
             cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
             ).post_synchronisation()
+        except NotImplementedError:
+            raise NotImplementedError
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1358,11 +1381,15 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(SwitchingTpmComponentManager, self._tpm_component_manager).sync_fpgas()
+        except NotImplementedError:
+            raise NotImplementedError
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1386,7 +1413,7 @@ class TileComponentManager(MccsComponentManager):
 
     def set_power_state(self: TileComponentManager, power_state: PowerState) -> None:
         """
-        Set the power state of the subrack.
+        Set the power state of the tile.
 
         :param power_state: The desired power state
         """

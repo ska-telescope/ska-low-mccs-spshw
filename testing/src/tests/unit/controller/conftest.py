@@ -24,9 +24,8 @@ from ska_low_mccs.controller import (
     MccsController,
 )
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
+from ska_low_mccs.testing.mock import (  # MockChangeEventCallback,
     MockCallable,
-    MockChangeEventCallback,
     MockDeviceBuilder,
     MockSubarrayBuilder,
 )
@@ -489,7 +488,7 @@ def patched_controller_device_class(
             :return: a mock component manager
             """
             self._communication_state: Optional[CommunicationStatus] = None
-#             self._component_power_state: Optional[PowerState] = None
+            #             self._component_power_state: Optional[PowerState] = None
 
             mock_component_manager._communication_state_changed_callback = (
                 self._communication_state_changed_callback

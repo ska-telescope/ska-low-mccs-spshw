@@ -11,6 +11,7 @@ from __future__ import annotations
 import itertools
 import json
 import time
+import unittest
 from typing import Any, Optional
 
 import pytest
@@ -67,6 +68,7 @@ class TestMccsTile:
     def test_healthState(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
         device_admin_mode_changed_callback: MockChangeEventCallback,
         device_health_state_changed_callback: MockChangeEventCallback,
     ) -> None:
@@ -80,6 +82,7 @@ class TestMccsTile:
             we can use to subscribe to admin mode changes on the device
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
+        :param mock_component_manager: A mock component manager.
         """
         tile_device.add_change_event_callback(
             "adminMode",
@@ -98,10 +101,12 @@ class TestMccsTile:
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
-
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        mock_component_manager.component_state_changed_callback(
+            {"health_state": HealthState.OK}
+        )
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
 

@@ -17,8 +17,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from tango import DevState
-from ska_tango_base.executor import TaskStatus
+
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.subrack import SubrackSimulator
 from ska_low_mccs.testing.mock import MockChangeEventCallback
@@ -130,11 +129,11 @@ class TestMccsSubrack:
         assert result_code == ResultCode.QUEUED
         assert "_On" in unique_id
 
-        message ='"On command has completed"'
+        message = '"On command has completed"'
         lrc_result = (
             unique_id,
             message,
-            )
+        )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         assert (
@@ -211,22 +210,22 @@ class TestMccsSubrack:
         ([result_code], [unique_id]) = device_under_test.On()
         assert result_code == ResultCode.QUEUED
         assert "_On" in unique_id
-        message ='"On command has completed"'
+        message = '"On command has completed"'
         lrc_result = (
             unique_id,
             message,
-            )
+        )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         tpm_id = 1
         ([result_code], [unique_id]) = device_under_test.PowerOnTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOnTpm" in unique_id
-        message =f'"Subrack TPM {tpm_id} turn on tpm task has completed"'
+        message = f'"Subrack TPM {tpm_id} turn on tpm task has completed"'
         lrc_result = (
             unique_id,
             message,
-            )
+        )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         # Issue redundant power on TPM command
@@ -273,11 +272,11 @@ class TestMccsSubrack:
         assert result_code == ResultCode.QUEUED
         assert "_On" in unique_id
 
-        message ='"On command has completed"'
+        message = '"On command has completed"'
         lrc_result = (
             unique_id,
             message,
-            )
+        )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
         tpm_id = 1
@@ -292,20 +291,19 @@ class TestMccsSubrack:
         ([result_code], [unique_id]) = device_under_test.PowerOnTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOnTpm" in unique_id
-        message =f'"Subrack TPM {tpm_id} turn on tpm task has completed"'
+        message = f'"Subrack TPM {tpm_id} turn on tpm task has completed"'
         lrc_result = (
             unique_id,
             message,
-            )
+        )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
-
 
         ([result_code], [unique_id]) = device_under_test.PowerOffTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOffTpm" in unique_id
-        message =f'"Subrack TPM {tpm_id} turn off tpm task has completed"'
+        message = f'"Subrack TPM {tpm_id} turn off tpm task has completed"'
         lrc_result = (
             unique_id,
             message,
-            )
+        )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)

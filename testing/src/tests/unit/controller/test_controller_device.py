@@ -12,7 +12,6 @@ import unittest
 
 import pytest
 import tango
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
@@ -149,14 +148,19 @@ class TestMccsController:
         device_under_test.adminMode = AdminMode.ONLINE
         print("1111111111111111111111111111111111111111111111111111111111111111111")
         message = device_under_test.On()
-        #assert result_code == ResultCode.QUEUED
-        #assert message.split("_")[-1] == "PowerUp"
-        #[[result_code], [uid]] = getattr(device_under_test, device_command)()
-        #esult = getattr(device_under_test, device_command)()
-        print("2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222", message)
-        #assert uid == unique_id
-        #assert result_code == ResultCode.QUEUED
-        print("33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+        # assert result_code == ResultCode.QUEUED
+        # assert message.split("_")[-1] == "PowerUp"
+        # [[result_code], [uid]] = getattr(device_under_test, device_command)()
+        # esult = getattr(device_under_test, device_command)()
+        print(
+            "2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222",
+            message,
+        )
+        # assert uid == unique_id
+        # assert result_code == ResultCode.QUEUED
+        print(
+            "33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333"
+        )
         method = getattr(mock_component_manager, component_method)
         method.assert_called_once()
         print("4444444444444444444444444444444444444444444")
@@ -249,9 +253,7 @@ class TestMccsController:
         mock_component_manager._component_state_changed_callback(
             {"health_state": HealthState.OK}, "low-mccs/subrack/01"
         )
-        device_health_state_changed_callback.assert_next_change_event(
-            HealthState.OK
-        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK
 
     def test_controlMode(

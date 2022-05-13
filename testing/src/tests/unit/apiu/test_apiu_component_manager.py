@@ -99,6 +99,7 @@ class TestApiuCommon:
             return (in simulation mode and powered on)
         :param request: A pytest object giving access to the requesting
             test context.
+        :param component_state_changed_callback: Callback to call when the component's state changes.
 
         :raises ValueError: if parametrized with an unrecognised option
 
@@ -126,7 +127,12 @@ class TestApiuCommon:
 
     def test_apiu_properties(
         self: TestApiuCommon,
-        apiu: Union[ApiuSimulator, ApiuSimulatorComponentManager, SwitchingApiuComponentManager, ApiuComponentManager],
+        apiu: Union[
+            ApiuSimulator,
+            ApiuSimulatorComponentManager,
+            SwitchingApiuComponentManager,
+            ApiuComponentManager,
+        ],
         random_current: Callable[[], float],
         random_humidity: Callable[[], float],
         random_temperature: Callable[[], float],
@@ -293,13 +299,13 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         apiu_component_manager.on()
         time.sleep(0.1)
-        expected_arguments = [{"fault": False},{"power_state": PowerState.ON}]
+        expected_arguments = [{"fault": False}, {"power_state": PowerState.ON}]
         component_state_changed_callback.assert_all_in_deque(expected_arguments)
         cast(
             SwitchingApiuComponentManager, apiu_component_manager
         )._hardware_component_manager._component.simulate_fault(True)
         time.sleep(0.1)
-        expected_arguments = [{"fault": True},{"power_state": PowerState.OFF}]
+        expected_arguments = [{"fault": True}, {"power_state": PowerState.OFF}]
         component_state_changed_callback.assert_all_in_deque(expected_arguments)
 
         cast(
@@ -341,24 +347,25 @@ class TestApiuComponentManager:
         expected_are_antennas_on = [False] * apiu_antenna_count
         expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        #component_state_changed_callback.assert_in_deque(expected_arguments)
-        #time.sleep(0.1)
-        #assert component_state_changed_callback.assert_in_deque(expected_arguments)
+        # component_state_changed_callback.assert_in_deque(expected_arguments)
+        # time.sleep(0.1)
+        # assert component_state_changed_callback.assert_in_deque(expected_arguments)
 
         apiu_component_manager.turn_on_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = True
         expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        #component_state_changed_callback.assert_in_deque(expected_arguments)
+        # component_state_changed_callback.assert_in_deque(expected_arguments)
 
-#         apiu_component_manager.turn_on_antenna(antenna_id)
-#         component_state_changed_callback.assert_not_called()
+        #         apiu_component_manager.turn_on_antenna(antenna_id)
+        #         component_state_changed_callback.assert_not_called()
 
         apiu_component_manager.turn_off_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = False
         expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
-        #component_state_changed_callback.assert_next_call(expected_are_antennas_on)
+        # component_state_changed_callback.assert_next_call(expected_are_antennas_on)
+
 
 #         apiu_component_manager.turn_off_antenna(antenna_id)
 #         component_state_changed_callback.assert_not_called()

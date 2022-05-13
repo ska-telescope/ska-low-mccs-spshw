@@ -27,7 +27,7 @@ class TestControllerComponentManager:
     def test_communication(
         self: TestControllerComponentManager,
         controller_component_manager: ControllerComponentManager,
-        communication_state_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test the controller component manager's management of communication.
@@ -38,6 +38,9 @@ class TestControllerComponentManager:
             called when the status of the communications channel between
             the component manager and its component changes
         """
+        print(dir(controller_component_manager))
+        import pdb
+        pdb.set_trace()
         assert (
             controller_component_manager.communication_state
             == CommunicationStatus.DISABLED
@@ -47,7 +50,36 @@ class TestControllerComponentManager:
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_state_changed_callback.assert_next_call(
+
+        for fqdn in controller_component_manager._subarrays.keys():
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+        for fqdn in controller_component_manager._subarray_beams.keys():
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+        for fqdn in controller_component_manager._stations.keys():
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+        for fqdn in controller_component_manager._station_beams.keys():
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+            communication_state_changed_callback.assert_in_deque(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
+        communication_state_changed_callback.assert_last_call(
             CommunicationStatus.ESTABLISHED
         )
         assert (

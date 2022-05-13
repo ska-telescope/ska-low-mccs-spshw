@@ -324,27 +324,27 @@ class ControllerComponentManager(MccsComponentManager):
         self._component_state_changed_callback = component_state_changed_callback
 
         self.__communication_state_lock = threading.Lock()
-        self._device_communication_statees: dict[str, CommunicationStatus] = {}
+        self._device_communication_states: dict[str, CommunicationStatus] = {}
 
         self._station_power_modes: dict[str, PowerState] = {}
         self._subrack_power_modes: dict[str, PowerState] = {}
 
         for fqdn in subarray_fqdns:
-            self._device_communication_statees[fqdn] = CommunicationStatus.DISABLED
+            self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
 
         for fqdn in subrack_fqdns:
-            self._device_communication_statees[fqdn] = CommunicationStatus.DISABLED
+            self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
             self._subrack_power_modes[fqdn] = PowerState.UNKNOWN
 
         for fqdn in station_fqdns:
-            self._device_communication_statees[fqdn] = CommunicationStatus.DISABLED
+            self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
             self._station_power_modes[fqdn] = PowerState.UNKNOWN
 
         for fqdn in subarray_beam_fqdns:
-            self._device_communication_statees[fqdn] = CommunicationStatus.DISABLED
+            self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
 
         for fqdn in station_beam_fqdns:
-            self._device_communication_statees[fqdn] = CommunicationStatus.DISABLED
+            self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
 
         self._resource_manager = ControllerResourceManager(
             subarray_fqdns,
@@ -454,7 +454,7 @@ class ControllerComponentManager(MccsComponentManager):
         :param fqdn: fqdn of changed device
         :param communication_state: new status
         """
-        if fqdn not in self._device_communication_statees:
+        if fqdn not in self._device_communication_states:
             self.logger.warning(
                 f"Received a communication status changed event for device {fqdn} "
                 "which is not managed by this controller. "
@@ -463,7 +463,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             return
 
-        self._device_communication_statees[fqdn] = communication_state
+        self._device_communication_states[fqdn] = communication_state
         if self.communication_state == CommunicationStatus.DISABLED:
             return
         self._evaluate_communication_state()
@@ -478,12 +478,12 @@ class ControllerComponentManager(MccsComponentManager):
         with self.__communication_state_lock:
             if (
                 CommunicationStatus.DISABLED
-                in self._device_communication_statees.values()
+                in self._device_communication_states.values()
             ):
                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             elif (
                 CommunicationStatus.NOT_ESTABLISHED
-                in self._device_communication_statees.values()
+                in self._device_communication_states.values()
             ):
                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:

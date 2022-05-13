@@ -213,26 +213,9 @@ def station_beam_health_changed_callback(
     return mock_callback_factory()
 
 
-# @pytest.fixture()
-# def communication_state_changed_callback(
-#     mock_component_state_changed_callback_factory: Callable[[], unittest.mock.Mock],
-# ) -> unittest.mock.Mock:
-#     """
-#     Return a mock callback for communication change.
-# 
-#     :param mock_callback_deque_factory: fixture that provides a mock callback
-#         factory (i.e. an object that returns mock callbacks when
-#         called).
-# 
-#     :return: a mock callback to be called when the communication status
-#         of a component manager changed.
-#     """
-#     return mock_component_state_changed_callback_factory()
-
-
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_component_state_changed_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for a change in state.
@@ -244,7 +227,7 @@ def component_state_changed_callback(
     :return: a mock callback to be called when the component manager
         detects that state has changed.
     """
-    return mock_component_state_changed_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -270,7 +253,7 @@ def controller_component_manager(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: MockCallable,
-    component_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> ControllerComponentManager:
     """
     Return a controller component manager in simulation mode.

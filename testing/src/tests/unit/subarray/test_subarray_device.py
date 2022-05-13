@@ -105,7 +105,7 @@ def patched_subarray_device_class(
 
         def create_component_manager(
             self: PatchedSubarrayDevice,
-        ) -> unittest.mock.Mock:
+        ) -> SubarrayComponentManager:
             """
             Return a partially mocked component manager instead of the usual one.
 

@@ -77,6 +77,10 @@ class TestMccsTransientBuffer:
 
                 :return: a mock component manager
                 """
+                mock_component_manager._component_state_changed_callback = (
+                self.component_state_changed_callback
+            )
+
                 return mock_component_manager
 
         return PatchedMccsTransientBuffer
@@ -106,6 +110,7 @@ class TestMccsTransientBuffer:
         self: TestMccsTransientBuffer,
         device_under_test: MccsDeviceProxy,
         device_health_state_changed_callback: MockChangeEventCallback,
+        mock_component_manager: unittest.mock.Mock,
     ) -> None:
         """
         Test for healthState.
@@ -123,9 +128,9 @@ class TestMccsTransientBuffer:
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-        #TODO: call callback here 
-        #device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
-        #assert device_under_test.healthState == HealthState.OK
+        mock_component_manager._component_state_changed_callback({"health_state": HealthState.OK})
+        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
+        assert device_under_test.healthState == HealthState.OK
 
     @pytest.mark.parametrize(
         ("device_attribute", "component_manager_property", "example_value"),

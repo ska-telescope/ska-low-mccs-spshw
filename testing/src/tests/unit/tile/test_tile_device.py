@@ -8,11 +8,10 @@
 """This module contains the tests for MccsTile."""
 from __future__ import annotations
 
-import unittest
-
 import itertools
 import json
 import time
+import unittest
 from typing import Any, Optional
 
 import pytest
@@ -83,6 +82,7 @@ class TestMccsTile:
             we can use to subscribe to admin mode changes on the device
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
+        :param mock_component_manager: A mock component manager.
         """
         tile_device.add_change_event_callback(
             "adminMode",
@@ -109,7 +109,6 @@ class TestMccsTile:
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
-
 
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),

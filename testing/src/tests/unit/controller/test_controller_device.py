@@ -12,7 +12,6 @@ import unittest
 
 import pytest
 import tango
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,

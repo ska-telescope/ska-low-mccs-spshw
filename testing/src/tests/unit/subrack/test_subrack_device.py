@@ -17,8 +17,6 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.executor import TaskStatus
-from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.subrack import SubrackSimulator

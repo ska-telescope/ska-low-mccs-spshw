@@ -14,7 +14,6 @@ from typing import Any, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.subrack import (
@@ -92,6 +91,7 @@ class TestSubrackSimulatorCommon:
             to return (in simulation mode and powered on)
         :param request: A pytest object giving access to the requesting
             test context.
+        :param component_state_changed_callback: Callback to call when the component's state changes.
 
         :raises ValueError: if parametrized with an unrecognised option
 
@@ -388,6 +388,7 @@ class TestSubrackDriverCommon:
             to return (in driver mode and powered on)
         :param request: A pytest object giving access to the requesting
             test context.
+        :param component_state_changed_callback: Callback to call when the component's state changes.
 
         :raises ValueError: if parametrized with an unrecognised option
 
@@ -674,7 +675,7 @@ class TestSubrackComponentManager:
         )
         subrack_component_manager.power_state = PowerState.ON
         assert subrack_component_manager.power_state == PowerState.ON
-        
+
         expected_tpm_power_states = [PowerState.OFF] * SubrackData.TPM_BAY_COUNT
         component_state_changed_callback.assert_next_call_with_keys(
             {"tpm_power_states": expected_tpm_power_states}
@@ -685,13 +686,17 @@ class TestSubrackComponentManager:
         assert subrack_component_manager.turn_on_tpm(tpm_id)
         time.sleep(0.2)
         expected_tpm_power_states[tpm_id - 1] = PowerState.ON
-        component_state_changed_callback.assert_in_deque({"tpm_power_states": expected_tpm_power_states})
+        component_state_changed_callback.assert_in_deque(
+            {"tpm_power_states": expected_tpm_power_states}
+        )
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
         assert subrack_component_manager.turn_off_tpm(tpm_id)
         time.sleep(0.2)
         expected_tpm_power_states[tpm_id - 1] = PowerState.OFF
-        component_state_changed_callback.assert_next_call_with_keys({"tpm_power_states": expected_tpm_power_states})
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"tpm_power_states": expected_tpm_power_states}
+        )
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
         subrack_component_manager._off()

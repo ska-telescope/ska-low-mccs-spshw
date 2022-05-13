@@ -19,6 +19,7 @@ from ska_tango_base.control_model import CommunicationStatus, HealthState, Power
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 class TestControllerComponentManager:
@@ -111,7 +112,7 @@ class TestControllerComponentManager:
     def test_power_events(
         self: TestControllerComponentManager,
         controller_component_manager: ControllerComponentManager,
-        component_state_changed_callback: MockComponentStateChangedCallback,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test the controller component manager's management of power mode.

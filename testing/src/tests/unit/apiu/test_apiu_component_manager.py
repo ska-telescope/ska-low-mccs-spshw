@@ -99,6 +99,7 @@ class TestApiuCommon:
             return (in simulation mode and powered on)
         :param request: A pytest object giving access to the requesting
             test context.
+        :param component_state_changed_callback: Callback to call when the component's state changes.
 
         :raises ValueError: if parametrized with an unrecognised option
 

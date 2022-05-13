@@ -79,15 +79,6 @@ class MccsSubarray(SKASubarray):
         # again here.
         for (command_name, method_name) in [
             ("SendTransientBuffer", "send_transient_buffer"),
-            # ("AssignResources", "assign"),
-            # ("ReleaseResources", "release"),
-            # ("ReleaseAllResources", "release_all"),
-            # ("Configure", "configure"),
-            # ("Scan", "scan"),
-            # ("EndScan", "end_scan"),
-            # ("End", "deconfigure"),
-            # ("ObsReset", "obsreset"),
-            # ("Restart", "restart"),
         ]:
             self.register_command_object(
                 command_name,
@@ -468,36 +459,6 @@ class MccsSubarray(SKASubarray):
         handler = self.get_command_object("End")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
-
-    #     class AbortCommand(FastCommand):
-    #         """Class for handling the Abort() command."""
-    #
-    #         RESULT_MESSAGES = {
-    #             ResultCode.OK: "Abort command started",  # Base classes return this
-    #             ResultCode.FAILED: "Abort command failed",
-    #         }
-    #
-    #         def do(  # type: ignore[override]
-    #             self: MccsSubarray.AbortCommand,
-    #         ) -> tuple[ResultCode, str]:
-    #             """
-    #             Implement the functionality of the AbortCommand.
-    #
-    #             :py:meth:`ska_tango_base.FastCommand` command for this
-    #             :py:class:`.MccsSubarray` device.
-    #
-    #             An abort command will leave the system in an ABORTED state.
-    #             Output to CSP is stopped, as is the beamformer and all running
-    #             jobs. The system can then be inspected in the ABORTED state
-    #             before it's de-configured and returned to the IDLE state by the
-    #             ObsReset command.
-    #
-    #             :return: A tuple containing a return code and a string
-    #                 message indicating status. The message is for
-    #                 information purpose only.
-    #             """
-    #             result_code = self.component_manager.abort()
-    #             return (result_code, self.RESULT_MESSAGES[result_code])
 
     @command(dtype_out="DevVarLongStringArray")
     def ObsReset(self: MccsSubarray) -> tuple[ResultCode, str]:

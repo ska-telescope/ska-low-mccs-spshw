@@ -8,6 +8,8 @@
 """This module contains the tests for MccsTile."""
 from __future__ import annotations
 
+import unittest
+
 import itertools
 import json
 import time
@@ -67,6 +69,7 @@ class TestMccsTile:
     def test_healthState(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
         device_admin_mode_changed_callback: MockChangeEventCallback,
         device_health_state_changed_callback: MockChangeEventCallback,
     ) -> None:
@@ -98,12 +101,15 @@ class TestMccsTile:
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
-
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        mock_component_manager.component_state_changed_callback(
+            {"health_state": HealthState.OK}
+        )
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
+
 
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),

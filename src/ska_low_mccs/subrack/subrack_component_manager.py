@@ -86,8 +86,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         """Break off communication with the subrack simulator."""
         if self.communication_state == CommunicationStatus.DISABLED:
             return
-
-        cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(None)
+        # cast(SubrackSimulator, self._component).set_are_tpms_on_changed_callback(None)
         cast(SubrackSimulator, self._component).set_progress_changed_callback(None)
         super().stop_communicating()
 
@@ -232,7 +231,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            SubrackSimulator(),
+            SubrackSimulator(component_state_changed_callback),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -375,13 +374,13 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component_state_changed_callback,
             # self._tpm_power_changed,
         )
-
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
             max_workers,
             self._power_supply_communication_state_changed,
             component_state_changed_callback,
             _initial_power_state,
+            self.component_power_state_changed,
         )
         super().__init__(
             hardware_component_manager,
@@ -455,24 +454,24 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
 
-    # def component_power_mode_changed(
-    #     self: SubrackComponentManager, power_mode: PowerState
-    # ) -> None:
-    #     """
-    #     Handle a change in power mode of the hardware.
+    def component_power_state_changed(
+        self: SubrackComponentManager, power_state: PowerState
+    ) -> None:
+        """
+        Handle a change in power state of the hardware.
 
-    #     :param power_mode: the power mode of the hardware
-    #     """
-    #     if power_mode == PowerState.UNKNOWN:
-    #         self._update_tpm_power_states(
-    #             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-    #         )
-    #     elif power_mode == PowerState.OFF:
-    #         self._update_tpm_power_states(
-    #             [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
-    #         )
+        :param power_state: the power state of the hardware
+        """
+        if power_state == PowerState.UNKNOWN:
+            self._update_tpm_power_states(
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            )
+        elif power_state == PowerState.OFF:
+            self._update_tpm_power_states(
+                [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
+            )
 
-    #     super().component_power_mode_changed(power_mode)
+        super().component_power_state_changed(power_state)
 
     @property
     def simulation_mode(self: SubrackComponentManager) -> SimulationMode:
@@ -576,7 +575,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             cast(
-                SwitchingSubrackComponentManager, self._hardware_component_manager
+                SwitchingSubrackComponentManager,
+                self._hardware_component_manager,
             ).turn_off_tpms()
             super().off()
         except Exception as ex:
@@ -756,6 +756,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 status=TaskStatus.COMPLETED,
                 result=f"Subrack TPM {tpm_id} turn on tpm task has completed",
             )
+            return
 
     def turn_on_tpms(
         self: SubrackComponentManager,

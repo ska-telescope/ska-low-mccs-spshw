@@ -7,8 +7,9 @@
 # See LICENSE for more info.
 """This module contains the tests of the tile component manage."""
 from __future__ import annotations
-import time
+
 import logging
+import time
 import unittest.mock
 from typing import Any, Callable, Union
 
@@ -509,15 +510,16 @@ class TestStaticSimulatorCommon:
         :param command_name: the name of the command under test
         :param num_args: the number of args the command takes
         """
-        lrc_list = ["cpld_flash_write",
-                    "get_arp_table",
-                    "start_acquisition",
-                    "post_synchronisation",
-                    "sync_fpgas",
+        lrc_list = [
+            "cpld_flash_write",
+            "get_arp_table",
+            "start_acquisition",
+            "post_synchronisation",
+            "sync_fpgas",
         ]
         args = [mocker.Mock()] * num_args
         if command_name in lrc_list and self.tile_name == "tile_component_manager":
-            command_name = "_"+command_name
+            command_name = "_" + command_name
         print("START", tile, args)
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)

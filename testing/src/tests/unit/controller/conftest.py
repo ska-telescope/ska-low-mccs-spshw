@@ -219,11 +219,11 @@ def station_beam_health_changed_callback(
 # ) -> unittest.mock.Mock:
 #     """
 #     Return a mock callback for communication change.
-# 
+#
 #     :param mock_callback_deque_factory: fixture that provides a mock callback
 #         factory (i.e. an object that returns mock callbacks when
 #         called).
-# 
+#
 #     :return: a mock callback to be called when the communication status
 #         of a component manager changed.
 #     """
@@ -506,7 +506,7 @@ def patched_controller_device_class(
             :return: a mock component manager
             """
             self._communication_state: Optional[CommunicationStatus] = None
-#             self._component_power_state: Optional[PowerState] = None
+            #             self._component_power_state: Optional[PowerState] = None
 
             mock_component_manager._communication_state_changed_callback = (
                 self._communication_state_changed_callback

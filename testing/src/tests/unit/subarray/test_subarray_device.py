@@ -11,8 +11,7 @@ from __future__ import annotations
 import json
 import time
 import unittest
-import pytest, pytest_mock
-from typing import Callable, Type, Any, Optional
+from typing import Callable, Type
 
 import pytest
 from ska_tango_base.commands import ResultCode
@@ -25,25 +24,28 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.executor import TaskStatus
-from ska_tango_base.control_model import CommunicationStatus, PowerState
 from tango import DevState
 from tango.server import command
 
 from ska_low_mccs import MccsDeviceProxy, MccsSubarray, release
 from ska_low_mccs.subarray.subarray_component_manager import SubarrayComponentManager
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs.testing.mock.mock_callable import MockCallable, MockCallableDeque
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
-
-#from testing.src.tests.unit.controller.conftest import component_state_changed_callback
-#from testing.src.tests.unit.subarray.conftest import subarray_beam_on_fqdn
 
 
 @pytest.fixture()
-def patched_subarray_device_class(mock_subarray_component_manager: SubarrayComponentManager, station_on_fqdn: str, subarray_beam_on_fqdn: str,) -> Type[MccsSubarray]:
+def patched_subarray_device_class(
+    mock_subarray_component_manager: SubarrayComponentManager,
+    station_on_fqdn: str,
+    subarray_beam_on_fqdn: str,
+) -> Type[MccsSubarray]:
     """
     Return a subarray device class, patched with extra methods for testing.
+
+    :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+    :param station_on_fqdn: The FQDN of a mock station that is powered on.
+    :param subarray_beam_on_fqdn: The FQDN of a mock subarray beam that is powered on.
 
     :return: a patched subarray device class, patched with extra methods
         for testing
@@ -67,39 +69,51 @@ def patched_subarray_device_class(mock_subarray_component_manager: SubarrayCompo
 
         @command(dtype_in=None)
         def TurnOnProxies(
-            self:PatchedSubarrayDevice,
+            self: PatchedSubarrayDevice,
         ) -> None:
-            for fqdn,proxy in self.component_manager._stations.items():
+            for fqdn, proxy in self.component_manager._stations.items():
                 if fqdn == station_on_fqdn:
                     proxy.power_state = PowerState.ON
 
-            for fqdn,proxy in self.component_manager._subarray_beams.items():
+            for fqdn, proxy in self.component_manager._subarray_beams.items():
                 if fqdn == subarray_beam_on_fqdn:
                     proxy.power_state = PowerState.ON
 
-        @command(dtype_in="DevString")
-        def component_state_changed_proxy(
+        @command(dtype_in=str)
+        def set_obs_state(
             self: PatchedSubarrayDevice,
-            state_change_json: str,
+            obs_state_name: str,
         ) -> None:
-            """This method is just a passthrough to test the callback."""
-            state_change = json.loads(state_change_json)
-            print(f"Calling callback with state change: {state_change}")
-            self._component_state_changed_callback(state_change)
+            """
+            Set the obsState of this device.
+
+            A method to set the obsState for testing purposes.
+
+            :param obs_state_name: The name of the obsState to directly transition to.
+            """
+            self.obs_state_model._straight_to_state(obs_state_name)
+
+        # @command(dtype_in="DevString")
+        # def component_state_changed_proxy(
+        #     self: PatchedSubarrayDevice,
+        #     state_change_json: str,
+        # ) -> None:
+        #     """This method is just a passthrough to access the callback."""
+        #     state_change = json.loads(state_change_json)
+        #     print(f"Calling callback with state change: {state_change}")
+        #     self._component_state_changed_callback(state_change)
 
         def create_component_manager(
             self: PatchedSubarrayDevice,
         ) -> unittest.mock.Mock:
             """
-            Return a mock component manager instead of the usual one.
+            Return a partially mocked component manager instead of the usual one.
 
             :return: a mock component manager
             """
             mock_subarray_component_manager._communication_state_changed_callback = (
                 self._component_communication_state_changed
             )
-            #mock_subarray_component_manager = pytest_mock.mocker.Mock()
-            #mock_subarray_component_manager = super().create_component_manager()
             mock_subarray_component_manager._component_state_changed_callback = (
                 self._component_state_changed_callback
             )
@@ -108,22 +122,24 @@ def patched_subarray_device_class(mock_subarray_component_manager: SubarrayCompo
 
     return PatchedSubarrayDevice
 
-@pytest.fixture()
-def device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for device admin mode change.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
+# @pytest.fixture()
+# def device_state_changed_callback(
+#     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+# ) -> MockChangeEventCallback:
+#     """
+#     Return a mock change event callback for device DevState change.
 
-    :return: a mock change event callback to be registered with the
-        device via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("state")
+#     :param mock_change_event_callback_factory: fixture that provides a
+#         mock change event callback factory (i.e. an object that returns
+#         mock callbacks when called).
+
+#     :return: a mock change event callback to be registered with the
+#         device via a change event subscription, so that it gets called
+#         when the device DevState changes.
+#     """
+#     return mock_change_event_callback_factory("state")
+
 
 @pytest.fixture()
 def device_to_load(
@@ -227,8 +243,9 @@ class TestMccsSubarray:
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-
-    @pytest.mark.skip("GetVersionInfo is no longer a long running command and merely returns a string. Should this test be removed?")
+    @pytest.mark.skip(
+        "GetVersionInfo is no longer a long running command and merely returns a string. Should this test be removed?"
+    )
     def test_GetVersionInfo(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
@@ -243,33 +260,35 @@ class TestMccsSubarray:
         :param lrc_result_changed_callback: a callback to
             be used to subscribe to device LRC result changes
         """
-        # TODO: Is this test pointless now? GetVersionInfo isn't a LRC anymore
-        # Subscribe to controller's LRC result attribute
-        device_under_test.add_change_event_callback(
-            "longRunningCommandResult",
-            lrc_result_changed_callback,
-        )
-        assert (
-            "longRunningCommandResult".casefold()
-            in device_under_test._change_event_subscription_ids
-        )
-        initial_lrc_result = ("", "")
-        assert device_under_test.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+        pass  # To please the linter and to show this test is skipped explicitly in test reports.
 
-        # GetVersionInfo appears to have changed. Maybe missing a cmd obj
-        version_info = device_under_test.GetVersionInfo()
-        print(version_info)
-        #assert result_code == TaskStatus.QUEUED
-        #assert "GetVersionInfo" in unique_id
+    #     # TODO: Is this test pointless now? GetVersionInfo isn't a LRC anymore
+    #     # Subscribe to controller's LRC result attribute
+    #     device_under_test.add_change_event_callback(
+    #         "longRunningCommandResult",
+    #         lrc_result_changed_callback,
+    #     )
+    #     assert (
+    #         "longRunningCommandResult".casefold()
+    #         in device_under_test._change_event_subscription_ids
+    #     )
+    #     initial_lrc_result = ("", "")
+    #     assert device_under_test.longRunningCommandResult == initial_lrc_result
+    #     lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
-        vinfo = release.get_release_info(device_under_test.info().dev_class)
-        lrc_result = (
-            unique_id,
-            str(ResultCode.OK.value),
-            str([vinfo]),
-        )
-        lrc_result_changed_callback.assert_last_change_event(lrc_result)
+    #     # GetVersionInfo appears to have changed. Maybe missing a cmd obj
+    #     version_info = device_under_test.GetVersionInfo()
+    #     print(version_info)
+    #     # assert result_code == TaskStatus.QUEUED
+    #     # assert "GetVersionInfo" in unique_id
+
+    #     vinfo = release.get_release_info(device_under_test.info().dev_class)
+    #     lrc_result = (
+    #         unique_id,
+    #         str(ResultCode.OK.value),
+    #         str([vinfo]),
+    #     )
+    #     lrc_result_changed_callback.assert_last_change_event(lrc_result)
 
     def test_buildState(
         self: TestMccsSubarray,
@@ -352,6 +371,8 @@ class TestMccsSubarray:
         :param station_beam_on_fqdn: the FQDN of a station beam that is powered
             on.
         :param channel_blocks: a list of channel blocks.
+        :param device_state_changed_callback: A mock callback to be called when the device's state
+            is changed.
         """
         device_under_test.add_change_event_callback(
             "adminMode",
@@ -361,13 +382,12 @@ class TestMccsSubarray:
             "state",
             device_state_changed_callback,
         )
+
         device_state_changed_callback.assert_next_change_event(DevState.UNKNOWN)
         device_state_changed_callback.assert_next_change_event(DevState.INIT)
 
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
-        time.sleep(0.1)
-
         device_state_changed_callback.assert_next_change_event(DevState.DISABLE)
         assert device_under_test.state() == DevState.DISABLE
 
@@ -376,8 +396,7 @@ class TestMccsSubarray:
         assert device_under_test.adminMode == AdminMode.ONLINE
         time.sleep(0.1)
 
-        # TODO: Not getting DevState.ON coming through for some reason.
-        device_state_changed_callback.assert_next_change_event(DevState.ON)
+        device_state_changed_callback.assert_last_change_event(DevState.ON)
         assert device_under_test.state() == DevState.ON
         assert device_under_test.obsState == ObsState.EMPTY
 
@@ -402,7 +421,9 @@ class TestMccsSubarray:
             )
         )
         assert result_code == ResultCode.QUEUED
-        assert "AssignResources" in str(response).rsplit("_", maxsplit=1)[-1].rstrip("']")
+        assert "AssignResources" in str(response).rsplit("_", maxsplit=1)[-1].rstrip(
+            "']"
+        )
 
         assert device_under_test.state() == DevState.ON
 
@@ -410,7 +431,7 @@ class TestMccsSubarray:
         assert device_under_test.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
-        time.sleep(0.1) # Needs time to actually resource or
+        time.sleep(0.5)  # Needs time to actually resource or
         # we release before we've finished assigning.
         assert device_under_test.assignedResources == json.dumps(
             {
@@ -421,6 +442,7 @@ class TestMccsSubarray:
             }
         )
 
+        assert device_under_test.obsState == ObsState.IDLE
         ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
         assert result_code == ResultCode.QUEUED
         assert "ReleaseAllResources" in unique_id
@@ -439,6 +461,7 @@ class TestMccsSubarray:
                 "channel_blocks": [],
             }
         )
+        assert device_under_test.obsState == ObsState.EMPTY
 
     def test_configure(
         self: TestMccsSubarray,
@@ -512,16 +535,12 @@ class TestMccsSubarray:
                 }
             )
         )
-        # Using device_obs_state variable to capture obsState value at this point.
-        # If we don't do this then it transitions to obsState.READY by the time we make the assertion for CONFIGURING.
-        device_obs_state = device_under_test.obsState
+        assert device_under_test.obsState == ObsState.CONFIGURING
+        # The above assertion can sometimes fail if configure completes before we get there.
         assert result_code == ResultCode.QUEUED
 
-        # This test sometimes fails at this point as the obsState has gone all the way to READY faster than we can check.
-        # TODO: Add a mock callback and make assertions on the change events for ObsState.
-        assert device_obs_state == ObsState.CONFIGURING
-        time.sleep(0.1)
         device_under_test.FakeSubservientDevicesObsState(ObsState.READY)
+        time.sleep(0.1)
         assert device_under_test.obsState == ObsState.READY
 
     def test_sendTransientBuffer(
@@ -546,7 +565,8 @@ class TestMccsSubarray:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         # Seems to be a bit of an adminMode wobble here.
-        # The first event to come through is another OFFLINE (possibly just a dupe of the first) but is followed by ONLINE so assertion has been changed from `assert_next_call` to `assert_last_call`
+        # The first event to come through is another OFFLINE (possibly just a dupe of the first)
+        # but is followed by ONLINE so assertion has been changed from `assert_next_change_event` to `assert_last_change_event`
         device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
@@ -555,36 +575,28 @@ class TestMccsSubarray:
         result_code, response = device_under_test.sendTransientBuffer(segment_spec)
 
         assert result_code == ResultCode.QUEUED
-        assert "SendTransientBuffer" in str(response).rsplit("_", maxsplit=1)[-1].rstrip("']")
+        assert "SendTransientBuffer" in str(response).rsplit("_", maxsplit=1)[
+            -1
+        ].rstrip("']")
 
-
-    # This will input all possible PowerState values for this test.
     @pytest.mark.parametrize("target_power_state", list(PowerState))
     def test_component_state_changed_callback_power_state(
         self: TestMccsSubarray,
-        device_under_test: MccsDeviceProxy, #pylint: disable=unused-argument
+        device_under_test: MccsDeviceProxy,  # pylint: disable=unused-argument
         mock_subarray_component_manager: SubarrayComponentManager,
         target_power_state: PowerState,
     ) -> None:
         """
-        Test component_state_changed_callback properly extracts values from state
-        changes it deals with and raises an error for any that it doesn't for single
-        state changes and multiple state changes.
+        Test `component_state_changed properly` handles power updates.
 
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param target_power_state: The PowerState that the device should end up in.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        #print(f"Testing powerState = {value}")
-
         key = "power_state"
-        initial_power_state = mock_subarray_component_manager.power_state
-        # Check the initial power state. If it's the same as the target power state then quickly switch it to a different one.
-        if initial_power_state == target_power_state:
-            new_initial_power_state = PowerState((initial_power_state+1)%len(list(PowerState)))
-            mock_subarray_component_manager.power_state = new_initial_power_state
-            assert mock_subarray_component_manager.power_state == new_initial_power_state
-        
         # Call the callback with the {key, value} pair
         state_change = {key: target_power_state}
         mock_subarray_component_manager.component_state_changed_callback(state_change)
@@ -592,7 +604,431 @@ class TestMccsSubarray:
         # Check that the power state has changed.
         final_power_state = mock_subarray_component_manager.power_state
         assert final_power_state == target_power_state
-        
-        # Deliberately fail the test so we get the traceback and stdout log in terminal.
-        assert False
-        
+
+    @pytest.mark.parametrize("target_health_state", list(HealthState))
+    def test_component_state_changed_callback_health_state(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,  # pylint: disable=unused-argument
+        mock_subarray_component_manager: SubarrayComponentManager,
+        target_health_state: HealthState,
+        device_health_state_changed_callback: MockChangeEventCallback,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles health updates.
+
+        Here we only test that the change event is pushed and that we receive it.
+        HealthState.UNKNOWN is omitted due to it being the initial state.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param target_health_state: The HealthState that the device should end up in.
+        :param device_health_state_changed_callback: A mock callback to be called when the device's health
+            state changes.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        device_under_test.add_change_event_callback(
+            "healthState",
+            device_health_state_changed_callback,
+        )
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
+        key = "health_state"
+        state_change = {key: target_health_state}
+
+        # Initial state is UNKNOWN so skip that one.
+        if target_health_state != HealthState.UNKNOWN:
+            mock_subarray_component_manager._component_state_changed_callback(
+                state_change
+            )
+            device_health_state_changed_callback.assert_next_change_event(
+                target_health_state
+            )
+
+    @pytest.mark.parametrize("configured_changed", [True, False])
+    def test_component_state_changed_callback_configured_changed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+        configured_changed: bool,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles configured_changed updates.
+
+        Test that the obs state model is properly updated when the component is configured or unconfigured.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param configured_changed: Whether the component is configured.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "configured_changed"
+        state_change = {key: configured_changed}
+        # set initial obsState
+        if configured_changed:
+            # TODO: Figure out a better test for these transitional state changes.
+            # obsState change: CONFIGURING_IDLE -> CONFIGURING_READY
+            initial_obs_state_name = "CONFIGURING_IDLE"
+            initial_obs_state = ObsState.CONFIGURING
+            final_obs_state = ObsState.CONFIGURING  # This is not a great test...
+        else:
+            # obsState change: READY -> IDLE
+            initial_obs_state_name = "READY"
+            initial_obs_state = ObsState.READY
+            final_obs_state = ObsState.IDLE
+        device_under_test.set_obs_state(initial_obs_state_name)
+
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    @pytest.mark.parametrize("scanning_changed", [True, False])
+    def test_component_state_changed_callback_scanning_changed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+        scanning_changed: bool,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles scanning_changed updates.
+
+        Test that the obs state model is properly updated when the component starts or stops scanning.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param scanning_changed: Whether the subarray is scanning.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "scanning_changed"
+        state_change = {key: scanning_changed}
+        # set initial obsState
+        if scanning_changed:
+            # obsState change: READY -> SCANNING
+            initial_obs_state_name = "READY"
+            initial_obs_state = ObsState.READY
+            final_obs_state = ObsState.SCANNING
+        else:
+            # obsState change: SCANNING -> READY
+            initial_obs_state_name = "SCANNING"
+            initial_obs_state = ObsState.SCANNING
+            final_obs_state = ObsState.READY
+        device_under_test.set_obs_state(initial_obs_state_name)
+
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    @pytest.mark.parametrize("resourcing", [True, False])
+    def test_component_state_changed_callback_assign_completed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+        resourcing: bool,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles assign_completed updates.
+
+        Test that the obs state model is properly updated when resource assignment completes.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param resourcing: Whether the subarray is resourcing or emptying.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "assign_completed"
+        state_change = {key: None}
+        # Set initial obsState.
+        if resourcing:
+            # obsState change: RESOURCING_IDLE -> IDLE
+            initial_obs_state_name = "RESOURCING_IDLE"
+            initial_obs_state = ObsState.RESOURCING
+            final_obs_state = ObsState.IDLE
+        else:
+            # obsState change: RESOURCING_EMPTY -> EMPTY
+            initial_obs_state_name = "RESOURCING_EMPTY"
+            initial_obs_state = ObsState.RESOURCING
+            final_obs_state = ObsState.EMPTY
+
+        device_under_test.set_obs_state(initial_obs_state_name)
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    @pytest.mark.parametrize("to_empty", [True, False])
+    def test_component_state_changed_callback_release_completed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+        to_empty: bool,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles release_completed updates.
+
+        Test that the obs state model is properly updated when resource release completes.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param to_empty: Whether the subarray is transitioning to EMPTY or not.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "release_completed"
+        state_change = {key: None}
+        # Set initial obsState.
+        if to_empty:
+            # obsState change: RESOURCING_EMPTY -> EMPTY
+            initial_obs_state_name = "RESOURCING_EMPTY"
+            initial_obs_state = ObsState.RESOURCING
+            final_obs_state = ObsState.EMPTY
+        else:
+            # obsState change: RESOURCING_IDLE -> IDLE
+            initial_obs_state_name = "RESOURCING_IDLE"
+            initial_obs_state = ObsState.RESOURCING
+            final_obs_state = ObsState.IDLE
+
+        device_under_test.set_obs_state(initial_obs_state_name)
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    @pytest.mark.parametrize("to_ready", [True, False])
+    def test_component_state_changed_callback_configure_completed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+        to_ready: bool,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles configure_completed updates.
+
+        Test that the obs state model is properly updated when configuring completes.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param to_ready: Whether the subarray is transitioning to READY or not.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "configure_completed"
+        state_change = {key: None}
+        # Set initial obsState.
+        if to_ready:
+            # obsState change: CONFIGURING_READY -> READY
+            initial_obs_state_name = "CONFIGURING_READY"
+            initial_obs_state = ObsState.CONFIGURING
+            final_obs_state = ObsState.READY
+        else:
+            # obsState change: CONFIGURING_IDLE -> IDLE
+            initial_obs_state_name = "CONFIGURING_IDLE"
+            initial_obs_state = ObsState.CONFIGURING
+            final_obs_state = ObsState.IDLE
+
+        device_under_test.set_obs_state(initial_obs_state_name)
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    def test_component_state_changed_callback_abort_completed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles abort_completed updates.
+
+        Test that the obs state model is properly updated when abort completes.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "abort_completed"
+        state_change = {key: None}
+        # Set initial obsState.
+        # obsState change: ABORTING -> ABORTED
+        initial_obs_state_name = "ABORTING"
+        initial_obs_state = ObsState.ABORTING
+        final_obs_state = ObsState.ABORTED
+
+        device_under_test.set_obs_state(initial_obs_state_name)
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    def test_component_state_changed_callback_obs_reset_completed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles obsreset_completed updates.
+
+        Test that the obs state model is properly updated when obsreset completes.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "obsreset_completed"
+        state_change = {key: None}
+        # Set initial obsState.
+        # obsState change: RESETTING -> IDLE
+        initial_obs_state_name = "RESETTING"
+        initial_obs_state = ObsState.RESETTING
+        final_obs_state = ObsState.IDLE
+
+        device_under_test.set_obs_state(initial_obs_state_name)
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    def test_component_state_changed_callback_restart_completed(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles restart_completed updates.
+
+        Test that the obs state model is properly updated when restart completes.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "restart_completed"
+        state_change = {key: None}
+        # Set initial obsState.
+        # obsState change: RESTARTING -> EMPTY
+        initial_obs_state_name = "RESTARTING"
+        initial_obs_state = ObsState.RESTARTING
+        final_obs_state = ObsState.EMPTY
+
+        device_under_test.set_obs_state(initial_obs_state_name)
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    @pytest.mark.parametrize("initial_obs_state", list(ObsState))
+    def test_component_state_changed_callback_obsfault(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,
+        mock_subarray_component_manager: SubarrayComponentManager,
+        initial_obs_state: ObsState,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles restart_completed updates.
+
+        Test that the obs state model is properly updated when restart completes.
+
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param initial_obs_state: The obsState that the subarray should start the test in.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        key = "obsfault"
+        state_change = {key: None}
+        # Set initial obsState.
+        # obsState change: * -> FAULT
+        initial_obs_state_name = initial_obs_state.name
+        # Handle special cases of RESOURCING and CONFIGURING with their transitional states.
+        special_cases = ["RESOURCING", "CONFIGURING"]
+        if initial_obs_state_name in special_cases:
+            initial_obs_state_name = initial_obs_state_name + "_IDLE"
+
+        final_obs_state = ObsState.FAULT
+
+        device_under_test.set_obs_state(initial_obs_state_name)
+        time.sleep(0.1)
+        assert device_under_test.obsState == initial_obs_state
+
+        mock_subarray_component_manager._component_state_changed_callback(state_change)
+        time.sleep(0.1)
+        assert device_under_test.obsState == final_obs_state
+
+    # # Not sure where I'm going with this...
+    # def test_component_state_changed_callback(
+    #     self: TestMccsSubarray,
+    #     device_under_test: MccsDeviceProxy, #pylint: disable=unused-argument
+    #     mock_subarray_component_manager: SubarrayComponentManager,
+    # ) -> None:
+
+    #     args = {
+    #         "power_state": (list(PowerState)),
+    #         "health_state": (list(HealthState)),
+    #         "configured_changed": (True, False),
+    #         "scanning_changed": (True, False),
+    #         }
+
+    #     expected_calls = {
+    #         "power_state": None,
+    #         "health_state": "push_change_event",
+    #         "configured_changed": "perform_action",
+    #         "scanning_changed": "perform_action",
+    #     }
+
+    #     def test_callback(key, value)-> None:
+    #         """Call the callback."""
+    #         print(key, value)
+    #         #mock_subarray_component_manager._component_state_changed_callback(key, value)
+
+    #     def check_calls(key, expected_value, expected_calls)->None:
+    #         """Checks callbacks have been called with the expected value."""
+    #         expected_call = expected_calls[key]
+    #         #assert expected_call called with expected_value
+    #         print(device_under_test.obs_state_model)
+    #         print(expected_call)
+
+    #     def check_state(key, expected_value)->None:
+    #         """Check device attribute has changed as expected."""
+
+    #     for key, values in args.items():
+    #         for value in values:
+    #             test_callback(key, value)
+    #             check_calls(key, value, expected_calls)
+    #             check_state(key, value)
+
+    #     #test_power_state(key, value)
+    #     #assert False

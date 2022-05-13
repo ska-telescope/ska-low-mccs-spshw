@@ -9,15 +9,15 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 import time
+from typing import Any
 
 import pytest
 from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
 from ska_low_mccs.testing.mock import MockCallable
-from ska_tango_base.executor import TaskStatus
 
 
 class TestStationBeamComponentManager:
@@ -189,13 +189,6 @@ class TestStationBeamComponentManager:
         :param station_beam_component_manager: the station beam component class object under
             test.
         """
-        station_beam_component_manager.start_communicating()
-        assert station_beam_component_manager.communication_state == CommunicationStatus.ESTABLISHED
-        import pdb
-        pdb.set_trace()
-        station_beam_component_manager.on()
-        #assert station_beam_component_manager.power_state == PowerState.ON
-
         beam_id = 2
         station_id = 1
         update_rate = 3.14
@@ -206,23 +199,24 @@ class TestStationBeamComponentManager:
 
         config = {
             "beam_id": beam_id,
-            "station_ids": [station_id],
+            "station_ids": station_id,
             "update_rate": update_rate,
-            "channels": [channels],
-            "desired_pointing": [desired_pointing],
-            "antenna_weights": [antenna_weights],
-            "phase_centre": [phase_centre],
+            "channels": channels,
+            "desired_pointing": desired_pointing,
+            "antenna_weights": antenna_weights,
+            "phase_centre": phase_centre,
         }
 
         config_dict = json.dumps(config)
-
         # Queueing of configure works fine but _configure is never executed.
         # This test passes if _configure is called directly.
-        # Probably failing due to comms/power states.
+        # Looks like this task actually ISN'T getting put on the queue...
         task_status, response = station_beam_component_manager.configure(config_dict)
+
+        # station_beam_component_manager._configure(beam_id,station_id,update_rate,channels,desired_pointing,antenna_weights,phase_centre)
         assert task_status == TaskStatus.QUEUED
         assert response == "Task queued"
-        time.sleep(0.1)
+        time.sleep(1)
 
         # Not getting into _configure where the following are set.
         assert station_beam_component_manager.beam_id == beam_id

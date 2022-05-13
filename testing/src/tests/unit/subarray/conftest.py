@@ -16,14 +16,14 @@ import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 
-from ska_low_mccs.subarray import SubarrayComponentManager, MccsSubarray
+from ska_low_mccs.subarray import SubarrayComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder, MockCallableDeque
+from ska_low_mccs.testing.mock import MockCallable, MockCallableDeque, MockDeviceBuilder
 
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[['dict[str, Any]'], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[["dict[str, Any]"], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
@@ -303,6 +303,7 @@ def subarray_component_manager(
         component_state_changed_callback,
     )
 
+
 @pytest.fixture()
 def mock_subarray_component_manager(
     logger: logging.Logger,
@@ -317,7 +318,6 @@ def mock_subarray_component_manager(
     which is omitted here to avoid a circular reference.
     This fixture is used to test subarray_device.
 
-    :param tango_harness: a test harness for MCCS tango devices
     :param logger: the logger to be used by this object.
     :param max_workers: Maximum number of workers in the thread pool.
     :param communication_state_changed_callback: callback to be

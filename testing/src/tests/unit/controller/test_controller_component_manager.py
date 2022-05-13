@@ -123,7 +123,9 @@ class TestControllerComponentManager:
         """
         controller_component_manager.start_communicating()
         time.sleep(0.1)
-        component_state_changed_callback.assert_in_deque({"power_state": PowerState.UNKNOWN})
+        component_state_changed_callback.assert_in_deque(
+            {"power_state": PowerState.UNKNOWN}
+        )
         assert controller_component_manager.power_mode == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():
@@ -136,7 +138,9 @@ class TestControllerComponentManager:
             subrack_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-        component_state_changed_callback.assert_next_call({"power_state": PowerState.OFF})
+        component_state_changed_callback.assert_next_call(
+            {"power_state": PowerState.OFF}
+        )
         assert controller_component_manager.power_mode == PowerState.OFF
 
     def test_subarray_allocation(

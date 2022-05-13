@@ -53,7 +53,7 @@ class MccsStationBeam(SKAObsDevice):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = StationBeamHealthModel(
-            self.component_state_changed_callback
+            self._component_state_changed_callback
         )
         self.set_change_event("healthState", True, False)
 
@@ -70,7 +70,7 @@ class MccsStationBeam(SKAObsDevice):
             self.logger,
             self._max_workers,
             self._communication_state_changed,
-            self.component_state_changed_callback,
+            self._component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsStationBeam) -> None:
@@ -119,7 +119,7 @@ class MccsStationBeam(SKAObsDevice):
     # ----------
     # Callbacks
     # ----------
-    def component_state_changed_callback(
+    def _component_state_changed_callback(
         self: MccsStationBeam, state_change: dict[str, Any]
     ) -> None:
         """

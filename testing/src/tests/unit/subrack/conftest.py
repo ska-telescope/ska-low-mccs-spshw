@@ -15,7 +15,6 @@ from typing import Any, Callable, Optional
 import pytest
 import requests
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
-from ska_low_mccs.testing.mock import MockCallableDeque
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -25,6 +24,7 @@ from ska_low_mccs.subrack import (
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
 )
+from ska_low_mccs.testing.mock import MockCallableDeque
 
 
 @pytest.fixture()
@@ -219,6 +219,7 @@ def subrack_driver(
 
     class MockResponse:
         """A mock class to replace requests.Response."""
+
         status_code = 200
         ATTRIBUTE_VALUES = {
             "tpm_on_off": [False, False, False],
@@ -257,7 +258,7 @@ def subrack_driver(
                 to be returned in this response.
             """
             self._json: dict[str, Any] = {}
-            
+
             if params is not None:
                 if params["type"] == "command":
                     self._json = {

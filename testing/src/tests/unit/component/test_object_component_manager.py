@@ -118,8 +118,7 @@ class TestObjectComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         assert (
-            component_manager.communication_state
-            == CommunicationStatus.NOT_ESTABLISHED
+            component_manager.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         component_manager.stop_communicating()
@@ -143,8 +142,7 @@ class TestObjectComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         assert (
-            component_manager.communication_state
-            == CommunicationStatus.NOT_ESTABLISHED
+            component_manager.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         with pytest.raises(ConnectionError, match="Failed to connect"):

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import unittest.mock
 from typing import Any
+import functools
 
 import pytest
 import pytest_mock
@@ -18,7 +19,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsPasdBus
-from ska_low_mccs.testing.mock.mock_callable import MockChangeEventCallback
+from ska_low_mccs.testing.mock.mock_callable import MockCallable, MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
@@ -95,6 +96,10 @@ class TestMccsPasdBus:
 
                 :return: a mock component manager
                 """
+                mock_component_manager._component_state_changed_callback = (
+                    self.component_state_changed_callback
+                )
+
                 return mock_component_manager
 
         return PatchedMccsPasdBus
@@ -144,12 +149,11 @@ class TestMccsPasdBus:
         device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-        #TODO: call callback to update health state
-        #mock_component_manager._component_state_changed_callback(
-         #   {"health_state": HealthState.OK}
-        #)
-        #device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
-        #assert device_under_test.healthState == HealthState.OK
+        mock_component_manager._component_state_changed_callback(
+            {"health_state": HealthState.OK}
+        )
+        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
+        assert device_under_test.healthState == HealthState.OK
 
     @pytest.mark.parametrize(
         ("device_attribute", "component_manager_property", "example_value"),
@@ -279,7 +283,6 @@ class TestMccsPasdBus:
             "device_command",
             "component_manager_method",
             "device_command_argin",
-            "component_manager_method_argin",
             "component_manager_method_return",
         ),
         [
@@ -287,13 +290,11 @@ class TestMccsPasdBus:
                 "ReloadDatabase",
                 "reload_database",
                 None,
-                None,
                 [True,True],
             ),
             (
                 "GetFndhInfo",
                 "get_fndh_info",
-                1,
                 1,
                 [True,True],
             ),
@@ -301,13 +302,11 @@ class TestMccsPasdBus:
                 "TurnFndhServiceLedOn",
                 "turn_fndh_service_led_on",
                 1,
-                1,
                 [True,True],
             ),
             (
                 "TurnFndhServiceLedOff",
                 "turn_fndh_service_led_off",
-                1,
                 1,
                 [True,True],
             ),
@@ -315,13 +314,11 @@ class TestMccsPasdBus:
                 "GetSmartboxInfo",
                 "get_smartbox_info",
                 1,
-                1,
                 [True, True],
             ),
             (
                 "TurnSmartboxOn",
                 "turn_smartbox_on",
-                1,
                 1,
                 [True, True],
             ),
@@ -329,13 +326,11 @@ class TestMccsPasdBus:
                 "TurnSmartboxOff",
                 "turn_smartbox_off",
                 1,
-                1,
                 [True, True],
             ),
             (
                 "TurnSmartboxServiceLedOn",
                 "turn_smartbox_service_led_on",
-                1,
                 1,
                 [True, True],
             ),
@@ -343,13 +338,11 @@ class TestMccsPasdBus:
                 "TurnSmartboxServiceLedOff",
                 "turn_smartbox_service_led_off",
                 1,
-                1,
                 [True, True],
             ),
             (
                 "GetAntennaInfo",
                 "get_antenna_info",
-                1,
                 1,
                 [True, True],
             ),
@@ -357,20 +350,17 @@ class TestMccsPasdBus:
                 "ResetAntennaBreaker",
                 "reset_antenna_breaker",
                 1,
-                1,
                 [True,True],
             ),
             (
                 "TurnAntennaOn",
                 "turn_antenna_on",
                 1,
-                1,
                 [True,True],
             ),
             (
                 "TurnAntennaOff",
                 "turn_antenna_off",
-                1,
                 1,
                 [True,True],
             ),
@@ -384,7 +374,6 @@ class TestMccsPasdBus:
         device_command: str,
         component_manager_method: str,
         device_command_argin: Any,
-        component_manager_method_argin: Any,
         component_manager_method_return: Any,
     ) -> None:
         """
@@ -398,12 +387,10 @@ class TestMccsPasdBus:
         :param mock_component_manager: the mock component manager being
             used by the patched transient buffer device.
         :param device_command: name of the device command under test.
-        :param device_command_argin: argument to the device command
         :param component_manager_method: name of the component manager
             method that is expected to be called when the device
             command is called.
-        :param component_manager_method_argin: argument to the component
-            manager method
+        :param device_command_argin: argument to the device command
         :param component_manager_method_return: return value of the
             component manager method
         """
@@ -417,10 +404,7 @@ class TestMccsPasdBus:
         else:
             command_return = command(device_command_argin)
 
-        #if component_manager_method_argin is None:
-         #   method_mock.assert_called_once_with()
-        #else:
-            #method_mock.assert_called_once_with(component_manager_method_argin)
+        method_mock.assert_called()
 
         assert command_return[0] == ResultCode.QUEUED
         assert command_return[1][0].split("_")[-1] == device_command

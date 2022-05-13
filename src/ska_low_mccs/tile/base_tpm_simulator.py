@@ -211,6 +211,16 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: program_cpld")
         raise NotImplementedError
 
+    def get_arp_table(self: BaseTpmSimulator) -> None:
+        """
+        Get the arp table.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmSimulator: get_arp_table")
+        raise NotImplementedError
+
     def initialise(self: BaseTpmSimulator) -> None:
         """
         Real TPM driver performs connectivity checks, programs and initialises the TPM.

@@ -960,9 +960,7 @@ class TestDriverCommon:
             ip: str,
             port: int,
             tpm_version: str,
-            communication_state_changed_callback: Callable[
-                [CommunicationStatus], None
-            ],
+            communication_state_changed_callback: Callable[[CommunicationStatus], None],
             component_state_changed_callback: Callable[[bool], None],
             aavs_tile: unittest.mock.Mock,
         ) -> None:
@@ -1102,6 +1100,4 @@ class TestDriverCommon:
         # )
 
         # assert patched_tpm_driver._queue_manager._task_result[2] == "Connected to Tile"
-        assert (
-            patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
-        )
+        assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED

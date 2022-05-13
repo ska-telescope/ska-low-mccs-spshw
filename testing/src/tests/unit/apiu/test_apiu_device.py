@@ -19,7 +19,6 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu import ApiuSimulator

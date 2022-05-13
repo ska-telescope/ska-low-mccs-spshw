@@ -98,6 +98,7 @@ class SubrackSimulator(ObjectComponent):
 
     def __init__(
         self: SubrackSimulator,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURES,
         board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
         board_current: float = DEFAULT_BOARD_CURRENT,
@@ -109,9 +110,6 @@ class SubrackSimulator(ObjectComponent):
         initial_are_tpms_on: list[bool] = DEFAULT_ARE_TPMS_ON,
         tpm_present: list[bool] = DEFAULT_TPM_PRESENT,
         _tpm_data: Optional[list[dict[str, Any]]] = None,
-        component_state_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
-        ] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -167,7 +165,9 @@ class SubrackSimulator(ObjectComponent):
         self._are_tpms_on_changed_callback: Optional[
             Callable[[dict[str, Any]], None]
         ] = None
-        self._component_state_changed_callback = component_state_changed_callback
+        self._component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = component_state_changed_callback
 
     def set_are_tpms_on_changed_callback(
         self: SubrackSimulator,

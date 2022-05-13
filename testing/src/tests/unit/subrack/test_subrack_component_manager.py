@@ -436,10 +436,10 @@ class TestSubrackDriverCommon:
         """
         setattr(subrack_driver, "_client", web_hardware_client_mock)
         web_hardware_client_mock.connect.return_value = True
-        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        assert subrack_driver.communication_state == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
         assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+            subrack_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         # Wait for the message to execute
@@ -448,7 +448,7 @@ class TestSubrackDriverCommon:
         # assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
         # assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
         # assert "Connected to " in subrack_driver._queue_manager._task_result[2]
-        assert subrack_driver.communication_status == CommunicationStatus.ESTABLISHED
+        assert subrack_driver.communication_state == CommunicationStatus.ESTABLISHED
 
     def test_communication_fails(
         self: TestSubrackDriverCommon,
@@ -466,10 +466,10 @@ class TestSubrackDriverCommon:
         """
         setattr(subrack_driver, "_client", web_hardware_client_mock)
         web_hardware_client_mock.connect.return_value = False
-        assert subrack_driver.communication_status == CommunicationStatus.DISABLED
+        assert subrack_driver.communication_state == CommunicationStatus.DISABLED
         subrack_driver.start_communicating()
         assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+            subrack_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         # Wait for the message to execute
@@ -481,7 +481,7 @@ class TestSubrackDriverCommon:
         # )
         # assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
         assert (
-            subrack_driver.communication_status == CommunicationStatus.NOT_ESTABLISHED
+            subrack_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
     @pytest.mark.parametrize(
@@ -659,73 +659,62 @@ class TestSubrackComponentManager:
             called when the component power mode changes
         :param tpm_id: the number of the tpm to use in the test
         """
-        expected_tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-        component_state_changed_callback.assert_next_call_with_keys(
-            {"tpm_power_states": expected_tpm_power_states}
-        )
-        component_state_changed_callback.assert_not_called()
-
         subrack_component_manager.start_communicating()
+        time.sleep(0.2)
         component_state_changed_callback.assert_in_deque(
             {"power_state": PowerState.OFF}
         )
         subrack_component_manager.power_state = PowerState.OFF
         assert subrack_component_manager.power_state == PowerState.OFF
+        time.sleep(0.2)
 
         expected_tpm_power_states = [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
         component_state_changed_callback.assert_next_call_with_keys(
             {"tpm_power_states": expected_tpm_power_states}
         )
-       # component_state_changed_callback.assert_not_called()
+        time.sleep(0.2)
 
-        subrack_component_manager.on()
-        component_state_changed_callback.assert_in_deque(
+        subrack_component_manager._on()
+        component_state_changed_callback.assert_next_call_with_keys(
             {"power_state": PowerState.ON}
         )
         subrack_component_manager.power_state = PowerState.ON
         assert subrack_component_manager.power_state == PowerState.ON
-
+        
         expected_tpm_power_states = [PowerState.OFF] * SubrackData.TPM_BAY_COUNT
         component_state_changed_callback.assert_next_call_with_keys({"tpm_power_states": expected_tpm_power_states})
         subrack_component_manager._tpm_power_states = expected_tpm_power_states
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
-      #  component_state_changed_callback.assert_not_called()
 
         assert subrack_component_manager.turn_on_tpm(tpm_id)
-        expected_tpm_power_states[tpm_id - 1] = PowerState.ON
-        component_state_changed_callback.assert_next_call_with_keys({"tpm_power_states": expected_tpm_power_states})
         time.sleep(0.2)
+        expected_tpm_power_states[tpm_id - 1] = PowerState.ON
+        component_state_changed_callback.assert_in_deque({"tpm_power_states": expected_tpm_power_states})
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
-        # assert subrack_component_manager.turn_on_tpm(tpm_id)  is None
-        # component_state_changed_callback.assert_not_called()
-
-        # assert subrack_component_manager.turn_off_tpm(tpm_id) is True
         assert subrack_component_manager.turn_off_tpm(tpm_id)
+        time.sleep(0.2)
         expected_tpm_power_states[tpm_id - 1] = PowerState.OFF
         component_state_changed_callback.assert_next_call_with_keys({"tpm_power_states": expected_tpm_power_states})
-        time.sleep(0.2)
-        #subrack_component_manager._tpm_power_states = expected_tpm_power_states
         assert subrack_component_manager.tpm_power_states == expected_tpm_power_states
 
-        # assert subrack_component_manager.turn_off_tpm(tpm_id) is None
-        # component_state_changed_callback.assert_not_called()
-        #assert subrack_component_manager.off() == ResultCode.OK
-        assert subrack_component_manager.off()
+        subrack_component_manager._off()
+        time.sleep(0.2)
         component_state_changed_callback.assert_next_call_with_keys(
             {"power_state": PowerState.OFF}
         )
         subrack_component_manager.power_state = PowerState.OFF
         assert subrack_component_manager.power_state == PowerState.OFF
-
+        time.sleep(0.3)
         expected_tpm_power_states = [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT
-        component_state_changed_callback.assert_next_call_with_keys(
+        component_state_changed_callback.assert_in_deque(
             {"tpm_power_states": expected_tpm_power_states}
         )
+
         expected_tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         subrack_component_manager.stop_communicating()
         time.sleep(0.2)
-        component_state_changed_callback.assert_next_call_with_keys(
+        component_state_changed_callback.assert_in_deque(
             {"tpm_power_states": expected_tpm_power_states}
         )
 
@@ -753,5 +742,6 @@ class TestSubrackComponentManager:
         component_state_changed_callback.assert_in_deque(expected_arguments)
         subrack_component_manager.power_state = PowerState.ON
         subrack_component_manager.turn_on_tpm(1)
+        time.sleep(0.3)
         component_state_changed_callback.assert_next_call_with_keys({"progress": 0})
         component_state_changed_callback.assert_next_call_with_keys({"progress": 100})

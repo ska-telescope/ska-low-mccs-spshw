@@ -43,7 +43,6 @@ class _StationProxy(ObsDeviceComponentManager):
 
         :return: A task status and response message.
         """
-        print("In station proxy configure.")
         assert self._proxy is not None
         configuration_str = json.dumps(configuration)
         (result_code, unique_id) = self._proxy.Configure(configuration_str)
@@ -122,14 +121,14 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
@@ -153,7 +152,7 @@ class SubarrayComponentManager(
         self._subarray_beam_health_changed_callback = component_state_changed_callback
         self._station_beam_health_changed_callback = component_state_changed_callback
 
-        self._device_communication_statuses: dict[str, CommunicationStatus] = {}
+        self._device_communication_statees: dict[str, CommunicationStatus] = {}
         self._station_power_modes: dict[str, Optional[PowerState]] = {}
         self._device_obs_states: dict[str, Optional[ObsState]] = {}
         self._is_assigning = False
@@ -170,7 +169,7 @@ class SubarrayComponentManager(
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -185,7 +184,7 @@ class SubarrayComponentManager(
             for station_beam_proxy in self._station_beams.values():
                 station_beam_proxy.start_communicating()
         else:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
             with self._power_state_lock:
                 self._component_state_changed_callback({"power_state": PowerState.ON})
 
@@ -244,6 +243,7 @@ class SubarrayComponentManager(
         :param task_callback: Update task state, defaults to None
         :return: a result code and response message.
         """
+        print("SUBMITTING ASSIGN")
         return self.submit_task(
             self._assign,
             args=[resource_spec],
@@ -276,6 +276,7 @@ class SubarrayComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
+        print("IN _ASSIGN")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -293,20 +294,20 @@ class SubarrayComponentManager(
         fqdns_to_add = station_fqdns_to_add.union(
             subarray_beam_fqdns_to_add, station_beam_fqdns_to_add
         )
-
+        print("IN ASSIGN 2")
         if fqdns_to_add:
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             for fqdn in fqdns_to_add:
-                self._device_communication_statuses[fqdn] = CommunicationStatus.DISABLED
+                self._device_communication_statees[fqdn] = CommunicationStatus.DISABLED
                 self._device_obs_states[fqdn] = ObsState.IDLE
-            self._evaluate_communication_status()
+            self._evaluate_communication_state()
 
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn] = _StationProxy(
                     fqdn,
                     self.logger,
                     self._max_workers,
-                    functools.partial(self._device_communication_status_changed, fqdn),
+                    functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
                         self._component_state_changed_callback, fqdn=fqdn
                     ),
@@ -316,7 +317,7 @@ class SubarrayComponentManager(
                     fqdn,
                     self.logger,
                     self._max_workers,
-                    functools.partial(self._device_communication_status_changed, fqdn),
+                    functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
                         self._component_state_changed_callback, fqdn=fqdn
                     ),
@@ -326,11 +327,12 @@ class SubarrayComponentManager(
                     fqdn,
                     self.logger,
                     self._max_workers,
-                    functools.partial(self._device_communication_status_changed, fqdn),
+                    functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
                         self._component_state_changed_callback, fqdn=fqdn
                     ),
                 )
+            print("IN ASSIGN 3")
             self._resources_changed_callback(
                 {
                     "resources_changed": [
@@ -340,7 +342,7 @@ class SubarrayComponentManager(
                     ]
                 }
             )
-
+            print("IN ASSIGN 4")
             self._is_assigning = True
             for fqdn in station_fqdns_to_add:
                 self._stations[fqdn].start_communicating()
@@ -350,10 +352,11 @@ class SubarrayComponentManager(
                 self._station_beams[fqdn].start_communicating()
 
         if task_callback is not None:
+            print("IN ASSIGN 5")
             task_callback(
                 status=TaskStatus.COMPLETED, result="AssignResources has completed."
             )
-
+        print("_ASSIGN DONE")
         return ResultCode.OK
 
     def _flatten_new_station_groups(
@@ -469,6 +472,7 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
+        print("SUBMITTING RELEASE ALL")
         return self.submit_task(
             self._release_all,
             args=[],
@@ -489,17 +493,19 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
+        print("IN RELEASE ALL")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
-
+        print("IN RELEASE ALL STILL")
         if self._stations or self._subarray_beams or self._station_beams:
             self._stations.clear()
             self._station_groups.clear()
             self._subarray_beams.clear()
             self._station_beams.clear()
             self._channel_blocks.clear()
-            self._device_communication_statuses.clear()
+            self._device_communication_statees.clear()
             self._device_obs_states.clear()
+            print("RELEASE ALL IF BLOCK")
 
             self._resources_changed_callback(
                 {
@@ -510,13 +516,15 @@ class SubarrayComponentManager(
                     ]
                 }
             )
-            self._evaluate_communication_status()
+            print("RELEASE ALL EVAL COMMS")
+            self._evaluate_communication_state()
         self._release_completed_callback({"release_completed": None})
-
+        print("STILL IN RELEASE ALL")
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."
             )
+        print("DONE RELEASE ALL")
         return ResultCode.OK
 
     @check_communicating
@@ -555,7 +563,6 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        print("In _configure")
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -566,15 +573,12 @@ class SubarrayComponentManager(
             subarray_beam["subarray_beam_id"]: subarray_beam
             for subarray_beam in subarray_beams
         }
-        print("Before station config")
+
         result_code = self._configure_stations(station_configuration)
-        print("After station config")
-        print(result_code)
         if result_code != ResultCode.FAILED:
             result_code = self._configure_subarray_beams(subarray_beam_configuration)
         self._configured_changed_callback({"configured_changed": True})
 
-        print(result_code)
         if result_code == ResultCode.OK:
             self._configure_completed_callback({"configure_completed": None})
 
@@ -595,16 +599,11 @@ class SubarrayComponentManager(
 
         :return: a result code
         """
-        print("in _config stations")
         result_code = ResultCode.OK
         for (station_id, configuration) in station_configuration.items():
             station_fqdn = f"low-mccs/station/{station_id:03d}"
             station_proxy = self._stations[station_fqdn]
-            print(f"-- before configure call for {station_fqdn}")
-            print(station_proxy.communication_status)
-            print(station_proxy.power_state)
             proxy_result_code, response = station_proxy.configure(configuration)
-            print("-- after configure call")
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
             elif proxy_result_code == ResultCode.QUEUED:
@@ -775,10 +774,6 @@ class SubarrayComponentManager(
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
         self._configured_changed_callback({"configured_changed": False})
-
-        # TODO: Will need to wait here until all subservient devices indicate
-        # they've finished and then call the task_callback indicating the results.
-        # Might need the task statuses so leave them in (unused) for now.
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="End/Deconfigure has completed."
@@ -875,6 +870,7 @@ class SubarrayComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
 
+    @check_communicating
     def send_transient_buffer(
         self: SubarrayComponentManager,
         argin: list[int],
@@ -892,7 +888,7 @@ class SubarrayComponentManager(
         """
         return self.submit_task(
             self._send_transient_buffer,
-            args=[argin],
+            args=argin,
             task_callback=task_callback,
         )
 
@@ -919,12 +915,12 @@ class SubarrayComponentManager(
                 result="send_transient_buffer command completed.",
             )
 
-    def _device_communication_status_changed(
+    def _device_communication_state_changed(
         self: SubarrayComponentManager,
         fqdn: str,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
-        if fqdn not in self._device_communication_statuses:
+        if fqdn not in self._device_communication_statees:
             self.logger.warning(
                 "Received a communication status changed event for a device not "
                 "managed by this subarray. Probably it was released just a moment ago. "
@@ -932,19 +928,19 @@ class SubarrayComponentManager(
             )
             return
 
-        self._device_communication_statuses[fqdn] = communication_status
-        if self.communication_status == CommunicationStatus.DISABLED:
+        self._device_communication_statees[fqdn] = communication_state
+        if self.communication_state == CommunicationStatus.DISABLED:
             return
 
-        self._evaluate_communication_status()
+        self._evaluate_communication_state()
 
-    def _evaluate_communication_status(self: SubarrayComponentManager) -> None:
-        if CommunicationStatus.DISABLED in self._device_communication_statuses:
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
-        elif CommunicationStatus.NOT_ESTABLISHED in self._device_communication_statuses:
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+    def _evaluate_communication_state(self: SubarrayComponentManager) -> None:
+        if CommunicationStatus.DISABLED in self._device_communication_statees:
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        elif CommunicationStatus.NOT_ESTABLISHED in self._device_communication_statees:
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         else:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
 
     def _station_power_state_changed(
         self: SubarrayComponentManager,

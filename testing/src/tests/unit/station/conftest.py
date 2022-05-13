@@ -323,7 +323,7 @@ def station_component_manager(
     :param logger: the logger to be used by this object.
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_power_mode_changed_callback: callback to be called

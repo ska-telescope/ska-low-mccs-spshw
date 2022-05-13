@@ -19,6 +19,7 @@ from ska_tango_base.commands import (  # FastCommand,
     SubmittedSlowCommand,
 )
 from ska_tango_base.control_model import CommunicationStatus, HealthState
+from ska_tango_base.executor import TaskStatus
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
 
@@ -69,7 +70,7 @@ class MccsSubarray(SKASubarray):
         return SubarrayComponentManager(
             self.logger,
             self._max_workers,
-            self._component_communication_status_changed,
+            self._component_communication_state_changed,
             self._component_state_changed_callback,
         )
 
@@ -140,6 +141,9 @@ class MccsSubarray(SKASubarray):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
+        # print("IN CALLBACK")
+        # print(f"state change: {state_change}")
+        # print(f"fqdn: {fqdn}")
         # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
         # valid_device_types = {"station": "station_health_changed",
         #                     "beam": "station_beam_health_changed",
@@ -152,7 +156,7 @@ class MccsSubarray(SKASubarray):
             # If all health states use "health_state" and overwrite each other
             # then the below code should fix it.
             # if fqdn is None:
-            #     # Do regular health update.
+            #     # Do regular health update. This device called the callback.
             #    if self._health_state != health:
             #         self._health_state = health
             #         self.push_change_event("healthState", health)
@@ -176,6 +180,7 @@ class MccsSubarray(SKASubarray):
 
         # resources should be passed in the dict's value as a list of sets to be extracted here.
         if "resources_changed" in state_change.keys():
+            print("IN CALLBACK RESOURCES CHANGED")
             resources = state_change.get("resources_changed")
             station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
@@ -234,9 +239,9 @@ class MccsSubarray(SKASubarray):
                 if power_state != self.component_manager.power_state:
                     self.component_manager.power_state = power_state
 
-    def _component_communication_status_changed(
+    def _component_communication_state_changed(
         self: MccsSubarray,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -245,7 +250,7 @@ class MccsSubarray(SKASubarray):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -254,12 +259,12 @@ class MccsSubarray(SKASubarray):
             CommunicationStatus.ESTABLISHED: "component_on",
         }
 
-        action = action_map[communication_status]
+        action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
     def _resources_changed(
@@ -281,13 +286,24 @@ class MccsSubarray(SKASubarray):
         :param station_beam_fqdns: the FQDNs of station beams assigned
             to this subarray
         """
+        print("IN _RESOURCES CHANGED")
+
         if station_fqdns or subarray_beam_fqdns or station_beam_fqdns:
+            print("ACTION 1")
+            print(self.obs_state_model.obs_state)
             self.obs_state_model.perform_action("component_resourced")
+            print("AFTER ACTION 1")
         else:
+            print("ACTION 2")
+            print(self.obs_state_model.obs_state)
             self.obs_state_model.perform_action("component_unresourced")
+            print("AFTER ACTION 2")
+
+        print("AFTER IF")
         self._health_model.resources_changed(
             station_fqdns, subarray_beam_fqdns, station_beam_fqdns
         )
+        print("DONE RES CHANGE")
 
     # def health_changed(self: MccsSubarray, health: HealthState) -> None:
     #     """
@@ -402,6 +418,7 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
+        print("RELEASEALLRESOURCES")
         handler = self.get_command_object("ReleaseAllResources")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
@@ -524,7 +541,7 @@ class MccsSubarray(SKASubarray):
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SendTransientBuffer(
         self: MccsSubarray, argin: list[int]
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Cause the subarray to send the requested segment of the transient buffer to SDP.
 

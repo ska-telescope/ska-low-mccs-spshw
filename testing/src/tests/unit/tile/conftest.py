@@ -13,6 +13,7 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
+import pytest_mock
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
@@ -56,6 +57,14 @@ def test_mode() -> TestMode:
     """
     return TestMode.TEST
 
+@pytest.fixture
+def unique_id() -> str:
+    """
+    Return a unique ID used to test Tango layer infrastructure.
+
+    :return: a unique ID
+    """
+    return "a unique id"
 
 @pytest.fixture()
 def subrack_fqdn() -> str:
@@ -146,19 +155,19 @@ def mock_subrack_device_proxy(
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for when the state of a component changes.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the state of a
         component changes.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -263,7 +272,7 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 def static_tpm_simulator_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> StaticTpmSimulatorComponentManager:
     """
@@ -273,7 +282,7 @@ def static_tpm_simulator_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: nos of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -284,7 +293,7 @@ def static_tpm_simulator_component_manager(
     return StaticTpmSimulatorComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -293,7 +302,7 @@ def static_tpm_simulator_component_manager(
 def dynamic_tpm_simulator_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> DynamicTpmSimulatorComponentManager:
     """
@@ -303,7 +312,7 @@ def dynamic_tpm_simulator_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: nos of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -314,7 +323,7 @@ def dynamic_tpm_simulator_component_manager(
     return DynamicTpmSimulatorComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -329,7 +338,7 @@ def switching_tpm_component_manager(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingTpmComponentManager:
     """
@@ -346,7 +355,7 @@ def switching_tpm_component_manager(
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param max_workers: nos. of worker threads
     :param tile_id: the unique ID for the tile
-    :param communication_status_changed_callback: callback  to be
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be called when the
@@ -364,7 +373,7 @@ def switching_tpm_component_manager(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -382,7 +391,7 @@ def tile_component_manager(
     tpm_version: str,
     subrack_fqdn: str,
     subrack_tpm_id: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> TileComponentManager:
     """
@@ -403,7 +412,7 @@ def tile_component_manager(
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -422,13 +431,34 @@ def tile_component_manager(
         tpm_version,
         subrack_fqdn,
         subrack_tpm_id,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
+@pytest.fixture()
+def mock_component_manager(
+    mocker: pytest_mock.mocker,  # type: ignore[valid-type]
+    unique_id: str,
+) -> unittest.mock.Mock:
+    """
+    Return a mock component manager.
+
+    The mock component manager is a simple mock.
+
+    :param mocker: pytest wrapper for unittest.mock
+    :param unique_id: a unique id used to check Tango layer functionality
+
+    :return: a mock component manager
+    """
+    mock = mocker.Mock()  # type: ignore[attr-defined]
+    mock.return_value = unique_id, ResultCode.QUEUED
+
+    return mock
 
 @pytest.fixture()
-def patched_tile_device_class() -> MccsTile:
+def patched_tile_device_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 
@@ -450,6 +480,24 @@ def patched_tile_device_class() -> MccsTile:
         implementation dependent. If an implementation change breaks
         this, we only want to fix it in this one place.
         """
+
+        def create_component_manager(
+            self: PatchedTileDevice,
+        ) -> unittest.mock.Mock:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            # self._communication_state: Optional[CommunicationStatus] = None
+
+            # mock_component_manager._communication_state_changed_callback = (
+            #     self._communication_state_changed_callback
+            # )
+            mock_component_manager.component_state_changed_callback = (
+                self.component_state_changed_callback
+            )
+            return mock_component_manager
 
         @command()
         def MockTpmOff(self: PatchedTileDevice) -> None:
@@ -474,6 +522,6 @@ def patched_tile_device_class() -> MccsTile:
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
-            self.component_manager._tpm_power_state_changed(PowerState.ON)
+            mock_component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice

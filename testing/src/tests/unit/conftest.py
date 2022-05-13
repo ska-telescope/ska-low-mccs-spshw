@@ -124,8 +124,9 @@ def mock_callback_deque_factory(
         not_called_timeout=mock_callback_not_called_timeout,
     )
 
+
 @pytest.fixture()
-def mock_component_state_changed_callback_factory(
+def mock_callback_deque_factory(
     mock_callback_called_timeout: float,
     mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallableDeque]:
@@ -152,7 +153,7 @@ def mock_component_state_changed_callback_factory(
 
 
 @pytest.fixture()
-def device_health_state_changed_callback(
+def device_state_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -207,7 +208,7 @@ def device_health_state_changed_callback(
 
 
 @pytest.fixture()
-def communication_status_changed_callback(
+def communication_state_changed_callback(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -221,23 +222,6 @@ def communication_status_changed_callback(
         of a component manager changed.
     """
     return mock_callback_factory()
-
-
-# @pytest.fixture()
-# def component_state_changed_callback(
-#     mock_callback_factory: Callable[[], unittest.mock.Mock],
-# ) -> unittest.mock.Mock:
-#     """
-#     Return a mock callback for component power mode change.
-# 
-#     :param mock_callback_factory: fixture that provides a mock callback
-#         factory (i.e. an object that returns mock callbacks when
-#         called).
-# 
-#     :return: a mock callback to be called when the component manager
-#         detects that the power mode of its component has changed.
-#     """
-#     return mock_callback_factory()
 
 
 @pytest.fixture()

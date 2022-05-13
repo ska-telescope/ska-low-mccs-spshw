@@ -37,7 +37,7 @@ class DeviceComponentManager(MccsComponentManager):
         fqdn: str,
         logger: logging.Logger,
         max_workers: Optional[int],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -46,7 +46,7 @@ class DeviceComponentManager(MccsComponentManager):
         :param fqdn: the FQDN of the device
         :param logger: the logger to be used by this object.
         :param max_workers: Nos of worker threads for async commands.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -68,7 +68,7 @@ class DeviceComponentManager(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -117,7 +117,7 @@ class DeviceComponentManager(MccsComponentManager):
             raise ConnectionError(
                 f"Could not connect to '{self._fqdn}'"
             ) from dev_failed
-        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self.update_communication_state(CommunicationStatus.ESTABLISHED)
 
         # TODO: Determine if we need this IF
         # if self._health_changed_callback is not None:
@@ -154,7 +154,7 @@ class DeviceComponentManager(MccsComponentManager):
     #                 f"Could not connect to '{self._fqdn}'"
     #             ) from dev_failed
 
-    #         self.update_communication_status(CommunicationStatus.ESTABLISHED)
+    #         self.update_communication_state(CommunicationStatus.ESTABLISHED)
     #         self._proxy.add_change_event_callback("state", self._device_state_changed)
 
     #         if self._health_changed_callback is not None:
@@ -399,7 +399,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         fqdn: str,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
@@ -407,7 +407,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
 
         :param fqdn: the FQDN of the device.
         :param logger: the logger to be used by this object.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes.
         :param component_state_changed_callback: callback to be called when the component's state changes.
@@ -419,7 +419,7 @@ class ObsDeviceComponentManager(DeviceComponentManager):
             fqdn,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
         self._event_callbacks["obsState"] = self._obs_state_changed

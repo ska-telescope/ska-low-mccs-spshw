@@ -42,7 +42,7 @@ class ObjectComponentManager(MccsComponentManager):
         component: ObjectComponent,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Optional[
+        communication_state_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
         component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
@@ -56,7 +56,7 @@ class ObjectComponentManager(MccsComponentManager):
             component manager
         :param logger: a logger for this object to use
         :param max_workers: nos of worker threads
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -71,7 +71,7 @@ class ObjectComponentManager(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -86,7 +86,7 @@ class ObjectComponentManager(MccsComponentManager):
         if self._fail_communicate:
             raise ConnectionError("Failed to connect")
 
-        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self.update_communication_state(CommunicationStatus.ESTABLISHED)
 
         self._component.set_fault_callback(self.component_state_changed_callback)
         self._component.set_power_mode_changed_callback(
@@ -112,9 +112,9 @@ class ObjectComponentManager(MccsComponentManager):
         self._fail_communicate = fail_communicate
         if (
             fail_communicate
-            and self.communication_status == CommunicationStatus.ESTABLISHED
+            and self.communication_state == CommunicationStatus.ESTABLISHED
         ):
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating
     def off(

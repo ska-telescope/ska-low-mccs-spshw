@@ -96,7 +96,7 @@ def antenna_apiu_proxy(
     apiu_antenna_id: int,
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_power_mode_changed_callback: MockCallable,
     component_fault_callback: MockCallable,
     antenna_power_mode_changed_callback: MockCallable,
@@ -112,7 +112,7 @@ def antenna_apiu_proxy(
     :param logger: a loger for the antenna component manager to use
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be called
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_power_mode_changed_callback: callback to be called
@@ -129,7 +129,7 @@ def antenna_apiu_proxy(
         apiu_antenna_id,
         logger,
         lrc_result_changed_callback,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
         antenna_power_mode_changed_callback,
@@ -143,7 +143,7 @@ def antenna_tile_proxy(
     tile_antenna_id: int,
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_fault_callback: Callable[[bool], None],
 ) -> _TileProxy:
     """
@@ -157,7 +157,7 @@ def antenna_tile_proxy(
     :param logger: a loger for the antenna component manager to use
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be called
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_fault_callback: callback to be called when the
@@ -170,7 +170,7 @@ def antenna_tile_proxy(
         tile_antenna_id,
         logger,
         lrc_result_changed_callback,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_fault_callback,
     )
 
@@ -184,7 +184,7 @@ def antenna_component_manager(
     tile_antenna_id: int,
     logger: logging.Logger,
     lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_power_mode_changed_callback: Callable[[PowerState], None],
     component_fault_callback: Callable[[bool], None],
 ) -> AntennaComponentManager:
@@ -199,7 +199,7 @@ def antenna_component_manager(
     :param logger: a loger for the antenna component manager to use
     :param lrc_result_changed_callback: a callback to
         be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be called
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_power_mode_changed_callback: callback to be called
@@ -216,7 +216,7 @@ def antenna_component_manager(
         tile_antenna_id,
         logger,
         lrc_result_changed_callback,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_power_mode_changed_callback,
         component_fault_callback,
     )

@@ -275,16 +275,20 @@ def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_state_changed_callback: MockCallableDeque,
 ) -> SubarrayComponentManager:
     """
     Return a subarray component manager.
 
+    This fixture is identical to `mock_subarray_component_manager` except for the inclusion of `tango_harness`.
+    Without `tango_harness` the component manager tests experience errors.
+    This fixture is used to test subarray_component_manager.
+
     :param tango_harness: a test harness for MCCS tango devices
     :param logger: the logger to be used by this object.
     :param max_workers: Maximum number of workers in the thread pool.
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be called when the
@@ -295,7 +299,39 @@ def subarray_component_manager(
     return SubarrayComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
+
+@pytest.fixture()
+def mock_subarray_component_manager(
+    logger: logging.Logger,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
+) -> SubarrayComponentManager:
+    """
+    Return a subarray component manager.
+
+    This fixture is identical to the `subarray_component_manager` fixture except for the `tango_harness`
+    which is omitted here to avoid a circular reference.
+    This fixture is used to test subarray_device.
+
+    :param tango_harness: a test harness for MCCS tango devices
+    :param logger: the logger to be used by this object.
+    :param max_workers: Maximum number of workers in the thread pool.
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be called when the
+        component's state changes.
+
+    :return: a subarray component manager
+    """
+    return SubarrayComponentManager(
+        logger,
+        max_workers,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 

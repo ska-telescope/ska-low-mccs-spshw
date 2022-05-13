@@ -40,7 +40,7 @@ class _TileProxy(DeviceComponentManager):
         logical_tile_id: int,
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[PowerState], None],
     ) -> None:
         """
@@ -55,7 +55,7 @@ class _TileProxy(DeviceComponentManager):
             associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -69,7 +69,7 @@ class _TileProxy(DeviceComponentManager):
             fqdn,
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -117,7 +117,7 @@ class StationComponentManager(MccsComponentManager):
         tile_fqdns: Sequence[str],
         logger: logging.Logger,
         max_workers: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[CommunicationStatus], None],
     ) -> None:
         """
@@ -133,7 +133,7 @@ class StationComponentManager(MccsComponentManager):
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
@@ -145,8 +145,8 @@ class StationComponentManager(MccsComponentManager):
         self._on_called = False
         self.component_state_changed_callback = component_state_changed_callback
 
-        self._communication_status_lock = threading.Lock()
-        self._communication_statuses = {
+        self._communication_state_lock = threading.Lock()
+        self._communication_statees = {
             fqdn: CommunicationStatus.DISABLED
             for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
         }
@@ -161,7 +161,7 @@ class StationComponentManager(MccsComponentManager):
             apiu_fqdn,
             logger,
             max_workers,
-            functools.partial(self._device_communication_status_changed, apiu_fqdn),
+            functools.partial(self._device_communication_state_changed, apiu_fqdn),
             functools.partial(self.component_state_changed_callback, fqdn=apiu_fqdn),
         )
         #self._antenna_proxies = [
@@ -171,7 +171,7 @@ class StationComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(
-                    self._device_communication_status_changed, antenna_fqdn
+                    self._device_communication_state_changed, antenna_fqdn
                 ),
                 functools.partial(
                     self.component_state_changed_callback, fqdn=antenna_fqdn
@@ -188,7 +188,7 @@ class StationComponentManager(MccsComponentManager):
                 logical_tile_id,
                 logger,
                 max_workers,
-                functools.partial(self._device_communication_status_changed, tile_fqdn),
+                functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(
                     self.component_state_changed_callback, fqdn=tile_fqdn
                 ),
@@ -200,7 +200,7 @@ class StationComponentManager(MccsComponentManager):
         super().__init__(
             logger,
             max_workers,
-            communication_status_changed_callback,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -224,34 +224,34 @@ class StationComponentManager(MccsComponentManager):
             tile_proxy.stop_communicating()
         self._apiu_proxy.stop_communicating()
 
-    def _device_communication_status_changed(
+    def _device_communication_state_changed(
         self: StationComponentManager,
         fqdn: str,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self._communication_status_lock:
-            self._communication_statuses[fqdn] = communication_status
+        with self._communication_state_lock:
+            self._communication_statees[fqdn] = communication_state
 
-            if self.communication_status == CommunicationStatus.DISABLED:
+            if self.communication_state == CommunicationStatus.DISABLED:
                 return
 
-            if CommunicationStatus.DISABLED in self._communication_statuses.values():
-                self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            if CommunicationStatus.DISABLED in self._communication_statees.values():
+                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             elif (
                 CommunicationStatus.NOT_ESTABLISHED
-                in self._communication_statuses.values()
+                in self._communication_statees.values()
             ):
-                self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
-                self.update_communication_status(CommunicationStatus.ESTABLISHED)
+                self.update_communication_state(CommunicationStatus.ESTABLISHED)
 
-    def update_communication_status(
+    def update_communication_state(
         self: StationComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Update the status of communication with the component.
@@ -259,12 +259,12 @@ class StationComponentManager(MccsComponentManager):
         Overridden here to fire the "is configured" callback whenever
         communication is freshly established
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the component
         """
-        super().update_communication_status(communication_status)
+        super().update_communication_state(communication_state)
 
-        if communication_status == CommunicationStatus.ESTABLISHED:
+        if communication_state == CommunicationStatus.ESTABLISHED:
             self.component_state_changed_callback({"is_configured": self.is_configured})
 
     @threadsafe

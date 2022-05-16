@@ -235,7 +235,7 @@ class ClusterSimulator(ObjectComponent):
         """
         self._fault_callback = fault_callback
         if fault_callback is not None:
-            fault_callback({"fault" : self._faulty})
+            fault_callback({"fault": self._faulty})
 
     def set_shadow_master_pool_node_health_changed_callback(
         self: ClusterSimulator,

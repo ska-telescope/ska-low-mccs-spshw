@@ -70,7 +70,7 @@ class TestTileComponentManager:
 
         # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
         tile_component_manager.start_communicating()
-
+        time.sleep(0.2)
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -342,6 +342,7 @@ class TestStaticSimulatorCommon:
 
         :return: the tile class object under test
         """
+        self.tile_name = request.param
         if request.param == "static_tpm_simulator":
             return static_tpm_simulator
         elif request.param == "static_tpm_simulator_component_manager":
@@ -375,7 +376,6 @@ class TestStaticSimulatorCommon:
             ),
             ("pps_delay", StaticTpmSimulator.PPS_DELAY),
             ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
-            ("arp_table", StaticTpmSimulator.ARP_TABLE),
             ("register_list", list(StaticTpmSimulator.REGISTER_MAP[0].keys())),
         ),
     )
@@ -454,6 +454,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("command_name", "num_args"),
         (
+            ("get_arp_table", 0),
             ("cpld_flash_write", 1),
             ("set_channeliser_truncation", 1),
             ("set_beamformer_regions", 1),
@@ -475,7 +476,7 @@ class TestStaticSimulatorCommon:
             ("send_beam_data", 0),
             ("stop_data_transmission", 0),
             ("compute_calibration_coefficients", 0),
-            ("start_acquisition", 0),
+            ("start_acquisition", 1),
             ("set_time_delays", 1),
             ("set_csp_rounding", 1),
             ("set_lmc_integrated_download", 3),
@@ -509,7 +510,17 @@ class TestStaticSimulatorCommon:
         :param command_name: the name of the command under test
         :param num_args: the number of args the command takes
         """
+        lrc_list = [
+            "cpld_flash_write",
+            "get_arp_table",
+            "start_acquisition",
+            "post_synchronisation",
+            "sync_fpgas",
+        ]
         args = [mocker.Mock()] * num_args
+        if command_name in lrc_list and self.tile_name == "tile_component_manager":
+            command_name = "_" + command_name
+        print("START", tile, args)
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)
 
@@ -528,8 +539,11 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         """
         tile.erase_fpga()
+        time.sleep(0.2)
         assert not tile.is_programmed
+        time.sleep(0.2)
         tile.initialise()
+        time.sleep(2)
         assert tile.is_programmed
         assert tile.firmware_name == "itpm_v1_6.bit"
 
@@ -554,9 +568,12 @@ class TestStaticSimulatorCommon:
         :param mocker: fixture that wraps unittest.mock
         """
         tile.erase_fpga()
+        time.sleep(0.2)
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
+        time.sleep(0.2)
         tile.download_firmware(mock_bitfile)
+        time.sleep(0.2)
         assert tile.is_programmed
 
     @pytest.mark.parametrize("device", (1,))
@@ -882,7 +899,6 @@ class TestDynamicSimulatorCommon:
             ),
             ("pps_delay", DynamicTpmSimulator.PPS_DELAY),
             ("firmware_available", DynamicTpmSimulator.FIRMWARE_AVAILABLE),
-            ("arp_table", DynamicTpmSimulator.ARP_TABLE),
             (
                 "register_list",
                 list(DynamicTpmSimulator.REGISTER_MAP[0].keys()),
@@ -1061,7 +1077,7 @@ class TestDriverCommon:
         # Wait for the message to execute
         # then check that the connect has been called
         # but the component is still unconnected
-        time.sleep(3.1)
+        time.sleep(0.3)
         hardware_tile_mock.connect.assert_called_with()
         assert (
             patched_tpm_driver.communication_state

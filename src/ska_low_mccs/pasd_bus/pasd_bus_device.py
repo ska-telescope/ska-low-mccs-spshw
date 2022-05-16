@@ -618,148 +618,180 @@ class MccsPasdBus(SKABaseDevice):
         result_code, unique_id = handler()
         return ([result_code], [unique_id])
 
-    @command(dtype_out=str)
-    def GetFndhInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def GetFndhInfo(self: MccsPasdBus, argin: int) -> Tuple[List[Any], List[Any]]:
         """
         Return information about the FNDH.
+
+        :param argin:fndh to get info from
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("GetFndhInfo")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def TurnFndhServiceLedOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def TurnFndhServiceLedOn(
+        self: MccsPasdBus, argin: int
+    ) -> DevVarLongStringArrayType:
         """
         Turn on an FNDH's blue service LED.
+
+        :param argin: fndh service led to turn on
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnFndhServiceLedOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def TurnFndhServiceLedOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def TurnFndhServiceLedOff(
+        self: MccsPasdBus, argin: int
+    ) -> DevVarLongStringArrayType:
         """
         Turn off an FNDH's blue service LED.
+
+        :param argin: fndh service led to turn off
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnFndhServiceLedOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
-    @command(dtype_in="DevULong", dtype_out=str)
-    def GetSmartboxInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def GetSmartboxInfo(self: MccsPasdBus, argin: int) -> Tuple[List[Any], List[Any]]:
         """
         Return information about a smartbox.
+
+        :param argin: smartbox to get info from
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("GetSmartboxInfo")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox.
+
+        :param argin: smartbox to turn on
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox.
+
+        :param argin: smartbox to turn off
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOn(
+        self: MccsPasdBus, argin: int
+    ) -> DevVarLongStringArrayType:
         """
         Turn on a smartbox's blue service LED.
+
+        :param argin: smartbox service led to turn on
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxServiceLedOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnSmartboxServiceLedOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnSmartboxServiceLedOff(
+        self: MccsPasdBus, argin: int
+    ) -> DevVarLongStringArrayType:
         """
         Turn off a smartbox's blue service LED.
+
+        :param argin: smartbox service led to turn off
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnSmartboxServiceLedOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
-    @command(dtype_in="DevULong", dtype_out=str)
-    def GetAntennaInfo(self: MccsPasdBus) -> Tuple[List[Any], List[Any]]:
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def GetAntennaInfo(self: MccsPasdBus, argin: int) -> Tuple[List[Any], List[Any]]:
         """
         Return information about relationship of an antenna to other PaSD components.
+
+        :param argin: antenna to get info from
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("GetAntennaInfo")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def ResetAntennaBreaker(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def ResetAntennaBreaker(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Reset a tripped antenna breaker.
+
+        :param argin: antenna breaker to reset
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("ResetAntennaBreaker")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnAntennaOn(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnAntennaOn(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn on an antenna.
+
+        :param argin: antenna to turn on
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnAntennaOn")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
-    def TurnAntennaOff(self: MccsPasdBus) -> DevVarLongStringArrayType:
+    def TurnAntennaOff(self: MccsPasdBus, argin: int) -> DevVarLongStringArrayType:
         """
         Turn off an antenna.
+
+        :param argin: antenna to turn off
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.
         """
         handler = self.get_command_object("TurnAntennaOff")
-        result_code, unique_id = handler()
+        result_code, unique_id = handler(argin)
         return ([result_code], [unique_id])
 
 

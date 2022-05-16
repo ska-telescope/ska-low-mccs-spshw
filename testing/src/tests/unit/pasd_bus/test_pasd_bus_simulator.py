@@ -737,16 +737,19 @@ class TestPasdBusSimulator:
                 pasd_bus_simulator.get_fndh_port_forcing(connected_fndh_port) == forcing
             )
 
+    @pytest.mark.parametrize("fndh_id", [1])
     def test_get_fndh_info(
         self: TestPasdBusSimulator,
         pasd_bus_simulator: PasdBusSimulator,
+        fndh_id: int,
     ) -> None:
         """
         Test the ``get_fndh_info`` method.
 
         :param pasd_bus_simulator: the PaSD Bus simulator under test.
+        :param fndh_id: the fndh to get info from
         """
-        fndh_info = pasd_bus_simulator.get_fndh_info()
+        fndh_info = pasd_bus_simulator.get_fndh_info(fndh_id)
         assert (
             fndh_info["modbus_register_map_revision_number"]
             == FndhSimulator.MODBUS_REGISTER_MAP_REVISION_NUMBER
@@ -1244,28 +1247,34 @@ class TestPasdBusSimulator:
             "tpm_input_number": antenna_config["tpm_input"],
         }
 
-    @pytest.mark.parametrize("smartbox_id", [1])
+    @pytest.mark.parametrize(
+        ("smartbox_id", "fndh_id"),
+        [
+            (1, 1),
+        ],
+    )
     def test_update_status(
         self: TestPasdBusSimulator,
         pasd_bus_simulator: PasdBusSimulator,
         smartbox_id: int,
+        fndh_id: int,
     ) -> None:
         """
         Test the ``update_status`` method.
 
         :param pasd_bus_simulator: the PaSD Bus simulator under test.
-        :param smartbox_id: number of a smartbox to use to check the
-            result of updating
+        :param smartbox_id: number of a smartbox to use
+        :param fndh_id: number of fndh to use
         """
         smartbox_info = pasd_bus_simulator.get_smartbox_info(smartbox_id)
-        fndh_info = pasd_bus_simulator.get_fndh_info()
+        fndh_info = pasd_bus_simulator.get_fndh_info(fndh_id)
 
         initial_smartbox_read_time = datetime.fromisoformat(smartbox_info["read_time"])
         initial_fndh_read_time = datetime.fromisoformat(fndh_info["read_time"])
 
         # check that the read time stays the same until we call update_status()
         smartbox_info = pasd_bus_simulator.get_smartbox_info(smartbox_id)
-        fndh_info = pasd_bus_simulator.get_fndh_info()
+        fndh_info = pasd_bus_simulator.get_fndh_info(fndh_id)
         new_smartbox_read_time = datetime.fromisoformat(smartbox_info["read_time"])
         new_fndh_read_time = datetime.fromisoformat(fndh_info["read_time"])
         assert new_smartbox_read_time == initial_smartbox_read_time
@@ -1275,7 +1284,7 @@ class TestPasdBusSimulator:
 
         # check that the read time has advanced now that we've called update_status()
         smartbox_info = pasd_bus_simulator.get_smartbox_info(smartbox_id)
-        fndh_info = pasd_bus_simulator.get_fndh_info()
+        fndh_info = pasd_bus_simulator.get_fndh_info(fndh_id)
         new_smartbox_read_time = datetime.fromisoformat(smartbox_info["read_time"])
         new_fndh_read_time = datetime.fromisoformat(fndh_info["read_time"])
         assert new_smartbox_read_time > initial_smartbox_read_time

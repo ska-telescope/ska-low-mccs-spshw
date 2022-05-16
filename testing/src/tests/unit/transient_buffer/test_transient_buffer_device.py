@@ -78,8 +78,8 @@ class TestMccsTransientBuffer:
                 :return: a mock component manager
                 """
                 mock_component_manager._component_state_changed_callback = (
-                self.component_state_changed_callback
-            )
+                    self.component_state_changed_callback
+                )
 
                 return mock_component_manager
 
@@ -120,15 +120,21 @@ class TestMccsTransientBuffer:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
+        :param mock_component_manager: mocked component manager used
+            to access the real component state changed callback
         """
         device_under_test.add_change_event_callback(
             "healthState",
             device_health_state_changed_callback,
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-        mock_component_manager._component_state_changed_callback({"health_state": HealthState.OK})
+        mock_component_manager._component_state_changed_callback(
+            {"health_state": HealthState.OK}
+        )
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK
 

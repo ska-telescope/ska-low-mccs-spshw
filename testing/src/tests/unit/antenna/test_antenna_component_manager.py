@@ -370,7 +370,7 @@ class TestAntennaComponentManager:
         )
 
         task_status, message = antenna_component_manager.on()
-        assert (task_status, message) == (TaskStatus.QUEUED, 'Task queued')
+        assert (task_status, message) == (TaskStatus.QUEUED, "Task queued")
 
         # no action taken initially because the APIU is switched off
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()

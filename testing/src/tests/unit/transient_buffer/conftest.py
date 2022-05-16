@@ -72,7 +72,7 @@ def transient_buffer_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: the maximum worker threads available
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be called

@@ -19,7 +19,7 @@ from ska_tango_base.control_model import CommunicationStatus, HealthState, Power
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager
 from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
+from ska_low_mccs.testing.mock.mock_callable import MockCallable
 
 
 class TestControllerComponentManager:
@@ -40,8 +40,6 @@ class TestControllerComponentManager:
             the component manager and its component changes
         """
         print(dir(controller_component_manager))
-        import pdb
-        pdb.set_trace()
         assert (
             controller_component_manager.communication_state
             == CommunicationStatus.DISABLED
@@ -53,31 +51,31 @@ class TestControllerComponentManager:
         )
 
         for fqdn in controller_component_manager._subarrays.keys():
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.assert_next_call(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.assert_next_call(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
         for fqdn in controller_component_manager._subarray_beams.keys():
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.assert_next_call(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.assert_next_call(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
         for fqdn in controller_component_manager._stations.keys():
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.asserte(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.assert_next_call(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
         for fqdn in controller_component_manager._station_beams.keys():
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.assert_next_call(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
-            communication_state_changed_callback.assert_in_deque(
+            communication_state_changed_callback.assert_next_call(
                 fqdn, CommunicationStatus.NOT_ESTABLISHED
             )
         communication_state_changed_callback.assert_last_call(

@@ -61,7 +61,7 @@ def component_state_changed_callback(
 def tel_state_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[Any], None],
 ) -> TelStateComponentManager:
     """
@@ -69,7 +69,7 @@ def tel_state_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: the maximum worker threads available
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be called
@@ -80,6 +80,6 @@ def tel_state_component_manager(
     return TelStateComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )

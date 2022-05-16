@@ -64,7 +64,7 @@ def component_state_changed_callback(
 def transient_buffer_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[Any], None],
 ) -> TransientBufferComponentManager:
     """
@@ -83,6 +83,6 @@ def transient_buffer_component_manager(
     return TransientBufferComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )

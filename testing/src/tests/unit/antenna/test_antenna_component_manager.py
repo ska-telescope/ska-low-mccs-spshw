@@ -362,10 +362,10 @@ class TestAntennaComponentManager:
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        # communication_status_changed_callback.assert_next_call(
+        # communication_state_changed_callback.assert_next_call(
         #     CommunicationStatus.ESTABLISHED
         # )
-        communication_status_changed_callback.assert_in_deque(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
 

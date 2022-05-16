@@ -617,7 +617,6 @@ class TestSubarrayComponentManager:
         channel_blocks: list[int],
         scan_id: int,
         start_time: float,
-        scanning_changed_callback: MockCallable,
         component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
@@ -641,8 +640,6 @@ class TestSubarrayComponentManager:
         :param channel_blocks: a list of channel blocks.
         :param scan_id: a scan id for use in testing
         :param start_time: a scan start time for use in testing
-        :param scanning_changed_callback: callback to be called when whether
-            the subarray is scanning changes
         :param component_state_changed_callback: Callback to call when the component's state changes.
         """
         subarray_component_manager.start_communicating()

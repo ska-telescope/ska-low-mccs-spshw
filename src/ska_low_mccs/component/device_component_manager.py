@@ -80,8 +80,13 @@ class DeviceComponentManager(MccsComponentManager):
         """
         super().start_communicating()
         task_status, response = self.submit_task(
-            self._connect_to_device, args=[self._event_callbacks], task_callback=None
+           self._connect_to_device, args=[self._event_callbacks], task_callback=None
         )
+        #task_status, response = self.submit_task(
+        #   self._connect_to_device, self._event_callbacks, task_callback=None
+        #)
+        #self._connect_to_device(self._event_callbacks)
+        print("submitted _connect_to_device")
 
     def _connect_to_device(
         self: DeviceComponentManager,

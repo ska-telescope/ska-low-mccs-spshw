@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 import pytest
 import pytest_mock
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
@@ -25,6 +26,26 @@ from ska_low_mccs.testing.mock import (
     MockChangeEventCallback,
     MockDeviceBuilder,
 )
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
+
+class MockLongRunningCommand(MockCallable):   
+    def __call__(self: MockCallable, *args: Any, **kwargs: Any) -> Any:
+        """
+        Handle a callback call.
+
+        Create a standard mock, call it, and put it on the queue. (This
+        approach lets us take advantange of the mock's assertion
+        functionality later.)
+
+        :param args: positional args in the call
+        :param kwargs: keyword args in the call
+
+        :return: the object's return calue
+        """
+        called_mock = unittest.mock.Mock()
+        called_mock(*args, **kwargs)
+        self._queue.put(called_mock)
+        return TaskStatus.QUEUED, "Task queued"
 
 
 @pytest.fixture()
@@ -247,6 +268,36 @@ def is_configured_changed_callback(
 
 
 @pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+) -> Callable[[], None]:
+    """
+    Return a mock callback for a change in whether the station changes state.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback for a change in whether the station is
+        configured.
+    """
+    #return mock_callback_factory()
+    return mock_callback_deque_factory()
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return an integer specifying the maximum number of worker threads 
+    available to execute long-running-commands.
+
+    :return: the max number of worker threads.
+    """
+    max_workers = 1
+    return max_workers
+
+
+@pytest.fixture()
 def station_component_manager(
     tango_harness: TangoHarness,
     station_id: int,
@@ -254,13 +305,9 @@ def station_component_manager(
     antenna_fqdns: list[str],
     tile_fqdns: list[str],
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_state_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    apiu_health_changed_callback: MockCallable,
-    antenna_health_changed_callback: MockCallable,
-    tile_health_changed_callback: MockCallable,
-    is_configured_changed_callback: MockCallable,
+    max_workers: int,
+    communication_status_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> StationComponentManager:
     """
     Return a station component manager.
@@ -298,13 +345,9 @@ def station_component_manager(
         antenna_fqdns,
         tile_fqdns,
         logger,
-        lrc_result_changed_callback,
-        communication_state_changed_callback,
-        component_power_mode_changed_callback,
-        apiu_health_changed_callback,
-        antenna_health_changed_callback,
-        tile_health_changed_callback,
-        is_configured_changed_callback,
+        max_workers,
+        communication_status_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -337,8 +380,8 @@ def mock_component_manager(
         device.
     """
     mock_component_manager = mocker.Mock()
-    mock_component_manager.apply_pointing = MockCallable()
-    mock_component_manager.configure = MockCallable()
+    mock_component_manager.apply_pointing = MockLongRunningCommand()
+    mock_component_manager.configure = MockLongRunningCommand()
     return mock_component_manager
 
 

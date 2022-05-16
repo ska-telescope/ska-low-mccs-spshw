@@ -237,13 +237,15 @@ class MccsStation(SKAObsDevice):
                 )
             else:
                 raise ValueError(
-                    f"unknown fqdn '{fqdn}', should belong to antenna, tile or apiu"
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
                 )
 
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
-            if power_state:
-                power_state_changed_callback(power_state)
+            with self.component_manager.power_state_lock:
+                self.component_manager.set_power_state(power_state, fqdn=fqdn)
+                if power_state:
+                    power_state_changed_callback(power_state)
 
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")

@@ -21,7 +21,7 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulatorComponentManager,
 )
 from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable
 
 
 class TestClusterCommon:
@@ -421,15 +421,14 @@ class TestClusterComponentManager:
     def test_init_simulation_mode(
         self: TestClusterComponentManager,
         logger: logging.Logger,
-        lrc_result_changed_callback: MockChangeEventCallback,
+        max_workers: int,
     ) -> None:
         """
         Test that we can't create a cluster manager that's not in simulation mode.
 
         :param logger: a logger for the ClusterComponentManager instance
             that this test will try to initialise.
-        :param lrc_result_changed_callback: a callback to
-            be used to subscribe to device LRC result changes
+        :param max_workers: the maximum number of worker threads.
         """
         with pytest.raises(
             NotImplementedError,
@@ -437,10 +436,8 @@ class TestClusterComponentManager:
         ):
             _ = ClusterComponentManager(
                 logger,
-                lrc_result_changed_callback,
+                max_workers,
                 SimulationMode.FALSE,
-                None,
-                None,
                 None,
                 None,
             )
@@ -463,27 +460,36 @@ class TestClusterComponentManager:
     def test_component_shadow_master_pool_node_health_changed_callback(
         self: TestClusterComponentManager,
         cluster_component_manager: ClusterComponentManager,
-        component_shadow_master_pool_node_health_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test that the callback is called when a shadow master pool node changes health.
 
         :param cluster_component_manager: a manager for an external cluster
-        :param component_shadow_master_pool_node_health_changed_callback:
-            callback to be called when the health of a node in the
-            shadow pool changes
+        :param component_state_changed_callback:
+            callback to be called when the state (health of a node in the
+            shadow pool) changes
         """
         cluster_component_manager.start_communicating()
-        component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            [HealthState.OK, HealthState.OK, HealthState.OK, HealthState.OK]
+        component_state_changed_callback.assert_in_deque(
+            {
+                "shadow_master_pool_node_healths": [
+                    HealthState.OK,
+                    HealthState.OK,
+                    HealthState.OK,
+                    HealthState.OK,
+                ]
+            }
         )
 
         cluster_component_manager._component.simulate_node_failure(1, True)
-        component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            [
-                HealthState.FAILED,
-                HealthState.OK,
-                HealthState.OK,
-                HealthState.OK,
-            ]
+        component_state_changed_callback.assert_in_deque(
+            {
+                "shadow_master_pool_node_healths": [
+                    HealthState.FAILED,
+                    HealthState.OK,
+                    HealthState.OK,
+                    HealthState.OK,
+                ]
+            }
         )

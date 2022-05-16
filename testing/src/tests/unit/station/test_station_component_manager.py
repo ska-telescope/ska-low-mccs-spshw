@@ -51,7 +51,7 @@ class TestStationComponentManager:
         station_component_manager.start_communicating()
 
         # allow some time for device communication to start before testing
-        time.sleep(0.1) 
+        time.sleep(0.1)
         communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -63,7 +63,9 @@ class TestStationComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
-        component_state_changed_callback.assert_next_call_with_keys({'is_configured': False})
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"is_configured": False}
+        )
 
         station_component_manager.stop_communicating()
         communication_state_changed_callback.assert_next_call(
@@ -135,7 +137,7 @@ class TestStationComponentManager:
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
         component_state_changed_callback: MockCallableDeque,
-        #component_power_state_changed_callback: MockCallable,
+        # component_power_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the station component manager's management of power mode.
@@ -147,8 +149,10 @@ class TestStationComponentManager:
         """
         print("apiu power mode = ", station_component_manager._apiu_proxy._power_state)
         station_component_manager.start_communicating()
-        time.sleep(1) # wait for events to come through
-        print("now apiu power mode = ", station_component_manager._apiu_proxy._power_state)
+        time.sleep(1)  # wait for events to come through
+        print(
+            "now apiu power mode = ", station_component_manager._apiu_proxy._power_state
+        )
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
@@ -156,8 +160,10 @@ class TestStationComponentManager:
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
         print(component_state_changed_callback.get_next_call())
-        #component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
-        component_state_changed_callback.assert_next_call_with_keys({"power_state": PowerState.UNKNOWN})
+        # component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"power_state": PowerState.UNKNOWN}
+        )
         assert station_component_manager.power_state == PowerState.UNKNOWN
 
         time.sleep(0.1)  # to let the UNKNOWN events subside
@@ -167,20 +173,22 @@ class TestStationComponentManager:
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
             assert station_component_manager.power_state == PowerState.UNKNOWN
-            #component_power_state_changed_callback.assert_not_called()
+            # component_power_state_changed_callback.assert_not_called()
             component_state_changed_callback.assert_not_called()
         for tile_proxy in station_component_manager._tile_proxies:
             tile_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
             assert station_component_manager.power_state == PowerState.UNKNOWN
-            #component_power_state_changed_callback.assert_not_called()
+            # component_power_state_changed_callback.assert_not_called()
             component_state_changed_callback.assert_not_called()
         station_component_manager._apiu_proxy._device_state_changed(
             "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
         )
-        #component_power_state_changed_callback.assert_next_call(PowerState.OFF)
-        component_state_changed_callback.assert_next_call_with_keys([{"power_state": PowerState.UNKNOWN}])
+        # component_power_state_changed_callback.assert_next_call(PowerState.OFF)
+        component_state_changed_callback.assert_next_call_with_keys(
+            [{"power_state": PowerState.UNKNOWN}]
+        )
         assert station_component_manager.power_state == PowerState.OFF
 
     def test_tile_setup(

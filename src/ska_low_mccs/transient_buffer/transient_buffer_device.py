@@ -45,7 +45,9 @@ class MccsTransientBuffer(SKABaseDevice):
     def _init_state_model(self: MccsTransientBuffer) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TransientBufferHealthModel(self.health_changed)
+        self._health_model = TransientBufferHealthModel(
+            self.component_state_changed_callback
+        )
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -82,9 +84,9 @@ class MccsTransientBuffer(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            super().do()
-            self._device._build_state = release.get_release_info()
-            self._device._version_id = release.version
+            # super().do()
+            self._build_state = release.get_release_info()
+            self._version_id = release.version
 
             return (ResultCode.OK, "Init command completed OK")
 

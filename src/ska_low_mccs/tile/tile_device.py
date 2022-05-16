@@ -171,7 +171,7 @@ class MccsTile(SKABaseDevice):
         for (command_name, method_name) in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
-            ("GetArpTable", "arp_table"),
+            ("GetArpTable", "get_arp_table"),
             ("StartAcquisition", "start_acquisition"),
             ("ProgramCPLD", "cpld_flash_write"),
             ("PostSynchronisation", "post_synchronisation"),

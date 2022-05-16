@@ -135,14 +135,13 @@ class TestPasdBusComponentManager:
         ("command_name", "args", "kwargs"),
         [
             ("reload_database", [], {}),
-            ("get_fndh_info", [], {}),
+            ("get_fndh_info", [1], {}),
             ("is_fndh_port_power_sensed", [1], {}),
             ("set_fndh_service_led_on", [True], {}),
             ("get_fndh_port_forcing", [1], {}),
             ("simulate_fndh_port_forcing", [1, True], {}),
             ("get_smartbox_info", [1], {}),
             ("turn_smartbox_on", [1], {}),
-            ("turn_smartbox_on", [1], {"desired_on_if_offline": False}),
             ("turn_smartbox_off", [1], {}),
             ("is_smartbox_port_power_sensed", [1, 2], {}),
             ("set_smartbox_service_led_on", [1, True], {}),
@@ -153,7 +152,6 @@ class TestPasdBusComponentManager:
             ("simulate_antenna_breaker_trip", [1], {}),
             ("reset_antenna_breaker", [1], {}),
             ("turn_antenna_on", [1], {}),
-            ("turn_antenna_on", [1], {"desired_on_if_offline": True}),
             ("turn_antenna_off", [1], {}),
             ("update_status", [], {}),
         ],
@@ -184,6 +182,9 @@ class TestPasdBusComponentManager:
         :param kwargs: keyword args to the command under test
         """
         _ = getattr(pasd_bus_component_manager, command_name)(*args, **kwargs)
-        getattr(mock_pasd_bus_simulator, command_name).assert_called_once_with(
-            *args, **kwargs
-        )
+        if (
+            _ is None
+        ):  # if method is not defined in component manager class then command is called by simulator class
+            getattr(mock_pasd_bus_simulator, command_name).assert_called_once_with(
+                *args, **kwargs
+            )

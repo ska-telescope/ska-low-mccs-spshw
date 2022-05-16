@@ -20,6 +20,7 @@ from ska_tango_base.control_model import CommunicationStatus, PowerState
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.station import StationComponentManager
 from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 class TestStationComponentManager:
@@ -28,8 +29,8 @@ class TestStationComponentManager:
     def test_communication(
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
-        communication_state_changed_callback: MockCallable,
-        is_configured_changed_callback: MockCallable,
+        communication_status_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test the station component manager's management of communication.
@@ -48,7 +49,10 @@ class TestStationComponentManager:
         )
 
         station_component_manager.start_communicating()
-        communication_state_changed_callback.assert_next_call(
+
+        # allow some time for device communication to start before testing
+        time.sleep(0.1) 
+        communication_status_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         communication_state_changed_callback.assert_next_call(
@@ -59,7 +63,7 @@ class TestStationComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
-        is_configured_changed_callback.assert_next_call(False)
+        component_state_changed_callback.assert_next_call_with_keys({'is_configured': False})
 
         station_component_manager.stop_communicating()
         communication_state_changed_callback.assert_next_call(
@@ -108,7 +112,7 @@ class TestStationComponentManager:
         apiu_proxy.On.assert_next_call()
 
         # pretend to receive APIU power mode changed event
-        station_component_manager._apiu_power_mode_changed(PowerState.ON)
+        station_component_manager._apiu_power_state_changed(PowerState.ON)
 
         for tile_proxy in tile_proxies:
             tile_proxy.On.assert_next_call()
@@ -117,11 +121,11 @@ class TestStationComponentManager:
 
         # pretend to receive tile and antenna events
         for fqdn in tile_fqdns:
-            station_component_manager._tile_power_mode_changed(fqdn, PowerState.ON)
+            station_component_manager._tile_power_state_changed(fqdn, PowerState.ON)
         for fqdn in antenna_fqdns:
-            station_component_manager._antenna_power_mode_changed(fqdn, PowerState.ON)
+            station_component_manager._antenna_power_state_changed(fqdn, PowerState.ON)
 
-        assert station_component_manager.power_mode == PowerState.ON
+        assert station_component_manager.power_state == PowerState.ON
 
         station_component_manager.off()
         for proxy in [apiu_proxy] + tile_proxies:
@@ -130,19 +134,31 @@ class TestStationComponentManager:
     def test_power_events(
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
-        component_power_mode_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
+        #component_power_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test the station component manager's management of power mode.
 
         :param station_component_manager: the station component manager
             under test.
-        :param component_power_mode_changed_callback: callback to be
+        :param component_power_state_changed_callback: callback to be
             called when the component power mode changes
         """
+        print("apiu power mode = ", station_component_manager._apiu_proxy._power_state)
         station_component_manager.start_communicating()
-        component_power_mode_changed_callback.assert_next_call(PowerState.UNKNOWN)
-        assert station_component_manager.power_mode == PowerState.UNKNOWN
+        time.sleep(1) # wait for events to come through
+        print("now apiu power mode = ", station_component_manager._apiu_proxy._power_state)
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        print(component_state_changed_callback.get_next_call())
+        #component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
+        component_state_changed_callback.assert_next_call_with_keys({"power_state": PowerState.UNKNOWN})
+        assert station_component_manager.power_state == PowerState.UNKNOWN
 
         time.sleep(0.1)  # to let the UNKNOWN events subside
 
@@ -150,19 +166,22 @@ class TestStationComponentManager:
             antenna_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-            assert station_component_manager.power_mode == PowerState.UNKNOWN
-            component_power_mode_changed_callback.assert_not_called()
+            assert station_component_manager.power_state == PowerState.UNKNOWN
+            #component_power_state_changed_callback.assert_not_called()
+            component_state_changed_callback.assert_not_called()
         for tile_proxy in station_component_manager._tile_proxies:
             tile_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-            assert station_component_manager.power_mode == PowerState.UNKNOWN
-            component_power_mode_changed_callback.assert_not_called()
+            assert station_component_manager.power_state == PowerState.UNKNOWN
+            #component_power_state_changed_callback.assert_not_called()
+            component_state_changed_callback.assert_not_called()
         station_component_manager._apiu_proxy._device_state_changed(
             "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
         )
-        component_power_mode_changed_callback.assert_next_call(PowerState.OFF)
-        assert station_component_manager.power_mode == PowerState.OFF
+        #component_power_state_changed_callback.assert_next_call(PowerState.OFF)
+        component_state_changed_callback.assert_next_call_with_keys([{"power_state": PowerState.UNKNOWN}])
+        assert station_component_manager.power_state == PowerState.OFF
 
     def test_tile_setup(
         self: TestStationComponentManager,
@@ -215,8 +234,8 @@ class TestStationComponentManager:
         tile_fqdns: list[str],
         logger: logging.Logger,
         pointing_delays: unittest.mock.Mock,
-        communication_state_changed_callback: MockCallable,
-        component_power_mode_changed_callback: MockCallable,
+        communication_status_changed_callback: MockCallable,
+        component_power_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test tile attribute assignment.
@@ -234,7 +253,7 @@ class TestStationComponentManager:
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
+        :param component_power_state_changed_callback: callback to be
             called when the component power mode changes
         """
         station_component_manager.start_communicating()
@@ -249,8 +268,8 @@ class TestStationComponentManager:
         # TODO: Using "last" instead of "next" here is a sneaky way of forcing a delay
         # so that we don't start faking receipt of events below until the real events
         # have all been received.
-        component_power_mode_changed_callback.assert_last_call(PowerState.UNKNOWN)
-        assert station_component_manager.power_mode == PowerState.UNKNOWN
+        component_power_state_changed_callback.assert_last_call(PowerState.UNKNOWN)
+        assert station_component_manager.power_state == PowerState.UNKNOWN
 
         # Tell this station each of its components is on, so that it thinks it is on
         station_component_manager._apiu_proxy._device_state_changed(
@@ -265,8 +284,8 @@ class TestStationComponentManager:
                 "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
             )
 
-        component_power_mode_changed_callback.assert_last_call(PowerState.ON)
-        assert station_component_manager.power_mode == PowerState.ON
+        component_power_state_changed_callback.assert_last_call(PowerState.ON)
+        assert station_component_manager.power_state == PowerState.ON
 
         station_component_manager.apply_pointing(pointing_delays)
         for tile_fqdn in tile_fqdns:

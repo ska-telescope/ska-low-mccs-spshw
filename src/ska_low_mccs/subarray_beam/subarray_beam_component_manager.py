@@ -47,7 +47,12 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self._is_configured_changed_callback = component_state_changed_callback
 
         super().__init__(
-            SubarrayBeam(logger),
+            SubarrayBeam(
+                logger,
+                max_workers,
+                communication_state_changed_callback,
+                component_state_changed_callback,
+            ),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -216,6 +221,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Task abort, defaults to None
         """
+        self.component_state_changed_callback({"configured_changed": True})
+
         task_callback(status=TaskStatus.IN_PROGRESS)
 
         # TODO Ben add config stuff here

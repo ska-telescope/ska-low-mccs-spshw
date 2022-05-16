@@ -12,6 +12,7 @@ import logging
 from typing import Any, Callable, Optional
 
 from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.component import ObjectComponent
 
@@ -24,22 +25,26 @@ class SubarrayBeam(ObjectComponent):
     def __init__(
         self: SubarrayBeam,
         logger: logging.Logger,
+        max_workers: int,
+        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: a logger for this component to use
+        :param max_workers: no of worker threads
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         self._logger = logger
 
-        self._is_beam_locked_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
-        ] = None
-
+        self._is_beam_locked_changed_callback = component_state_changed_callback
         self._is_configured = False
-        self._is_configured_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
-        ] = None
+        self._is_configured_changed_callback = component_state_changed_callback
 
         self._subarray_id = 0
         self._subarray_beam_id = 0

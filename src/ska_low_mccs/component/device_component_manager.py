@@ -436,6 +436,5 @@ class ObsDeviceComponentManager(DeviceComponentManager):
         assert (
             event_name.lower() == "obsstate"
         ), f"obs state changed callback called but event_name is {event_name}."
-
         if self._obs_state_changed_callback is not None:
             self._obs_state_changed_callback({"obsstate_changed": event_value})

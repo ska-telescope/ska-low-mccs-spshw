@@ -17,7 +17,7 @@ PYTHON_RUNNER = poetry run
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = testing/src/
-PYTHON_LINT_TARGET = src/ska_low_mccs #testing/src/tests  ## Paths containing python to be formatted and linted
+PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
 # Disable warning, convention, and refactoring messages
 # Disable errors: E1101 (no-member), E1136 (unsubscriptable-object), E0611 (no-name-in-module), E0603 (undefined-all-variable),
     # E1121 (too-many-function-args), E1120 (no-value-for-parameter)

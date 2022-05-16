@@ -20,6 +20,7 @@ from ska_low_mccs import release
 from ska_low_mccs.subarray_beam import (
     SubarrayBeamComponentManager,
     SubarrayBeamHealthModel,
+    SubarrayBeamObsStateModel,
 )
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
@@ -46,10 +47,9 @@ class MccsSubarrayBeam(SKAObsDevice):
 
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
-        #         self._obs_state_model = SubarrayBeamObsStateModel(
-        #             self.logger,
-        #             self.component_state_changed_callback
-        #         )
+        self._obs_state_model = SubarrayBeamObsStateModel(
+            self.logger, self.component_state_changed_callback
+        )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubarrayBeamHealthModel(
             self.component_state_changed_callback
@@ -162,6 +162,8 @@ class MccsSubarrayBeam(SKAObsDevice):
 
         :param state_change: the state change dict
         """
+        print("callback called")
+        print("callback called with: ", state_change)
         if "health_state" in state_change.keys():
             health = state_change["health_state"]
             if self._health_state != health:
@@ -172,13 +174,13 @@ class MccsSubarrayBeam(SKAObsDevice):
             beam_locked = state_change["beam_locked"]
             self._health_model.is_beam_locked_changed(beam_locked)
 
-    #         if "configured_changed" in state_change.keys():
-    #             configured_changed = state_change.get("configured_changed")
-    #             self._obs_state_model.is_configured_changed(configured_changed)
+        if "configured_changed" in state_change.keys():
+            configured_changed = state_change["configured_changed"]
+            self._obs_state_model.is_configured_changed(configured_changed)
 
-    #         if "obs_state" in state_change.keys():
-    #             configured_changed = state_change.get("obs_state")
-    #             self._obs_state_model.obs_state = configured_changed
+            if "obs_state" in state_change.keys():
+                configured_changed = state_change.get("obs_state")
+                self._obs_state_model.obs_state = configured_changed
 
     # ----------
     # Attributes

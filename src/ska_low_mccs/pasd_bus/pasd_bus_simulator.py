@@ -976,9 +976,11 @@ class PasdBusSimulator(ObjectComponent):
         """
         raise NotImplementedError("PaSD bus simulator reset not implemented.")
 
-    def get_fndh_info(self: PasdBusSimulator) -> FndhInfoType:
+    def get_fndh_info(self: PasdBusSimulator, fndh: int) -> FndhInfoType:
         """
         Return information about an FNDH controller.
+
+        :param fndh: the fndh to get info from
 
         :return: a dictionary containing information about the FNDH
             controller.

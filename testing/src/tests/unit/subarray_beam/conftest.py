@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 from ska_tango_base.control_model import CommunicationStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
-from ska_low_mccs.testing.mock import MockChangeEventCallback
 
 
 @pytest.fixture()
@@ -54,47 +53,83 @@ def is_configured_changed_callback(
 
 
 @pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+
+    :return: number of worker threads
+    """
+    return 1
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for a change in the subarray beam state.
+
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        deque factory (i.e. an object that returns mock callback deques when
+        called).
+
+    :return: a mock callback deque to be called when the component manager
+        detects that the subarray beam state has changed
+    """
+    return mock_callback_deque_factory()
+
+
+@pytest.fixture()
 def subarray_beam_component(
     logger: logging.Logger,
+    max_workers: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubarrayBeam:
     """
     Fixture that returns a subarray beam component.
 
     :param logger: a logger for the subarray beam component to use.
+    :param max_workers: number of worker threads
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: a callback to be
+        called when the component state changes.
 
     :return: a subarray beam component
     """
-    return SubarrayBeam(logger)
+    return SubarrayBeam(
+        logger,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
 
 
 @pytest.fixture()
 def subarray_beam_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_is_beam_locked_changed_callback: Callable[[bool], None],
-    is_configured_changed_callback: Callable[[bool], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubarrayBeamComponentManager:
     """
     Return a subarray beam component manager.
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: number of worker threads
     :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_is_beam_locked_changed_callback: a callback to be
-        called when whether the beam is locked changes.
-    :param is_configured_changed_callback: a callback to be
-        called when whether the beam is configured changes.
+    :param component_state_changed_callback: a callback to be
+        called when the component state changes.
 
     :return: a subarray beam component manager
     """
     return SubarrayBeamComponentManager(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_state_changed_callback,
-        component_is_beam_locked_changed_callback,
-        is_configured_changed_callback,
+        component_state_changed_callback,
     )

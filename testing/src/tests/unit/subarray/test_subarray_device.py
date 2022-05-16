@@ -93,19 +93,9 @@ def patched_subarray_device_class(
             """
             self.obs_state_model._straight_to_state(obs_state_name)
 
-        # @command(dtype_in="DevString")
-        # def component_state_changed_proxy(
-        #     self: PatchedSubarrayDevice,
-        #     state_change_json: str,
-        # ) -> None:
-        #     """This method is just a passthrough to access the callback."""
-        #     state_change = json.loads(state_change_json)
-        #     print(f"Calling callback with state change: {state_change}")
-        #     self._component_state_changed_callback(state_change)
-
         def create_component_manager(
             self: PatchedSubarrayDevice,
-        ) -> unittest.mock.Mock:
+        ) -> SubarrayComponentManager:
             """
             Return a partially mocked component manager instead of the usual one.
 
@@ -121,24 +111,6 @@ def patched_subarray_device_class(
             return mock_subarray_component_manager
 
     return PatchedSubarrayDevice
-
-
-# @pytest.fixture()
-# def device_state_changed_callback(
-#     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-# ) -> MockChangeEventCallback:
-#     """
-#     Return a mock change event callback for device DevState change.
-
-#     :param mock_change_event_callback_factory: fixture that provides a
-#         mock change event callback factory (i.e. an object that returns
-#         mock callbacks when called).
-
-#     :return: a mock change event callback to be registered with the
-#         device via a change event subscription, so that it gets called
-#         when the device DevState changes.
-#     """
-#     return mock_change_event_callback_factory("state")
 
 
 @pytest.fixture()
@@ -441,7 +413,6 @@ class TestMccsSubarray:
                 "channel_blocks": channel_blocks,
             }
         )
-
         assert device_under_test.obsState == ObsState.IDLE
         ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
         assert result_code == ResultCode.QUEUED

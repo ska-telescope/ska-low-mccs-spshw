@@ -229,7 +229,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._get_fndh_info, args=[], task_callback=task_callback
+            self._get_fndh_info, args=[fndh], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -249,7 +249,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_fndh_service_led_on, args=[], task_callback=task_callback
+            self._turn_fndh_service_led_on, args=[fndh], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -269,7 +269,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_fndh_service_led_off, args=[], task_callback=task_callback
+            self._turn_fndh_service_led_off, args=[fndh], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -289,7 +289,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._get_smartbox_info, args=[], task_callback=task_callback
+            self._get_smartbox_info, args=[smartbox], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -309,7 +309,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_smartbox_on, args=[], task_callback=task_callback
+            self._turn_smartbox_on, args=[smartbox], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -329,7 +329,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_smartbox__off, args=[], task_callback=task_callback
+            self._turn_smartbox__off, args=[smartbox], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -349,7 +349,9 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_smartbox_service_led_on, args=[], task_callback=task_callback
+            self._turn_smartbox_service_led_on,
+            args=[smartbox],
+            task_callback=task_callback,
         )
         return task_status, unique_id
 
@@ -369,7 +371,9 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_smartbox_service_led_off, args=[], task_callback=task_callback
+            self._turn_smartbox_service_led_off,
+            args=[smartbox],
+            task_callback=task_callback,
         )
         return task_status, unique_id
 
@@ -389,7 +393,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._get_antenna_info, args=[], task_callback=task_callback
+            self._get_antenna_info, args=[antenna], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -409,7 +413,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._reset_antenna_breaker, args=[], task_callback=task_callback
+            self._reset_antenna_breaker, args=[antenna], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -429,7 +433,7 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_antenna_on, args=[], task_callback=task_callback
+            self._turn_antenna_on, args=[antenna], task_callback=task_callback
         )
         return task_status, unique_id
 
@@ -449,6 +453,6 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :return: A tuple containing a task status and a unique id string to identify the command
         """
         task_status, unique_id = self.submit_task(
-            self._turn_antenna_off, args=[], task_callback=task_callback
+            self._turn_antenna_off, args=[antenna], task_callback=task_callback
         )
         return task_status, unique_id

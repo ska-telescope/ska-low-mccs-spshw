@@ -12,19 +12,49 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Callable, Optional
 
 import pytest
 import pytest_mock
 import yaml
-from ska_tango_base.control_model import CommunicationStatus, SimulationMode
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
+from ska_low_mccs import MccsPasdBus
 from ska_low_mccs.pasd_bus import (
     PasdBusComponentManager,
     PasdBusSimulator,
     PasdBusSimulatorComponentManager,
 )
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+
+    :return: number of worker threads
+    """
+    return 1
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for a change in the pasd bus state.
+
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        deque factory (i.e. an object that returns mock callback deques when
+        called).
+
+    :return: a mock callback deque to be called when the component manager
+        detects that the pasd bus state has changed
+    """
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -160,9 +190,9 @@ def mock_pasd_bus_simulator(
 def pasd_bus_simulator_component_manager(
     mock_pasd_bus_simulator: unittest.mock.Mock,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     communication_state_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> PasdBusSimulatorComponentManager:
     """
     Return a PaSD bus simulator component manager.
@@ -172,21 +202,20 @@ def pasd_bus_simulator_component_manager(
     :param mock_pasd_bus_simulator: a mock PaSD bus simulator to be used
         by the PaSD bus simulator component manager
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: number of worker threads
     :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be called when the
+        component state changes
 
     :return: a PaSD bus simulator component manager.
     """
     return PasdBusSimulatorComponentManager(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_state_changed_callback,
-        component_fault_callback,
+        component_state_changed_callback,
         _simulator=mock_pasd_bus_simulator,
     )
 
@@ -195,9 +224,9 @@ def pasd_bus_simulator_component_manager(
 def pasd_bus_component_manager(
     pasd_bus_simulator_component_manager: PasdBusSimulatorComponentManager,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_fault_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> PasdBusComponentManager:
     """
     Return a PaSD bus component manager.
@@ -206,21 +235,93 @@ def pasd_bus_component_manager(
         PaSD bus simulator component manager to be used by the PaSD bus
         component manager
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: number of worker threads
     :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be called when the
+        component state changes
 
     :return: a PaSD bus component manager
     """
     return PasdBusComponentManager(
         SimulationMode.TRUE,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         communication_state_changed_callback,
-        component_fault_callback,
+        component_state_changed_callback,
         _simulator_component_manager=pasd_bus_simulator_component_manager,
     )
+
+
+@pytest.fixture()
+def mock_component_manager(
+    mocker: pytest_mock.mocker,  # type: ignore[valid-type]
+    unique_id: str,
+) -> unittest.mock.Mock:
+    """
+    Return a mock component manager.
+
+    The mock component manager is a simple mock except for one bit of
+    extra functionality: when we call start_communicating() on it, it
+    makes calls to callbacks signaling that communication is established
+    and the component is off.
+
+    :param mocker: pytest wrapper for unittest.mock
+    :param unique_id: a unique id used to check Tango layer functionality
+
+    :return: a mock component manager
+    """
+    mock = mocker.Mock()  # type: ignore[attr-defined]
+    mock.is_communicating = False
+
+    def _start_communicating(mock: unittest.mock.Mock) -> None:
+        mock.is_communicating = True
+        mock._communication_status_changed_callback(CommunicationStatus.NOT_ESTABLISHED)
+        mock._communication_status_changed_callback(CommunicationStatus.ESTABLISHED)
+        mock._component_state_changed_callback({"power_state": PowerState.OFF})
+
+    mock.start_communicating.side_effect = lambda: _start_communicating(mock)
+
+    mock.return_value = unique_id, ResultCode.QUEUED
+
+    return mock
+
+
+@pytest.fixture()
+def patched_pasd_bus_device_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsPasdBus]:
+    """
+    Return a pasd bus device that is patched with a mock component manager.
+
+    :param mock_component_manager: the mock component manager with
+        which to patch the device
+
+    :return: a pasd bus device that is patched with a mock component
+        manager.
+    """
+
+    class PatchedMccsPasdBus(MccsPasdBus):
+        """A pasd bus device patched with a mock component manager."""
+
+        def create_component_manager(
+            self: PatchedMccsPasdBus,
+        ) -> unittest.mock.Mock:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            self._communication_status: Optional[CommunicationStatus] = None
+            #             self._component_power_state: Optional[PowerState] = None
+
+            mock_component_manager._communication_status_changed_callback = (
+                self._communication_status_changed_callback
+            )
+            mock_component_manager._component_state_changed_callback = (
+                self._component_state_changed_callback
+            )
+            return mock_component_manager
+
+    return PatchedMccsPasdBus

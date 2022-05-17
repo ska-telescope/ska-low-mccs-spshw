@@ -140,10 +140,10 @@ class StationComponentManager(MccsComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
+        self._apiu_fqdn = apiu_fqdn
 
         self._is_configured = False
         self._on_called = False
-        self.component_state_changed_callback = component_state_changed_callback
 
         self._communication_state_lock = threading.Lock()
         self._communication_statees = {
@@ -156,13 +156,12 @@ class StationComponentManager(MccsComponentManager):
             fqdn: PowerState.UNKNOWN for fqdn in antenna_fqdns
         }
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
-
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
             logger,
             max_workers,
             functools.partial(self._device_communication_state_changed, apiu_fqdn),
-            functools.partial(self.component_state_changed_callback, fqdn=apiu_fqdn),
+            functools.partial(component_state_changed_callback, fqdn=apiu_fqdn),
         )
         #self._antenna_proxies = [
         self._antenna_proxies = {antenna_fqdn:
@@ -174,7 +173,7 @@ class StationComponentManager(MccsComponentManager):
                     self._device_communication_state_changed, antenna_fqdn
                 ),
                 functools.partial(
-                    self.component_state_changed_callback, fqdn=antenna_fqdn
+                    component_state_changed_callback, fqdn=antenna_fqdn
                 ),
             )
             for antenna_fqdn in antenna_fqdns
@@ -190,7 +189,7 @@ class StationComponentManager(MccsComponentManager):
                 max_workers,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(
-                    self.component_state_changed_callback, fqdn=tile_fqdn
+                    component_state_changed_callback, fqdn=tile_fqdn
                 ),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
@@ -265,7 +264,7 @@ class StationComponentManager(MccsComponentManager):
         super().update_communication_state(communication_state)
 
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self.component_state_changed_callback({"is_configured": self.is_configured})
+            self._component_state_changed_callback({"is_configured": self.is_configured})
 
     @threadsafe
     def _antenna_power_state_changed(
@@ -341,11 +340,11 @@ class StationComponentManager(MccsComponentManager):
             if fqdn is None:
                 self.power_state = power_state
             elif fqdn in self._antenna_proxies.keys():
-                self.antenna_proxies[fqdn].power_state = power_state
+                self._antenna_proxies[fqdn].power_state = power_state
             elif fqdn in self._tile_proxies.keys():
-                self.tile_proxies[fqdn].power_state = power_state
-            elif fqdn == self.APIUFQDN:
-                self.apiu_proxy.power_state = power_state
+                self._tile_proxies[fqdn].power_state = power_state
+            elif fqdn == self._apiu_fqdn:
+                self._apiu_proxy.power_state = power_state
             else:
                 raise ValueError(
                     f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
@@ -536,7 +535,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured
-            self.component_state_changed_callback({"is_configured": is_configured})
+            self._component_state_changed_callback({"is_configured": is_configured})
 
     def configure(
         self: StationComponentManager,
@@ -554,10 +553,7 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code and response string
         """
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%", argin)
         configuration = json.loads(argin)
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%", configuration)
-        print("%%%%%%%%%%%%%%%", self._configure)
         station_id = configuration.get("station_id")
         return self.submit_task(
             self._configure, args=[station_id], task_callback=task_callback

@@ -235,7 +235,7 @@ class ClusterSimulator(ObjectComponent):
         """
         self._fault_callback = fault_callback
         if fault_callback is not None:
-            fault_callback(self._faulty)
+            fault_callback({"fault": self._faulty})
 
     def set_shadow_master_pool_node_health_changed_callback(
         self: ClusterSimulator,
@@ -260,14 +260,14 @@ class ClusterSimulator(ObjectComponent):
         )
         if shadow_master_pool_node_health_changed_callback is not None:
             shadow_master_pool_node_health_changed_callback(
-                {"shadow_master_pool_node_healths": self.shadow_master_pool_status}
+                self.shadow_master_pool_status
             )
 
     def update_shadow_master_pool_node_health(self: ClusterSimulator) -> None:
         """Update the shadow master pool node health, calling callbacks as required."""
         if self._shadow_master_pool_node_health_changed_callback is not None:
             self._shadow_master_pool_node_health_changed_callback(
-                {"shadow_master_pool_node_healths": self.shadow_master_pool_status}
+                self.shadow_master_pool_status
             )
 
     @property

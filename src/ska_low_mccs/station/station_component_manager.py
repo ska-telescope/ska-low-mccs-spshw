@@ -166,9 +166,9 @@ class StationComponentManager(MccsComponentManager):
             functools.partial(self._device_communication_state_changed, apiu_fqdn),
             functools.partial(component_state_changed_callback, fqdn=apiu_fqdn),
         )
-        #self._antenna_proxies = [
-        self._antenna_proxies = {antenna_fqdn:
-            DeviceComponentManager(
+        # self._antenna_proxies = [
+        self._antenna_proxies = {
+            antenna_fqdn: DeviceComponentManager(
                 antenna_fqdn,
                 logger,
                 max_workers,
@@ -181,10 +181,10 @@ class StationComponentManager(MccsComponentManager):
             )
             for antenna_fqdn in antenna_fqdns
         }
-        #]
-        #self._tile_proxies = [
-        self._tile_proxies = {tile_fqdn:
-            _TileProxy(
+        # ]
+        # self._tile_proxies = [
+        self._tile_proxies = {
+            tile_fqdn: _TileProxy(
                 tile_fqdn,
                 station_id,
                 logical_tile_id,
@@ -197,7 +197,7 @@ class StationComponentManager(MccsComponentManager):
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         }
-        #]
+        # ]
 
         super().__init__(
             logger,
@@ -337,7 +337,7 @@ class StationComponentManager(MccsComponentManager):
         :param power_state: the value of PowerState to be set.
         :param fqdn: the fqdn of the component's device.
         """
-        # Note: this setter was, prior to V0.13 of the base classes, in 
+        # Note: this setter was, prior to V0.13 of the base classes, in
         # MccsComponentManager.update_component_power_mode
         with self._power_state_lock:
             if fqdn is None:
@@ -352,7 +352,7 @@ class StationComponentManager(MccsComponentManager):
                 raise ValueError(
                     f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
                 )
-        
+
     @property
     def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
         """
@@ -360,7 +360,7 @@ class StationComponentManager(MccsComponentManager):
 
         :return: the power state lock of this component manager.
         """
-        return self._power_state_lock   
+        return self._power_state_lock
 
     def off(
         self: StationComponentManager,
@@ -549,7 +549,8 @@ class StationComponentManager(MccsComponentManager):
         :return: a result code
         """
         results = [
-            tile_proxy.set_pointing_delay(delays) for tile_proxy in self._tile_proxies.values()
+            tile_proxy.set_pointing_delay(delays)
+            for tile_proxy in self._tile_proxies.values()
         ]
         if ResultCode.FAILED in results:
             return ResultCode.FAILED

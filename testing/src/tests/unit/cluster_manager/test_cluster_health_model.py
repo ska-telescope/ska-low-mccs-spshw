@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import unittest.mock
-from typing import Callable, Optional
+from typing import Callable
 
 import pytest
 from ska_tango_base.control_model import HealthState
@@ -69,53 +69,53 @@ class TestClusterHealthModel:
             changed.
         """
 
-        def assert_health_changed(health_state: Optional[HealthState]) -> None:
-            if health_state is None:
+        def assert_health_changed(health_state: dict[str, HealthState]) -> None:
+            if health_state["health_state"] is None:
                 health_changed_callback.assert_not_called()
             else:
-                assert cluster_health_model.health_state == health_state
+                assert cluster_health_model.health_state == health_state["health_state"]
                 health_changed_callback.assert_next_call(health_state)
 
         # starting state
-        assert_health_changed(HealthState.UNKNOWN)
+        assert_health_changed({"health_state": HealthState.UNKNOWN})
 
         cluster_health_model.is_communicating(True)
-        assert_health_changed(None)
+        assert_health_changed({"health_state": None})
 
         cluster_health_model.component_fault(True)
-        assert_health_changed(HealthState.FAILED)
+        assert_health_changed({"health_state": HealthState.FAILED})
 
         cluster_health_model.component_fault(False)
-        assert_health_changed(HealthState.UNKNOWN)
+        assert_health_changed({"health_state": HealthState.UNKNOWN})
 
         cluster_health_model.shadow_master_pool_node_health_changed(
             [HealthState.OK, HealthState.OK]
         )
-        assert_health_changed(HealthState.OK)
+        assert_health_changed({"health_state": HealthState.OK})
 
         cluster_health_model.is_communicating(False)
-        assert_health_changed(HealthState.UNKNOWN)
+        assert_health_changed({"health_state": HealthState.UNKNOWN})
 
         cluster_health_model.component_fault(False)
         cluster_health_model.is_communicating(True)
-        assert_health_changed(HealthState.OK)
+        assert_health_changed({"health_state": HealthState.OK})
 
         cluster_health_model.shadow_master_pool_node_health_changed(
             [HealthState.OK, HealthState.FAILED]
         )
-        assert_health_changed(HealthState.DEGRADED)
+        assert_health_changed({"health_state": HealthState.DEGRADED})
 
         cluster_health_model.is_communicating(False)
-        assert_health_changed(HealthState.UNKNOWN)
+        assert_health_changed({"health_state": HealthState.UNKNOWN})
 
         cluster_health_model.component_fault(True)
         cluster_health_model.is_communicating(True)
-        assert_health_changed(HealthState.FAILED)
+        assert_health_changed({"health_state": HealthState.FAILED})
 
         cluster_health_model.component_fault(False)
-        assert_health_changed(HealthState.DEGRADED)
+        assert_health_changed({"health_state": HealthState.DEGRADED})
 
         cluster_health_model.shadow_master_pool_node_health_changed(
             [HealthState.DEGRADED, HealthState.FAILED]
         )
-        assert_health_changed(HealthState.FAILED)
+        assert_health_changed({"health_state": HealthState.FAILED})

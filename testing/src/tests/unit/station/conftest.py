@@ -28,7 +28,8 @@ from ska_low_mccs.testing.mock import (
 )
 from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
-class MockLongRunningCommand(MockCallable):   
+
+class MockLongRunningCommand(MockCallable):
     def __call__(self: MockCallable, *args: Any, **kwargs: Any) -> Any:
         """
         Handle a callback call.
@@ -281,15 +282,15 @@ def component_state_changed_callback(
     :return: a mock callback for a change in whether the station is
         configured.
     """
-    #return mock_callback_factory()
+    # return mock_callback_factory()
     return mock_callback_deque_factory()
 
 
 @pytest.fixture()
 def max_workers() -> int:
     """
-    Return an integer specifying the maximum number of worker threads 
-    available to execute long-running-commands.
+    Return an integer specifying the maximum number of worker threads available to
+    execute long-running-commands.
 
     :return: the max number of worker threads.
     """

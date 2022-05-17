@@ -77,7 +77,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         # default to FALSE.
         return ClusterComponentManager(
             self.logger,
-            self.push_change_event,
+            self._max_workers,
             SimulationMode.TRUE,
             self._component_communication_state_changed,
             self._component_state_changed_callback,

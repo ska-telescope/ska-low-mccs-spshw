@@ -64,7 +64,9 @@ class TestStationComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
-        component_state_changed_callback.assert_next_call_with_keys({'is_configured': False})
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"is_configured": False}
+        )
 
         station_component_manager.stop_communicating()
         communication_state_changed_callback.assert_next_call(

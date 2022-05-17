@@ -401,10 +401,10 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(
-            DevFailed, match="Communication with component is not established"
-        ):
-            _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
+        
+        ([result_code], [message]) = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
+        assert result_code == ResultCode.FAILED
+        assert message == "Communication with component is not established"
         device_under_test.adminMode = AdminMode.ONLINE
 
         for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
@@ -421,10 +421,12 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        ([result_code], [message]) = device_under_test.ClearJobStats()
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
-
+        with pytest.raises(
+            DevFailed,
+            match="Communication with component is not established",
+            ):
+            ([_], [_]) = device_under_test.ClearJobStats()
+    
         device_under_test.adminMode = AdminMode.ONLINE
 
         ([result_code], [message]) = device_under_test.ClearJobStats()
@@ -444,13 +446,11 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        print("admin mode is: ", device_under_test.adminMode)
-        ([result_code], [message]) = device_under_test.PingMasterPool()
-        print(result_code)
-        print(message)
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
-
+        with pytest.raises(
+            DevFailed,
+            match="Communication with component is not established",
+            ):
+            ([_], [_]) = device_under_test.PingMasterPool()
         device_under_test.adminMode = AdminMode.ONLINE
 
         with pytest.raises(

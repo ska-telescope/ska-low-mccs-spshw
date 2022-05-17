@@ -41,9 +41,9 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
     ) -> None:
         self._component_state_changed_callback = component_state_changed_callback
 
-        cluster_simulator = ClusterSimulator()
+        self.cluster_simulator = ClusterSimulator()
         super().__init__(
-            cluster_simulator,
+            self.cluster_simulator,
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -388,8 +388,11 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
+            print(f"trying...")
             self.cluster_simulator.get_job_status(job_id)
+            print(f"...tried")
         except Exception as ex:
+            print(f"exception: {ex}")
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
             return

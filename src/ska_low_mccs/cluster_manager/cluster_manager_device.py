@@ -79,7 +79,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             self.logger,
             self._max_workers,
             SimulationMode.TRUE,
-            self._component_communication_state_changed,
+            self._communication_state_changed_callback,
             self._component_state_changed_callback,
         )
 
@@ -133,7 +133,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # --------------
     # Callback hooks
     # --------------
-    def _component_communication_state_changed(
+    def _communication_state_changed_callback(
         self: MccsClusterManagerDevice,
         communication_state: CommunicationStatus,
     ) -> None:
@@ -544,8 +544,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
         print("got object SubmitJob")
         return handler(argin)
 
-    @command(dtype_in="DevString", dtype_out="DevShort")
-    def GetJobStatus(self: MccsClusterManagerDevice, argin: str) -> int:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def GetJobStatus(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
         """
         Poll the current status for a job.
 
@@ -556,9 +556,13 @@ class MccsClusterManagerDevice(SKABaseDevice):
         print("GetJobStatus called")
         handler = self.get_command_object("GetJobStatus")
         print("got object GetJobStatus")
-        return handler(argin)
+        print(f"argin={argin}")
+        print(f"handler={handler}")
+        result = handler(argin)
+        print(f"result={result}")
+        return result
 
-    class ClearJobStatsCommand(FastCommand):
+    class ClearJobStatsCommand(SubmittedSlowCommand):
         """Class for handling the ClearJobStats() command."""
 
         SUCCEEDED_MESSAGE = "Job stats cleared"
@@ -598,7 +602,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class PingMasterPoolCommand(FastCommand):
+    class PingMasterPoolCommand(SubmittedSlowCommand):
         """Class for handling the PingMasterPool() command."""
 
         SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"

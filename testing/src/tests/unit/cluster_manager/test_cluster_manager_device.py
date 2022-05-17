@@ -444,7 +444,10 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
+        print("admin mode is: ", device_under_test.adminMode)
         ([result_code], [message]) = device_under_test.PingMasterPool()
+        print(result_code)
+        print(message)
         assert result_code == ResultCode.FAILED
         assert "Communication with component is not established" in message
 

@@ -106,7 +106,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
-            self.StartJobCommand
+            #print("registered command: ", command_name)
+            #print("command objects are: ", self._command_objects)
 
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for this device."""
@@ -504,7 +505,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
+        print("StartJob called")
         handler = self.get_command_object("StartJob")
+        print("got object StartJob")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
@@ -521,7 +524,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
+        print("StopJob called")
         handler = self.get_command_object("StopJob")
+        print("got object StopJob")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
@@ -534,7 +539,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         :return: the job id of the submitted job
         """
+        print("SubmitJob called")
         handler = self.get_command_object("SubmitJob")
+        print("got object SubmitJob")
         return handler(argin)
 
     @command(dtype_in="DevString", dtype_out="DevShort")
@@ -546,7 +553,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         :return: the job status.
         """
+        print("GetJobStatus called")
         handler = self.get_command_object("GetJobStatus")
+        print("got object GetJobStatus")
         return handler(argin)
 
     class ClearJobStatsCommand(FastCommand):
@@ -583,7 +592,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
+        print("ClearJobStats called")
         handler = self.get_command_object("ClearJobStats")
+        print("got object ClearJobStats")
         (return_code, message) = handler()
         return ([return_code], [message])
 
@@ -621,8 +632,13 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
+        print("PingMasterPool called")
         handler = self.get_command_object("PingMasterPool")
+        print("got object PingMasterPool")
         (return_code, message) = handler()
+        #return_code = "test"
+        #message = "test"
+        print("returning PingMasterPool return ...")
         return ([return_code], [message])
 
 

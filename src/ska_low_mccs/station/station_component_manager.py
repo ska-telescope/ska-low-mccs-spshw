@@ -7,11 +7,14 @@
 # See LICENSE for more info.
 """This module implements component management for stations."""
 from __future__ import annotations
+from asyncio import Task
 
 import functools
 import json
 import logging
+import pytest
 import threading
+import time
 from typing import Callable, Optional, Sequence
 
 import tango
@@ -422,12 +425,18 @@ class StationComponentManager(MccsComponentManager):
         :type task_callback: Callable, optional
         :return: a result code and response message
         """
+        print("Submitting station _on")
         task_status, response = self.submit_task(self._on, task_callback=task_callback)
+        time.sleep(3)
+        print("Submitted task")
         return task_status, response
+        #self._on(task_callback=task_callback)
+        #return TaskStatus.QUEUED, "adasdasdasdasdasd"
 
     @check_communicating
     def _on(
         self: StationComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Turn on this station.
@@ -436,13 +445,42 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        #if self._apiu_power_state == PowerState.ON:
+        #    return self._turn_on_tiles_and_antennas()
+        #self._on_called = True
+        #result_code = self._apiu_proxy.on()
+        #if result_code:
+        #    return result_code
+        #return ResultCode.OK
+        pytest.set_trace()
+        print("On in progress")
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         if self._apiu_power_state == PowerState.ON:
-            return self._turn_on_tiles_and_antennas()
+            print("APIU is on")
+            result = self._turn_on_tiles_and_antennas()
+            print(result)
+            if result == ResultCode.QUEUED:
+                print("starting to turn on tiles and antennas")
+                time.sleep(1)
+                if task_callback:
+                    task_callback(status=TaskStatus.COMPLETED)
+            else:
+                print("failed to start turning on tiles and antennas")
+                if task_callback:
+                    task_callback(status=TaskStatus.FAILED)
+            return
         self._on_called = True
+        print("Turning APIU on")
         result_code = self._apiu_proxy.on()
-        if result_code:
-            return result_code
-        return ResultCode.OK
+        if result_code != ResultCode.QUEUED:
+            print("Failed to start turning APIU on")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED)
+            return
+        print("starting to turn APIU on")
+        if task_callback:
+            task_callback(status=TaskStatus.COMPLETED)
 
     @check_communicating
     def _turn_on_tiles_and_antennas(
@@ -577,18 +615,22 @@ class StationComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: abort event
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             if station_id != self._station_id:
                 raise ValueError("Wrong station id")
             self._update_is_configured(True)
         except ValueError as value_error:
-            task_callback(
-                status=TaskStatus.FAILED,
-                result=f"Configure command has failed: {value_error}",
-            )
+            if task_callback:
+                print("here")
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=f"Configure command has failed: {value_error}",
+                )
             return
 
-        task_callback(
-            status=TaskStatus.COMPLETED, result="Configure command has completed"
-        )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure command has completed"
+            )

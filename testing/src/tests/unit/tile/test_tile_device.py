@@ -15,7 +15,7 @@ import unittest
 from typing import Any, Optional
 
 import pytest
-import tango
+from tango import DevState, DevFailed
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState, TestMode
 
@@ -46,16 +46,16 @@ def device_to_load(
     }
 
 
-@pytest.fixture()
-def tile_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
-    """
-    Fixture that returns the tile device under test.
+# @pytest.fixture()
+# def tile_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
+#     """
+#     Fixture that returns the tile device under test.
 
-    :param tango_harness: a test harness for Tango devices
+#     :param tango_harness: a test harness for Tango devices
 
-    :return: the tile device under test
-    """
-    return tango_harness.get_device("low-mccs/tile/0001")
+#     :return: the tile device under test
+#     """
+#     return tango_harness.get_device("low-mccs/tile/0001")
 
 
 class TestMccsTile:
@@ -64,6 +64,18 @@ class TestMccsTile:
 
     The Tile device represents the TANGO interface to a Tile (TPM) unit.
     """
+
+    @pytest.fixture()
+    def tile_device(self: TestMccsTile, tango_harness: TangoHarness
+    ) -> MccsDeviceProxy:
+        """
+        Fixture that returns the tile device under test.
+
+        :param tango_harness: a test harness for Tango devices
+
+        :return: the tile device under test
+        """
+        return tango_harness.get_device("low-mccs/tile/0001")
 
     def test_healthState(
         self: TestMccsTile,
@@ -115,7 +127,7 @@ class TestMccsTile:
         [
             ("logicalTileId", 0, 7),
             ("stationId", 0, 5),
-            ("voltage", StaticTpmSimulator.VOLTAGE, None),
+            ("voltage", 4.7, None),
             ("boardTemperature", StaticTpmSimulator.BOARD_TEMPERATURE, None),
             ("current", StaticTpmSimulator.CURRENT, None),
             ("fpga1Temperature", StaticTpmSimulator.FPGA1_TEMPERATURE, None),
@@ -139,11 +151,12 @@ class TestMccsTile:
             ("ppsDelay", 12, None),
         ],
     )
+
     def test_component_attribute(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
-        device_state_changed_callback: MockChangeEventCallback,
         device_admin_mode_changed_callback: MockChangeEventCallback,
+        device_state_changed_callback: MockChangeEventCallback,
         attribute: str,
         initial_value: Any,
         write_value: Any,
@@ -166,32 +179,39 @@ class TestMccsTile:
         :param initial_value: expected initial value of the attribute
         :param write_value: value to be written as part of the test.
         """
+        # with pytest.raises(
+        #     DevFailed,
+        #     match="Communication with component is not established",
+        # ):
+        #     _ = getattr(tile_device, attribute)
+
         tile_device.testMode = TestMode.TEST
         tile_device.add_change_event_callback(
             "adminMode",
             device_admin_mode_changed_callback,
         )
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
         tile_device.add_change_event_callback(
             "state",
             device_state_changed_callback,
         )
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
 
-        with pytest.raises(
-            tango.DevFailed,
-            match="Communication with component is not established",
-        ):
-            _ = getattr(tile_device, attribute)
+        device_state_changed_callback.assert_next_change_event(DevState.UNKNOWN)
+        device_state_changed_callback.assert_next_change_event(DevState.INIT)
+
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+        device_state_changed_callback.assert_next_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
 
         tile_device.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
-        device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
+        assert tile_device.adminMode == AdminMode.ONLINE
+        time.sleep(0.2)
+        device_state_changed_callback.assert_next_change_event(DevState.OFF)
 
         tile_device.MockTpmOn()
-        device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+        time.sleep(0.1)
+        device_state_changed_callback.assert_last_change_event(DevState.ON)
 
         assert getattr(tile_device, attribute) == initial_value
 
@@ -430,6 +450,7 @@ class TestMccsTileCommands:
     def test_On(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
+        device_state_changed_callback: MockChangeEventCallback,
         device_admin_mode_changed_callback: MockChangeEventCallback,
         mock_subrack_device_proxy: MccsDeviceProxy,
         subrack_tpm_id: int,
@@ -451,9 +472,14 @@ class TestMccsTileCommands:
             "adminMode",
             device_admin_mode_changed_callback,
         )
+        tile_device.add_change_event_callback(
+            "state",
+            device_state_changed_callback,
+        )
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
+        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
         assert tile_device.state() == tango.DevState.DISABLE
         with pytest.raises(
             tango.DevFailed,

@@ -8,7 +8,6 @@
 """This module contains the tests for the MCCS cluster manager device."""
 from __future__ import annotations
 
-import time
 import json
 from typing import Any
 
@@ -403,14 +402,14 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.test_context.DeviceTestContext`.
         """
         with pytest.raises(
-            DevFailed, 
-            #match="Communication with component is not established"
+            DevFailed,
+            # match="Communication with component is not established"
         ):
             _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
         device_under_test.adminMode = AdminMode.ONLINE
 
         for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
-            #assert status == device_under_test.GetJobStatus(job_id)
+            # assert status == device_under_test.GetJobStatus(job_id)
             ([result_code], [message]) = device_under_test.GetJobStatus(job_id)
             print(f"###### result_code is {result_code}")
             print(f"###### message is {message}")

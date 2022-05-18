@@ -576,7 +576,7 @@ class ClusterSimulator(ObjectComponent):
         for status in JobStatus:
             self._job_stats[status] = 0
 
-    def get_job_status(self: ClusterSimulator, job_id: str) -> int:#JobStatus:
+    def get_job_status(self: ClusterSimulator, job_id: str) -> int:  # JobStatus:
         """
         Return the status of an open job.
 

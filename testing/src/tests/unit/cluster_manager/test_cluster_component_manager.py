@@ -14,6 +14,7 @@ from typing import Union, cast
 import pytest
 from _pytest.fixtures import SubRequest  # for type hinting
 from ska_tango_base.control_model import HealthState, SimulationMode
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.cluster_manager import (
     ClusterComponentManager,
@@ -22,8 +23,6 @@ from ska_low_mccs.cluster_manager import (
 )
 from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus
 from ska_low_mccs.testing.mock import MockCallable
-
-from ska_tango_base.executor import TaskStatus
 
 
 class TestClusterCommon:
@@ -174,10 +173,12 @@ class TestClusterCommon:
 
             cluster.stop_job(jobs_of_status.pop())
             assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
-            assert cluster.jobs_killed == ClusterSimulator.JOB_STATS[JobStatus.KILLED] + 1
+            assert (
+                cluster.jobs_killed == ClusterSimulator.JOB_STATS[JobStatus.KILLED] + 1
+            )
 
             cluster.clear_job_stats()
-            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)            
+            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
 
     @pytest.mark.parametrize(
         "resource",
@@ -325,9 +326,10 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test that when we call the submit_job method from the component 
-        manager, the job is added to the queue.
-        
+        Test for submit_job command.
+
+        Test that when we call the submit_job method from the component manager, the job
+        is added to the queue.
         Test that when we call the submit_job method from the simulator,
         the JobStatus is STAGING.
 

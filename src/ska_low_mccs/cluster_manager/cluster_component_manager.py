@@ -12,13 +12,13 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
     HealthState,
     SimulationMode,
 )
 from ska_tango_base.executor import TaskStatus
-from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
 from ska_low_mccs.component import (
@@ -358,7 +358,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         self: ClusterComponentManager,
         job_id: str,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:#tuple[TaskStatus, str]:
+    ) -> tuple[ResultCode, str]:  # tuple[TaskStatus, str]:
         """
         Submit the get_job_status slow task.
 

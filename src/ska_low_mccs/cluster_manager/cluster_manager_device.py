@@ -525,7 +525,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
         return ([return_code], [message])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SubmitJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
+    def SubmitJob(
+        self: MccsClusterManagerDevice, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Command to submit a job to the queue.
 
@@ -537,7 +539,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
         return handler(argin)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def GetJobStatus(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
+    def GetJobStatus(
+        self: MccsClusterManagerDevice, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Poll the current status for a job.
 

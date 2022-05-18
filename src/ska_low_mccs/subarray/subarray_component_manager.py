@@ -135,25 +135,7 @@ class SubarrayComponentManager(
             component state changes.
         :param max_workers: Maximum number of workers in the worker pool. Defaults to None.
         """
-        # Not used *yet*. Below self._callbacks to be removed eventually.
         self._component_state_changed_callback = component_state_changed_callback
-
-        # TODO: Replace the below callbacks with component_state_changed_callback
-        # and remove references throughout.
-        # Some obsState issues were seen in testing and the above replacement fixed it.
-        self._assign_completed_callback = component_state_changed_callback
-        self._release_completed_callback = component_state_changed_callback
-        self._configure_completed_callback = component_state_changed_callback
-        self._abort_completed_callback = component_state_changed_callback
-        self._obsreset_completed_callback = component_state_changed_callback
-        self._restart_completed_callback = component_state_changed_callback
-        self._resources_changed_callback = component_state_changed_callback
-        self._configured_changed_callback = component_state_changed_callback
-        self._scanning_changed_callback = component_state_changed_callback
-        self._obs_fault_callback = component_state_changed_callback
-        self._station_health_changed_callback = component_state_changed_callback
-        self._subarray_beam_health_changed_callback = component_state_changed_callback
-        self._station_beam_health_changed_callback = component_state_changed_callback
 
         self._device_communication_statees: dict[str, CommunicationStatus] = {}
         self._station_power_modes: dict[str, Optional[PowerState]] = {}
@@ -333,7 +315,6 @@ class SubarrayComponentManager(
                         self._component_state_changed_callback, fqdn=fqdn
                     ),
                 )
-            # self._resources_changed_callback(
             self._component_state_changed_callback(
                 {
                     "resources_changed": [
@@ -503,7 +484,6 @@ class SubarrayComponentManager(
             self._device_communication_statees.clear()
             self._device_obs_states.clear()
 
-            # self._resources_changed_callback(
             self._component_state_changed_callback(
                 {
                     "resources_changed": [
@@ -515,7 +495,7 @@ class SubarrayComponentManager(
             )
 
             self._evaluate_communication_state()
-        self._release_completed_callback({"release_completed": None})
+        self._component_state_changed_callback({"release_completed": None})
 
         if task_callback is not None:
             task_callback(
@@ -572,11 +552,9 @@ class SubarrayComponentManager(
 
         if result_code != ResultCode.FAILED:
             result_code = self._configure_subarray_beams(subarray_beam_configuration)
-        # self._configured_changed_callback
         self._component_state_changed_callback({"configured_changed": True})
 
         if result_code == ResultCode.OK:
-            # self._configure_completed_callback
             self._component_state_changed_callback({"configure_completed": None})
 
         if task_callback is not None:
@@ -686,7 +664,6 @@ class SubarrayComponentManager(
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
             if proxy_result_code == ResultCode.FAILED:
                 result_code = ResultCode.FAILED
-        # self._scanning_changed_callback
         self._component_state_changed_callback({"scanning_changed": True})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
@@ -730,7 +707,6 @@ class SubarrayComponentManager(
 
         # Stuff goes here. This should tell the subarray beam device to
         # stop scanning, but that device doesn't support it yet.
-        # self._scanning_changed_callback
         self._component_state_changed_callback({"scanning_changed": False})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="EndScan has completed.")
@@ -772,7 +748,6 @@ class SubarrayComponentManager(
             proxy_task_status, response = station_proxy.configure({})
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
-        # self._configured_changed_callback
         self._component_state_changed_callback({"configured_changed": False})
         if task_callback is not None:
             task_callback(
@@ -790,7 +765,7 @@ class SubarrayComponentManager(
         """
         # Stuff goes here. This should tell the subarray beam device to
         # abort scanning, but that device doesn't support it yet.
-        self._abort_completed_callback({"abort_completed": None})
+        self._component_state_changed_callback({"abort_completed": None})
         return ResultCode.OK
 
     @check_communicating
@@ -827,7 +802,7 @@ class SubarrayComponentManager(
             task_callback(status=TaskStatus.IN_PROGRESS)
         # other stuff here
         self.deconfigure()
-        self._obsreset_completed_callback({"obsreset_completed": None})
+        self._component_state_changed_callback({"obsreset_completed": None})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="ObsReset has completed.")
 
@@ -866,7 +841,7 @@ class SubarrayComponentManager(
         # other stuff here
         self.deconfigure()
         self.release_all(task_callback=task_callback)
-        self._restart_completed_callback({"restart_completed": None})
+        self._component_state_changed_callback({"restart_completed": None})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
 
@@ -952,7 +927,7 @@ class SubarrayComponentManager(
             power_mode is not None for power_mode in self._station_power_modes.values()
         ):
             self._is_assigning = False
-            self._assign_completed_callback({"assign_completed": None})
+            self._component_state_changed_callback({"assign_completed": None})
 
     def _device_obs_state_changed(
         self: SubarrayComponentManager,

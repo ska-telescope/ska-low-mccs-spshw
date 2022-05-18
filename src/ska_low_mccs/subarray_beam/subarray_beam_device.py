@@ -162,8 +162,6 @@ class MccsSubarrayBeam(SKAObsDevice):
 
         :param state_change: the state change dict
         """
-        print("callback called")
-        print("callback called with: ", state_change)
         if "health_state" in state_change.keys():
             health = state_change["health_state"]
             if self._health_state != health:

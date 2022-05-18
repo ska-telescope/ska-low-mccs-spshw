@@ -85,14 +85,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_fqdn: Optional[str] = None
         self._station_proxy: Optional[_StationProxy] = None
 
-        # This may want to be changed later on but for now this is a quick fix.
-        self._is_beam_locked_changed_callback = component_state_changed_callback
-        self._station_health_changed_callback = component_state_changed_callback
-        self._station_fault_changed_callback = component_state_changed_callback
-
-        # Not used *yet*.
         self._component_state_changed_callback = component_state_changed_callback
-
         self._max_workers = max_workers
 
         super().__init__(
@@ -258,8 +251,8 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         if self._is_beam_locked != value:
             self._is_beam_locked = value
-            if self._is_beam_locked_changed_callback is not None:
-                self._is_beam_locked_changed_callback({"beam_locked": value})
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback({"beam_locked": value})
 
     @property
     def channels(self: StationBeamComponentManager) -> list[list[int]]:

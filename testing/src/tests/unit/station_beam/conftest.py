@@ -103,6 +103,41 @@ def beam_id() -> int:
 
 
 @pytest.fixture()
+def mock_station_beam_component_manager(
+    beam_id: int,
+    logger: logging.Logger,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
+) -> StationBeamComponentManager:
+    """
+    Return a subarray component manager.
+
+    This fixture is identical to the `station_beam_component_manager` fixture except for the `tango_harness`
+    which is omitted here to avoid a circular reference.
+    This fixture is used to test station_beam_device.
+
+    :param beam_id: a beam id for the station beam under test.
+    :param logger: the logger to be used by this object.
+    :param max_workers: Maximum number of workers in the thread pool.
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be called when the
+        component's state changes.
+
+    :return: a station beam component manager
+    """
+    return StationBeamComponentManager(
+        beam_id,
+        logger,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
+
+
+@pytest.fixture()
 def station_beam_component_manager(
     tango_harness: TangoHarness,
     beam_id: int,

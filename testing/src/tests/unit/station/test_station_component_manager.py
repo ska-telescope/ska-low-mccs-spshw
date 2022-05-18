@@ -77,62 +77,7 @@ class TestStationComponentManager:
             == CommunicationStatus.DISABLED
         )
 
-    def test_power_commands(
-        self: TestStationComponentManager,
-        station_component_manager: StationComponentManager,
-        communication_state_changed_callback: MockCallable,
-        apiu_proxy: unittest.mock.Mock,
-        tile_fqdns: list[str],
-        tile_proxies: list[unittest.mock.Mock],
-        antenna_fqdns: list[str],
-        antenna_proxies: list[unittest.mock.Mock],
-    ) -> None:
-        """
-        Test that the power commands work as expected.
-
-        :param station_component_manager: the station component manager
-            under test.
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param apiu_proxy: proxy to this station's APIU device
-        :param tile_fqdns: FQDNs of tile devices
-        :param tile_proxies: list of proxies to this station's tile
-            devices
-        :param antenna_fqdns: FQDNs of antenna devices
-        :param antenna_proxies: list of proxies to this station's
-            antenna devices
-        """
-        station_component_manager.start_communicating()
-        communication_state_changed_callback.assert_next_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        communication_state_changed_callback.assert_last_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        station_component_manager.on()
-
-        apiu_proxy.On.assert_next_call()
-
-        # pretend to receive APIU power mode changed event
-        station_component_manager._apiu_power_state_changed(PowerState.ON)
-
-        for tile_proxy in tile_proxies:
-            tile_proxy.On.assert_next_call()
-        for antenna_proxy in antenna_proxies:
-            antenna_proxy.On.assert_next_call()
-
-        # pretend to receive tile and antenna events
-        for fqdn in tile_fqdns:
-            station_component_manager._tile_power_state_changed(fqdn, PowerState.ON)
-        for fqdn in antenna_fqdns:
-            station_component_manager._antenna_power_state_changed(fqdn, PowerState.ON)
-
-        assert station_component_manager.power_state == PowerState.ON
-
-        station_component_manager.off()
-        for proxy in [apiu_proxy] + tile_proxies:
-            proxy.Off.assert_next_call()
+    # Note: test_power_commands has been moved to TestStationComponentStateChangedCallback::test_power_commands
 
     def test_power_events_received(
         self: TestStationComponentManager,

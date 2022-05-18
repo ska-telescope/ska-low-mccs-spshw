@@ -376,13 +376,13 @@ class StationComponentManager(MccsComponentManager):
         :type task_callback: Callable, optional
         :return: a result code and response message
         """
-        task_status, response = self.submit_task(self._off, task_callback=task_callback)
-        return task_status, response
+        return self.submit_task(self._off, task_callback=task_callback)
 
     @check_communicating
     def _off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Turn off this station.
@@ -390,30 +390,26 @@ class StationComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         results = [proxy.off() for proxy in self._tile_proxies.values()] + [
             self._apiu_proxy.off()
         ]  # Never mind antennas, turning off APIU suffices
-
-        if ResultCode.FAILED in results:
-            return ResultCode.FAILED
-        elif ResultCode.QUEUED in results:
-            return ResultCode.QUEUED
+        # TODO: Here we need to monitor the APIU and Tiles. This will eventually use the
+        # mechanism described in MCCS-945, but until that is implemented we might instead just poll 
+        # these devices' longRunngCommandAttribute. For the moment, however, we just submit the
+        # subservient devices' commands for execution and forget about them.
+        if all(result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED] for (result, _) in results):
+            task_status = TaskStatus.COMPLETED
         else:
-            return ResultCode.OK
-
-        task_callback(status=TaskStatus.IN_PROGRESS)
-        with self._power_state_lock:
-            self._target_power_state = PowerState.ON
-        self._review_power()
-        task_callback(
-            status=TaskStatus.COMPLETED, result="This slow task has completed"
-        )
-        return ResultCode.OK
+            task_status = TaskStatus.FAILED
+        if task_callback:
+                task_callback(status=task_status)
 
     def on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Submit the _on method.
@@ -425,62 +421,41 @@ class StationComponentManager(MccsComponentManager):
         :type task_callback: Callable, optional
         :return: a result code and response message
         """
-        print("Submitting station _on")
-        task_status, response = self.submit_task(self._on, task_callback=task_callback)
-        time.sleep(3)
-        print("Submitted task")
-        return task_status, response
-        #self._on(task_callback=task_callback)
-        #return TaskStatus.QUEUED, "adasdasdasdasdasd"
+        return self.submit_task(self._on, task_callback=task_callback)
 
     @check_communicating
     def _on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Turn on this station.
 
         The order to turn a station on is: APIU, then tiles and antennas.
-
-        :return: a result code
         """
-        #if self._apiu_power_state == PowerState.ON:
-        #    return self._turn_on_tiles_and_antennas()
-        #self._on_called = True
-        #result_code = self._apiu_proxy.on()
-        #if result_code:
-        #    return result_code
-        #return ResultCode.OK
-        pytest.set_trace()
-        print("On in progress")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         if self._apiu_power_state == PowerState.ON:
-            print("APIU is on")
-            result = self._turn_on_tiles_and_antennas()
-            print(result)
-            if result == ResultCode.QUEUED:
-                print("starting to turn on tiles and antennas")
-                time.sleep(1)
-                if task_callback:
-                    task_callback(status=TaskStatus.COMPLETED)
+            result_code = self._turn_on_tiles_and_antennas()
+            # TODO: Monitor the Tiles' & antennas' On command statuses and update the Station On command
+            # status accordingly.
+            if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+                task_status = TaskStatus.COMPLETED
             else:
-                print("failed to start turning on tiles and antennas")
-                if task_callback:
-                    task_callback(status=TaskStatus.FAILED)
+                task_status = TaskStatus.FAILED
+            if task_callback:
+                task_callback(status=task_status)
             return
         self._on_called = True
-        print("Turning APIU on")
-        result_code = self._apiu_proxy.on()
-        if result_code != ResultCode.QUEUED:
-            print("Failed to start turning APIU on")
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED)
-            return
-        print("starting to turn APIU on")
+        result_code, _ = self._apiu_proxy.on()
+        # TODO: Monitor the APIU On command status and update the Station On command status accordingly.
+        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            task_status = TaskStatus.COMPLETED
+        else:
+            task_status = TaskStatus.FAILED
         if task_callback:
-            task_callback(status=TaskStatus.COMPLETED)
+            task_callback(status=task_status)
 
     @check_communicating
     def _turn_on_tiles_and_antennas(
@@ -538,6 +513,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         delays: list[float],
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> tuple[ResultCode, str]:
         """
         Apply the pointing configuration by setting the delays on each tile.
@@ -548,15 +524,19 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         results = [
             tile_proxy.set_pointing_delay(delays)
             for tile_proxy in self._tile_proxies.values()
         ]
-        if ResultCode.FAILED in results:
-            return ResultCode.FAILED
-        elif ResultCode.QUEUED in results:
-            return ResultCode.QUEUED
-        return ResultCode.OK
+        # TODO: Monitor the Tiles' SetPointingDelay command status and update the Station command status accordingly.
+        if all(result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED] for result in results):
+            task_status = TaskStatus.COMPLETED
+        else:
+            task_status = TaskStatus.FAILED
+        if task_callback:
+            task_callback(status=task_status)
 
     @property  # type:ignore[misc]
     @check_communicating
@@ -624,7 +604,6 @@ class StationComponentManager(MccsComponentManager):
             self._update_is_configured(True)
         except ValueError as value_error:
             if task_callback:
-                print("here")
                 task_callback(
                     status=TaskStatus.FAILED,
                     result=f"Configure command has failed: {value_error}",

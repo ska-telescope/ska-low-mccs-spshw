@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 import unittest.mock
 import functools
 
@@ -17,6 +18,7 @@ import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.station import StationComponentManager, MccsStation
@@ -221,7 +223,84 @@ class TestStationComponentStateChangedCallback:
         # i.e. component_power_state_changed_callback.assert_next_call(PowerState.ON)
         assert mock_station_component_manager.power_state == PowerState.ON
 
-        mock_station_component_manager._apply_pointing(pointing_delays)
+        task_callback = MockCallable()
+        mock_station_component_manager.apply_pointing(pointing_delays, task_callback)
         for tile_fqdn in tile_fqdns:
             tile_device_proxy = MccsDeviceProxy(tile_fqdn, logger)
             tile_device_proxy.SetPointingDelay.assert_next_call(pointing_delays)
+        
+        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and then COMPLETED
+        # This will likely change once we start monitoring the tile command progress
+        for status in [TaskStatus.QUEUED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]:
+            _, kwargs = task_callback.get_next_call()
+            assert kwargs['status'] == status
+
+    def test_power_commands(
+        self: TestStationComponentManager,
+        device_under_test: MccsDeviceProxy,
+        mock_station_component_manager: StationComponentManager,
+        communication_state_changed_callback: MockCallable,
+        apiu_proxy: unittest.mock.Mock,
+        tile_fqdns: list[str],
+        tile_proxies: list[unittest.mock.Mock],
+        antenna_fqdns: list[str],
+        antenna_proxies: list[unittest.mock.Mock],
+    ) -> None:
+        """
+        Test that the power commands work as expected.
+
+        :param station_component_manager: the station component manager
+            under test.
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param apiu_proxy: proxy to this station's APIU device
+        :param tile_fqdns: FQDNs of tile devices
+        :param tile_proxies: list of proxies to this station's tile
+            devices
+        :param antenna_fqdns: FQDNs of antenna devices
+        :param antenna_proxies: list of proxies to this station's
+            antenna devices
+        """
+        mock_station_component_manager.start_communicating()
+        time.sleep(1)
+        communication_state_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_state_changed_callback.assert_last_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        task_callback_on = MockCallable()
+        mock_station_component_manager.on(task_callback=task_callback_on)
+        apiu_proxy.On.assert_next_call()
+        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and then COMPLETED
+        # This will likely change once we start monitoring the subservient device command progress
+        for status in [TaskStatus.QUEUED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]:
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs['status'] == status
+
+        # pretend to receive APIU power mode changed event
+        mock_station_component_manager._apiu_power_state_changed(PowerState.ON)
+
+        for tile_proxy in tile_proxies:
+            tile_proxy.On.assert_next_call()
+        for antenna_proxy in antenna_proxies:
+            antenna_proxy.On.assert_next_call()
+
+        # pretend to receive tile and antenna events
+        for fqdn in tile_fqdns:
+            mock_station_component_manager._tile_power_state_changed(fqdn, PowerState.ON)
+        for fqdn in antenna_fqdns:
+            mock_station_component_manager._antenna_power_state_changed(fqdn, PowerState.ON)
+
+        assert mock_station_component_manager.power_state == PowerState.ON
+
+        task_callback_off = MockCallable()
+        mock_station_component_manager.off(task_callback=task_callback_off)
+        for proxy in [apiu_proxy] + tile_proxies:
+            proxy.Off.assert_next_call()
+        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and then COMPLETED
+        # This will likely change once we start monitoring the subservient device command progress
+        for status in [TaskStatus.QUEUED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]:
+            _, kwargs = task_callback_off.get_next_call()
+            assert kwargs['status'] == status

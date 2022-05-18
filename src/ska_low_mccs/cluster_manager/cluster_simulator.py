@@ -558,7 +558,7 @@ class ClusterSimulator(ObjectComponent):
             self._node_statuses[node_id] for node_id in self.shadow_master_pool_node_ids
         ]
 
-    def ping_master_pool(self: ClusterSimulator, argin) -> None:
+    def ping_master_pool(self: ClusterSimulator) -> None:
         """
         Ping the master pool nodes to make sure they are ok.
 
@@ -571,12 +571,12 @@ class ClusterSimulator(ObjectComponent):
             "ClusterSimulator.ping_master_pool has not been implemented"
         )
 
-    def clear_job_stats(self: ClusterSimulator, argin) -> None:
+    def clear_job_stats(self: ClusterSimulator) -> None:
         """Clear stats for closed jobs."""
         for status in JobStatus:
             self._job_stats[status] = 0
 
-    def get_job_status(self: ClusterSimulator, job_id: str) -> JobStatus:
+    def get_job_status(self: ClusterSimulator, job_id: str) -> int:#JobStatus:
         """
         Return the status of an open job.
 

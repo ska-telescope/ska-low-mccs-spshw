@@ -106,8 +106,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
-            #print("registered command: ", command_name)
-            #print("command objects are: ", self._command_objects)
 
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for this device."""
@@ -505,9 +503,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        print("StartJob called")
         handler = self.get_command_object("StartJob")
-        print("got object StartJob")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
@@ -524,14 +520,12 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        print("StopJob called")
         handler = self.get_command_object("StopJob")
-        print("got object StopJob")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    @command(dtype_in="DevString", dtype_out="DevString")
-    def SubmitJob(self: MccsClusterManagerDevice, argin: str) -> str:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SubmitJob(self: MccsClusterManagerDevice, argin: str) -> DevVarLongStringArrayType:
         """
         Command to submit a job to the queue.
 
@@ -539,9 +533,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         :return: the job id of the submitted job
         """
-        print("SubmitJob called")
         handler = self.get_command_object("SubmitJob")
-        print("got object SubmitJob")
         return handler(argin)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -553,14 +545,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         :return: the job status.
         """
-        print("GetJobStatus called")
         handler = self.get_command_object("GetJobStatus")
-        print("got object GetJobStatus")
-        print(f"argin={argin}")
-        print(f"handler={handler}")
-        result = handler(argin)
-        print(f"result={result}")
-        return result
+        return handler(argin)
 
     class ClearJobStatsCommand(SubmittedSlowCommand):
         """Class for handling the ClearJobStats() command."""
@@ -596,13 +582,11 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        print("ClearJobStats called")
         handler = self.get_command_object("ClearJobStats")
-        print("got object ClearJobStats")
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class PingMasterPoolCommand(SubmittedSlowCommand):
+    '''class PingMasterPoolCommand(SubmittedSlowCommand):
         """Class for handling the PingMasterPool() command."""
 
         SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
@@ -623,7 +607,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             except ConnectionError as connection_error:
                 return (ResultCode.FAILED, str(connection_error))
             else:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)'''
 
     @command(dtype_out="DevVarLongStringArray")
     def PingMasterPool(
@@ -636,13 +620,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        print("PingMasterPool called")
         handler = self.get_command_object("PingMasterPool")
-        print("got object PingMasterPool")
         (return_code, message) = handler()
-        #return_code = "test"
-        #message = "test"
-        print("returning PingMasterPool return ...")
         return ([return_code], [message])
 
 

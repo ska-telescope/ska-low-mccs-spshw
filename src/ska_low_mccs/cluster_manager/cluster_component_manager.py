@@ -18,6 +18,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
 )
 from ska_tango_base.executor import TaskStatus
+from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
 from ska_low_mccs.component import (
@@ -189,13 +190,13 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         :param component_state_changed_callback: callback to be called when the
             component state changes
         """
-        cluster_simulator = ClusterSimulatorComponentManager(
+        self.cluster_simulator = ClusterSimulatorComponentManager(
             logger,
             max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
-        super().__init__(None, cluster_simulator, initial_simulation_mode)
+        super().__init__(None, self.cluster_simulator, initial_simulation_mode)
 
     def start_job(
         self: ClusterComponentManager,
@@ -357,7 +358,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         self: ClusterComponentManager,
         job_id: str,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> tuple[ResultCode, str]:#tuple[TaskStatus, str]:
         """
         Submit the get_job_status slow task.
 
@@ -388,11 +389,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            print(f"trying...")
             self.cluster_simulator.get_job_status(job_id)
-            print(f"...tried")
         except Exception as ex:
-            print(f"exception: {ex}")
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
             return

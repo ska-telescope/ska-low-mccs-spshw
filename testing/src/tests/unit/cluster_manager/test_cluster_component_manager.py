@@ -20,8 +20,10 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
-from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
+from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus
 from ska_low_mccs.testing.mock import MockCallable
+
+from ska_tango_base.executor import TaskStatus
 
 
 class TestClusterCommon:
@@ -161,20 +163,21 @@ class TestClusterCommon:
         :param status: the job status for which stats reporting is under
             test
         """
-        jobs = ClusterSimulator.OPEN_JOBS.keys()
-        job_status = JobStatus[status.upper()]
-        jobs_of_status = [
-            job for job in jobs if cluster.get_job_status(job) == job_status
-        ]
+        if isinstance(cluster, ClusterSimulator):
+            jobs = ClusterSimulator.OPEN_JOBS.keys()
+            job_status = JobStatus[status.upper()]
+            jobs_of_status = [
+                job for job in jobs if cluster.get_job_status(job) == job_status
+            ]
 
-        assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
+            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
 
-        cluster.stop_job(jobs_of_status.pop())
-        assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
-        assert cluster.jobs_killed == ClusterSimulator.JOB_STATS[JobStatus.KILLED] + 1
+            cluster.stop_job(jobs_of_status.pop())
+            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
+            assert cluster.jobs_killed == ClusterSimulator.JOB_STATS[JobStatus.KILLED] + 1
 
-        cluster.clear_job_stats()
-        assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
+            cluster.clear_job_stats()
+            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)            
 
     @pytest.mark.parametrize(
         "resource",
@@ -322,15 +325,22 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test that when we submit a job, we get a job id for it.
-
-        Also, the status of the job is STAGING.
+        Test that when we call the submit_job method from the component 
+        manager, the job is added to the queue.
+        
+        Test that when we call the submit_job method from the simulator,
+        the JobStatus is STAGING.
 
         :param cluster: the simulated cluster
         """
-        job_config = JobConfig()
-        job_id = cluster.submit_job(job_config)
-        assert cluster.get_job_status(job_id) == JobStatus.STAGING
+        if isinstance(cluster, ClusterSimulator):
+            job_id = cluster.submit_job()
+            assert cluster.get_job_status(job_id) == JobStatus.STAGING
+
+        elif isinstance(cluster, ClusterComponentManager):
+            (result_code, message) = cluster.submit_job()
+            assert result_code == TaskStatus.QUEUED
+            assert message == "Task queued"
 
     def test_start_job(
         self: TestClusterCommon,
@@ -341,16 +351,22 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
-        with pytest.raises(ValueError, match="No such job"):
-            cluster.start_job("no_such_job_id")
+        if isinstance(cluster, ClusterSimulator):
+            with pytest.raises(ValueError, match="No such job"):
+                cluster.start_job("no_such_job_id")
 
-        for job_id in ClusterSimulator.OPEN_JOBS:
-            if cluster.get_job_status(job_id) == JobStatus.STAGING:
-                cluster.start_job(job_id)
-                assert cluster.get_job_status(job_id) == JobStatus.RUNNING
-            else:
-                with pytest.raises(ValueError, match="Job cannot be started"):
+            for job_id in ClusterSimulator.OPEN_JOBS:
+                if cluster.get_job_status(job_id) == JobStatus.STAGING:
                     cluster.start_job(job_id)
+                    assert cluster.get_job_status(job_id) == JobStatus.RUNNING
+                else:
+                    with pytest.raises(ValueError, match="Job cannot be started"):
+                        cluster.start_job(job_id)
+
+        elif isinstance(cluster, ClusterComponentManager):
+            (result_code, message) = cluster.start_job("job_id")
+            assert result_code == TaskStatus.QUEUED
+            assert message == "Task queued"
 
     def test_stop_job(
         self: TestClusterCommon,
@@ -361,14 +377,20 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
-        with pytest.raises(ValueError, match="No such job"):
-            cluster.stop_job("no_such_job_id")
-
-        for job_id in list(ClusterSimulator.OPEN_JOBS):
-            cluster.stop_job(job_id)
-
+        if isinstance(cluster, ClusterSimulator):
             with pytest.raises(ValueError, match="No such job"):
+                cluster.stop_job("no_such_job_id")
+
+            for job_id in list(ClusterSimulator.OPEN_JOBS):
                 cluster.stop_job(job_id)
+
+                with pytest.raises(ValueError, match="No such job"):
+                    cluster.stop_job(job_id)
+
+        elif isinstance(cluster, ClusterComponentManager):
+            (result_code, message) = cluster.stop_job("job_id")
+            assert result_code == TaskStatus.QUEUED
+            assert message == "Task queued"
 
 
 class TestClusterSimulator:

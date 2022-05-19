@@ -10,7 +10,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import tango
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
@@ -74,9 +74,6 @@ class MccsSubarray(SKASubarray):
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        # The below has commands commented out because it seems they've already been
-        # registered by the base classes along with a hook so we don't need to do it
-        # again here.
         for (command_name, method_name) in [
             ("SendTransientBuffer", "send_transient_buffer"),
         ]:
@@ -131,39 +128,29 @@ class MccsSubarray(SKASubarray):
         :param state_change: A dictionary containing the name of the state that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
-        # The commented out stuff is an idea to solve an issue with proxies that hasn't reared its head yet.
-        # valid_device_types = {"station": "station_health_changed",
-        #                     "beam": "station_beam_health_changed",
-        #                     "subarraybeam": "subarray_beam_health_changed"}
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
-            if self._health_state != health:
-                self._health_state = health
-                self.push_change_event("healthState", health)
-            # If all health states use "health_state" and overwrite each other
-            # then the below code should fix it.
-            # if fqdn is None:
-            #     # Do regular health update. This device called the callback.
-            #    if self._health_state != health:
-            #         self._health_state = health
-            #         self.push_change_event("healthState", health)
-            # else:
-            #     # Identify and call subservient device method.
-            #     device_type = fqdn.split("/")[1]
-            #     if device_type in valid_device_types.keys():
-            #         valid_device_types[device_type](fqdn, health)
-
-        if "station_health_state" in state_change.keys():
-            station_health = state_change.get("station_health_state")
-            self._health_model.station_health_changed(fqdn, station_health)
-
-        if "station_beam_health_state" in state_change.keys():
-            station_beam_health = state_change.get("station_beam_health_state")
-            self._health_model.station_beam_health_changed(fqdn, station_beam_health)
-
-        if "subarray_beam_health_state" in state_change.keys():
-            subarray_beam_health = state_change.get("subarray_beam_health_state")
-            self._health_model.subarray_beam_health_changed(fqdn, subarray_beam_health)
+            if fqdn is None:
+                # Do regular health update. This device called the callback.
+                if self._health_state != health:
+                    self._health_state = health
+                    self.push_change_event("healthState", health)
+            else:
+                valid_device_types: dict(str, Callable) = {
+                    "station": self._health_model.station_health_changed,
+                    "beam": self._health_model.station_beam_health_changed,
+                    "subarraybeam": self._health_model.subarray_beam_health_changed,
+                }
+                # Identify and call subservient device method.
+                device_type = fqdn.split("/")[1]
+                if device_type in valid_device_types.keys():
+                    valid_device_types[device_type](fqdn, health)
+                else:
+                    # We've somehow got a health update for a device type we don't manage.
+                    self.logger.warning(
+                        f"Received a health state changed event for device {fqdn} "
+                        "which is not managed by this subarray."
+                    )
 
         # resources should be passed in the dict's value as a list of sets to be extracted here.
         if "resources_changed" in state_change.keys():

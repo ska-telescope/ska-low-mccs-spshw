@@ -307,7 +307,7 @@ def station_component_manager(
     tile_fqdns: list[str],
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_state_changed_callback: MockCallableDeque,
 ) -> StationComponentManager:
     """
@@ -347,7 +347,60 @@ def station_component_manager(
         tile_fqdns,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
+
+
+@pytest.fixture()
+def mock_station_component_manager(
+    station_id: int,
+    apiu_fqdn: str,
+    antenna_fqdns: list[str],
+    tile_fqdns: list[str],
+    logger: logging.Logger,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
+) -> StationComponentManager:
+    """
+    Return a station component manager.
+
+    :param tango_harness: a test harness for Tango devices
+    :param station_id: the station id of the station
+    :param apiu_fqdn: FQDN of the Tango device that manages this
+        station's APIU
+    :param antenna_fqdns: FQDNs of the Tango devices that manage this
+        station's antennas
+    :param tile_fqdns: FQDNs of the Tango devices that manage this
+        station's tiles
+    :param logger: the logger to be used by this object.
+    :param lrc_result_changed_callback: a callback to
+        be used to subscribe to device LRC result changes
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_power_mode_changed_callback: callback to be called
+        when the component power mode changes
+    :param apiu_health_changed_callback: callback to be called when the
+        health of this station's APIU changes
+    :param antenna_health_changed_callback: callback to be called when
+        the health of one of this station's antennas changes
+    :param tile_health_changed_callback: callback to be called when
+        the health of one of this station's tiles changes
+    :param is_configured_changed_callback: a mock callback for a change in
+        whether the station is configured.
+
+    :return: a station component manager
+    """
+    return StationComponentManager(
+        station_id,
+        apiu_fqdn,
+        antenna_fqdns,
+        tile_fqdns,
+        logger,
+        max_workers,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 

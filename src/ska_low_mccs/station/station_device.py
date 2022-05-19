@@ -220,20 +220,22 @@ class MccsStation(SKAObsDevice):
             device_family = fqdn.split("/")[1]
             if device_family == "apiu":
                 health_state_changed_callback = self._health_model.apiu_health_changed
-                power_state_changed_callback = self.component_manager._apiu_mode_changed
+                power_state_changed_callback = (
+                    self.component_manager._apiu_power_state_changed
+                )
             elif device_family == "antenna":
                 health_state_changed_callback = functools.partial(
                     self._health_model.antenna_health_changed, fqdn
                 )
                 power_state_changed_callback = functools.partial(
-                    self.component_manager._antenna_power_mode_changed, fqdn
+                    self.component_manager._antenna_power_state_changed, fqdn
                 )
             elif device_family == "tile":
                 health_state_changed_callback = functools.partial(
                     self._health_model.tile_health_changed, fqdn
                 )
                 power_state_changed_callback = functools.partial(
-                    self.component_manager._tile_power_mode_changed, fqdn
+                    self.component_manager._tile_power_state_changed, fqdn
                 )
             else:
                 raise ValueError(
@@ -244,7 +246,7 @@ class MccsStation(SKAObsDevice):
             power_state = state_change.get("power_state")
             with self.component_manager.power_state_lock:
                 self.component_manager.set_power_state(power_state, fqdn=fqdn)
-                if power_state:
+                if power_state is not None:
                     power_state_changed_callback(power_state)
 
         if "health_state" in state_change.keys():

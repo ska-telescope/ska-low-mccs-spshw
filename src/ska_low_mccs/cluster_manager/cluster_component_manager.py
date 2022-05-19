@@ -373,6 +373,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
 
         :return: A tuple containing a ResultCode and a response message
         """
+        print("!!get_job_status!!")
         return self.submit_task(
             self._get_job_status, args=[job_id], task_callback=task_callback
         )
@@ -390,10 +391,16 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
+        print("!!_get_job_status!!")
+        print(f"job_id={job_id}")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
+            print("trying...")
+            print(f"Cluster Sim: {self.cluster_simulator}")
+            print(f"Cluster Sim GJS: {self.cluster_simulator.get_job_status}")
             self.cluster_simulator.get_job_status(job_id)
+            print("...tried")
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")

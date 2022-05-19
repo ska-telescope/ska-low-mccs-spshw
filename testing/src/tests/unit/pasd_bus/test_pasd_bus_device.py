@@ -23,27 +23,6 @@ from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
-def device_to_load(
-    patched_pasd_bus_device_class: type[MccsPasdBus],
-) -> DeviceToLoadType:
-    """
-    Fixture that specifies the device to be loaded for testing.
-
-    :param patched_pasd_bus_device_class: a pasd bus device class
-        that has been patched with a mock component manager
-
-    :return: specification of the device to be loaded
-    """
-    return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
-        "package": "ska_low_mccs",
-        "device": "pasd_bus",
-        "proxy": MccsDeviceProxy,
-        "patch": patched_pasd_bus_device_class,
-    }
-
-
-@pytest.fixture()
 def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
@@ -56,7 +35,7 @@ def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
 
 
 class TestMccsPasdBus:
-    """Tests of the MCCS transient buffer device."""
+    """Tests of the MCCS pasd bus device."""
 
     @pytest.fixture()
     def mock_component_manager(self: TestMccsPasdBus, mocker: pytest_mock.mocker) -> unittest.mock.Mock:  # type: ignore[valid-type]
@@ -67,7 +46,7 @@ class TestMccsPasdBus:
             module
 
         :return: a mock to be used as a component manager for the
-            transient buffer device.
+            pasd bus device.
         """
         return mocker.Mock()  # type: ignore[attr-defined]
 
@@ -261,7 +240,7 @@ class TestMccsPasdBus:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param mock_component_manager: the mock component manager being
-            used by the patched transient buffer device.
+            used by the patched pasd bus device.
         :param device_attribute: name of the device attribute under test.
         :param component_manager_property: name of the component manager
             property that is expected to be called when the device
@@ -387,7 +366,7 @@ class TestMccsPasdBus:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param mock_component_manager: the mock component manager being
-            used by the patched transient buffer device.
+            used by the patched pasd bus device.
         :param device_command: name of the device command under test.
         :param component_manager_method: name of the component manager
             method that is expected to be called when the device

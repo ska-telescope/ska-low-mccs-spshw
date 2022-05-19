@@ -22,7 +22,7 @@ from ska_tango_base.control_model import AdminMode, HealthState, TestMode
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_low_mccs.tile import StaticTpmSimulator
+from ska_low_mccs.tile import StaticTpmSimulator, TileComponentManager
 
 
 @pytest.fixture()
@@ -178,7 +178,7 @@ class TestMccsTile:
             "state",
             device_state_changed_callback,
         )
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        device_state_changed_callback.assert_last_change_event(tango.DevState.DISABLE)
 
         with pytest.raises(
             tango.DevFailed,
@@ -509,7 +509,7 @@ class TestMccsTileCommands:
             _ = tile_device.Initialise()
 
         tile_device.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
         time.sleep(0.1)
@@ -526,8 +526,8 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
 
         [[result_code], [message]] = tile_device.Initialise()
-        assert result_code == ResultCode.OK
-        assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
+        assert result_code == ResultCode.QUEUED
+        assert "Initialise" in message.split("_")[-1]
 
     def test_GetFirmwareAvailable(
         self: TestMccsTileCommands,
@@ -563,7 +563,7 @@ class TestMccsTileCommands:
             "state",
             device_state_changed_callback,
         )
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        device_state_changed_callback.assert_last_change_event(tango.DevState.DISABLE)
         assert tile_device.state() == tango.DevState.DISABLE
 
         with pytest.raises(
@@ -573,8 +573,10 @@ class TestMccsTileCommands:
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+
+        
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
         # At this point, the component should be unconnected, as not turned on

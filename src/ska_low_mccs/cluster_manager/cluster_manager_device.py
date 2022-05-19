@@ -552,29 +552,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         handler = self.get_command_object("GetJobStatus")
         return handler(argin)
 
-    class ClearJobStatsCommand(SubmittedSlowCommand):
-        """Class for handling the ClearJobStats() command."""
-
-        SUCCEEDED_MESSAGE = "Job stats cleared"
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.ClearJobStatsCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Run the user-specified functionality of this command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            try:
-                component_manager.clear_job_stats()
-            except ConnectionError as connection_error:
-                return ResultCode.FAILED, str(connection_error)
-            else:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_out="DevVarLongStringArray")
     def ClearJobStats(
         self: MccsClusterManagerDevice,
@@ -589,29 +566,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         handler = self.get_command_object("ClearJobStats")
         (return_code, message) = handler()
         return ([return_code], [message])
-
-    '''class PingMasterPoolCommand(SubmittedSlowCommand):
-        """Class for handling the PingMasterPool() command."""
-
-        SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.PingMasterPoolCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Run the user-specified functionality of this command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            try:
-                component_manager.ping_master_pool()
-            except ConnectionError as connection_error:
-                return (ResultCode.FAILED, str(connection_error))
-            else:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)'''
 
     @command(dtype_out="DevVarLongStringArray")
     def PingMasterPool(

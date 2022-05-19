@@ -407,3 +407,103 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
                 status=TaskStatus.COMPLETED,
                 result="The get job status task has completed",
             )
+
+    def clear_job_stats(
+        self: ClusterComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[ResultCode, str]:  # tuple[TaskStatus, str]:
+        """
+        Submit the clear_job_stats slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(
+            self._clear_job_stats, args=[], task_callback=task_callback
+        )
+
+    def _clear_job_stats(
+        self: ClusterComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Clear the job stats using slow cammand.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self.cluster_simulator.clear_job_stats()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The clear job stats task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The clear job stats task has completed",
+            )
+
+    def ping_master_pool(
+        self: ClusterComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[ResultCode, str]:  # tuple[TaskStatus, str]:
+        """
+        Submit the ping_master_pool slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(
+            self._ping_master_pool, args=[], task_callback=task_callback
+        )
+
+    def _ping_master_pool(
+        self: ClusterComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Ping the master pool using slow cammand.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self.cluster_simulator.ping_master_pool()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The ping master pool task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The ping master pool task has completed",
+            )

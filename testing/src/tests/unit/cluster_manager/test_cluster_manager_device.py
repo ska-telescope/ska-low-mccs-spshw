@@ -414,7 +414,6 @@ class TestMccsClusterManagerDevice:
             print(f"###### result_code is {result_code}")
             print(f"###### message is {message}")
 
-    @pytest.mark.skip(reason="TEST FAILING")
     def test_ClearJobStats(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
@@ -453,18 +452,18 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(
-            DevFailed,
-            match="Communication with component is not established",
-        ):
-            ([result_code], [message]) = device_under_test.PingMasterPool()
-            assert result_code == ResultCode.FAILED
-            assert "Communication with component is not established" in message
+        # with pytest.raises(
+        #     DevFailed,
+        #     match="Communication with component is not established",
+        # ):
+        ([result_code], [message]) = device_under_test.PingMasterPool()
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PingMasterPool"
 
         device_under_test.adminMode = AdminMode.ONLINE
 
-        with pytest.raises(
-            DevFailed,
-            match="ClusterSimulator.ping_master_pool has not been implemented",
-        ):
-            _ = device_under_test.PingMasterPool()
+        # with pytest.raises(
+        #     DevFailed,
+        #     match="ClusterSimulator.ping_master_pool has not been implemented",
+        # ):
+        #     _ = device_under_test.PingMasterPool()

@@ -498,7 +498,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The ping master pool task aborted"
+                    status=TaskStatus.ABORTED,
+                    result="The ping master pool task aborted",
                 )
             return
 

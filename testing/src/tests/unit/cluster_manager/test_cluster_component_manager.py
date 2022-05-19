@@ -131,12 +131,15 @@ class TestClusterCommon:
         :param status: the job status for which stats reporting is under
             test
         """
-        job_status = JobStatus[status.upper()]
-        assert (
-            getattr(cluster, f"jobs_{status}") == ClusterSimulator.JOB_STATS[job_status]
-        )
-        cluster.clear_job_stats()
-        assert getattr(cluster, f"jobs_{status}") == 0
+        if isinstance(cluster, ClusterSimulator):
+            job_status = JobStatus[status.upper()]
+            assert (
+                getattr(cluster, f"jobs_{status}") == ClusterSimulator.JOB_STATS[job_status]
+            )
+            cluster.clear_job_stats()
+            assert getattr(cluster, f"jobs_{status}") == 0
+        elif isinstance(cluster, ClusterComponentManager):
+            assert cluster.clear_job_stats() == (TaskStatus.QUEUED, 'Task queued')
 
     @pytest.mark.parametrize(
         "status", ("staging", "starting", "running", "killing", "unreachable")
@@ -298,11 +301,14 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
-        with pytest.raises(
-            NotImplementedError,
-            match="ClusterSimulator.ping_master_pool has not been implemented",
-        ):
-            assert cluster.ping_master_pool() is None
+        if isinstance(cluster, ClusterSimulator):
+            with pytest.raises(
+                NotImplementedError,
+                match="ClusterSimulator.ping_master_pool has not been implemented",
+            ):
+                assert cluster.ping_master_pool() is None
+        elif isinstance(cluster, ClusterComponentManager):
+            assert cluster.ping_master_pool() == (TaskStatus.QUEUED, 'Task queued')
 
     def test_shadow_master_pool_status(
         self: TestClusterCommon,

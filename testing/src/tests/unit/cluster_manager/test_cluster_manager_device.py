@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+import time
 
 import pytest
 from ska_tango_base.commands import ResultCode
@@ -307,6 +308,7 @@ class TestMccsClusterManagerDevice:
     def test_StartJob(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
+        lrc_status_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for StartJob.
@@ -315,34 +317,55 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        # ([result_code], [message]) = device_under_test.StartJob(
-        #     next(iter(ClusterSimulator.OPEN_JOBS))
-        # )
-        # assert result_code == ResultCode.FAILED
-        # assert "Communication with component is not established" in message
+        device_under_test.add_change_event_callback(
+            "longRunningCommandStatus",
+            lrc_status_changed_callback,
+        )
+        assert (
+            "longRunningCommandStatus".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
 
-        ([result_code], [message]) = device_under_test.StartJob(next(iter(ClusterSimulator.OPEN_JOBS)))
+        #lrc_status_changed_callback.assert_next_change_event(initial_lrc_result)
+
+        ([result_code], [message]) = device_under_test.StartJob(
+            next(iter(ClusterSimulator.OPEN_JOBS))
+        )
+        # Even when comms are not ESTABLISHED we can still queue the command.
         assert result_code == ResultCode.QUEUED
-        assert message.split("_")[-1] == "StartJob"
+        assert "StartJob" in message.split("/")[-1]
+        time.sleep(0.1)
+        print(lrc_status_changed_callback.get_next_call())
+        print(lrc_status_changed_callback.get_next_call())
+        print(lrc_status_changed_callback.get_next_call())
 
-        # device_under_test.adminMode = AdminMode.ONLINE
+        # But we expect it to have failed when a worker thread picks it up.
+        lrc_id, lrc_status = device_under_test.longRunningCommandStatus
+        print(lrc_id, lrc_status)
+        assert lrc_id == message
+        assert lrc_status == "FAILED"
+        
+        #assert result_code == ResultCode.FAILED
+        #assert "Communication with component is not established" in message
 
-        # for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
-        #     ([result_code], [message]) = device_under_test.StartJob(job_id)
-        #     if status == JobStatus.STAGING:
-        #         assert result_code == ResultCode.OK
-        #         assert (
-        #             message
-        #             == MccsClusterManagerDevice.StartJobCommand.SUCCEEDED_MESSAGE
-        #         )
+        device_under_test.adminMode = AdminMode.ONLINE
 
-        #         assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
-        #     else:
-        #         assert result_code == ResultCode.FAILED
-        #         assert (
-        #             message
-        #             == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
-        #         )
+        for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
+            ([result_code], [message]) = device_under_test.StartJob(job_id)
+            if status == JobStatus.STAGING:
+                assert result_code == ResultCode.OK
+                assert (
+                    message
+                    == MccsClusterManagerDevice.StartJobCommand.SUCCEEDED_MESSAGE
+                )
+
+                assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
+            else:
+                assert result_code == ResultCode.FAILED
+                assert (
+                    message
+                    == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
+                )
 
     def test_StopJob(
         self: TestMccsClusterManagerDevice,

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from typing import Any
 import time
+import tango
 
 import pytest
 from ska_tango_base.commands import ResultCode
@@ -326,7 +327,7 @@ class TestMccsClusterManagerDevice:
             in device_under_test._change_event_subscription_ids
         )
 
-        #lrc_status_changed_callback.assert_next_change_event(initial_lrc_result)
+        lrc_status_changed_callback.assert_next_change_event(None, tango._tango.AttrQuality.ATTR_VALID)
 
         ([result_code], [message]) = device_under_test.StartJob(
             next(iter(ClusterSimulator.OPEN_JOBS))
@@ -334,38 +335,42 @@ class TestMccsClusterManagerDevice:
         # Even when comms are not ESTABLISHED we can still queue the command.
         assert result_code == ResultCode.QUEUED
         assert "StartJob" in message.split("/")[-1]
-        time.sleep(0.1)
-        print(lrc_status_changed_callback.get_next_call())
-        print(lrc_status_changed_callback.get_next_call())
-        print(lrc_status_changed_callback.get_next_call())
+        #time.sleep(0.1)
 
-        # But we expect it to have failed when a worker thread picks it up.
-        lrc_id, lrc_status = device_under_test.longRunningCommandStatus
-        print(lrc_id, lrc_status)
-        assert lrc_id == message
-        assert lrc_status == "FAILED"
-        
-        #assert result_code == ResultCode.FAILED
-        #assert "Communication with component is not established" in message
+        # lrc_status[0][1] contains the status and ID of all commands submitted.
+        # So we expect a "QUEUED" event...
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "QUEUED" in lrc_status[0][1]
+        # Followed by "IN_PROGRESS" when a worker thread picks it up...
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "IN_PROGRESS" in lrc_status[0][1]
+        # But then we expect "FAILED" due to comms not being ESTABLISHED.
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "FAILED" in lrc_status[0][1]
+
 
         device_under_test.adminMode = AdminMode.ONLINE
 
         for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
             ([result_code], [message]) = device_under_test.StartJob(job_id)
-            if status == JobStatus.STAGING:
-                assert result_code == ResultCode.OK
-                assert (
-                    message
-                    == MccsClusterManagerDevice.StartJobCommand.SUCCEEDED_MESSAGE
-                )
+            assert result_code == ResultCode.QUEUED
+            assert "StartJob" in message.split("/")[-1]
 
+            # We'll always expect these two events first whether the command
+            # is expected to succeed or fail.
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "QUEUED" in lrc_status[0][1]
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "IN_PROGRESS" in lrc_status[0][1]
+
+            if status == JobStatus.STAGING:
+                lrc_status = lrc_status_changed_callback.get_next_call()
+                assert message, "COMPLETED" in lrc_status[0][1]
+                # What's this next line meant to achieve?
                 assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
             else:
-                assert result_code == ResultCode.FAILED
-                assert (
-                    message
-                    == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
-                )
+                lrc_status = lrc_status_changed_callback.get_next_call()
+                assert message, "FAILED" in lrc_status[0][1]
 
     def test_StopJob(
         self: TestMccsClusterManagerDevice,

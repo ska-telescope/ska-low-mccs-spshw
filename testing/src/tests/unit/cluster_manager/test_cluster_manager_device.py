@@ -9,8 +9,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 import time
+from typing import Any
 
 import pytest
 from ska_tango_base.commands import ResultCode
@@ -316,6 +316,8 @@ class TestMccsClusterManagerDevice:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
         """
         device_under_test.add_change_event_callback(
             "longRunningCommandStatus",
@@ -326,7 +328,7 @@ class TestMccsClusterManagerDevice:
             in device_under_test._change_event_subscription_ids
         )
 
-        #lrc_status_changed_callback.assert_next_change_event(initial_lrc_result)
+        # lrc_status_changed_callback.assert_next_change_event(initial_lrc_result)
 
         ([result_code], [message]) = device_under_test.StartJob(
             next(iter(ClusterSimulator.OPEN_JOBS))
@@ -344,9 +346,9 @@ class TestMccsClusterManagerDevice:
         print(lrc_id, lrc_status)
         assert lrc_id == message
         assert lrc_status == "FAILED"
-        
-        #assert result_code == ResultCode.FAILED
-        #assert "Communication with component is not established" in message
+
+        # assert result_code == ResultCode.FAILED
+        # assert "Communication with component is not established" in message
 
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -383,7 +385,9 @@ class TestMccsClusterManagerDevice:
         # )
         # assert result_code == ResultCode.FAILED
         # assert "Communication with component is not established" in message
-        ([result_code], [message]) = device_under_test.StopJob(next(iter(ClusterSimulator.OPEN_JOBS)))
+        ([result_code], [message]) = device_under_test.StopJob(
+            next(iter(ClusterSimulator.OPEN_JOBS))
+        )
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "StopJob"
 
@@ -441,7 +445,9 @@ class TestMccsClusterManagerDevice:
         # ):
         #     _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
         # device_under_test.adminMode = AdminMode.ONLINE
-        ([result_code], [message]) = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
+        ([result_code], [message]) = device_under_test.GetJobStatus(
+            next(iter(ClusterSimulator.OPEN_JOBS))
+        )
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "GetJobStatus"
 

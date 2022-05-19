@@ -21,7 +21,7 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulator,
     ClusterSimulatorComponentManager,
 )
-from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 from ska_low_mccs.testing.mock import MockCallable
 
 
@@ -134,12 +134,13 @@ class TestClusterCommon:
         if isinstance(cluster, ClusterSimulator):
             job_status = JobStatus[status.upper()]
             assert (
-                getattr(cluster, f"jobs_{status}") == ClusterSimulator.JOB_STATS[job_status]
+                getattr(cluster, f"jobs_{status}")
+                == ClusterSimulator.JOB_STATS[job_status]
             )
             cluster.clear_job_stats()
             assert getattr(cluster, f"jobs_{status}") == 0
         elif isinstance(cluster, ClusterComponentManager):
-            assert cluster.clear_job_stats() == (TaskStatus.QUEUED, 'Task queued')
+            assert cluster.clear_job_stats() == (TaskStatus.QUEUED, "Task queued")
 
     @pytest.mark.parametrize(
         "status", ("staging", "starting", "running", "killing", "unreachable")
@@ -308,7 +309,7 @@ class TestClusterCommon:
             ):
                 assert cluster.ping_master_pool() is None
         elif isinstance(cluster, ClusterComponentManager):
-            assert cluster.ping_master_pool() == (TaskStatus.QUEUED, 'Task queued')
+            assert cluster.ping_master_pool() == (TaskStatus.QUEUED, "Task queued")
 
     def test_shadow_master_pool_status(
         self: TestClusterCommon,
@@ -341,12 +342,14 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
+        job_config = JobConfig()
+
         if isinstance(cluster, ClusterSimulator):
-            job_id = cluster.submit_job()
+            job_id = cluster.submit_job(job_config)
             assert cluster.get_job_status(job_id) == JobStatus.STAGING
 
         elif isinstance(cluster, ClusterComponentManager):
-            (result_code, message) = cluster.submit_job()
+            (result_code, message) = cluster.submit_job(job_config)
             assert result_code == TaskStatus.QUEUED
             assert message == "Task queued"
 

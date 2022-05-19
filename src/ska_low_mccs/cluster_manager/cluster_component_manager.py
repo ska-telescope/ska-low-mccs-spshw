@@ -322,7 +322,9 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
 
         :return: A tuple containing a ResultCode and a response message
         """
-        return self.submit_task(self._submit_job, args=[job_config], task_callback=task_callback)
+        return self.submit_task(
+            self._submit_job, args=[job_config], task_callback=task_callback
+        )
 
     def _submit_job(
         self: ClusterComponentManager,

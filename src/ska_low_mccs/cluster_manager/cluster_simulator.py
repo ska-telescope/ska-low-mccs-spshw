@@ -586,7 +586,6 @@ class ClusterSimulator(ObjectComponent):
 
         :return: the status of the job
         """
-        print("!!Simulator.get_job_status!!")
         try:
             return self._open_jobs[job_id]
         except KeyError as key_error:

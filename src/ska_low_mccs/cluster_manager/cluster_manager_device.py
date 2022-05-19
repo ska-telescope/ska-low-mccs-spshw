@@ -536,7 +536,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
         :return: the job id of the submitted job
         """
         handler = self.get_command_object("SubmitJob")
-        return handler(argin)
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def GetJobStatus(
@@ -549,9 +550,9 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         :return: the job status.
         """
-        print("!!GetJobStatus!!")
         handler = self.get_command_object("GetJobStatus")
-        return handler(argin)
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
     def ClearJobStats(

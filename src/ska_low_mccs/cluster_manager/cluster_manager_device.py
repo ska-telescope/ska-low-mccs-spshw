@@ -549,6 +549,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
 
         :return: the job status.
         """
+        print("!!GetJobStatus!!")
         handler = self.get_command_object("GetJobStatus")
         return handler(argin)
 

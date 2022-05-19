@@ -315,30 +315,34 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        ([result_code], [message]) = device_under_test.StartJob(
-            next(iter(ClusterSimulator.OPEN_JOBS))
-        )
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
+        # ([result_code], [message]) = device_under_test.StartJob(
+        #     next(iter(ClusterSimulator.OPEN_JOBS))
+        # )
+        # assert result_code == ResultCode.FAILED
+        # assert "Communication with component is not established" in message
 
-        device_under_test.adminMode = AdminMode.ONLINE
+        ([result_code], [message]) = device_under_test.StartJob(next(iter(ClusterSimulator.OPEN_JOBS)))
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "StartJob"
 
-        for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
-            ([result_code], [message]) = device_under_test.StartJob(job_id)
-            if status == JobStatus.STAGING:
-                assert result_code == ResultCode.OK
-                assert (
-                    message
-                    == MccsClusterManagerDevice.StartJobCommand.SUCCEEDED_MESSAGE
-                )
+        # device_under_test.adminMode = AdminMode.ONLINE
 
-                assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
-            else:
-                assert result_code == ResultCode.FAILED
-                assert (
-                    message
-                    == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
-                )
+        # for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
+        #     ([result_code], [message]) = device_under_test.StartJob(job_id)
+        #     if status == JobStatus.STAGING:
+        #         assert result_code == ResultCode.OK
+        #         assert (
+        #             message
+        #             == MccsClusterManagerDevice.StartJobCommand.SUCCEEDED_MESSAGE
+        #         )
+
+        #         assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
+        #     else:
+        #         assert result_code == ResultCode.FAILED
+        #         assert (
+        #             message
+        #             == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
+        #         )
 
     def test_StopJob(
         self: TestMccsClusterManagerDevice,
@@ -351,22 +355,25 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        ([result_code], [message]) = device_under_test.StopJob(
-            next(iter(ClusterSimulator.OPEN_JOBS))
-        )
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
+        # ([result_code], [message]) = device_under_test.StopJob(
+        #     next(iter(ClusterSimulator.OPEN_JOBS))
+        # )
+        # assert result_code == ResultCode.FAILED
+        # assert "Communication with component is not established" in message
+        ([result_code], [message]) = device_under_test.StopJob(next(iter(ClusterSimulator.OPEN_JOBS)))
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "StopJob"
 
-        device_under_test.adminMode = AdminMode.ONLINE
+        # device_under_test.adminMode = AdminMode.ONLINE
 
-        for job_id in list(ClusterSimulator.OPEN_JOBS):
-            [[result_code], [message]] = device_under_test.StopJob(job_id)
-            assert result_code == ResultCode.OK
-            assert message == MccsClusterManagerDevice.StopJobCommand.SUCCEEDED_MESSAGE
+        # for job_id in list(ClusterSimulator.OPEN_JOBS):
+        #     [[result_code], [message]] = device_under_test.StopJob(job_id)
+        #     assert result_code == ResultCode.OK
+        #     assert message == MccsClusterManagerDevice.StopJobCommand.SUCCEEDED_MESSAGE
 
-            [[result_code], [message]] = device_under_test.StopJob(job_id)
-            assert result_code == ResultCode.FAILED
-            assert message == ClusterSimulator.NONEXISTENT_JOB_MESSAGE
+        #     [[result_code], [message]] = device_under_test.StopJob(job_id)
+        #     assert result_code == ResultCode.FAILED
+        #     assert message == ClusterSimulator.NONEXISTENT_JOB_MESSAGE
 
     def test_SubmitJob(
         self: TestMccsClusterManagerDevice,
@@ -381,14 +388,18 @@ class TestMccsClusterManagerDevice:
         """
         job_config = json.dumps({"mock_key": "mock_value"})
 
-        with pytest.raises(
-            DevFailed, match="Communication with component is not established"
-        ):
-            _ = device_under_test.SubmitJob(job_config)
-        device_under_test.adminMode = AdminMode.ONLINE
+        # with pytest.raises(
+        #     DevFailed, match="Communication with component is not established"
+        # ):
+        #     _ = device_under_test.SubmitJob(job_config)
+        # device_under_test.adminMode = AdminMode.ONLINE
 
-        job_id = device_under_test.SubmitJob(job_config)
-        assert device_under_test.GetJobStatus(job_id) == JobStatus.STAGING
+        ([result_code], [message]) = device_under_test.SubmitJob(job_config)
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "SubmitJob"
+
+        # job_id = device_under_test.SubmitJob(job_config)
+        # assert device_under_test.GetJobStatus(job_id) == JobStatus.STAGING
 
     def test_GetJobStatus(
         self: TestMccsClusterManagerDevice,
@@ -401,18 +412,21 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(
-            DevFailed,
-            # match="Communication with component is not established"
-        ):
-            _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
-        device_under_test.adminMode = AdminMode.ONLINE
+        # with pytest.raises(
+        #     DevFailed,
+        #     # match="Communication with component is not established"
+        # ):
+        #     _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
+        # device_under_test.adminMode = AdminMode.ONLINE
+        ([result_code], [message]) = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "GetJobStatus"
 
-        for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
-            # assert status == device_under_test.GetJobStatus(job_id)
-            ([result_code], [message]) = device_under_test.GetJobStatus(job_id)
-            print(f"###### result_code is {result_code}")
-            print(f"###### message is {message}")
+        # for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
+        #     # assert status == device_under_test.GetJobStatus(job_id)
+        #     ([result_code], [message]) = device_under_test.GetJobStatus(job_id)
+        #     print(f"###### result_code is {result_code}")
+        #     print(f"###### message is {message}")
 
     def test_ClearJobStats(
         self: TestMccsClusterManagerDevice,
@@ -425,21 +439,25 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(
-            DevFailed,
-            match="Communication with component is not established",
-        ):
-            ([result_code], [message]) = device_under_test.ClearJobStats()
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
-
-        device_under_test.adminMode = AdminMode.ONLINE
+        # with pytest.raises(
+        #     DevFailed,
+        #     match="Communication with component is not established",
+        # ):
+        #     ([result_code], [message]) = device_under_test.ClearJobStats()
+        # assert result_code == ResultCode.FAILED
+        # assert "Communication with component is not established" in message
 
         ([result_code], [message]) = device_under_test.ClearJobStats()
-        assert result_code == ResultCode.OK
-        assert (
-            message == MccsClusterManagerDevice.ClearJobStatsCommand.SUCCEEDED_MESSAGE
-        )
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "ClearJobStats"
+
+        # device_under_test.adminMode = AdminMode.ONLINE
+
+        # ([result_code], [message]) = device_under_test.ClearJobStats()
+        # assert result_code == ResultCode.OK
+        # assert (
+        #     message == MccsClusterManagerDevice.ClearJobStatsCommand.SUCCEEDED_MESSAGE
+        # )
 
     def test_PingMasterPool(
         self: TestMccsClusterManagerDevice,

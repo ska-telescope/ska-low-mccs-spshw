@@ -306,6 +306,7 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
 
     def submit_job(
         self: ClusterComponentManager,
+        job_config: str,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
@@ -316,27 +317,30 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         :todo: currently the JobConfig class is unimplemented. This task should
             include the job specification
 
+        :param job_config: The configuration of the job to be submitted
         :param task_callback: Update task state, defaults to None
 
         :return: A tuple containing a ResultCode and a response message
         """
-        return self.submit_task(self._submit_job, task_callback=task_callback)
+        return self.submit_task(self._submit_job, args=[job_config], task_callback=task_callback)
 
     def _submit_job(
         self: ClusterComponentManager,
+        job_config: str,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Submit job command using slow cammand.
 
+        :param job_config: The configuration of the job to be submitted
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self.cluster_simulator.submit_job()
+            self.cluster_simulator.submit_job(job_config)
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")

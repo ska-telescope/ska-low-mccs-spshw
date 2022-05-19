@@ -120,7 +120,9 @@ class MccsStationBeam(SKAObsDevice):
     # Callbacks
     # ----------
     def _component_state_changed_callback(
-        self: MccsStationBeam, state_change: dict[str, Any]
+        self: MccsStationBeam,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
     ) -> None:
         """
         Handle change in this device's state.
@@ -130,19 +132,22 @@ class MccsStationBeam(SKAObsDevice):
         sure the attribute is up to date, and events are pushed.
 
         :param state_change: A dictionary containing the name of the state that changed and its new value.
+        :param fqdn: The fqdn of the calling device or `None` if this device is the caller.
         """
         if "health_state" in state_change.keys():
             health = cast(HealthState, state_change.get("health_state"))
-            if self._health_state != health:
-                self._health_state = health
-                self.push_change_event("healthState", health)
+            if fqdn is None:
+                # Do regular health update. This device called the callback.
+                if self._health_state != health:
+                    self._health_state = health
+                    self.push_change_event("healthState", health)
+            else:
+                # Call station health changed.
+                self._health_model.station_health_changed(health)
 
-        if "station_health" in state_change.keys():
-            station_health = cast(HealthState, state_change.get("station_health"))
-            self._health_model.station_health_changed(station_health)
-
-        if "station_fault" in state_change.keys():
-            station_fault = cast(bool, state_change.get("station_fault"))
+        # Probably more to do here with fault.
+        if "fault" in state_change.keys():
+            station_fault = cast(bool, state_change.get("fault"))
             self._health_model.station_fault_changed(station_fault)
 
         if "beam_locked" in state_change.keys():

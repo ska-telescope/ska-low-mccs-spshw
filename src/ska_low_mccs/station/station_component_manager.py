@@ -7,11 +7,14 @@
 # See LICENSE for more info.
 """This module implements component management for stations."""
 from __future__ import annotations
+from asyncio import Task
 
 import functools
 import json
 import logging
+import pytest
 import threading
+import time
 from typing import Callable, Optional, Sequence
 
 import tango
@@ -140,10 +143,10 @@ class StationComponentManager(MccsComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
+        self._apiu_fqdn = apiu_fqdn
 
         self._is_configured = False
         self._on_called = False
-        self.component_state_changed_callback = component_state_changed_callback
 
         self._communication_state_lock = threading.Lock()
         self._communication_statees = {
@@ -156,13 +159,12 @@ class StationComponentManager(MccsComponentManager):
             fqdn: PowerState.UNKNOWN for fqdn in antenna_fqdns
         }
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
-
         self._apiu_proxy = DeviceComponentManager(
             apiu_fqdn,
             logger,
             max_workers,
             functools.partial(self._device_communication_state_changed, apiu_fqdn),
-            functools.partial(self.component_state_changed_callback, fqdn=apiu_fqdn),
+            functools.partial(component_state_changed_callback, fqdn=apiu_fqdn),
         )
         # self._antenna_proxies = [
         self._antenna_proxies = {
@@ -174,7 +176,7 @@ class StationComponentManager(MccsComponentManager):
                     self._device_communication_state_changed, antenna_fqdn
                 ),
                 functools.partial(
-                    self.component_state_changed_callback, fqdn=antenna_fqdn
+                    component_state_changed_callback, fqdn=antenna_fqdn
                 ),
             )
             for antenna_fqdn in antenna_fqdns
@@ -190,7 +192,7 @@ class StationComponentManager(MccsComponentManager):
                 max_workers,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(
-                    self.component_state_changed_callback, fqdn=tile_fqdn
+                    component_state_changed_callback, fqdn=tile_fqdn
                 ),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
@@ -265,7 +267,7 @@ class StationComponentManager(MccsComponentManager):
         super().update_communication_state(communication_state)
 
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self.component_state_changed_callback({"is_configured": self.is_configured})
+            self._component_state_changed_callback({"is_configured": self.is_configured})
 
     @threadsafe
     def _antenna_power_state_changed(
@@ -341,11 +343,11 @@ class StationComponentManager(MccsComponentManager):
             if fqdn is None:
                 self.power_state = power_state
             elif fqdn in self._antenna_proxies.keys():
-                self.antenna_proxies[fqdn].power_state = power_state
+                self._antenna_proxies[fqdn].power_state = power_state
             elif fqdn in self._tile_proxies.keys():
-                self.tile_proxies[fqdn].power_state = power_state
-            elif fqdn == self.APIUFQDN:
-                self.apiu_proxy.power_state = power_state
+                self._tile_proxies[fqdn].power_state = power_state
+            elif fqdn == self._apiu_fqdn:
+                self._apiu_proxy.power_state = power_state
             else:
                 raise ValueError(
                     f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
@@ -374,13 +376,13 @@ class StationComponentManager(MccsComponentManager):
         :type task_callback: Callable, optional
         :return: a result code and response message
         """
-        task_status, response = self.submit_task(self._off, task_callback=task_callback)
-        return task_status, response
+        return self.submit_task(self._off, task_callback=task_callback)
 
     @check_communicating
     def _off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Turn off this station.
@@ -388,30 +390,26 @@ class StationComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :return: a result code
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         results = [proxy.off() for proxy in self._tile_proxies.values()] + [
             self._apiu_proxy.off()
         ]  # Never mind antennas, turning off APIU suffices
-
-        if ResultCode.FAILED in results:
-            return ResultCode.FAILED
-        elif ResultCode.QUEUED in results:
-            return ResultCode.QUEUED
+        # TODO: Here we need to monitor the APIU and Tiles. This will eventually use the
+        # mechanism described in MCCS-945, but until that is implemented we might instead just poll 
+        # these devices' longRunngCommandAttribute. For the moment, however, we just submit the
+        # subservient devices' commands for execution and forget about them.
+        if all(result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED] for (result, _) in results):
+            task_status = TaskStatus.COMPLETED
         else:
-            return ResultCode.OK
-
-        task_callback(status=TaskStatus.IN_PROGRESS)
-        with self._power_state_lock:
-            self._target_power_state = PowerState.ON
-        self._review_power()
-        task_callback(
-            status=TaskStatus.COMPLETED, result="This slow task has completed"
-        )
-        return ResultCode.OK
+            task_status = TaskStatus.FAILED
+        if task_callback:
+                task_callback(status=task_status)
 
     def on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Submit the _on method.
@@ -423,27 +421,41 @@ class StationComponentManager(MccsComponentManager):
         :type task_callback: Callable, optional
         :return: a result code and response message
         """
-        task_status, response = self.submit_task(self._on, task_callback=task_callback)
-        return task_status, response
+        return self.submit_task(self._on, task_callback=task_callback)
 
     @check_communicating
     def _on(
         self: StationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> ResultCode:
         """
         Turn on this station.
 
         The order to turn a station on is: APIU, then tiles and antennas.
-
-        :return: a result code
         """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         if self._apiu_power_state == PowerState.ON:
-            return self._turn_on_tiles_and_antennas()
+            result_code = self._turn_on_tiles_and_antennas()
+            # TODO: Monitor the Tiles' & antennas' On command statuses and update the Station On command
+            # status accordingly.
+            if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+                task_status = TaskStatus.COMPLETED
+            else:
+                task_status = TaskStatus.FAILED
+            if task_callback:
+                task_callback(status=task_status)
+            return
         self._on_called = True
-        result_code = self._apiu_proxy.on()
-        if result_code:
-            return result_code
-        return ResultCode.OK
+        result_code, _ = self._apiu_proxy.on()
+        # TODO: Monitor the APIU On command status and update the Station On command status accordingly.
+        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            task_status = TaskStatus.COMPLETED
+        else:
+            task_status = TaskStatus.FAILED
+        if task_callback:
+            task_callback(status=task_status)
 
     @check_communicating
     def _turn_on_tiles_and_antennas(
@@ -501,6 +513,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         delays: list[float],
         task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
     ) -> tuple[ResultCode, str]:
         """
         Apply the pointing configuration by setting the delays on each tile.
@@ -511,15 +524,19 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code
         """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         results = [
             tile_proxy.set_pointing_delay(delays)
             for tile_proxy in self._tile_proxies.values()
         ]
-        if ResultCode.FAILED in results:
-            return ResultCode.FAILED
-        elif ResultCode.QUEUED in results:
-            return ResultCode.QUEUED
-        return ResultCode.OK
+        # TODO: Monitor the Tiles' SetPointingDelay command status and update the Station command status accordingly.
+        if all(result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED] for result in results):
+            task_status = TaskStatus.COMPLETED
+        else:
+            task_status = TaskStatus.FAILED
+        if task_callback:
+            task_callback(status=task_status)
 
     @property  # type:ignore[misc]
     @check_communicating
@@ -537,7 +554,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured
-            self.component_state_changed_callback({"is_configured": is_configured})
+            self._component_state_changed_callback({"is_configured": is_configured})
 
     def configure(
         self: StationComponentManager,
@@ -555,10 +572,7 @@ class StationComponentManager(MccsComponentManager):
 
         :return: a result code and response string
         """
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%", argin)
         configuration = json.loads(argin)
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%", configuration)
-        print("%%%%%%%%%%%%%%%", self._configure)
         station_id = configuration.get("station_id")
         return self.submit_task(
             self._configure, args=[station_id], task_callback=task_callback
@@ -582,18 +596,21 @@ class StationComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: abort event
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             if station_id != self._station_id:
                 raise ValueError("Wrong station id")
             self._update_is_configured(True)
         except ValueError as value_error:
-            task_callback(
-                status=TaskStatus.FAILED,
-                result=f"Configure command has failed: {value_error}",
-            )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=f"Configure command has failed: {value_error}",
+                )
             return
 
-        task_callback(
-            status=TaskStatus.COMPLETED, result="Configure command has completed"
-        )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure command has completed"
+            )

@@ -56,7 +56,8 @@ def patched_subarray_device_class(
         MccsSubarray patched with extra commands for testing purposes.
 
         The extra commands allow us to mock the receipt of obs state
-        change events from subservient devices.
+        change events from subservient devices, turn on DeviceProxies,
+        set the initial obsState and examine the health model.
         """
 
         @command(dtype_in=int)
@@ -92,6 +93,26 @@ def patched_subarray_device_class(
             :param obs_state_name: The name of the obsState to directly transition to.
             """
             self.obs_state_model._straight_to_state(obs_state_name)
+
+        @command(dtype_in=str, dtype_out=int)
+        def examine_health_model(
+            self: PatchedSubarrayDevice,
+            fqdn: str,
+        ) -> HealthState:
+            """
+            Return the health state of a subservient device.
+
+            Returns the health state of the device at the given FQDN.
+            :param fqdn: The FQDN of a device whose health state we want.
+            :return: The HealthState of the device at the specified FQDN.
+            """
+            device_type = fqdn.split("/")[1]
+            if device_type == "beam":
+                return self._health_model._station_beam_healths[fqdn]
+            elif device_type == "station":
+                return self._health_model._station_healths[fqdn]
+            elif device_type == "subarraybeam":
+                return self._health_model._subarray_beam_healths[fqdn]
 
         def create_component_manager(
             self: PatchedSubarrayDevice,
@@ -434,6 +455,12 @@ class TestMccsSubarray:
         )
         assert device_under_test.obsState == ObsState.EMPTY
 
+    # This is a bit of a flaky test and will sometimes fail on the obsState==CONFIGURING assertion.
+    # It occurs because the obsState has already progressed through CONFIGURING to READY by the time we assert.
+    @pytest.mark.xfail(
+        strict=False,
+        reason="Flaky test. Sometimes the obsState passes through CONFIGURING to READY before we can make the assertion.",
+    )
     def test_configure(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
@@ -959,47 +986,43 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.obsState == final_obs_state
 
-    # # Not sure where I'm going with this...
-    # def test_component_state_changed_callback(
-    #     self: TestMccsSubarray,
-    #     device_under_test: MccsDeviceProxy, #pylint: disable=unused-argument
-    #     mock_subarray_component_manager: SubarrayComponentManager,
-    # ) -> None:
+    @pytest.mark.parametrize("target_health_state", list(HealthState))
+    @pytest.mark.parametrize(
+        "fqdn", ["station_on_fqdn", "subarray_beam_on_fqdn", "station_beam_on_fqdn"]
+    )
+    def test_component_state_changed_callback_subservient_device_health_state(
+        self: TestMccsSubarray,
+        device_under_test: MccsDeviceProxy,  # pylint: disable=unused-argument
+        mock_subarray_component_manager: SubarrayComponentManager,
+        target_health_state: HealthState,
+        fqdn: str,
+        request: pytest.FixtureRequest,
+    ) -> None:
+        """
+        Test `component_state_changed` properly handles health updates.
 
-    #     args = {
-    #         "power_state": (list(PowerState)),
-    #         "health_state": (list(HealthState)),
-    #         "configured_changed": (True, False),
-    #         "scanning_changed": (True, False),
-    #         }
+        Here we test that by calling `component_state_changed_callback` with
+        the fqdn of a device and a new healthState the record of it's health
+        state in the health model is properly updated.
 
-    #     expected_calls = {
-    #         "power_state": None,
-    #         "health_state": "push_change_event",
-    #         "configured_changed": "perform_action",
-    #         "scanning_changed": "perform_action",
-    #     }
+        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
+            which has access to the component_state_changed_callback.
+        :param target_health_state: The HealthState that the device should end up in.
+        :param fqdn: The fqdn of a subservient device.
+        :param request: A PyTest object giving access to the requesting test.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        # Get the fixture from the parametrized fixture that's not a fixture. (But is really.)
+        fqdn = request.getfixturevalue(fqdn)
 
-    #     def test_callback(key, value)-> None:
-    #         """Call the callback."""
-    #         print(key, value)
-    #         #mock_subarray_component_manager._component_state_changed_callback(key, value)
+        key = "health_state"
+        state_change = {key: target_health_state}
 
-    #     def check_calls(key, expected_value, expected_calls)->None:
-    #         """Checks callbacks have been called with the expected value."""
-    #         expected_call = expected_calls[key]
-    #         #assert expected_call called with expected_value
-    #         print(device_under_test.obs_state_model)
-    #         print(expected_call)
-
-    #     def check_state(key, expected_value)->None:
-    #         """Check device attribute has changed as expected."""
-
-    #     for key, values in args.items():
-    #         for value in values:
-    #             test_callback(key, value)
-    #             check_calls(key, value, expected_calls)
-    #             check_state(key, value)
-
-    #     #test_power_state(key, value)
-    #     #assert False
+        mock_subarray_component_manager._component_state_changed_callback(
+            state_change, fqdn=fqdn
+        )
+        dev_final_health_state = device_under_test.examine_health_model(fqdn)
+        print(fqdn, target_health_state, dev_final_health_state)
+        assert dev_final_health_state == target_health_state

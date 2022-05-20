@@ -9,8 +9,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, cast
 import time
+from typing import Any
 
 import pytest
 import tango
@@ -18,7 +18,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState
 from tango import DevFailed
 
-from ska_low_mccs import MccsClusterManagerDevice, MccsDeviceProxy
+from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
@@ -355,7 +355,6 @@ class TestMccsClusterManagerDevice:
         device_under_test.adminMode = AdminMode.ONLINE
 
         for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
-            print(f"Current job id: {job_id}")
             ([result_code], [message]) = device_under_test.StartJob(job_id)
             assert result_code == ResultCode.QUEUED
             assert "StartJob" in message.split("/")[-1]
@@ -384,6 +383,10 @@ class TestMccsClusterManagerDevice:
         """
         Test for StopJob.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -464,6 +467,10 @@ class TestMccsClusterManagerDevice:
         """
         Test for SubmitJob.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -508,8 +515,6 @@ class TestMccsClusterManagerDevice:
     def test_GetJobStatus(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
-        lrc_status_changed_callback: MockChangeEventCallback,
-        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for GetJobStatus.
@@ -518,43 +523,14 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        device_under_test.add_change_event_callback(
-            "longRunningCommandStatus",
-            lrc_status_changed_callback,
-        )
-        device_under_test.add_change_event_callback(
-            "longRunningCommandResult",
-            lrc_result_changed_callback,
-        )
-
-        ([result_code], [message]) = device_under_test.GetJobStatus(
-            next(iter(ClusterSimulator.OPEN_JOBS))
-        )
-        assert result_code == ResultCode.QUEUED
-        assert message.split("_")[-1] == "GetJobStatus"
-
-        print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
-        print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
-        print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
-        lrc_status = lrc_status_changed_callback.get_next_call()
-        assert "FAILED" in lrc_status[0][1]
-        print(f"!!LRC result: {lrc_result_changed_callback.get_next_call()}")
-
-        lrc_result = lrc_result_changed_callback.get_next_call()
-        assert (
-            "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. Communication with component is not established.\""
-            in lrc_result[0][1]
-        )
-
+        with pytest.raises(
+            DevFailed, match="Communication with component is not established"
+        ):
+            _ = device_under_test.GetJobStatus(next(iter(ClusterSimulator.OPEN_JOBS)))
         device_under_test.adminMode = AdminMode.ONLINE
 
         for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
-            ([result_code], [message]) = device_under_test.GetJobStatus(job_id)
-            print([result_code], [message])
-            lrc_result = lrc_result_changed_callback.get_next_call()
-            assert '"The get job status task has completed"' in lrc_result[0][1]
-
-            ##TODO: how do we check the status is correct now??
+            assert status == device_under_test.GetJobStatus(job_id)
 
     def test_ClearJobStats(
         self: TestMccsClusterManagerDevice,
@@ -565,6 +541,10 @@ class TestMccsClusterManagerDevice:
         """
         Test for ClearJobStats.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -598,7 +578,8 @@ class TestMccsClusterManagerDevice:
         # device_under_test.adminMode = AdminMode.ONLINE
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert lrc_result.contains(
-            "Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. Communication with component is not established."
+            "Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
+            Communication with component is not established."
         )
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -633,6 +614,10 @@ class TestMccsClusterManagerDevice:
         """
         Test for PingMasterPool.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.

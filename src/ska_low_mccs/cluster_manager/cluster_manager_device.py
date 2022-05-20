@@ -14,10 +14,10 @@ based upon architecture in SKA-TEL-LFAA-06000052-02.
 
 from __future__ import annotations  # allow forward references in type hints
 
+import logging
 from typing import Any, List, Optional, Tuple
 
 import tango
-import logging
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import FastCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import (
@@ -93,7 +93,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             ("StartJob", "start_job"),
             ("StopJob", "stop_job"),
             ("SubmitJob", "submit_job"),
-            #("GetJobStatus", "get_job_status"),
+            # ("GetJobStatus", "get_job_status"),
             ("ClearJobStats", "clear_job_stats"),
             ("PingMasterPool", "ping_master_pool"),
         ]:
@@ -108,7 +108,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
-        
+
         for (command_name, command_object) in [
             ("GetJobStatus", self.GetJobStatusCommand),
         ]:
@@ -116,7 +116,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
                 command_name,
                 command_object(self.component_manager, self.logger),
             )
-
 
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for this device."""
@@ -584,11 +583,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
             except ValueError:
                 return JobStatus.UNKNOWN
 
-
     @command(dtype_in="DevString", dtype_out="DevShort")
-    def GetJobStatus(
-        self: MccsClusterManagerDevice, argin: str
-    ) -> int:
+    def GetJobStatus(self: MccsClusterManagerDevice, argin: str) -> int:
         """
         Poll the current status for a job.
 

@@ -21,15 +21,18 @@ from ska_tango_base.executor import TaskStatus
 from ska_low_mccs import MccsDeviceProxy, MccsStation
 from ska_low_mccs.station import StationComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
 from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 class MockLongRunningCommand(MockCallable):
+    """
+    Mock the call to submit a LRC.
+
+    A long running command submission, if successful, returns a
+    TaskStatus and result message.
+    """
+
     def __call__(self: MockCallable, *args: Any, **kwargs: Any) -> Any:
         """
         Handle a callback call.
@@ -275,20 +278,19 @@ def component_state_changed_callback(
     """
     Return a mock callback for a change in whether the station changes state.
 
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
+    :param mock_callback_deque_factory: fixture that provides a mock callback deque
+        factory.
 
-    :return: a mock callback for a change in whether the station is
-        configured.
+    :return: a mock callback deque holding a sequence of calls to component_state_changed_callback.
     """
-    # return mock_callback_factory()
     return mock_callback_deque_factory()
 
 
 @pytest.fixture()
 def max_workers() -> int:
     """
+    Max worker threads available to run a LRC.
+
     Return an integer specifying the maximum number of worker threads available to
     execute long-running-commands.
 
@@ -322,21 +324,12 @@ def station_component_manager(
     :param tile_fqdns: FQDNs of the Tango devices that manage this
         station's tiles
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: max number of threads available to run a LRC.
     :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be called
-        when the component power mode changes
-    :param apiu_health_changed_callback: callback to be called when the
-        health of this station's APIU changes
-    :param antenna_health_changed_callback: callback to be called when
-        the health of one of this station's antennas changes
-    :param tile_health_changed_callback: callback to be called when
-        the health of one of this station's tiles changes
-    :param is_configured_changed_callback: a mock callback for a change in
-        whether the station is configured.
+    :param component_state_changed_callback: callback to call when the
+        device state changes.
 
     :return: a station component manager
     """
@@ -350,6 +343,7 @@ def station_component_manager(
         communication_state_changed_callback,
         component_state_changed_callback,
     )
+
 
 @pytest.fixture()
 def mock_station_component_manager(
@@ -365,7 +359,6 @@ def mock_station_component_manager(
     """
     Return a station component manager.
 
-    :param tango_harness: a test harness for Tango devices
     :param station_id: the station id of the station
     :param apiu_fqdn: FQDN of the Tango device that manages this
         station's APIU
@@ -374,21 +367,12 @@ def mock_station_component_manager(
     :param tile_fqdns: FQDNs of the Tango devices that manage this
         station's tiles
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param max_workers: max number of threads available to run a LRC.
     :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be called
-        when the component power mode changes
-    :param apiu_health_changed_callback: callback to be called when the
-        health of this station's APIU changes
-    :param antenna_health_changed_callback: callback to be called when
-        the health of one of this station's antennas changes
-    :param tile_health_changed_callback: callback to be called when
-        the health of one of this station's tiles changes
-    :param is_configured_changed_callback: a mock callback for a change in
-        whether the station is configured.
+        the component manager and its component changes.
+    :param component_state_changed_callback: callback to call when the
+        device state changes.
 
     :return: a station component manager
     """
@@ -402,6 +386,7 @@ def mock_station_component_manager(
         communication_state_changed_callback,
         component_state_changed_callback,
     )
+
 
 @pytest.fixture()
 def pointing_delays(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:

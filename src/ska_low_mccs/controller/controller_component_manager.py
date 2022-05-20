@@ -322,23 +322,28 @@ class ControllerComponentManager(MccsComponentManager):
             communication_state_changed_callback
         )
         self._component_state_changed_callback = component_state_changed_callback
+        # TODO: Replace the below callbacks with component_state_changed_callback
+        # and remove references throughout.
+        self._subrack_power_state_changed = component_state_changed_callback
+        self._station_power_state_changed = component_state_changed_callback
+        self._station_beam_health_changed_callback = component_state_changed_callback
 
         self.__communication_state_lock = threading.Lock()
         self._device_communication_states: dict[str, CommunicationStatus] = {}
 
-        self._station_power_modes: dict[str, PowerState] = {}
-        self._subrack_power_modes: dict[str, PowerState] = {}
+        self._station_power_states: dict[str, PowerState] = {}
+        self._subrack_power_states: dict[str, PowerState] = {}
 
         for fqdn in subarray_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
 
         for fqdn in subrack_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
-            self._subrack_power_modes[fqdn] = PowerState.UNKNOWN
+            self._subrack_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in station_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
-            self._station_power_modes[fqdn] = PowerState.UNKNOWN
+            self._station_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in subarray_beam_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
@@ -360,7 +365,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._communication_state_changed_callback, fqdn),
-                functools.partial(self._component_state_changed_callback, fqdn),
+                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in subarray_fqdns
         }
@@ -370,7 +375,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._communication_state_changed_callback, fqdn),
-                functools.partial(self._component_state_changed_callback, fqdn),
+                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in subrack_fqdns
         }
@@ -381,7 +386,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._communication_state_changed_callback, fqdn),
-                functools.partial(self._component_state_changed_callback, fqdn),
+                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in station_fqdns
         }
@@ -391,7 +396,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._communication_state_changed_callback, fqdn),
-                functools.partial(self._component_state_changed_callback, fqdn),
+                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in subarray_beam_fqdns
         }
@@ -401,7 +406,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._communication_state_changed_callback, fqdn),
-                functools.partial(self._component_state_changed_callback, fqdn),
+                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in station_beam_fqdns
         }
@@ -427,6 +432,10 @@ class ControllerComponentManager(MccsComponentManager):
             subarray_beam_proxy.start_communicating()
         for station_beam_proxy in self._station_beams.values():
             station_beam_proxy.start_communicating()
+
+        self.update_communication_state(CommunicationStatus.ESTABLISHED)
+        with self._power_state_lock:
+            self._component_state_changed_callback({"power_state": PowerState.ON})
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
@@ -454,6 +463,7 @@ class ControllerComponentManager(MccsComponentManager):
         :param fqdn: fqdn of changed device
         :param communication_state: new status
         """
+        print(f"ppppppppppppppppppppppp {fqdn} {communication_state}")
         if fqdn not in self._device_communication_states:
             self.logger.warning(
                 f"Received a communication status changed event for device {fqdn} "
@@ -490,48 +500,48 @@ class ControllerComponentManager(MccsComponentManager):
                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
                 self.update_component_fault(False)
 
-    def _subrack_power_mode_changed(
+    def _subrack_power_state_changed(
         self: ControllerComponentManager,
         fqdn: str,
-        power_mode: PowerState,
+        power_state: PowerState,
     ) -> None:
-        with self._power_mode_lock:
-            self._subrack_power_modes[fqdn] = power_mode
-        self._evaluate_power_mode()
+        with self.__communication_state_lock:
+            self._subrack_power_states[fqdn] = power_state
+        self._evaluate_power_state()
 
-    def _station_power_mode_changed(
+    def _station_power_state_changed(
         self: ControllerComponentManager,
         fqdn: str,
-        power_mode: PowerState,
+        power_state: PowerState,
     ) -> None:
-        with self._power_mode_lock:
-            self._station_power_modes[fqdn] = power_mode
-        self._evaluate_power_mode()
+        with self.__communication_state_lock:
+            self._station_power_states[fqdn] = power_state
+        self._evaluate_power_state()
 
-    def _evaluate_power_mode(self: ControllerComponentManager) -> None:
+    def _evaluate_power_state(self: ControllerComponentManager) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self._power_mode_lock:
-            for power_mode in [
+        with self.__communication_state_lock:
+            for power_state in [
                 PowerState.UNKNOWN,
                 PowerState.OFF,
                 PowerState.STANDBY,
                 PowerState.ON,
             ]:
                 if (
-                    power_mode in self._subrack_power_modes.values()
-                    or power_mode in self._station_power_modes.values()
+                    power_state in self._subrack_power_states.values()
+                    or power_state in self._station_power_states.values()
                 ):
                     break
             self.logger.info(
                 "In ControllerComponentManager._evaluatePowerState with:\n"
-                f"\tsubracks: {self._subrack_power_modes}\n"
-                f"\tstations: {self._station_power_modes}\n"
-                f"\tresult: {str(power_mode)}"
+                f"\tsubracks: {self._subrack_power_states}\n"
+                f"\tstations: {self._station_power_states}\n"
+                f"\tresult: {str(power_state)}"
             )
-            self.update_component_power_mode(power_mode)
+            self.update_component_state({"power_state": power_state})
 
     def _subarray_health_changed(
         self: ControllerComponentManager,
@@ -611,6 +621,7 @@ class ControllerComponentManager(MccsComponentManager):
         if self._station_beam_health_changed_callback is not None:
             self._station_beam_health_changed_callback(fqdn, health)
 
+    @check_communicating
     def off(
         self: ControllerComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
@@ -623,7 +634,6 @@ class ControllerComponentManager(MccsComponentManager):
         """
         return self.submit_task(self._off, task_callback=task_callback)
 
-    # @check_communicating
     def _off(
         self: ControllerComponentManager,
         task_callback: Callable = None,
@@ -652,6 +662,7 @@ class ControllerComponentManager(MccsComponentManager):
         else:
             task_callback(status=TaskStatus.FAILED, result="The off command has failed")
 
+    @check_communicating
     def standby(
         self: ControllerComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
@@ -664,7 +675,6 @@ class ControllerComponentManager(MccsComponentManager):
         """
         return self.submit_task(self._standby, task_callback=task_callback)
 
-    @check_communicating
     def _standby(
         self: ControllerComponentManager,
         task_callback: Callable = None,
@@ -696,9 +706,10 @@ class ControllerComponentManager(MccsComponentManager):
                 status=TaskStatus.FAILED, result="The standby command has failed"
             )
 
+    @check_communicating
     def on(
-        self: ControllerComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+        self: ControllerComponentManager, task_callback: Optional[Callable] = None,
+        ) -> tuple[TaskStatus, str]:
         """
         Turn on the MCCS subsystem.
 
@@ -706,9 +717,10 @@ class ControllerComponentManager(MccsComponentManager):
 
         :returns: task status and message
         """
-        return self.submit_task(self._on, task_callback=task_callback)
+        msg = self.submit_task(self._on, task_callback=task_callback)
+        print(f"WWWWWWWWWWWWWWWWWW {msg}")
+        return msg
 
-    @check_communicating
     def _on(
         self: ControllerComponentManager,
         task_callback: Callable = None,
@@ -720,23 +732,30 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        print("2WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        print("3WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
 
         results = [station_proxy.on() for station_proxy in self._stations.values()] + [
             subrack_proxy.on() for subrack_proxy in self._subracks.values()
         ]
+        print("results ", results)
         completed = True
         for result in results:
             if result[0] == TaskStatus.FAILED:
                 completed = False
                 break
-        if completed:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The On command has completed"
-            )
-        else:
-            task_callback(status=TaskStatus.FAILED, result="The On command has failed")
+        if task_callback:
+            if completed:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="The On command has completed"
+                )
+            else:
+                task_callback(status=TaskStatus.FAILED, result="The On command has failed")
 
+    @check_communicating
+    @check_on
     def allocate(
         self: ControllerComponentManager,
         argin: str,
@@ -785,8 +804,6 @@ class ControllerComponentManager(MccsComponentManager):
             task_callback=task_callback,
         )
 
-    @check_communicating
-    @check_on
     def _allocate(
         self: ControllerComponentManager,
         subarray_id: int,
@@ -900,6 +917,8 @@ class ControllerComponentManager(MccsComponentManager):
                 status=TaskStatus.COMPLETED, result="The allocate command has completed"
             )
 
+    @check_communicating
+    @check_on
     def release(
         self: ControllerComponentManager,
         argin: str,
@@ -926,8 +945,6 @@ class ControllerComponentManager(MccsComponentManager):
                 "Currently Release can only be used to release all resources from a subarray.",
             )
 
-    @check_communicating
-    @check_on
     def _release_all(
         self: ControllerComponentManager,
         subarray_id: int,
@@ -975,6 +992,8 @@ class ControllerComponentManager(MccsComponentManager):
                 status=TaskStatus.COMPLETED, result="The release command has completed"
             )
 
+    @check_communicating
+    @check_on
     def restart_subarray(
         self: ControllerComponentManager,
         subarray_id: int,
@@ -994,8 +1013,6 @@ class ControllerComponentManager(MccsComponentManager):
             task_callback=task_callback,
         )
 
-    # @check_communicating
-    # @check_on
     def _restart_subarray(
         self: ControllerComponentManager,
         subarray_fqdn: str,

@@ -17,6 +17,7 @@ from __future__ import annotations  # allow forward references in type hints
 from typing import Any, List, Optional, Tuple
 
 import tango
+import logging
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import FastCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import (
@@ -30,6 +31,7 @@ from tango.server import attribute, command
 
 import ska_low_mccs.release as release
 from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
+from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus
 
 __all__ = ["MccsClusterManagerDevice", "main"]
 
@@ -91,7 +93,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             ("StartJob", "start_job"),
             ("StopJob", "stop_job"),
             ("SubmitJob", "submit_job"),
-            ("GetJobStatus", "get_job_status"),
+            #("GetJobStatus", "get_job_status"),
             ("ClearJobStats", "clear_job_stats"),
             ("PingMasterPool", "ping_master_pool"),
         ]:
@@ -106,6 +108,15 @@ class MccsClusterManagerDevice(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
+        
+        for (command_name, command_object) in [
+            ("GetJobStatus", self.GetJobStatusCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.component_manager, self.logger),
+            )
+
 
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for this device."""
@@ -539,10 +550,45 @@ class MccsClusterManagerDevice(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    class GetJobStatusCommand(FastCommand):
+        """Class for handling GetJobStatus() command."""
+
+        def __init__(
+            self: MccsClusterManagerDevice.GetJobStatusCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new GetJobStatusCommand instance.
+
+            :param component_manager: The component manager to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(  # type: ignore[override]
+            self: MccsClusterManagerDevice.GetJobStatusCommand,
+            argin: str,
+        ) -> JobStatus:
+            """
+            Run the user-specified functionality of this command.
+
+            :param argin: the job id
+
+            :return: The status of the job
+            """
+            component_manager = self._component_manager
+            try:
+                return component_manager.get_job_status(argin)
+            except ValueError:
+                return JobStatus.UNKNOWN
+
+
+    @command(dtype_in="DevString", dtype_out="DevShort")
     def GetJobStatus(
         self: MccsClusterManagerDevice, argin: str
-    ) -> DevVarLongStringArrayType:
+    ) -> int:
         """
         Poll the current status for a job.
 
@@ -551,8 +597,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         :return: the job status.
         """
         handler = self.get_command_object("GetJobStatus")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        return handler(argin)
 
     @command(dtype_out="DevVarLongStringArray")
     def ClearJobStats(

@@ -9,8 +9,8 @@
 from __future__ import annotations
 
 import json
+from typing import Any, cast
 import time
-from typing import Any
 
 import pytest
 import tango
@@ -329,6 +329,7 @@ class TestMccsClusterManagerDevice:
             in device_under_test._change_event_subscription_ids
         )
 
+        # Initialisation event.
         lrc_status_changed_callback.assert_next_change_event(
             None, tango._tango.AttrQuality.ATTR_VALID
         )
@@ -339,10 +340,9 @@ class TestMccsClusterManagerDevice:
         # Even when comms are not ESTABLISHED we can still queue the command.
         assert result_code == ResultCode.QUEUED
         assert "StartJob" in message.split("/")[-1]
-        # time.sleep(0.1)
 
         # lrc_status[0][1] contains the status and ID of all commands submitted.
-        # So we expect a "QUEUED" event...
+        # We expect a "QUEUED" event...
         lrc_status = lrc_status_changed_callback.get_next_call()
         assert message, "QUEUED" in lrc_status[0][1]
         # Followed by "IN_PROGRESS" when a worker thread picks it up...
@@ -355,6 +355,7 @@ class TestMccsClusterManagerDevice:
         device_under_test.adminMode = AdminMode.ONLINE
 
         for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
+            print(f"Current job id: {job_id}")
             ([result_code], [message]) = device_under_test.StartJob(job_id)
             assert result_code == ResultCode.QUEUED
             assert "StartJob" in message.split("/")[-1]
@@ -369,7 +370,6 @@ class TestMccsClusterManagerDevice:
             if status == JobStatus.STAGING:
                 lrc_status = lrc_status_changed_callback.get_next_call()
                 assert message, "COMPLETED" in lrc_status[0][1]
-                # What's this next line meant to achieve?
                 assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
             else:
                 lrc_status = lrc_status_changed_callback.get_next_call()

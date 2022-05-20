@@ -442,7 +442,8 @@ class TestMccsClusterManagerDevice:
             print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
             print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
             print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
-
+            lrc_result = lrc_result_changed_callback.get_next_call()
+            assert '"Exception: No such job"' in lrc_result[0][1]
         # device_under_test.adminMode = AdminMode.ONLINE
 
         # for job_id in list(ClusterSimulator.OPEN_JOBS):

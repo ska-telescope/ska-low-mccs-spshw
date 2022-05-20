@@ -344,14 +344,8 @@ class TestClusterCommon:
         """
         job_config = JobConfig()
 
-        if isinstance(cluster, ClusterSimulator):
-            job_id = cluster.submit_job(job_config)
-            assert cluster.get_job_status(job_id) == JobStatus.STAGING
-
-        elif isinstance(cluster, ClusterComponentManager):
-            (result_code, message) = cluster.submit_job(job_config)
-            assert result_code == TaskStatus.QUEUED
-            assert message == "Task queued"
+        job_id = cluster.submit_job(job_config)
+        assert cluster.get_job_status(job_id) == JobStatus.STAGING
 
     def test_start_job(
         self: TestClusterCommon,

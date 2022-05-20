@@ -15,6 +15,7 @@ based upon architecture in SKA-TEL-LFAA-06000052-02.
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
+import json
 from typing import Any, List, Optional, Tuple
 
 import tango
@@ -31,7 +32,7 @@ from tango.server import attribute, command
 
 import ska_low_mccs.release as release
 from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
-from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 
 __all__ = ["MccsClusterManagerDevice", "main"]
 
@@ -92,7 +93,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
         for (command_name, method_name) in [
             ("StartJob", "start_job"),
             ("StopJob", "stop_job"),
-            ("SubmitJob", "submit_job"),
+            # ("SubmitJob", "submit_job"),
             # ("GetJobStatus", "get_job_status"),
             ("ClearJobStats", "clear_job_stats"),
             ("PingMasterPool", "ping_master_pool"),
@@ -110,6 +111,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             )
 
         for (command_name, command_object) in [
+            ("SubmitJob", self.SubmitJobCommand),
             ("GetJobStatus", self.GetJobStatusCommand),
         ]:
             self.register_command_object(
@@ -534,10 +536,58 @@ class MccsClusterManagerDevice(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SubmitJob(
-        self: MccsClusterManagerDevice, argin: str
-    ) -> DevVarLongStringArrayType:
+    # @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    # def SubmitJob(
+    #     self: MccsClusterManagerDevice, argin: str
+    # ) -> DevVarLongStringArrayType:
+    #     """
+    #     Command to submit a job to the queue.
+
+    #     :param argin: the job configuration, encoded as a JSON string
+
+    #     :return: the job id of the submitted job
+    #     """
+    #     handler = self.get_command_object("SubmitJob")
+    #     (return_code, message) = handler(argin)
+    #     return ([return_code], [message])
+
+    class SubmitJobCommand(FastCommand):
+        """Class for handling the SubmitJob(argin) command."""
+
+        def __init__(
+            self: MccsClusterManagerDevice.SubmitJobCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SubmitJobCommand instance.
+
+            :param component_manager: The component manager to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(  # type: ignore[override]
+            self: MccsClusterManagerDevice.SubmitJobCommand, argin: str
+        ) -> tuple[ResultCode, str]:
+            """
+            Run the user-specified functionality of this command.
+
+            :param argin: a JSON string specifying the job configuration
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            kwargs = json.loads(argin)
+            job_config = JobConfig(**kwargs)
+
+            component_manager = self._component_manager
+            return component_manager.submit_job(job_config)
+
+    @command(dtype_in="DevString", dtype_out="DevString")
+    def SubmitJob(self: MccsClusterManagerDevice, argin: str) -> str:
         """
         Command to submit a job to the queue.
 
@@ -546,8 +596,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
         :return: the job id of the submitted job
         """
         handler = self.get_command_object("SubmitJob")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        return handler(argin)
+
 
     class GetJobStatusCommand(FastCommand):
         """Class for handling GetJobStatus() command."""

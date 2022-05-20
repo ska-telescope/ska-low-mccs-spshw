@@ -591,7 +591,7 @@ class ClusterSimulator(ObjectComponent):
         except KeyError as key_error:
             raise ValueError(self.NONEXISTENT_JOB_MESSAGE) from key_error
 
-    def submit_job(self: ClusterSimulator, job_config: str) -> str:
+    def submit_job(self: ClusterSimulator, job_config: JobConfig) -> str:
         """
         Submit a job to the cluster.
 
@@ -599,7 +599,7 @@ class ClusterSimulator(ObjectComponent):
         creates a unique job id for the job, registers it as a STAGING
         job, and returns the job id.
 
-        :param job_config: The configuration of the job to be submitted
+        :param job_config: The specification of the job to be submitted
 
         :return: the job_id
         """

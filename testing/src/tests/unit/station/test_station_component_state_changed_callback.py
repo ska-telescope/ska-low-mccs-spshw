@@ -25,6 +25,7 @@ from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
+
 @pytest.fixture
 def patched_station_device_class(
     mock_station_component_manager: StationComponentManager,

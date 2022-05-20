@@ -8,10 +8,12 @@
 """Contains the tests for the MccsController Tango device_under_test prototype."""
 from __future__ import annotations
 
+import time
 import unittest
 
 import pytest
 import tango
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
@@ -61,35 +63,24 @@ def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
 class TestMccsController:
     """Tests of the MccsController device."""
 
-    def test_State(
+    def test_InitDevice(
         self: TestMccsController,
         device_under_test: MccsDeviceProxy,
     ) -> None:
         """
-        Test for State.
+        Test for Initialisation.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        device_under_test.adminMode = AdminMode.OFFLINE
-        device_under_test.adminMode = AdminMode.ONLINE
-        assert device_under_test.State() == tango.DevState.DISABLE
-
-    def test_Status(
-        self: TestMccsController,
-        device_under_test: MccsDeviceProxy,
-    ) -> None:
-        """
-        Test for Status.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        """
-        device_under_test.adminMode = AdminMode.OFFLINE
-        device_under_test.adminMode = AdminMode.ONLINE
-        assert device_under_test.Status() == "The device is in DISABLE state."
+        assert device_under_test.healthState == HealthState.UNKNOWN
+        assert device_under_test.controlMode == ControlMode.REMOTE
+        assert device_under_test.simulationMode == SimulationMode.FALSE
+        assert device_under_test.testMode == TestMode.TEST
+        assert device_under_test.State() == tango.DevState.UNKNOWN
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+        assert device_under_test.Status() == "The device is in UNKNOWN state."
 
     def test_adminMode(
         self: TestMccsController,
@@ -106,11 +97,12 @@ class TestMccsController:
             been patched into the device under test
         """
         assert device_under_test.adminMode == AdminMode.OFFLINE
-        assert device_under_test.state() == tango.DevState.DISABLE
+        assert device_under_test.state() == tango.DevState.UNKNOWN
 
         device_under_test.adminMode = AdminMode.ONLINE
         mock_component_manager.start_communicating.assert_called_once_with()
 
+        time.sleep(0.2)
         assert device_under_test.adminMode == AdminMode.ONLINE
         assert device_under_test.state() == tango.DevState.OFF
 
@@ -120,7 +112,6 @@ class TestMccsController:
             ("On", "on"),
             ("Off", "off"),
             ("Standby", "standby"),
-            ("Reset", "reset"),
         ],
     )
     def test_command(
@@ -144,26 +135,15 @@ class TestMccsController:
             implements the device command
         :param unique_id: a unique id used to check Tango layer functionality
         """
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         device_under_test.adminMode = AdminMode.ONLINE
+        assert device_under_test.adminMode == AdminMode.ONLINE
         print("1111111111111111111111111111111111111111111111111111111111111111111")
-        message = device_under_test.On()
-        # assert result_code == ResultCode.QUEUED
-        # assert message.split("_")[-1] == "PowerUp"
-        # [[result_code], [uid]] = getattr(device_under_test, device_command)()
-        # esult = getattr(device_under_test, device_command)()
-        print(
-            "2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222",
-            message,
-        )
-        # assert uid == unique_id
-        # assert result_code == ResultCode.QUEUED
-        print(
-            "33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333"
-        )
+        [[result_code], [uid]] = getattr(device_under_test, device_command)()
+        print(f"jjjjjjjjjjjjjjj {uid}")
+        assert result_code == ResultCode.QUEUED
+        assert uid.split("_")[-1] == device_command
         method = getattr(mock_component_manager, component_method)
         method.assert_called_once()
-        print("4444444444444444444444444444444444444444444")
         assert len(method.call_args[0]) == 1
 
     @pytest.mark.skip(reason="too weak a test to count")
@@ -178,11 +158,14 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        with pytest.raises(
-            tango.DevFailed,
-            match="Command Reset not allowed when the device is in DISABLE state",
-        ):
-            device_under_test.Reset()
+        [[result_code], [uid]] = getattr(device_under_test, device_command)()
+        print(f"jjjjjjjjjjjjjjj {uid}")
+        assert result_code == ResultCode.QUEUED
+        assert uid.split("_")[-1] == device_command
+        method = getattr(mock_component_manager, component_method)
+        method.assert_called_once()
+        assert len(method.call_args[0]) == 1
+
 
     def test_buildState(
         self: TestMccsController,

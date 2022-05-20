@@ -10,11 +10,8 @@ from __future__ import annotations
 
 import logging
 import time
-import unittest.mock
 
-import pytest
 import tango
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 from ska_tango_base.executor import TaskStatus
 
@@ -41,8 +38,8 @@ class TestStationComponentManager:
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param is_configured_changed_callback: callback to be called
-            when whether the station is configured changes
+        :param component_state_changed_callback: callback to be called
+            when the station state changes
         """
         assert (
             station_component_manager.communication_state
@@ -92,8 +89,11 @@ class TestStationComponentManager:
 
         :param station_component_manager: the station component manager
             under test.
-        :param component_power_state_changed_callback: callback to be
-            called when the component power mode changes
+        :param component_state_changed_callback: callback to be called
+            when the station state changes
+        :param antenna_fqdns: list of antenna fqdns
+        :param tile_fqdns: list of antenna fqdns
+        :param apiu_fqdn: apiu fqdn
         """
         # Note: since the base class 0.13 adoption most of this test has been moved into
         # TestStationComponentStateChangedCallback::test_power_events.
@@ -159,7 +159,6 @@ class TestStationComponentManager:
         self: TestStationComponentManager,
         station_component_manager: StationComponentManager,
         communication_state_changed_callback: MockCallable,
-        # is_configured_changed_callback: MockCallable,
         component_state_changed_callback: MockCallableDeque,
         station_id: int,
     ) -> None:
@@ -175,8 +174,8 @@ class TestStationComponentManager:
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param is_configured_changed_callback: callback to be called
-            when whether the station is configured changes
+        :param component_state_changed_callback: callback to be called
+            when the station state changes
         :param station_id: the id of the station
         """
         station_component_manager.start_communicating()
@@ -192,7 +191,6 @@ class TestStationComponentManager:
         )
         assert not station_component_manager.is_configured
 
-        # with pytest.raises(ValueError, match="Wrong station id"):
         mock_task_callback = MockCallable()
         station_component_manager._configure(
             station_id + 1, task_callback=mock_task_callback
@@ -214,8 +212,6 @@ class TestStationComponentManager:
             status=TaskStatus.COMPLETED, result="Configure command has completed"
         )
 
-        # assert result == ResultCode.OK
-        # is_configured_changed_callback.assert_next_call(True)
         component_state_changed_callback.assert_next_call_with_keys(
             {"is_configured": True}
         )

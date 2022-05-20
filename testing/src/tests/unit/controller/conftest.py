@@ -16,6 +16,7 @@ import pytest
 import pytest_mock
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.controller import (
@@ -212,26 +213,9 @@ def station_beam_health_changed_callback(
     return mock_callback_factory()
 
 
-# @pytest.fixture()
-# def communication_state_changed_callback(
-#     mock_component_state_changed_callback_factory: Callable[[], unittest.mock.Mock],
-# ) -> unittest.mock.Mock:
-#     """
-#     Return a mock callback for communication change.
-#
-#     :param mock_callback_deque_factory: fixture that provides a mock callback
-#         factory (i.e. an object that returns mock callbacks when
-#         called).
-#
-#     :return: a mock callback to be called when the communication status
-#         of a component manager changed.
-#     """
-#     return mock_component_state_changed_callback_factory()
-
-
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_component_state_changed_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for a change in state.
@@ -243,7 +227,7 @@ def component_state_changed_callback(
     :return: a mock callback to be called when the component manager
         detects that state has changed.
     """
-    return mock_component_state_changed_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -269,7 +253,7 @@ def controller_component_manager(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: MockCallable,
-    component_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> ControllerComponentManager:
     """
     Return a controller component manager in simulation mode.
@@ -465,6 +449,10 @@ def mock_component_manager(
     """
     mock = mocker.Mock()  # type: ignore[attr-defined]
     mock.is_communicating = False
+    mock.on.return_value = (TaskStatus.QUEUED, unique_id)
+    mock.off.return_value = (TaskStatus.QUEUED, unique_id)
+    mock.reset.return_value = (TaskStatus.QUEUED, unique_id)
+    mock.standby.return_value = (TaskStatus.QUEUED, unique_id)
 
     def _start_communicating(mock: unittest.mock.Mock) -> None:
         mock.is_communicating = True
@@ -501,12 +489,12 @@ def patched_controller_device_class(
         ) -> unittest.mock.Mock:
             """
             Return a mock component manager instead of the usual one.
-
+ 
             :return: a mock component manager
             """
             self._communication_state: Optional[CommunicationStatus] = None
-            #             self._component_power_state: Optional[PowerState] = None
-
+            self._component_power_state: Optional[PowerState] = None
+ 
             mock_component_manager._communication_state_changed_callback = (
                 self._communication_state_changed_callback
             )

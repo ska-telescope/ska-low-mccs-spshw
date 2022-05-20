@@ -12,18 +12,18 @@ import functools
 import logging
 import time
 import unittest.mock
-from typing import Any
+from typing import Type
 
 import pytest
 import tango
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.station import MccsStation, StationComponentManager
 from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
+
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def patched_station_device_class(
     """
     Return a station device class, patched with extra methods for testing.
 
-    :param mock_Station_component_manager: A fixture that provides a partially mocked component manager
+    :param mock_station_component_manager: A fixture that provides a partially mocked component manager
             which has access to the component_state_changed_callback.
 
     :return: a patched station device class, patched with extra methods
@@ -87,10 +87,13 @@ def patched_station_device_class(
 
 @pytest.fixture()
 def device_to_load(
-    patched_station_device_class: PatchedStationDevice,
+    patched_station_device_class: Type[MccsStation],
 ) -> DeviceToLoadType:
     """
     Fixture that specifies the device to be loaded for testing.
+
+    :param patched_station_device_class: fixture returning an instance of
+        a patched station device.
 
     :return: specification of the device to be loaded
     """
@@ -125,7 +128,18 @@ class TestStationComponentStateChangedCallback:
         device_under_test: MccsDeviceProxy,
         mock_station_component_manager: StationComponentManager,
     ):
-        """Test the station component manager's management of power mode."""
+        """
+        Test the station component manager's management of power mode.
+
+        :param device_under_test: proxy to our (patched) station device. This is
+            only included so that our patched station device replaces our
+            mock_station_component_manager's component_state_changed_callback
+            with its own
+        :param mock_station_component_manager: a component manager that started
+            life with a mocked component_state_changed_callback, but has had it
+            replaced with a real component_state_changed_callback from the stood-up
+            Tango device.
+        """
         mock_station_component_manager.power_state = None
         mock_station_component_manager.start_communicating()
         time.sleep(0.1)  # wait for events to come through
@@ -160,7 +174,7 @@ class TestStationComponentStateChangedCallback:
         assert mock_station_component_manager.power_state == PowerState.OFF
 
     def test_apply_pointing(
-        self: TestStationComponentManager,
+        self: TestStationComponentStateChangedCallback,
         # station_component_manager: StationComponentManager,
         tile_fqdns: list[str],
         logger: logging.Logger,
@@ -176,8 +190,6 @@ class TestStationComponentStateChangedCallback:
         established communication with its tiles, it write its station
         id and a unique logical tile id to each one.
 
-        :param station_component_manager: the station component manager
-            under test.
         :param tile_fqdns: FQDNs of the Tango devices that manage this
             station's tiles.
         :param logger: a logger
@@ -185,8 +197,14 @@ class TestStationComponentStateChangedCallback:
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_state_changed_callback: callback to be
-            called when the component power mode changes
+        :param device_under_test: proxy to our (patched) station device. This is
+            only included so that our patched station device replaces our
+            mock_station_component_manager's component_state_changed_callback
+            with its own
+        :param mock_station_component_manager: a component manager that started
+            life with a mocked component_state_changed_callback, but has had it
+            replaced with a real component_state_changed_callback from the stood-up
+            Tango device.
         """
         mock_station_component_manager.start_communicating()
         time.sleep(0.1)  # wait for the events from subservient devices to come through
@@ -241,7 +259,7 @@ class TestStationComponentStateChangedCallback:
             assert kwargs["status"] == status
 
     def test_power_commands(
-        self: TestStationComponentManager,
+        self: TestStationComponentStateChangedCallback,
         device_under_test: MccsDeviceProxy,
         mock_station_component_manager: StationComponentManager,
         communication_state_changed_callback: MockCallable,
@@ -254,8 +272,14 @@ class TestStationComponentStateChangedCallback:
         """
         Test that the power commands work as expected.
 
-        :param station_component_manager: the station component manager
-            under test.
+        :param device_under_test: proxy to our (patched) station device. This is
+            only included so that our patched station device replaces our
+            mock_station_component_manager's component_state_changed_callback
+            with its own
+        :param mock_station_component_manager: a component manager that started
+            life with a mocked component_state_changed_callback, but has had it
+            replaced with a real component_state_changed_callback from the stood-up
+            Tango device.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes

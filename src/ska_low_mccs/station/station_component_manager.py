@@ -12,8 +12,6 @@ import functools
 import json
 import logging
 import threading
-import time
-from asyncio import Task
 from typing import Callable, Optional, Sequence
 
 import pytest
@@ -334,6 +332,8 @@ class StationComponentManager(MccsComponentManager):
 
         :param power_state: the value of PowerState to be set.
         :param fqdn: the fqdn of the component's device.
+
+        :raises ValueError: fqdn not found
         """
         # Note: this setter was, prior to V0.13 of the base classes, in
         # MccsComponentManager.update_component_power_mode
@@ -386,7 +386,7 @@ class StationComponentManager(MccsComponentManager):
         Turn off this station.
 
         :param task_callback: Update task state, defaults to None
-        :return: a result code
+        :param task_abort_event: Abort the task
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -410,8 +410,7 @@ class StationComponentManager(MccsComponentManager):
     def on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the _on method.
 
@@ -420,7 +419,8 @@ class StationComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :type task_callback: Callable, optional
-        :return: a result code and response message
+
+        :return: a task staus and response message
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
@@ -429,12 +429,16 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
-    ) -> ResultCode:
+    ) -> None:
         """
         Turn on this station.
 
         The order to turn a station on is: APIU, then tiles and
         antennas.
+
+        :param task_callback: Update task state, defaults to None
+        :type task_callback: Callable, optional
+        :param task_abort_event: Abort the task
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -492,7 +496,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         delays: list[float],
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the apply_pointing method.
 
@@ -516,15 +520,14 @@ class StationComponentManager(MccsComponentManager):
         delays: list[float],
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> None:
         """
         Apply the pointing configuration by setting the delays on each tile.
 
         :param delays: an array containing a beam index and antenna
             delays
         :param task_callback: :param task_callback:
-
-        :return: a result code
+        :param task_abort_event: Abort the task
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -599,7 +602,7 @@ class StationComponentManager(MccsComponentManager):
         :param station_id: the id of the station for which the provided
             configuration is intended.
         :param task_callback: Update task state, defaults to None
-        :param task_abort_event: abort event
+        :param task_abort_event: Abort the task
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)

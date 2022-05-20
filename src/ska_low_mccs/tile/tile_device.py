@@ -294,22 +294,23 @@ class MccsTile(SKABaseDevice):
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
 
-        # action_map_established = {
-        #     AdminMode.ONLINE: "component_connected",
-        #     AdminMode.OFFLINE: "component_disconnected",
-        #     AdminMode.MAINTENANCE: "component_connected",
-        #     AdminMode.NOT_FITTED: "component_disconnected",
-        #     AdminMode.RESERVED: "component_disconnected",
-        # }
+        action_map_established = {
+            AdminMode.ONLINE: "component_connected",
+            AdminMode.OFFLINE: "component_disconnected",
+            AdminMode.MAINTENANCE: "component_connected",
+            AdminMode.NOT_FITTED: "component_disconnected",
+            AdminMode.RESERVED: "component_disconnected",
+        }
 
         admin_mode = self.admin_mode_model.admin_mode
         power_state = self.component_manager.power_state
         self.logger.debug(
             f"communication_state: {communication_state}, adminMode: {admin_mode}, powerMode: {power_state}"
         )
+        #admin mode stuff here
         action = action_map[communication_state]
-        # if communication_state == CommunicationStatus.ESTABLISHED:
-        #     action = action_map_established[adminMode]
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            action = action_map_established[admin_mode]
         if action is not None:
             self.op_state_model.perform_action(action)
         # if communication has been established, update power mode
@@ -838,7 +839,9 @@ class MccsTile(SKABaseDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("Initialise")
         """
+        print("IN BIG INIT")
         handler = self.get_command_object("Initialise")
+        print(handler._component_manager)
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
 

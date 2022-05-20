@@ -1003,6 +1003,7 @@ class TileComponentManager(MccsComponentManager):
         # This one-liner is only a method so that we can decorate it.
         setattr(self._tpm_component_manager, name, value)
 
+    @check_communicating
     def initialise(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1016,7 +1017,11 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        return self.submit_task(self._initialise, task_callback=task_callback)
+        print("IN INIT--")
+        try:
+            return self.submit_task(self._initialise, task_callback=task_callback)
+        except ConnectionError as comm_err:
+            return comm_err
 
     def _initialise(
         self: TileComponentManager,

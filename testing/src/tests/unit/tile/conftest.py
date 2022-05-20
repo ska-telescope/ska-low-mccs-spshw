@@ -437,31 +437,86 @@ def tile_component_manager(
         component_state_changed_callback,
     )
 
-
 @pytest.fixture()
-def mock_component_manager(
-    mocker: pytest_mock.mocker,  # type: ignore[valid-type]
-    unique_id: str,
-) -> unittest.mock.Mock:
+def mock_tile_component_manager(
+    simulation_mode: SimulationMode,
+    test_mode: TestMode,
+    logger: logging.Logger,
+    max_workers: int,
+    tile_id: int,
+    tpm_ip: str,
+    tpm_cpld_port: int,
+    tpm_version: str,
+    subrack_fqdn: str,
+    subrack_tpm_id: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
+) -> TileComponentManager:
     """
-    Return a mock component manager.
+    Return a tile component manager (in simulation and test mode as specified).
 
-    The mock component manager is a simple mock.
+    (This is a pytest fixture.)
 
-    :param mocker: pytest wrapper for unittest.mock
-    :param unique_id: a unique id used to check Tango layer functionality
+    :param tango_harness: a test harness for MCCS tango devices
+    :param simulation_mode: the initial simulation mode of this
+        component manager
+    :param test_mode: the initial test mode of this component manager
+    :param logger: the logger to be used by this object.
+    :param tile_id: the unique ID for the tile
+    :param tpm_ip: the IP address of the tile
+    :param tpm_cpld_port: the port at which the tile is accessed for control
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param subrack_fqdn: FQDN of the subrack that controls power to
+        this tile
+    :param subrack_tpm_id: This tile's position in its subrack
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
 
-    :return: a mock component manager
+    :return: a TPM component manager in the specified simulation mode.
     """
-    mock = mocker.Mock()  # type: ignore[attr-defined]
-    mock.return_value = unique_id, ResultCode.QUEUED
+    return TileComponentManager(
+        simulation_mode,
+        test_mode,
+        logger,
+        max_workers,
+        tile_id,
+        tpm_ip,
+        tpm_cpld_port,
+        tpm_version,
+        subrack_fqdn,
+        subrack_tpm_id,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
 
-    return mock
+# @pytest.fixture()
+# def mock_component_manager(
+#     mocker: pytest_mock.mocker,  # type: ignore[valid-type]
+#     unique_id: str,
+# ) -> unittest.mock.Mock:
+#     """
+#     Return a mock component manager.
+
+#     The mock component manager is a simple mock.
+
+#     :param mocker: pytest wrapper for unittest.mock
+#     :param unique_id: a unique id used to check Tango layer functionality
+
+#     :return: a mock component manager
+#     """
+#     mock = mocker.Mock()  # type: ignore[attr-defined]
+#     mock.return_value = unique_id, ResultCode.QUEUED
+
+#     return mock
 
 
 @pytest.fixture()
 def patched_tile_device_class(
-    mock_component_manager: unittest.mock.Mock,
+    mock_tile_component_manager: TileComponentManager,
 ) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
@@ -500,10 +555,10 @@ def patched_tile_device_class(
             # mock_component_manager._communication_state_changed_callback = (
             #     self._communication_state_changed_callback
             # )
-            mock_component_manager.component_state_changed_callback = (
+            mock_tile_component_manager.component_state_changed_callback = (
                 self.component_state_changed_callback
             )
-            return mock_component_manager
+            return mock_tile_component_manager
 
         @command()
         def MockTpmOff(self: PatchedTileDevice) -> None:
@@ -528,6 +583,6 @@ def patched_tile_device_class(
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
-            mock_component_manager._tpm_power_state_changed(PowerState.ON)
+            self.component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice

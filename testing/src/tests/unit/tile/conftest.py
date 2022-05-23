@@ -13,7 +13,6 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
-import pytest_mock
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
@@ -437,6 +436,7 @@ def tile_component_manager(
         component_state_changed_callback,
     )
 
+
 @pytest.fixture()
 def mock_tile_component_manager(
     simulation_mode: SimulationMode,
@@ -457,7 +457,6 @@ def mock_tile_component_manager(
 
     (This is a pytest fixture.)
 
-    :param tango_harness: a test harness for MCCS tango devices
     :param simulation_mode: the initial simulation mode of this
         component manager
     :param test_mode: the initial test mode of this component manager
@@ -493,6 +492,7 @@ def mock_tile_component_manager(
         component_state_changed_callback,
     )
 
+
 # @pytest.fixture()
 # def mock_component_manager(
 #     mocker: pytest_mock.mocker,  # type: ignore[valid-type]
@@ -521,7 +521,7 @@ def patched_tile_device_class(
     """
     Return a tile device class patched with extra methods for testing.
 
-    :param mock_component_manager: A mock component manager.
+    :param mock_tile_component_manager: A mock component manager.
 
     :return: a tile device class patched with extra methods for testing.
 

@@ -410,7 +410,6 @@ class TestMccsClusterManagerDevice:
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "StopJob"
 
-
         lrc_status = lrc_status_changed_callback.get_next_call()
         assert message, "QUEUED" in lrc_status[0][1]
         lrc_status = lrc_status_changed_callback.get_next_call()
@@ -453,7 +452,6 @@ class TestMccsClusterManagerDevice:
             lrc_result = lrc_result_changed_callback.get_next_call()
             assert '"Exception: No such job"' in lrc_result[0][1]
 
-
     def test_SubmitJob(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
@@ -461,10 +459,6 @@ class TestMccsClusterManagerDevice:
         """
         Test for SubmitJob.
 
-        :param lrc_status_changed_callback: callback which reports the
-            status of the submitted slow command.
-        :param lrc_result_changed_callback: callback which reports the
-            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -531,7 +525,7 @@ class TestMccsClusterManagerDevice:
         )
         # Initialisation event.
         lrc_result_changed_callback.assert_next_change_event(
-            ('', ''), tango._tango.AttrQuality.ATTR_VALID
+            ("", ""), tango._tango.AttrQuality.ATTR_VALID
         )
 
         ([result_code], [message]) = device_under_test.ClearJobStats()
@@ -547,8 +541,11 @@ class TestMccsClusterManagerDevice:
 
         lrc_result = lrc_result_changed_callback.get_next_call()
         print(f"LRC Result: {lrc_result}")
-        assert lrc_result[0][1][1] == '"Exception: Cannot execute \'ClusterSimulatorComponentManager._get_from_component\'. Communication with component is not established."'
-        
+        assert (
+            lrc_result[0][1][1]
+            == "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. Communication with component is not established.\""
+        )
+
         device_under_test.adminMode = AdminMode.ONLINE
 
         ([result_code], [message]) = device_under_test.ClearJobStats()
@@ -597,7 +594,7 @@ class TestMccsClusterManagerDevice:
         )
         # Initialisation event.
         lrc_result_changed_callback.assert_next_change_event(
-            ('', ''), tango._tango.AttrQuality.ATTR_VALID
+            ("", ""), tango._tango.AttrQuality.ATTR_VALID
         )
 
         ([result_code], [message]) = device_under_test.PingMasterPool()
@@ -614,7 +611,10 @@ class TestMccsClusterManagerDevice:
 
         # But we expect it to have failed when a worker thread picks it up.
         lrc_result = lrc_result_changed_callback.get_next_call()
-        assert lrc_result[0][1][1] == '"Exception: Cannot execute \'ClusterSimulatorComponentManager._get_from_component\'. Communication with component is not established."'
+        assert (
+            lrc_result[0][1][1]
+            == "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. Communication with component is not established.\""
+        )
 
         lrc_id, lrc_status = device_under_test.longRunningCommandStatus
         print(lrc_id, lrc_status)
@@ -631,4 +631,7 @@ class TestMccsClusterManagerDevice:
         print(f"lrcStatus: {device_under_test.longRunningCommandStatus}")
 
         lrc_result = lrc_result_changed_callback.get_next_call()
-        assert lrc_result[0][1][1] == '"Exception: ClusterSimulator.ping_master_pool has not been implemented"'
+        assert (
+            lrc_result[0][1][1]
+            == '"Exception: ClusterSimulator.ping_master_pool has not been implemented"'
+        )

@@ -63,6 +63,7 @@ class DeviceComponentManager(MccsComponentManager):
         self._event_callbacks = {
             "healthState": self._device_health_state_changed,
             "adminMode": self._device_admin_mode_changed,
+            "state": self._device_state_changed,
         }
 
         super().__init__(
@@ -322,6 +323,8 @@ class DeviceComponentManager(MccsComponentManager):
                         {"power_state": PowerState.STANDBY}
                     )
                 elif event_value == tango.DevState.ON:
+                    print(f"HEEEEERE: {self}")
+                    print(self._component_state_changed_callback)
                     self._component_state_changed_callback(
                         {"power_state": PowerState.ON}
                     )

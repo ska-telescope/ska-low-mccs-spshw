@@ -1017,7 +1017,6 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        print("IN INIT--")
         try:
             return self.submit_task(self._initialise, task_callback=task_callback)
         except ConnectionError as comm_err:
@@ -1058,6 +1057,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def download_firmware(
         self: TileComponentManager,
         argin: str,
@@ -1123,6 +1123,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def get_arp_table(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1179,6 +1180,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def start_acquisition(
         self: TileComponentManager,
         argin: str,
@@ -1242,6 +1244,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def cpld_flash_write(
         self: TileComponentManager,
         argin: str,
@@ -1304,6 +1307,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def post_synchronisation(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1361,6 +1365,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def sync_fpgas(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,

@@ -46,16 +46,16 @@ def device_to_load(
     }
 
 
-# @pytest.fixture()
-# def tile_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
-#     """
-#     Fixture that returns the tile device under test.
+@pytest.fixture()
+def tile_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
+    """
+    Fixture that returns the tile device under test.
 
-#     :param tango_harness: a test harness for Tango devices
+    :param tango_harness: a test harness for Tango devices
 
-#     :return: the tile device under test
-#     """
-#     return tango_harness.get_device("low-mccs/tile/0001")
+    :return: the tile device under test
+    """
+    return tango_harness.get_device("low-mccs/tile/0001")
 
 
 class TestMccsTile:
@@ -64,18 +64,6 @@ class TestMccsTile:
 
     The Tile device represents the TANGO interface to a Tile (TPM) unit.
     """
-
-    @pytest.fixture()
-    def tile_device(self: TestMccsTile, tango_harness: TangoHarness
-    ) -> MccsDeviceProxy:
-        """
-        Fixture that returns the tile device under test.
-
-        :param tango_harness: a test harness for Tango devices
-
-        :return: the tile device under test
-        """
-        return tango_harness.get_device("low-mccs/tile/0001")
 
     def test_healthState(
         self: TestMccsTile,
@@ -429,13 +417,13 @@ class TestMccsTileCommands:
 
         args = [] if arg is None else [arg]
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Communication with component is not established",
         ):
             _ = getattr(tile_device, device_command)(*args)
 
         tile_device.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
         tile_device.MockTpmOff()
@@ -444,8 +432,63 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
         time.sleep(0.1)
 
-        with pytest.raises(tango.DevFailed, match="NotImplementedError"):
+        with pytest.raises(DevFailed, match="NotImplementedError"):
             _ = getattr(tile_device, device_command)(*args)
+
+    def test_SyncFpgas(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_state_changed_callback: MockChangeEventCallback,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
+        """
+        Test for On.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the tile
+            device
+        :param mock_subrack_device_proxy: a proxy to this subrack device
+            for the subrack of the TPM under test.
+        :param subrack_tpm_id: the position of the TPM in its subrack
+        """
+        tile_device.testMode = TestMode.TEST
+        tile_device.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        tile_device.add_change_event_callback(
+            "state",
+            device_state_changed_callback,
+        )
+
+        device_state_changed_callback.assert_next_change_event(DevState.UNKNOWN)
+        device_state_changed_callback.assert_next_change_event(DevState.INIT)
+
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+        device_state_changed_callback.assert_next_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
+        assert tile_device.adminMode == AdminMode.ONLINE
+        time.sleep(0.2)
+        # with pytest.raises(
+        #     DevFailed,
+        #     match="Command On not allowed when the device is in DISABLE state",
+        # ):
+        #     _ = tile_device.On()
+        tile_device.MockTpmOff()
+        time.sleep(0.1)
+
+        tile_device.MockTpmOn()
+
+        [[result_code], [message]] = tile_device.SyncFpgas()
+        assert result_code == ResultCode.OK
+        assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
 
     def test_On(
         self: TestMccsTileCommands,
@@ -479,10 +522,10 @@ class TestMccsTileCommands:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
-        assert tile_device.state() == tango.DevState.DISABLE
+        device_state_changed_callback.assert_next_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Command On not allowed when the device is in DISABLE state",
         ):
             _ = tile_device.On()
@@ -504,7 +547,7 @@ class TestMccsTileCommands:
         # At this point the subrack should turn the TPM on, then fire a change event.
         # so let's fake that.
         tile_device.MockTpmOn()
-        assert tile_device.state() == tango.DevState.ON
+        assert tile_device.state() == DevState.ON
 
     def test_Initialise(
         self: TestMccsTileCommands,
@@ -529,13 +572,13 @@ class TestMccsTileCommands:
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Communication with component is not established",
         ):
             _ = tile_device.Initialise()
 
         tile_device.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
 
         time.sleep(0.1)
@@ -544,7 +587,7 @@ class TestMccsTileCommands:
         time.sleep(0.1)
 
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Communication with component is not established",
         ):
             _ = tile_device.Initialise()
@@ -589,11 +632,11 @@ class TestMccsTileCommands:
             "state",
             device_state_changed_callback,
         )
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
-        assert tile_device.state() == tango.DevState.DISABLE
+        device_state_changed_callback.assert_last_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
 
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Communication with component is not established",
         ):
             _ = tile_device.GetFirmwareAvailable()
@@ -601,17 +644,17 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
-        device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+        device_state_changed_callback.assert_last_change_event(DevState.OFF)
 
         # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Communication with component is not established",
         ):
             _ = tile_device.GetFirmwareAvailable()
 
         tile_device.MockTpmOn()
-        device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+        device_state_changed_callback.assert_last_change_event(DevState.ON)
 
         firmware_available_str = tile_device.GetFirmwareAvailable()
         firmware_available = json.loads(firmware_available_str)
@@ -792,7 +835,7 @@ class TestMccsTileCommands:
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
             bad_json_arg = json.dumps(bad_arg)
             with pytest.raises(
-                tango.DevFailed,
+                DevFailed,
                 match=f"{exclude_key} is a mandatory parameter",
             ):
                 _ = tile_device.ReadRegister(bad_json_arg)
@@ -845,7 +888,7 @@ class TestMccsTileCommands:
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
             bad_json_arg = json.dumps(bad_arg)
             with pytest.raises(
-                tango.DevFailed,
+                DevFailed,
                 match=f"{exclude_key} is a mandatory parameter",
             ):
                 _ = tile_device.WriteRegister(bad_json_arg)
@@ -887,7 +930,7 @@ class TestMccsTileCommands:
         expected = (0,) * nvalues
         assert tuple(tile_device.ReadAddress([address, nvalues])) == expected
 
-        with pytest.raises(tango.DevFailed):
+        with pytest.raises(DevFailed):
             _ = tile_device.ReadAddress([address])
 
     def test_WriteAddress(
@@ -1014,7 +1057,7 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
         with pytest.raises(
-            tango.DevFailed, match="Invalid core id or arp table id specified"
+            DevFailed, match="Invalid core id or arp table id specified"
         ):
             _ = tile_device.Get40GCoreConfiguration(json_arg)
 
@@ -1060,11 +1103,11 @@ class TestMccsTileCommands:
             [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
         )
 
-        with pytest.raises(tango.DevFailed, match="NotImplementedError"):
+        with pytest.raises(DevFailed, match="NotImplementedError"):
             _ = tile_device.SetChanneliserTruncation(array)
-        with pytest.raises(tango.DevFailed, match="ValueError: cannot reshape array"):
+        with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
             _ = tile_device.SetChanneliserTruncation(array[:-1])
-        with pytest.raises(tango.DevFailed, match="ValueError: cannot reshape array"):
+        with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
             _ = tile_device.SetChanneliserTruncation(array + [1.0])
 
     def test_LoadCalibrationCoefficients(
@@ -1112,13 +1155,13 @@ class TestMccsTileCommands:
         out = [[v.real, v.imag] for v in inp]
         coefficients = [antenna] + list(itertools.chain.from_iterable(out))
 
-        with pytest.raises(tango.DevFailed, match="NotImplementedError"):
+        with pytest.raises(DevFailed, match="NotImplementedError"):
             _ = tile_device.LoadCalibrationCoefficients(coefficients)
 
-        with pytest.raises(tango.DevFailed, match="ValueError"):
+        with pytest.raises(DevFailed, match="ValueError"):
             _ = tile_device.LoadCalibrationCoefficients(coefficients[0:8])
 
-        with pytest.raises(tango.DevFailed, match="ValueError"):
+        with pytest.raises(DevFailed, match="ValueError"):
             _ = tile_device.LoadCalibrationCoefficients(coefficients[0:16])
 
     def test_LoadCalibrationCurve(
@@ -1169,13 +1212,13 @@ class TestMccsTileCommands:
             [float(antenna)] + [float(beam)] + list(itertools.chain.from_iterable(out))
         )
 
-        with pytest.raises(tango.DevFailed, match="NotImplementedError"):
+        with pytest.raises(DevFailed, match="NotImplementedError"):
             _ = tile_device.LoadCalibrationCurve(coefficients)
 
-        with pytest.raises(tango.DevFailed, match="ValueError"):
+        with pytest.raises(DevFailed, match="ValueError"):
             _ = tile_device.LoadCalibrationCurve(coefficients[0:9])
 
-        with pytest.raises(tango.DevFailed, match="ValueError"):
+        with pytest.raises(DevFailed, match="ValueError"):
             _ = tile_device.LoadCalibrationCurve(coefficients[0:17])
 
     @pytest.mark.parametrize("start_time", (None, 0))

@@ -224,38 +224,38 @@ class MccsTile(SKABaseDevice):
             print("tile InitCommand finished")
             return (ResultCode.OK, "Init command completed OK")
 
-    class OnCommand(SKABaseDevice):
-        """
-        A class for the MccsTile's On() command.
+    # class OnCommand(SKABaseDevice):
+    #     """
+    #     A class for the MccsTile's On() command.
 
-        This class overrides the SKABaseDevice OnCommand to allow for an
-        eventual consistency semantics. For example it is okay to call
-        On() before the subrack is on; this device will happily wait for
-        the subrack to come on, then tell it to turn on its TPM. This
-        change of semantics requires an override because the
-        SKABaseDevice OnCommand only allows On() to be run when in OFF
-        state.
-        """
+    #     This class overrides the SKABaseDevice OnCommand to allow for an
+    #     eventual consistency semantics. For example it is okay to call
+    #     On() before the subrack is on; this device will happily wait for
+    #     the subrack to come on, then tell it to turn on its TPM. This
+    #     change of semantics requires an override because the
+    #     SKABaseDevice OnCommand only allows On() to be run when in OFF
+    #     state.
+    #     """
 
-        def do(  # type: ignore[override]
-            self: MccsTile.OnCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for On() command functionality.
+    #     def do(  # type: ignore[override]
+    #         self: MccsTile.OnCommand,
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Stateless hook for On() command functionality.
 
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            # It's fine to complete this long-running command here
-            # (returning ResultCode.OK), even though the component manager
-            # may not actually be finished turning everything on.
-            # The completion of the original On command to MccsController
-            # is waiting for the various power mode callbacks to be received
-            # rather than completion of the various long-running commands.
-            _ = self.target.on()
-            message = "Tile On command completed OK"
-            return (ResultCode.OK, message)
+    #         :return: A tuple containing a return code and a string
+    #             message indicating status. The message is for
+    #             information purpose only.
+    #         """
+    #         # It's fine to complete this long-running command here
+    #         # (returning ResultCode.OK), even though the component manager
+    #         # may not actually be finished turning everything on.
+    #         # The completion of the original On command to MccsController
+    #         # is waiting for the various power mode callbacks to be received
+    #         # rather than completion of the various long-running commands.
+    #         _ = self.target.on()
+    #         message = "Tile On command completed OK"
+    #         return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsTile) -> bool:
         """

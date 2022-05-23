@@ -528,6 +528,6 @@ def patched_tile_device_class(
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
-            mock_component_manager._tpm_power_state_changed(PowerState.ON)
+            self.component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice

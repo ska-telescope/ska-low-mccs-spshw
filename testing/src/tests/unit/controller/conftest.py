@@ -220,7 +220,7 @@ def component_state_changed_callback(
     """
     Return a mock callback for a change in state.
 
-    :param mock_component_state_changed_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
@@ -489,12 +489,12 @@ def patched_controller_device_class(
         ) -> unittest.mock.Mock:
             """
             Return a mock component manager instead of the usual one.
- 
+
             :return: a mock component manager
             """
             self._communication_state: Optional[CommunicationStatus] = None
             self._component_power_state: Optional[PowerState] = None
- 
+
             mock_component_manager._communication_state_changed_callback = (
                 self._communication_state_changed_callback
             )

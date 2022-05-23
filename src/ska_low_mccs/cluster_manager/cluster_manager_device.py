@@ -14,8 +14,8 @@ based upon architecture in SKA-TEL-LFAA-06000052-02.
 
 from __future__ import annotations  # allow forward references in type hints
 
-import logging
 import json
+import logging
 from typing import Any, List, Optional, Tuple
 
 import tango
@@ -597,7 +597,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         """
         handler = self.get_command_object("SubmitJob")
         return handler(argin)
-
 
     class GetJobStatusCommand(FastCommand):
         """Class for handling GetJobStatus() command."""

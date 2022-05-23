@@ -10,6 +10,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import json
 import logging
+import os.path
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
@@ -190,6 +191,7 @@ class MccsTile(SKABaseDevice):
             )
 
         antenna_args = (
+            self.component_manager,
             self.logger,
             self.AntennasPerTile,
         )
@@ -221,7 +223,6 @@ class MccsTile(SKABaseDevice):
             self._device._csp_destination_port = 0
             self._device._antenna_ids = []
 
-            print("tile InitCommand finished")
             return (ResultCode.OK, "Init command completed OK")
 
     # class OnCommand(SKABaseDevice):
@@ -307,7 +308,7 @@ class MccsTile(SKABaseDevice):
         self.logger.debug(
             f"communication_state: {communication_state}, adminMode: {admin_mode}, powerMode: {power_state}"
         )
-        #admin mode stuff here
+        # admin mode stuff here
         action = action_map[communication_state]
         if communication_state == CommunicationStatus.ESTABLISHED:
             action = action_map_established[admin_mode]
@@ -839,9 +840,7 @@ class MccsTile(SKABaseDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("Initialise")
         """
-        print("IN BIG INIT")
         handler = self.get_command_object("Initialise")
-        print(handler._component_manager)
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
 
@@ -921,9 +920,12 @@ class MccsTile(SKABaseDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("DownloadFirmware", "/tmp/firmware/bitfile")
         """
-        handler = self.get_command_object("DownloadFirmware")
-        (return_code, unique_id) = handler(argin)
-        return ([return_code], [unique_id])
+        if os.path.isfile(argin):
+            handler = self.get_command_object("DownloadFirmware")
+            (return_code, unique_id) = handler(argin)
+            return ([return_code], [unique_id])
+        else:
+            return ([ResultCode.FAILED], [f"{argin} doesn't exist"])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ProgramCPLD(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -1124,7 +1126,8 @@ class MccsTile(SKABaseDevice):
                 self._component_manager.logger.error("Device is a mandatory parameter")
                 raise ValueError("Device is a mandatory parameter")
 
-            return self._component_manager.write_register(name, values, offset, device)
+            self._component_manager.write_register(name, values, offset, device)
+            return (ResultCode.OK, "WriteRegister completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def WriteRegister(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -2140,16 +2143,19 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.LoadAntennaTaperingCommand,
+            component_manager,
             logger: logging.Logger,
             antennas_per_tile: int,
         ) -> None:
             """
             Initialise a new LoadAntennaTaperingCommand instance.
 
+            :param component_manager: the device to which this command belongs.
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :param antennas_per_tile: the number of antennas per tile
             """
+            self._component_manager = component_manager
             super().__init__(logger)
             self._antennas_per_tile = antennas_per_tile
 
@@ -2278,16 +2284,19 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SetPointingDelayCommand,
+            component_manager,
             logger: logging.Logger,
             antennas_per_tile: int,
         ) -> None:
             """
             Initialise a new SetPointingDelayCommand instance.
 
+            :param component_manager: the device to which this command belongs.
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :param antennas_per_tile: the number of antennas per tile
             """
+            self._component_manager = component_manager
             super().__init__(logger)
             self._antennas_per_tile = antennas_per_tile
 

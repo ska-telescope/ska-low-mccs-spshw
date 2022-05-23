@@ -12,6 +12,7 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
     HealthState,
@@ -20,6 +21,7 @@ from ska_tango_base.control_model import (
 from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
+from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus
 from ska_low_mccs.component import (
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
@@ -41,9 +43,9 @@ class ClusterSimulatorComponentManager(ObjectComponentManager):
     ) -> None:
         self._component_state_changed_callback = component_state_changed_callback
 
-        cluster_simulator = ClusterSimulator()
+        self.cluster_simulator = ClusterSimulator()
         super().__init__(
-            cluster_simulator,
+            self.cluster_simulator,
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -189,13 +191,13 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         :param component_state_changed_callback: callback to be called when the
             component state changes
         """
-        cluster_simulator = ClusterSimulatorComponentManager(
+        self.cluster_simulator = ClusterSimulatorComponentManager(
             logger,
             max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
-        super().__init__(None, cluster_simulator, initial_simulation_mode)
+        super().__init__(None, self.cluster_simulator, initial_simulation_mode)
 
     def start_job(
         self: ClusterComponentManager,
@@ -303,92 +305,148 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
                 status=TaskStatus.COMPLETED, result="The stop job task has completed"
             )
 
-    def submit_job(
+    # def submit_job(
+    #     self: ClusterComponentManager,
+    #     job_config: str,
+    #     task_callback: Optional[Callable] = None,
+    # ) -> tuple[TaskStatus, str]:
+    #     """
+    #     Submit the submit_job slow task.
+
+    #     This method returns immediately after it is submitted for execution.
+
+    #     :todo: currently the JobConfig class is unimplemented. This task should
+    #         include the job specification
+
+    #     :param job_config: The configuration of the job to be submitted
+    #     :param task_callback: Update task state, defaults to None
+
+    #     :return: A tuple containing a ResultCode and a response message
+    #     """
+    #     return self.submit_task(
+    #         self._submit_job, args=[job_config], task_callback=task_callback
+    #     )
+
+    # def _submit_job(
+    #     self: ClusterComponentManager,
+    #     job_config: str,
+    #     task_callback: Optional[Callable] = None,
+    #     task_abort_event: Optional[threading.Event] = None,
+    # ) -> None:
+    #     """
+    #     Submit job command using slow cammand.
+
+    #     :param job_config: The configuration of the job to be submitted
+    #     :param task_callback: Update task state, defaults to None
+    #     :param task_abort_event: Check for abort, defaults to None
+    #     """
+    #     if task_callback:
+    #         task_callback(status=TaskStatus.IN_PROGRESS)
+    #     try:
+    #         self.cluster_simulator.submit_job(job_config)
+    #     except Exception as ex:
+    #         if task_callback:
+    #             task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+    #         return
+
+    #     if task_abort_event and task_abort_event.is_set():
+    #         if task_callback:
+    #             task_callback(
+    #                 status=TaskStatus.ABORTED, result="The submit job task aborted"
+    #             )
+    #         return
+
+    #     if task_callback:
+    #         task_callback(
+    #             status=TaskStatus.COMPLETED, result="The submit job task has completed"
+    #         )
+
+    # def get_job_status(
+    #     self: ClusterComponentManager,
+    #     job_id: str,
+    #     task_callback: Optional[Callable] = None,
+    # ) -> tuple[ResultCode, str]:  # tuple[TaskStatus, str]:
+    #     """
+    #     Submit the get_job_status slow task.
+
+    #     This method returns immediately after it is submitted for execution.
+
+    #     :param job_id: The id of the job for which the status is to be checked
+    #     :param task_callback: Update task state, defaults to None
+
+    #     :return: A tuple containing a ResultCode and a response message
+    #     """
+    #     return self.submit_task(
+    #         self._get_job_status, args=[job_id], task_callback=task_callback
+    #     )
+
+    # def get_job_status(
+    #     self: ClusterComponentManager,
+    #     job_id: str,
+    #     #task_callback: Optional[Callable] = None,
+    #     #task_abort_event: Optional[threading.Event] = None,
+    # ) -> JobStatus:
+    #     """
+    #     Get job status command using slow cammand.
+
+    #     :param job_id: The id of the job for which the status is to be checked
+    #     :param task_callback: Update task state, defaults to None
+    #     :param task_abort_event: Check for abort, defaults to None
+    #     """
+    #     # if task_callback:
+    #     #     task_callback(status=TaskStatus.IN_PROGRESS)
+    #     try:
+    #         self.cluster_simulator.get_job_status(job_id)
+    #     except Exception as ex:
+    #         # if task_callback:
+    #         #     task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+    #         return
+
+    #     if task_abort_event and task_abort_event.is_set():
+    #         if task_callback:
+    #             task_callback(
+    #                 status=TaskStatus.ABORTED, result="The get job status task aborted"
+    #             )
+    #         return
+
+    #     if task_callback:
+    #         task_callback(
+    #             status=TaskStatus.COMPLETED,
+    #             result="The get job status task has completed",
+    #         )
+
+    def clear_job_stats(
         self: ClusterComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> tuple[ResultCode, str]:  # tuple[TaskStatus, str]:
         """
-        Submit the submit_job slow task.
+        Submit the clear_job_stats slow task.
 
         This method returns immediately after it is submitted for execution.
 
-        :todo: currently the JobConfig class is unimplemented. This task should
-            include the job specification
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a ResultCode and a response message
-        """
-        return self.submit_task(self._submit_job, task_callback=task_callback)
-
-    def _submit_job(
-        self: ClusterComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Submit job command using slow cammand.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            self.cluster_simulator.submit_job()
-        except Exception as ex:
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            return
-
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result="The submit job task aborted"
-                )
-            return
-
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The submit job task has completed"
-            )
-
-    def get_job_status(
-        self: ClusterComponentManager,
-        job_id: str,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the get_job_status slow task.
-
-        This method returns immediately after it is submitted for execution.
-
-        :param job_id: The id of the job for which the status is to be checked
         :param task_callback: Update task state, defaults to None
 
         :return: A tuple containing a ResultCode and a response message
         """
         return self.submit_task(
-            self._get_job_status, args=[job_id], task_callback=task_callback
+            self._clear_job_stats, args=[], task_callback=task_callback
         )
 
-    def _get_job_status(
+    def _clear_job_stats(
         self: ClusterComponentManager,
-        job_id: str,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
-        Get job status command using slow cammand.
+        Clear the job stats using slow cammand.
 
-        :param job_id: The id of the job for which the status is to be checked
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self.cluster_simulator.get_job_status(job_id)
+            self.cluster_simulator.clear_job_stats()
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -397,12 +455,63 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
         if task_abort_event and task_abort_event.is_set():
             if task_callback:
                 task_callback(
-                    status=TaskStatus.ABORTED, result="The get job status task aborted"
+                    status=TaskStatus.ABORTED, result="The clear job stats task aborted"
                 )
             return
 
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="The get job status task has completed",
+                result="The clear job stats task has completed",
+            )
+
+    def ping_master_pool(
+        self: ClusterComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[ResultCode, str]:  # tuple[TaskStatus, str]:
+        """
+        Submit the ping_master_pool slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(
+            self._ping_master_pool, args=[], task_callback=task_callback
+        )
+
+    def _ping_master_pool(
+        self: ClusterComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Ping the master pool using slow cammand.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self.cluster_simulator.ping_master_pool()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="The ping master pool task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The ping master pool task has completed",
             )

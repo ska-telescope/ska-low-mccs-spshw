@@ -9,14 +9,16 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 import pytest
+import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState
 from tango import DevFailed
 
-from ska_low_mccs import MccsClusterManagerDevice, MccsDeviceProxy
+from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
@@ -307,6 +309,7 @@ class TestMccsClusterManagerDevice:
     def test_StartJob(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
+        lrc_status_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for StartJob.
@@ -314,59 +317,142 @@ class TestMccsClusterManagerDevice:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
         """
+        device_under_test.add_change_event_callback(
+            "longRunningCommandStatus",
+            lrc_status_changed_callback,
+        )
+        assert (
+            "longRunningCommandStatus".casefold()
+            in device_under_test._change_event_subscription_ids
+        )
+
+        # Initialisation event.
+        lrc_status_changed_callback.assert_next_change_event(
+            None, tango._tango.AttrQuality.ATTR_VALID
+        )
+
         ([result_code], [message]) = device_under_test.StartJob(
             next(iter(ClusterSimulator.OPEN_JOBS))
         )
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
+        # Even when comms are not ESTABLISHED we can still queue the command.
+        assert result_code == ResultCode.QUEUED
+        assert "StartJob" in message.split("/")[-1]
+
+        # lrc_status[0][1] contains the status and ID of all commands submitted.
+        # We expect a "QUEUED" event...
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "QUEUED" in lrc_status[0][1]
+        # Followed by "IN_PROGRESS" when a worker thread picks it up...
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "IN_PROGRESS" in lrc_status[0][1]
+        # But then we expect "FAILED" due to comms not being ESTABLISHED.
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "FAILED" in lrc_status[0][1]
 
         device_under_test.adminMode = AdminMode.ONLINE
 
         for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
             ([result_code], [message]) = device_under_test.StartJob(job_id)
-            if status == JobStatus.STAGING:
-                assert result_code == ResultCode.OK
-                assert (
-                    message
-                    == MccsClusterManagerDevice.StartJobCommand.SUCCEEDED_MESSAGE
-                )
+            assert result_code == ResultCode.QUEUED
+            assert "StartJob" in message.split("/")[-1]
 
+            # We'll always expect these two events first whether the command
+            # is expected to succeed or fail.
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "QUEUED" in lrc_status[0][1]
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "IN_PROGRESS" in lrc_status[0][1]
+
+            if status == JobStatus.STAGING:
+                lrc_status = lrc_status_changed_callback.get_next_call()
+                assert message, "COMPLETED" in lrc_status[0][1]
                 assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
             else:
-                assert result_code == ResultCode.FAILED
-                assert (
-                    message
-                    == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
-                )
+                lrc_status = lrc_status_changed_callback.get_next_call()
+                assert message, "FAILED" in lrc_status[0][1]
 
     def test_StopJob(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
+        lrc_status_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for StopJob.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
+        device_under_test.add_change_event_callback(
+            "longRunningCommandStatus",
+            lrc_status_changed_callback,
+        )
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        # Initialisation event.
+        lrc_status_changed_callback.assert_next_change_event(
+            None, tango._tango.AttrQuality.ATTR_VALID
+        )
+
         ([result_code], [message]) = device_under_test.StopJob(
             next(iter(ClusterSimulator.OPEN_JOBS))
         )
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "StopJob"
 
+
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "QUEUED" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "IN_PROGRESS" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert "FAILED" in lrc_status[0][1]
+        print(f"LRC result: {lrc_result_changed_callback.get_next_call()}")
+
+        lrc_result = lrc_result_changed_callback.get_next_call()
+        assert (
+            "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. Communication with component is not established.\""
+            in lrc_result[0][1]
+        )
         device_under_test.adminMode = AdminMode.ONLINE
 
         for job_id in list(ClusterSimulator.OPEN_JOBS):
-            [[result_code], [message]] = device_under_test.StopJob(job_id)
-            assert result_code == ResultCode.OK
-            assert message == MccsClusterManagerDevice.StopJobCommand.SUCCEEDED_MESSAGE
 
-            [[result_code], [message]] = device_under_test.StopJob(job_id)
-            assert result_code == ResultCode.FAILED
-            assert message == ClusterSimulator.NONEXISTENT_JOB_MESSAGE
+            ([result_code], [message]) = device_under_test.StopJob(job_id)
+            assert result_code == ResultCode.QUEUED
+            assert message.split("_")[-1] == "StopJob"
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "QUEUED" in lrc_status[0][1]
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "IN_PROGRESS" in lrc_status[0][1]
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "COMPLETED" in lrc_status[0][1]
+
+            lrc_result = lrc_result_changed_callback.get_next_call()
+            assert '"The stop job task has completed"' in lrc_result[0][1]
+
+            ([result_code], [message]) = device_under_test.StopJob(job_id)
+            assert result_code == ResultCode.QUEUED
+            assert message.split("_")[-1] == "StopJob"
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "QUEUED" in lrc_status[0][1]
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "IN_PROGRESS" in lrc_status[0][1]
+            lrc_status = lrc_status_changed_callback.get_next_call()
+            assert message, "FAILED" in lrc_status[0][1]
+            lrc_result = lrc_result_changed_callback.get_next_call()
+            assert '"Exception: No such job"' in lrc_result[0][1]
+
 
     def test_SubmitJob(
         self: TestMccsClusterManagerDevice,
@@ -375,6 +461,10 @@ class TestMccsClusterManagerDevice:
         """
         Test for SubmitJob.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -413,45 +503,132 @@ class TestMccsClusterManagerDevice:
     def test_ClearJobStats(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
+        lrc_status_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for ClearJobStats.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        ([result_code], [message]) = device_under_test.ClearJobStats()
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
+        device_under_test.add_change_event_callback(
+            "longRunningCommandStatus",
+            lrc_status_changed_callback,
+        )
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+        # Initialisation event.
+        lrc_status_changed_callback.assert_next_change_event(
+            None, tango._tango.AttrQuality.ATTR_VALID
+        )
+        # Initialisation event.
+        lrc_result_changed_callback.assert_next_change_event(
+            ('', ''), tango._tango.AttrQuality.ATTR_VALID
+        )
 
+        ([result_code], [message]) = device_under_test.ClearJobStats()
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "ClearJobStats"
+
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "QUEUED" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "IN_PROGRESS" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "FAILED" in lrc_status[0][1]
+
+        lrc_result = lrc_result_changed_callback.get_next_call()
+        print(f"LRC Result: {lrc_result}")
+        assert lrc_result[0][1][1] == '"Exception: Cannot execute \'ClusterSimulatorComponentManager._get_from_component\'. Communication with component is not established."'
+        
         device_under_test.adminMode = AdminMode.ONLINE
 
         ([result_code], [message]) = device_under_test.ClearJobStats()
-        assert result_code == ResultCode.OK
-        assert (
-            message == MccsClusterManagerDevice.ClearJobStatsCommand.SUCCEEDED_MESSAGE
-        )
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "ClearJobStats"
+
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "QUEUED" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "IN_PROGRESS" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert "COMPLETED" in lrc_status[0][1]
+
+        lrc_result = lrc_result_changed_callback.get_next_call()
+        assert lrc_result[0][1][1] == '"The clear job stats task has completed"'
 
     def test_PingMasterPool(
         self: TestMccsClusterManagerDevice,
         device_under_test: MccsDeviceProxy,
+        lrc_status_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test for PingMasterPool.
 
+        :param lrc_status_changed_callback: callback which reports the
+            status of the submitted slow command.
+        :param lrc_result_changed_callback: callback which reports the
+            result of the submitted slow command.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
+        device_under_test.add_change_event_callback(
+            "longRunningCommandStatus",
+            lrc_status_changed_callback,
+        )
+        device_under_test.add_change_event_callback(
+            "longRunningCommandResult",
+            lrc_result_changed_callback,
+        )
+
+        # Initialisation event.
+        lrc_status_changed_callback.assert_next_change_event(
+            None, tango._tango.AttrQuality.ATTR_VALID
+        )
+        # Initialisation event.
+        lrc_result_changed_callback.assert_next_change_event(
+            ('', ''), tango._tango.AttrQuality.ATTR_VALID
+        )
+
         ([result_code], [message]) = device_under_test.PingMasterPool()
-        assert result_code == ResultCode.FAILED
-        assert "Communication with component is not established" in message
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PingMasterPool"
+
+        time.sleep(0.1)
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "QUEUED" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "IN_PROGRESS" in lrc_status[0][1]
+        lrc_status = lrc_status_changed_callback.get_next_call()
+        assert message, "FAILED" in lrc_status[0][1]
+
+        # But we expect it to have failed when a worker thread picks it up.
+        lrc_result = lrc_result_changed_callback.get_next_call()
+        assert lrc_result[0][1][1] == '"Exception: Cannot execute \'ClusterSimulatorComponentManager._get_from_component\'. Communication with component is not established."'
+
+        lrc_id, lrc_status = device_under_test.longRunningCommandStatus
+        print(lrc_id, lrc_status)
+        assert lrc_id == message
+        assert lrc_status == "FAILED"
 
         device_under_test.adminMode = AdminMode.ONLINE
 
-        with pytest.raises(
-            DevFailed,
-            match="ClusterSimulator.ping_master_pool has not been implemented",
-        ):
-            _ = device_under_test.PingMasterPool()
+        ([result_code], [message]) = device_under_test.PingMasterPool()
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PingMasterPool"
+
+        print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
+        print(f"lrcStatus: {device_under_test.longRunningCommandStatus}")
+
+        lrc_result = lrc_result_changed_callback.get_next_call()
+        assert lrc_result[0][1][1] == '"Exception: ClusterSimulator.ping_master_pool has not been implemented"'

@@ -365,7 +365,7 @@ def patched_antenna_device_class(
         def MockAntennaPoweredOn(self: PatchedAntennaDevice) -> None:
             are_antennas_on = list(initial_are_antennas_on)
             are_antennas_on[self.LogicalApiuAntennaId - 1] = True
-            self.component_manager._apiu_proxy._antenna_power_mode_changed(
+            self.component_manager._apiu_proxy._antenna_power_state_changed(
                 "areAntennasOn",
                 are_antennas_on,
                 tango.AttrQuality.ATTR_VALID,

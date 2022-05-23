@@ -63,6 +63,7 @@ class DeviceComponentManager(MccsComponentManager):
         self._event_callbacks = {
             "healthState": self._device_health_state_changed,
             "adminMode": self._device_admin_mode_changed,
+            "state": self._device_state_changed,
         }
 
         super().__init__(
@@ -302,6 +303,7 @@ class DeviceComponentManager(MccsComponentManager):
         :param event_value: the new state
         :param event_quality: the quality of the change event
         """
+        print(f"XXXX _device_state_changed for {self._fqdn}, {event_name}->{event_value}")
         assert (
             event_name.lower() == "state"
         ), f"state changed callback called but event_name is {event_name}."

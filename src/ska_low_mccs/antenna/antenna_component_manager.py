@@ -8,6 +8,7 @@
 """This module implements an component manager for an MCCS antenna Tango device."""
 from __future__ import annotations
 
+import functools
 import logging
 import threading
 from typing import Any, Callable, Optional
@@ -97,6 +98,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
+        print(f"XXX power_on APIUProxy {self.supplied_power_state}")
         if self.supplied_power_state == PowerState.ON:
             return None
         return self._power_up_antenna()
@@ -164,6 +166,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
+        print(f"XXXX [ACM] _device_state_changed for {self._fqdn}, {event_name}->{event_value}")
         assert (
             event_name.lower() == "state"
         ), "state changed callback called but event_name is {event_name}."
@@ -379,21 +382,24 @@ class AntennaComponentManager(MccsComponentManager):
         self._antenna_faulty_via_apiu = False
         self._antenna_faulty_via_tile = False
 
+        self._apiu_fqdn = apiu_fqdn
+        self._tile_fqdn = tile_fqdn
+
         self._apiu_proxy = _ApiuProxy(
             apiu_fqdn,
             apiu_antenna_id,
             logger,
             max_workers,
-            communication_state_changed_callback,
-            component_state_changed_callback,
+            self._apiu_communication_state_changed,
+            functools.partial(component_state_changed_callback, fqdn=apiu_fqdn),
         )
         self._tile_proxy = _TileProxy(
             tile_fqdn,
             tile_antenna_id,
             logger,
             max_workers,
-            communication_state_changed_callback,
-            component_state_changed_callback,
+            self._tile_communication_state_changed,
+            functools.partial(component_state_changed_callback, fqdn=tile_fqdn),
         )
 
         super().__init__(
@@ -513,6 +519,15 @@ class AntennaComponentManager(MccsComponentManager):
             {"fault": self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile}
         )
 
+    @property
+    def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
+        """
+        Return the power state lock of this component manager.
+
+        :return: the power state lock of this component manager.
+        """
+        return self._power_state_lock
+
     # @check_communicating
     def off(self: AntennaComponentManager) -> ResultCode | None:
         """
@@ -550,6 +565,7 @@ class AntennaComponentManager(MccsComponentManager):
 
         :returns: task status and message
         """
+        print(f"XXX on command")
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
@@ -564,6 +580,7 @@ class AntennaComponentManager(MccsComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
+        print(f"XXX _on command")
         task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             with self._power_state_lock:
@@ -578,6 +595,7 @@ class AntennaComponentManager(MccsComponentManager):
         )
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
+        print(f"XXXXX _review_power Target={self._target_power_state}")
         with self._power_state_lock:
             if self._target_power_state is None:
                 return None
@@ -591,6 +609,7 @@ class AntennaComponentManager(MccsComponentManager):
                 self.power_state == PowerState.OFF
                 and self._target_power_state == PowerState.ON
             ):
+                print(f"XXX PS={self.power_state}, TargetPS={self._target_power_state}")
                 result_code = self._apiu_proxy.power_on()
                 self._target_power_state = None
                 return result_code
@@ -616,14 +635,25 @@ class AntennaComponentManager(MccsComponentManager):
         """
         raise NotImplementedError("Antenna cannot be reset.")
 
-    def set_power_state(self: AntennaComponentManager, power_state: PowerState) -> None:
+    def set_power_state(self: AntennaComponentManager, power_state: PowerState,
+    fqdn: Optional[str] = None,
+    ) -> None:
         """
         Set the power state of the antenna.
 
         :param power_state: The desired power state
         """
         with self._power_state_lock:
-            self.power_state = power_state
+            if fqdn is None:
+                self.power_state = power_state
+            elif fqdn == self._tile_fqdn:
+                self._tile_proxy.power_state = power_state
+            elif fqdn == self._apiu_fqdn:
+                self._apiu_proxy.power_state = power_state
+            else:
+                raise ValueError(
+                    f"unknown fqdn '{fqdn}', should be None or belong to tile or apiu"
+                )
 
     @property
     def current(self: AntennaComponentManager) -> float:

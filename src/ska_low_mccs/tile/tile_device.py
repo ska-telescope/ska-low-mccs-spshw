@@ -289,19 +289,23 @@ class MccsTile(SKABaseDevice):
         :param communication_state: the status of communications
             between the component manager and its component.
         """
+        # TODO: The following 2 lines might need some attention/tidying up.
+        self.component_manager._tpm_communication_state = communication_state
+        self.component_manager._communication_state = communication_state
         action_map = {
             CommunicationStatus.DISABLED: "component_disconnected",
             CommunicationStatus.NOT_ESTABLISHED: None,
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
 
-        action_map_established = {
-            AdminMode.ONLINE: "component_connected",
-            AdminMode.OFFLINE: "component_disconnected",
-            AdminMode.MAINTENANCE: "component_connected",
-            AdminMode.NOT_FITTED: "component_disconnected",
-            AdminMode.RESERVED: "component_disconnected",
-        }
+        # TODO: This admin mode stuff is commented out in main also, why?
+        # action_map_established = {
+        #     AdminMode.ONLINE: "component_connected",
+        #     AdminMode.OFFLINE: "component_disconnected",
+        #     AdminMode.MAINTENANCE: "component_connected",
+        #     AdminMode.NOT_FITTED: "component_disconnected",
+        #     AdminMode.RESERVED: "component_disconnected",
+        # }
 
         admin_mode = self.admin_mode_model.admin_mode
         power_state = self.component_manager.power_state
@@ -310,15 +314,16 @@ class MccsTile(SKABaseDevice):
         )
         # admin mode stuff here
         action = action_map[communication_state]
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            action = action_map_established[admin_mode]
+        # See TODO above.
+        # if communication_state == CommunicationStatus.ESTABLISHED:
+        #     action = action_map_established[admin_mode]
         if action is not None:
             self.op_state_model.perform_action(action)
         # if communication has been established, update power mode
         if (communication_state == CommunicationStatus.ESTABLISHED) and (
             admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
         ):
-            self._component_state_changed({"power_state": power_state})
+            self.component_state_changed_callback({"power_state": power_state})
 
         self._health_model.is_communicating(
             communication_state == CommunicationStatus.ESTABLISHED

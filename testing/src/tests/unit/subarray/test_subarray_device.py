@@ -455,12 +455,6 @@ class TestMccsSubarray:
         )
         assert device_under_test.obsState == ObsState.EMPTY
 
-    # This is a bit of a flaky test and will sometimes fail on the obsState==CONFIGURING assertion.
-    # It occurs because the obsState has already progressed through CONFIGURING to READY by the time we assert.
-    @pytest.mark.xfail(
-        strict=False,
-        reason="Flaky test. Sometimes the obsState passes through CONFIGURING to READY before we can make the assertion.",
-    )
     def test_configure(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
@@ -533,8 +527,10 @@ class TestMccsSubarray:
                 }
             )
         )
-        assert device_under_test.obsState == ObsState.CONFIGURING
-        # The above assertion can sometimes fail if configure completes before we get there.
+        # The below assertion will often fail as the obsState transitions
+        # through CONFIGURING to READY faster than we can check.
+        # assert device_under_test.obsState == ObsState.CONFIGURING
+
         assert result_code == ResultCode.QUEUED
 
         device_under_test.FakeSubservientDevicesObsState(ObsState.READY)

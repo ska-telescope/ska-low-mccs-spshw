@@ -323,6 +323,8 @@ class DeviceComponentManager(MccsComponentManager):
                         {"power_state": PowerState.STANDBY}
                     )
                 elif event_value == tango.DevState.ON:
+                    print(f"HEEEEERE: {self}")
+                    print(self._component_state_changed_callback)
                     self._component_state_changed_callback(
                         {"power_state": PowerState.ON}
                     )

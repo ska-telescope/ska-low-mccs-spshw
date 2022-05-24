@@ -166,11 +166,11 @@ class TestMccsTile:
         :param initial_value: expected initial value of the attribute
         :param write_value: value to be written as part of the test.
         """
-        # with pytest.raises(
-        #     DevFailed,
-        #     match="Communication with component is not established",
-        # ):
-        #     _ = getattr(tile_device, attribute)
+        with pytest.raises(
+            DevFailed,
+            match="Communication with component is not established",
+        ):
+            _ = getattr(tile_device, attribute)
 
         tile_device.testMode = TestMode.TEST
         tile_device.add_change_event_callback(
@@ -193,7 +193,7 @@ class TestMccsTile:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
-        time.sleep(0.2)
+        time.sleep(0.1)
         device_state_changed_callback.assert_next_change_event(DevState.OFF)
 
         tile_device.MockTpmOn()
@@ -873,6 +873,7 @@ class TestMccsTileCommands:
         [[result_code], [message]] = tile_device.DownloadFirmware(bitfile)
         assert result_code == ResultCode.QUEUED
         assert "DownloadFirmware" in message.split("_")[-1]
+        time.sleep(0.1)
         assert tile_device.isProgrammed
         assert tile_device.firmwareName == bitfile
 

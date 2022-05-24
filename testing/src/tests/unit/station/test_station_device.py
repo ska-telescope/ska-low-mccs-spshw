@@ -12,7 +12,6 @@ import json
 import unittest.mock
 
 import pytest
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     ControlMode,
     HealthState,

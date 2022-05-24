@@ -756,8 +756,9 @@ class ControllerComponentManager(MccsComponentManager):
 
     @check_communicating
     def on(
-        self: ControllerComponentManager, task_callback: Optional[Callable] = None,
-        ) -> tuple[TaskStatus, str]:
+        self: ControllerComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
         """
         Turn on the MCCS subsystem.
 
@@ -800,7 +801,9 @@ class ControllerComponentManager(MccsComponentManager):
                     status=TaskStatus.COMPLETED, result="The On command has completed"
                 )
             else:
-                task_callback(status=TaskStatus.FAILED, result="The On command has failed")
+                task_callback(
+                    status=TaskStatus.FAILED, result="The On command has failed"
+                )
 
     @check_communicating
     @check_on

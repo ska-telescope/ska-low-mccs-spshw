@@ -74,10 +74,16 @@ class TestControllerComponentManager:
             assert (fqdn, CommunicationStatus.NOT_ESTABLISHED) in args
             assert (fqdn, CommunicationStatus.ESTABLISHED) in args
 
+<<<<<<< HEAD
         # TODO find way of generating event for CommunicationStatus.ESTABLISHED
         #controller_component_manager._evaluate_communication_state()
         res = controller_component_manager.communication_state
         print(res)
+=======
+        call_args = communication_state_changed_callback.get_whole_queue()
+        print(call_args)
+        # assert (None, CommunicationStatus.ESTABLISHED)
+>>>>>>> 39fd355b3a424a70a89f967ad46409f41b2450b6
         assert (
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
@@ -172,14 +178,33 @@ class TestControllerComponentManager:
             station_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
+<<<<<<< HEAD
+=======
+            # assert controller_component_manager.power_state == PowerState.UNKNOWN
+            component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.OFF}, fqdn=station_proxy._fqdn
+            )
+            # print(component_state_changed_callback.get_next_call_with_keys('power_state', fqdn='low-mccs/station/001'))
+>>>>>>> 39fd355b3a424a70a89f967ad46409f41b2450b6
 
         for subrack_proxy in controller_component_manager._subracks.values():
             subrack_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
+<<<<<<< HEAD
 
         #component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.OFF})
         #controller_component_manager.power_state = PowerState.OFF
+=======
+            component_state_changed_callback.get_next_call_with_keys(
+                {"power_state": PowerState.OFF}, fqdn=subrack_proxy._fqdn
+            )
+
+        print(component_state_changed_callback.get_next_call_with_keys("power_state"))
+        assert False
+        # component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.OFF})
+        controller_component_manager.power_state = PowerState.OFF
+>>>>>>> 39fd355b3a424a70a89f967ad46409f41b2450b6
         assert controller_component_manager.power_state == PowerState.OFF
 
     def test_subarray_allocation(
@@ -281,13 +306,13 @@ class TestControllerComponentManager:
             HealthState.OK,
         )
 
-#         with pytest.raises(ConnectionError, match="Component is not turned on"):
-#             controller_component_manager.allocate(
-#                 99,
-#                 [["low-mccs/station/001"]],
-#                 ["low-mccs/subarraybeam/02"],
-#                 [3, 4],  # unknown subarray id
-#             )
+        #         with pytest.raises(ConnectionError, match="Component is not turned on"):
+        #             controller_component_manager.allocate(
+        #                 99,
+        #                 [["low-mccs/station/001"]],
+        #                 ["low-mccs/subarraybeam/02"],
+        #                 [3, 4],  # unknown subarray id
+        #             )
 
         # Fake events to tell this controller component manager that its devices are all
         # turned on, so that it decided that it is turned on.

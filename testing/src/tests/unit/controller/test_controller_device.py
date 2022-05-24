@@ -164,7 +164,6 @@ class TestMccsController:
         method.assert_called_once()
         assert len(method.call_args[0]) == 1
 
-
     def test_buildState(
         self: TestMccsController,
         device_under_test: MccsDeviceProxy,

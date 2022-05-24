@@ -220,7 +220,9 @@ class MccsStation(SKAObsDevice):
             device_family = fqdn.split("/")[1]
             if device_family == "apiu":
                 health_state_changed_callback = self._health_model.apiu_health_changed
-                power_state_changed_callback = self.component_manager._apiu_power_state_changed
+                power_state_changed_callback = (
+                    self.component_manager._apiu_power_state_changed
+                )
             elif device_family == "antenna":
                 health_state_changed_callback = functools.partial(
                     self._health_model.antenna_health_changed, fqdn

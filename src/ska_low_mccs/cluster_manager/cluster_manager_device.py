@@ -14,6 +14,8 @@ based upon architecture in SKA-TEL-LFAA-06000052-02.
 
 from __future__ import annotations  # allow forward references in type hints
 
+import json
+import logging
 from typing import Any, List, Optional, Tuple
 
 import tango
@@ -30,6 +32,7 @@ from tango.server import attribute, command
 
 import ska_low_mccs.release as release
 from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
+from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 
 __all__ = ["MccsClusterManagerDevice", "main"]
 
@@ -79,7 +82,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
             self.logger,
             self._max_workers,
             SimulationMode.TRUE,
-            self._component_communication_state_changed,
+            self._communication_state_changed_callback,
             self._component_state_changed_callback,
         )
 
@@ -90,8 +93,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
         for (command_name, method_name) in [
             ("StartJob", "start_job"),
             ("StopJob", "stop_job"),
-            ("SubmitJob", "submit_job"),
-            ("GetJobStatus", "get_job_status"),
+            # ("SubmitJob", "submit_job"),
+            # ("GetJobStatus", "get_job_status"),
             ("ClearJobStats", "clear_job_stats"),
             ("PingMasterPool", "ping_master_pool"),
         ]:
@@ -106,7 +109,15 @@ class MccsClusterManagerDevice(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
-            self.StartJobCommand
+
+        for (command_name, command_object) in [
+            ("SubmitJob", self.SubmitJobCommand),
+            ("GetJobStatus", self.GetJobStatusCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.component_manager, self.logger),
+            )
 
     class InitCommand(SKABaseDevice.InitCommand):
         """Class that implements device initialisation for this device."""
@@ -132,7 +143,7 @@ class MccsClusterManagerDevice(SKABaseDevice):
     # --------------
     # Callback hooks
     # --------------
-    def _component_communication_state_changed(
+    def _communication_state_changed_callback(
         self: MccsClusterManagerDevice,
         communication_state: CommunicationStatus,
     ) -> None:
@@ -525,6 +536,56 @@ class MccsClusterManagerDevice(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
+    # @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    # def SubmitJob(
+    #     self: MccsClusterManagerDevice, argin: str
+    # ) -> DevVarLongStringArrayType:
+    #     """
+    #     Command to submit a job to the queue.
+
+    #     :param argin: the job configuration, encoded as a JSON string
+
+    #     :return: the job id of the submitted job
+    #     """
+    #     handler = self.get_command_object("SubmitJob")
+    #     (return_code, message) = handler(argin)
+    #     return ([return_code], [message])
+
+    class SubmitJobCommand(FastCommand):
+        """Class for handling the SubmitJob(argin) command."""
+
+        def __init__(
+            self: MccsClusterManagerDevice.SubmitJobCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SubmitJobCommand instance.
+
+            :param component_manager: The component manager to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(  # type: ignore[override]
+            self: MccsClusterManagerDevice.SubmitJobCommand, argin: str
+        ) -> tuple[ResultCode, str]:
+            """
+            Run the user-specified functionality of this command.
+
+            :param argin: a JSON string specifying the job configuration
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            kwargs = json.loads(argin)
+            job_config = JobConfig(**kwargs)
+
+            component_manager = self._component_manager
+            return component_manager.submit_job(job_config)
+
     @command(dtype_in="DevString", dtype_out="DevString")
     def SubmitJob(self: MccsClusterManagerDevice, argin: str) -> str:
         """
@@ -537,6 +598,40 @@ class MccsClusterManagerDevice(SKABaseDevice):
         handler = self.get_command_object("SubmitJob")
         return handler(argin)
 
+    class GetJobStatusCommand(FastCommand):
+        """Class for handling GetJobStatus() command."""
+
+        def __init__(
+            self: MccsClusterManagerDevice.GetJobStatusCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new GetJobStatusCommand instance.
+
+            :param component_manager: The component manager to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(  # type: ignore[override]
+            self: MccsClusterManagerDevice.GetJobStatusCommand,
+            argin: str,
+        ) -> JobStatus:
+            """
+            Run the user-specified functionality of this command.
+
+            :param argin: the job id
+
+            :return: The status of the job
+            """
+            component_manager = self._component_manager
+            try:
+                return component_manager.get_job_status(argin)
+            except ValueError:
+                return JobStatus.UNKNOWN
+
     @command(dtype_in="DevString", dtype_out="DevShort")
     def GetJobStatus(self: MccsClusterManagerDevice, argin: str) -> int:
         """
@@ -548,29 +643,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         """
         handler = self.get_command_object("GetJobStatus")
         return handler(argin)
-
-    class ClearJobStatsCommand(FastCommand):
-        """Class for handling the ClearJobStats() command."""
-
-        SUCCEEDED_MESSAGE = "Job stats cleared"
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.ClearJobStatsCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Run the user-specified functionality of this command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            try:
-                component_manager.clear_job_stats()
-            except ConnectionError as connection_error:
-                return ResultCode.FAILED, str(connection_error)
-            else:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def ClearJobStats(
@@ -586,29 +658,6 @@ class MccsClusterManagerDevice(SKABaseDevice):
         handler = self.get_command_object("ClearJobStats")
         (return_code, message) = handler()
         return ([return_code], [message])
-
-    class PingMasterPoolCommand(FastCommand):
-        """Class for handling the PingMasterPool() command."""
-
-        SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsClusterManagerDevice.PingMasterPoolCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Run the user-specified functionality of this command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            try:
-                component_manager.ping_master_pool()
-            except ConnectionError as connection_error:
-                return (ResultCode.FAILED, str(connection_error))
-            else:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def PingMasterPool(

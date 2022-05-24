@@ -529,8 +529,8 @@ class TestMccsSubarray:
         )
         # The below assertion will often fail as the obsState transitions
         # through CONFIGURING to READY faster than we can check.
-        #assert device_under_test.obsState == ObsState.CONFIGURING
-        
+        # assert device_under_test.obsState == ObsState.CONFIGURING
+
         assert result_code == ResultCode.QUEUED
 
         device_under_test.FakeSubservientDevicesObsState(ObsState.READY)

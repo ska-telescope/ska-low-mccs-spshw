@@ -523,7 +523,6 @@ class TileComponentManager(MccsComponentManager):
                 component_state_changed_callback,
             )
         )
-
         self._tile_orchestrator = TileOrchestrator(
             self._start_communicating_with_subrack,
             self._stop_communicating_with_subrack,
@@ -532,7 +531,7 @@ class TileComponentManager(MccsComponentManager):
             self._turn_off_tpm,
             self._turn_on_tpm,
             self.update_communication_state,
-            self.update_tpm_power_state,
+            component_state_changed_callback,
             logger,
         )
 
@@ -604,6 +603,7 @@ class TileComponentManager(MccsComponentManager):
         # Pass this as a callback, rather than the method that is calls,
         # so that self._tpm_component_manager is resolved when the
         # callback is called, not when it is registered.
+        print("CALLING START COMMS WITH TPM")
         self._tpm_component_manager.start_communicating()
 
     def _stop_communicating_with_tpm(self: TileComponentManager) -> None:
@@ -675,6 +675,7 @@ class TileComponentManager(MccsComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
+        print(f"TPM POWER EVENT: {event_value}")
         self._tpm_power_state_changed(event_value)
 
     def _stop_communicating_with_subrack(self: TileComponentManager) -> None:

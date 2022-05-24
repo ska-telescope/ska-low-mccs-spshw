@@ -493,27 +493,6 @@ def mock_tile_component_manager(
     )
 
 
-# @pytest.fixture()
-# def mock_component_manager(
-#     mocker: pytest_mock.mocker,  # type: ignore[valid-type]
-#     unique_id: str,
-# ) -> unittest.mock.Mock:
-#     """
-#     Return a mock component manager.
-
-#     The mock component manager is a simple mock.
-
-#     :param mocker: pytest wrapper for unittest.mock
-#     :param unique_id: a unique id used to check Tango layer functionality
-
-#     :return: a mock component manager
-#     """
-#     mock = mocker.Mock()  # type: ignore[attr-defined]
-#     mock.return_value = unique_id, ResultCode.QUEUED
-
-#     return mock
-
-
 @pytest.fixture()
 def patched_tile_device_class(
     mock_tile_component_manager: TileComponentManager,
@@ -544,19 +523,24 @@ def patched_tile_device_class(
 
         def create_component_manager(
             self: PatchedTileDevice,
-        ) -> unittest.mock.Mock:
+        ) -> TileComponentManager:
             """
             Return a mock component manager instead of the usual one.
 
             :return: a mock component manager
             """
             # self._communication_state: Optional[CommunicationStatus] = None
-
-            # mock_component_manager._communication_state_changed_callback = (
-            #     self._communication_state_changed_callback
-            # )
-            mock_tile_component_manager.component_state_changed_callback = (
+            mock_tile_component_manager._communication_state_changed_callback = (
+                self._component_communication_state_changed
+            )
+            mock_tile_component_manager._component_state_changed_callback = (
                 self.component_state_changed_callback
+            )
+            mock_tile_component_manager._tile_orchestrator._component_state_changed_callback = (
+                self.component_state_changed_callback
+            )
+            mock_tile_component_manager._tile_orchestrator._communication_state_changed_callback = (
+                self._component_communication_state_changed
             )
             return mock_tile_component_manager
 

@@ -325,8 +325,8 @@ class ControllerComponentManager(MccsComponentManager):
         self._component_state_changed_callback = component_state_changed_callback
         # TODO: Replace the below callbacks with component_state_changed_callback
         # and remove references throughout.
-        #self._subrack_power_state_changed = component_state_changed_callback
-        #self._station_power_state_changed = component_state_changed_callback
+        # self._subrack_power_state_changed = component_state_changed_callback
+        # self._station_power_state_changed = component_state_changed_callback
         self._station_beam_health_changed_callback = component_state_changed_callback
 
         self.__communication_state_lock = threading.Lock()
@@ -442,8 +442,8 @@ class ControllerComponentManager(MccsComponentManager):
         for station_beam_proxy in self._station_beams.values():
             station_beam_proxy.start_communicating()
 
-        #self.update_communication_state(CommunicationStatus.ESTABLISHED)
-        #with self._power_state_lock:
+        # self.update_communication_state(CommunicationStatus.ESTABLISHED)
+        # with self._power_state_lock:
         #    self._component_state_changed_callback({"power_state": PowerState.ON})
 
     def stop_communicating(self: ControllerComponentManager) -> None:
@@ -502,28 +502,32 @@ class ControllerComponentManager(MccsComponentManager):
                 CommunicationStatus.ESTABLISHED,
             ]:
                 print("evaluate", self._device_communication_states)
-                if (
-                    communication_state in self._device_communication_states.values()
-                ):
+                if communication_state in self._device_communication_states.values():
                     break
-            print("evaluate final ", self._device_communication_states, " with ", communication_state)
+            print(
+                "evaluate final ",
+                self._device_communication_states,
+                " with ",
+                communication_state,
+            )
             self.update_communication_state(communication_state)
             self.update_component_fault(False)
-#             if (
-#                 CommunicationStatus.DISABLED
-#                 in self._device_communication_states.values()
-#             ):
-#                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-#             elif (
-#                 CommunicationStatus.NOT_ESTABLISHED
-#                 in self._device_communication_states.values()
-#             ):
-#                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-#             else:
-# #                 if not self.communication_state == CommunicationStatus.ESTABLISHED:
-# #                     self.communication_state_changed_callback(None, CommunicationStatus)
-#                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
-#                 self.update_component_fault(False)
+
+    #             if (
+    #                 CommunicationStatus.DISABLED
+    #                 in self._device_communication_states.values()
+    #             ):
+    #                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+    #             elif (
+    #                 CommunicationStatus.NOT_ESTABLISHED
+    #                 in self._device_communication_states.values()
+    #             ):
+    #                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+    #             else:
+    # #                 if not self.communication_state == CommunicationStatus.ESTABLISHED:
+    # #                     self.communication_state_changed_callback(None, CommunicationStatus)
+    #                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
+    #                 self.update_component_fault(False)
 
     def component_state_changed_callback(
         self: ControllerComponentManager,
@@ -545,23 +549,23 @@ class ControllerComponentManager(MccsComponentManager):
                 print("in compnent_changed", self._device_power_states)
             self._evaluate_power_state()
 
-#     def _subrack_power_state_changed(
-#         self: ControllerComponentManager,
-#         fqdn: str,
-#         power_state: PowerState,
-#     ) -> None:
-#         with self.__communication_state_lock:
-#             self._subrack_power_states[fqdn] = power_state
-#         self._evaluate_power_state()
-# 
-#     def _station_power_state_changed(
-#         self: ControllerComponentManager,
-#         fqdn: str,
-#         power_state: PowerState,
-#     ) -> None:
-#         with self.__communication_state_lock:
-#             self._station_power_states[fqdn] = power_state
-#         self._evaluate_power_state()
+    #     def _subrack_power_state_changed(
+    #         self: ControllerComponentManager,
+    #         fqdn: str,
+    #         power_state: PowerState,
+    #     ) -> None:
+    #         with self.__communication_state_lock:
+    #             self._subrack_power_states[fqdn] = power_state
+    #         self._evaluate_power_state()
+    #
+    #     def _station_power_state_changed(
+    #         self: ControllerComponentManager,
+    #         fqdn: str,
+    #         power_state: PowerState,
+    #     ) -> None:
+    #         with self.__communication_state_lock:
+    #             self._station_power_states[fqdn] = power_state
+    #         self._evaluate_power_state()
 
     def _evaluate_power_state(self: ControllerComponentManager) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
@@ -577,9 +581,10 @@ class ControllerComponentManager(MccsComponentManager):
             ]:
                 print("evaluate", self._device_power_states)
                 if (
-                    power_state in self._device_power_states.values()
-#                    power_state in self._subrack_power_states.values()
-#                    or power_state in self._station_power_states.values()
+                    power_state
+                    in self._device_power_states.values()
+                    #                    power_state in self._subrack_power_states.values()
+                    #                    or power_state in self._station_power_states.values()
                 ):
                     break
             self.logger.info(

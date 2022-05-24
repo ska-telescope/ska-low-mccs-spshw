@@ -318,18 +318,21 @@ class ControllerComponentManager(MccsComponentManager):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
+        print("DDDDDDDDDDDD", communication_state_changed_callback)
         self._communication_state_changed_callback = (
             communication_state_changed_callback
         )
         self._component_state_changed_callback = component_state_changed_callback
         # TODO: Replace the below callbacks with component_state_changed_callback
         # and remove references throughout.
-        self._subrack_power_state_changed = component_state_changed_callback
-        self._station_power_state_changed = component_state_changed_callback
+        #self._subrack_power_state_changed = component_state_changed_callback
+        #self._station_power_state_changed = component_state_changed_callback
         self._station_beam_health_changed_callback = component_state_changed_callback
 
         self.__communication_state_lock = threading.Lock()
+        self.__power_state_lock = threading.Lock()
         self._device_communication_states: dict[str, CommunicationStatus] = {}
+        self._device_power_states: dict[str, PowerState] = {}
 
         self._station_power_states: dict[str, PowerState] = {}
         self._subrack_power_states: dict[str, PowerState] = {}
@@ -340,10 +343,12 @@ class ControllerComponentManager(MccsComponentManager):
         for fqdn in subrack_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
             self._subrack_power_states[fqdn] = PowerState.UNKNOWN
+            self._device_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in station_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
             self._station_power_states[fqdn] = PowerState.UNKNOWN
+            self._device_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in subarray_beam_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
@@ -420,9 +425,13 @@ class ControllerComponentManager(MccsComponentManager):
 
     def start_communicating(self: ControllerComponentManager) -> None:
         """Establish communication with the station components."""
+        print(f"initial power state -------------------{self.power_state}")
+        print(self._device_power_states)
         super().start_communicating()
+        print(self._device_power_states)
 
         for subarray_proxy in self._subarrays.values():
+            print(f"FFFFFFFFFFFFFFFFFFFFFFFF {type(subarray_proxy)}")
             subarray_proxy.start_communicating()
         for subrack_proxy in self._subracks.values():
             subrack_proxy.start_communicating()
@@ -433,9 +442,9 @@ class ControllerComponentManager(MccsComponentManager):
         for station_beam_proxy in self._station_beams.values():
             station_beam_proxy.start_communicating()
 
-        self.update_communication_state(CommunicationStatus.ESTABLISHED)
-        with self._power_state_lock:
-            self._component_state_changed_callback({"power_state": PowerState.ON})
+        #self.update_communication_state(CommunicationStatus.ESTABLISHED)
+        #with self._power_state_lock:
+        #    self._component_state_changed_callback({"power_state": PowerState.ON})
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
@@ -485,54 +494,92 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
+        print("evaluationevaluationevaluation")
         with self.__communication_state_lock:
-            if (
-                CommunicationStatus.DISABLED
-                in self._device_communication_states.values()
-            ):
-                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            elif (
-                CommunicationStatus.NOT_ESTABLISHED
-                in self._device_communication_states.values()
-            ):
-                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            else:
-                self.update_communication_state(CommunicationStatus.ESTABLISHED)
-                self.update_component_fault(False)
+            for communication_state in [
+                CommunicationStatus.DISABLED,
+                CommunicationStatus.NOT_ESTABLISHED,
+                CommunicationStatus.ESTABLISHED,
+            ]:
+                print("evaluate", self._device_communication_states)
+                if (
+                    communication_state in self._device_communication_states.values()
+                ):
+                    break
+            print("evaluate final ", self._device_communication_states, " with ", communication_state)
+            self.update_communication_state(communication_state)
+            self.update_component_fault(False)
+#             if (
+#                 CommunicationStatus.DISABLED
+#                 in self._device_communication_states.values()
+#             ):
+#                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+#             elif (
+#                 CommunicationStatus.NOT_ESTABLISHED
+#                 in self._device_communication_states.values()
+#             ):
+#                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+#             else:
+# #                 if not self.communication_state == CommunicationStatus.ESTABLISHED:
+# #                     self.communication_state_changed_callback(None, CommunicationStatus)
+#                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
+#                 self.update_component_fault(False)
 
-    def _subrack_power_state_changed(
+    def component_state_changed_callback(
         self: ControllerComponentManager,
-        fqdn: str,
-        power_state: PowerState,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
     ) -> None:
-        with self.__communication_state_lock:
-            self._subrack_power_states[fqdn] = power_state
-        self._evaluate_power_state()
+        """
+        Handle communication changes.
 
-    def _station_power_state_changed(
-        self: ControllerComponentManager,
-        fqdn: str,
-        power_state: PowerState,
-    ) -> None:
-        with self.__communication_state_lock:
-            self._station_power_states[fqdn] = power_state
-        self._evaluate_power_state()
+        :param fqdn: fqdn of changed device
+        :param communication_state: new status
+        """
+        print("in compnent_changed", self._device_power_states)
+        if "power_state" in state_change.keys():
+            print("in compnent_changed", self._device_power_states)
+            power_state = state_change.get("power_state")
+            with self.__communication_state_lock:
+                self._device_power_states[fqdn] = power_state
+                print("in compnent_changed", self._device_power_states)
+            self._evaluate_power_state()
+
+#     def _subrack_power_state_changed(
+#         self: ControllerComponentManager,
+#         fqdn: str,
+#         power_state: PowerState,
+#     ) -> None:
+#         with self.__communication_state_lock:
+#             self._subrack_power_states[fqdn] = power_state
+#         self._evaluate_power_state()
+# 
+#     def _station_power_state_changed(
+#         self: ControllerComponentManager,
+#         fqdn: str,
+#         power_state: PowerState,
+#     ) -> None:
+#         with self.__communication_state_lock:
+#             self._station_power_states[fqdn] = power_state
+#         self._evaluate_power_state()
 
     def _evaluate_power_state(self: ControllerComponentManager) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self.__communication_state_lock:
+        with self.__power_state_lock:
             for power_state in [
                 PowerState.UNKNOWN,
                 PowerState.OFF,
                 PowerState.STANDBY,
                 PowerState.ON,
             ]:
+                print("evaluate", self._device_power_states)
                 if (
-                    power_state in self._subrack_power_states.values()
-                    or power_state in self._station_power_states.values()
+                    power_state in self._device_power_states.values()
+#                    power_state in self._subrack_power_states.values()
+#                    or power_state in self._station_power_states.values()
                 ):
                     break
             self.logger.info(
@@ -541,6 +588,7 @@ class ControllerComponentManager(MccsComponentManager):
                 f"\tstations: {self._station_power_states}\n"
                 f"\tresult: {str(power_state)}"
             )
+            print("evaluate final ", self._device_power_states, " with ", power_state)
             self.update_component_state({"power_state": power_state})
 
     def _subarray_health_changed(

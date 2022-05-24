@@ -63,6 +63,7 @@ class DeviceComponentManager(MccsComponentManager):
         self._event_callbacks = {
             "healthState": self._device_health_state_changed,
             "adminMode": self._device_admin_mode_changed,
+            "state": self._device_state_changed,
         }
 
         super().__init__(

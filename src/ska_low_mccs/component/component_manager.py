@@ -123,7 +123,7 @@ class MccsComponentManager(
 
         self._power_state_lock = threading.RLock()
 
-        self._power_state: Optional[PowerState] = PowerState.UNKNOWN
+        self._power_state: Optional[PowerState] = None
         self._faulty: Optional[bool] = None
 
         self._component_state_changed_callback = component_state_changed_callback
@@ -168,6 +168,7 @@ class MccsComponentManager(
         if self._communication_state != communication_state:
             with self.__communication_lock:
                 self._communication_state = communication_state
+                print(f"ZZZZZZZZZZZZZZ {self._communication_state}")
                 if self._communication_state_changed_callback is not None:
                     self._communication_state_changed_callback(communication_state)
 
@@ -219,6 +220,10 @@ class MccsComponentManager(
         This is a helper method for use by subclasses.
         :param state_change: pass thru.
         """
+        if "power_state" in state_change.keys():
+            if self._power_state != state_change.get("power_state"):
+                with self.__communication_lock:
+                    self._power_state = state_change.get("power_state")
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(state_change)
 

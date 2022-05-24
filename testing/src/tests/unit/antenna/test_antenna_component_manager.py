@@ -19,7 +19,7 @@ from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockCallable, MockCallableDeque
 
 
 class TestAntennaApiuProxy:
@@ -65,6 +65,7 @@ class TestAntennaApiuProxy:
         mock_apiu_device_proxy: unittest.mock.Mock,
         initial_are_antennas_on: list[bool],
         apiu_antenna_id: int,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test that this antenna APIU proxy can control the power mode of the antenna.
@@ -87,6 +88,12 @@ class TestAntennaApiuProxy:
 
         antenna_apiu_proxy.start_communicating()
         time.sleep(0.1)
+
+        # print(component_state_changed_callback.get_next_call_with_keys('power_state'))
+        # print(component_state_changed_callback.get_next_call_with_keys('power_state'))
+        # print(component_state_changed_callback.get_next_call_with_keys('power_state'))
+        # print(component_state_changed_callback.get_next_call_with_keys('power_state'))
+        print(f"Queue: {component_state_changed_callback.get_whole_queue()}")
 
         # communication status is ESTABLISHED because MccsAPIU's state
         # is OFF, from which it can be inferred that the antenna itself
@@ -160,7 +167,7 @@ class TestAntennaTileProxy:
     def test_communication(
         self: TestAntennaTileProxy,
         antenna_tile_proxy: _TileProxy,
-        communication_state_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test that this proxy refuses to try to invoke power commands on the antenna.
@@ -172,6 +179,7 @@ class TestAntennaTileProxy:
         """
         assert antenna_tile_proxy.communication_state == CommunicationStatus.DISABLED
         antenna_tile_proxy.start_communicating()
+        time.sleep(0.1)
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -180,6 +188,7 @@ class TestAntennaTileProxy:
         )
 
         antenna_tile_proxy.stop_communicating()
+        time.sleep(0.1)
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
@@ -362,9 +371,6 @@ class TestAntennaComponentManager:
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        # communication_state_changed_callback.assert_next_call(
-        #     CommunicationStatus.ESTABLISHED
-        # )
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )

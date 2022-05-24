@@ -83,6 +83,7 @@ class DeviceComponentManager(MccsComponentManager):
         task_status, response = self.submit_task(
             self._connect_to_device, args=[self._event_callbacks], task_callback=None
         )
+        print(f"XXX  start_communicating {task_status}, {response}")
 
     def _connect_to_device(
         self: DeviceComponentManager,
@@ -114,6 +115,7 @@ class DeviceComponentManager(MccsComponentManager):
                 f"Could not connect to '{self._fqdn}'"
             ) from dev_failed
         self.update_communication_state(CommunicationStatus.ESTABLISHED)
+        print(f"XXXX updated com state")
 
         # TODO: Determine if we need this IF
         # if self._health_changed_callback is not None:

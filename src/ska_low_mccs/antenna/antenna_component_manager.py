@@ -444,6 +444,7 @@ class AntennaComponentManager(MccsComponentManager):
         :param communication_state: the status of communication with
             the antenna via the tile.
         """
+        print(f"XXXX _tile_communication_state_changed {communication_state}")
         self._tile_communication_state = communication_state
         self._update_joint_communication_state()
 
@@ -456,6 +457,7 @@ class AntennaComponentManager(MccsComponentManager):
         The update takes into account communication via both tile and
         APIU.
         """
+        print(f"XXXX _update_joint_communication_state {self._apiu_communication_state},{self._tile_communication_state}")
         for communication_state in [
             CommunicationStatus.DISABLED,
             CommunicationStatus.ESTABLISHED,

@@ -165,7 +165,8 @@ class MccsAntenna(SKABaseDevice):
         )
 
     def component_state_changed_callback(
-        self: MccsAntenna, state_change: dict[str, Any],
+        self: MccsAntenna,
+        state_change: dict[str, Any],
         fqdn: Optional[str] = None,
     ) -> None:
         """
@@ -178,7 +179,6 @@ class MccsAntenna(SKABaseDevice):
             of the component.
         :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is an antenna.
         """
-        print(f"XXXXX --CALLBACK-- {fqdn} : {state_change}")
         if fqdn is None:
             health_state_changed_callback = self._health_changed
             power_state_changed_callback = self._component_power_state_changed
@@ -543,7 +543,6 @@ class MccsAntenna(SKABaseDevice):
 
         :return: ``True`` if the command is allowed
         """
-        print(f"XXX is_On_allowed State={self.get_state()}")
         return self.get_state() in [
             tango.DevState.OFF,
             tango.DevState.STANDBY,

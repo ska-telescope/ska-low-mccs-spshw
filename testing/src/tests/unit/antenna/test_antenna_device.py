@@ -651,11 +651,14 @@ class TestMccsAntenna:
 
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.QUEUED
-        assert  message.split("_")[-1] == "On"
+        assert message.split("_")[-1] == "On"
 
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
         # At this point the APIU should turn the antenna on, then fire a change event.
         # so let's fake that.
+        print("")
+        print("")
+        print("------------CALLING MOCK ANTENNA ON-------------")
         device_under_test.MockAntennaPoweredOn()
         time.sleep(0.1)
         assert device_under_test.state() == tango.DevState.ON

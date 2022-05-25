@@ -98,7 +98,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
-        print(f"XXX power_on APIUProxy {self.supplied_power_state}")
         if self.supplied_power_state == PowerState.ON:
             return None
         return self._power_up_antenna()
@@ -166,7 +165,6 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        print(f"XXXX [ACM] _device_state_changed for {self._fqdn}, {event_name}->{event_value}")
         assert (
             event_name.lower() == "state"
         ), "state changed callback called but event_name is {event_name}."
@@ -207,11 +205,12 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             "APIU 'areAntennasOn' attribute changed callback called but "
             f"event_name is {event_name}."
         )
-        self.update_supplied_power_state(
+        power_state = (
             PowerState.ON
             if event_value[self._logical_antenna_id - 1]
             else PowerState.OFF
         )
+        self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
 
 
 class _TileProxy(DeviceComponentManager):
@@ -444,7 +443,6 @@ class AntennaComponentManager(MccsComponentManager):
         :param communication_state: the status of communication with
             the antenna via the tile.
         """
-        print(f"XXXX _tile_communication_state_changed {communication_state}")
         self._tile_communication_state = communication_state
         self._update_joint_communication_state()
 
@@ -457,7 +455,6 @@ class AntennaComponentManager(MccsComponentManager):
         The update takes into account communication via both tile and
         APIU.
         """
-        print(f"XXXX _update_joint_communication_state {self._apiu_communication_state},{self._tile_communication_state}")
         for communication_state in [
             CommunicationStatus.DISABLED,
             CommunicationStatus.ESTABLISHED,
@@ -581,7 +578,6 @@ class AntennaComponentManager(MccsComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
-        print(f"XXX! _on command")
         task_callback(status=TaskStatus.IN_PROGRESS)
         print(f"XXX!! _on command")
         try:
@@ -606,14 +602,12 @@ class AntennaComponentManager(MccsComponentManager):
             if self.power_state == self._target_power_state:
                 self._target_power_state = None  # attained without any action needed
                 return None
-
             if self._apiu_power_state != PowerState.ON:
                 return ResultCode.QUEUED
             if (
                 self.power_state == PowerState.OFF
                 and self._target_power_state == PowerState.ON
             ):
-                print(f"XXX PS={self.power_state}, TargetPS={self._target_power_state}")
                 result_code = self._apiu_proxy.power_on()
                 self._target_power_state = None
                 return result_code
@@ -639,8 +633,10 @@ class AntennaComponentManager(MccsComponentManager):
         """
         raise NotImplementedError("Antenna cannot be reset.")
 
-    def set_power_state(self: AntennaComponentManager, power_state: PowerState,
-    fqdn: Optional[str] = None,
+    def set_power_state(
+        self: AntennaComponentManager,
+        power_state: PowerState,
+        fqdn: Optional[str] = None,
     ) -> None:
         """
         Set the power state of the antenna.

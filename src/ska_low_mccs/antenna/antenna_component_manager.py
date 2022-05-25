@@ -567,7 +567,6 @@ class AntennaComponentManager(MccsComponentManager):
 
         :returns: task status and message
         """
-        print(f"XXX on command")
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
@@ -582,12 +581,15 @@ class AntennaComponentManager(MccsComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
-        print(f"XXX _on command")
+        print(f"XXX! _on command")
         task_callback(status=TaskStatus.IN_PROGRESS)
+        print(f"XXX!! _on command")
         try:
+            print("trying")
             with self._power_state_lock:
                 self._target_power_state = PowerState.ON
             self._review_power()
+            print("...tried")
         except Exception as ex:
             task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
 
@@ -597,7 +599,7 @@ class AntennaComponentManager(MccsComponentManager):
         )
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
-        print(f"XXXXX _review_power Target={self._target_power_state}")
+        print(f"XXXXX _review_power Self={self.power_state} Target={self._target_power_state} APIU={self._apiu_power_state}")
         with self._power_state_lock:
             if self._target_power_state is None:
                 return None

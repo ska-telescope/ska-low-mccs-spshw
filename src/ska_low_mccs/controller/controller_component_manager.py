@@ -483,8 +483,9 @@ class ControllerComponentManager(MccsComponentManager):
             return
 
         self._device_communication_states[fqdn] = communication_state
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
+        print(self._device_communication_states)
+#         if self.communication_state == CommunicationStatus.DISABLED:
+#             return
         self._evaluate_communication_state()
 
     def _evaluate_communication_state(
@@ -506,12 +507,10 @@ class ControllerComponentManager(MccsComponentManager):
                     break
             print(
                 "evaluate final ",
-                self._device_communication_states,
-                " with ",
                 communication_state,
             )
             self.update_communication_state(communication_state)
-            self.update_component_fault(False)
+            self.update_component_state({"fault": False})
 
     #             if (
     #                 CommunicationStatus.DISABLED

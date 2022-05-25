@@ -168,7 +168,6 @@ class MccsComponentManager(
         if self._communication_state != communication_state:
             with self.__communication_lock:
                 self._communication_state = communication_state
-                print(f"ZZZZZZZZZZZZZZ {self._communication_state}")
                 if self._communication_state_changed_callback is not None:
                     self._communication_state_changed_callback(communication_state)
 
@@ -224,6 +223,8 @@ class MccsComponentManager(
             if self._power_state != state_change.get("power_state"):
                 with self.__communication_lock:
                     self._power_state = state_change.get("power_state")
+        if "fault" in state_change.keys():
+            self._faulty = state_change.get("fault")
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(state_change)
 

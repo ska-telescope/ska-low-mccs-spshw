@@ -137,9 +137,7 @@ class TestMccsController:
         """
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.adminMode == AdminMode.ONLINE
-        print("1111111111111111111111111111111111111111111111111111111111111111111")
         [[result_code], [uid]] = getattr(device_under_test, device_command)()
-        print(f"jjjjjjjjjjjjjjj {uid}")
         assert result_code == ResultCode.QUEUED
         assert uid.split("_")[-1] == device_command
         method = getattr(mock_component_manager, component_method)

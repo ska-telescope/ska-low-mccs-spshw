@@ -431,7 +431,6 @@ class ControllerComponentManager(MccsComponentManager):
         print(self._device_power_states)
 
         for subarray_proxy in self._subarrays.values():
-            print(f"FFFFFFFFFFFFFFFFFFFFFFFF {type(subarray_proxy)}")
             subarray_proxy.start_communicating()
         for subrack_proxy in self._subracks.values():
             subrack_proxy.start_communicating()
@@ -484,8 +483,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         self._device_communication_states[fqdn] = communication_state
         print(self._device_communication_states)
-#         if self.communication_state == CommunicationStatus.DISABLED:
-#             return
+        #         if self.communication_state == CommunicationStatus.DISABLED:
+        #             return
         self._evaluate_communication_state()
 
     def _evaluate_communication_state(

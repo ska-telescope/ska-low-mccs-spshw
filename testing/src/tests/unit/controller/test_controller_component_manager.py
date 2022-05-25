@@ -142,7 +142,35 @@ class TestControllerComponentManager:
         """
         controller_component_manager.start_communicating()
         time.sleep(0.25)
-        controller_component_manager.communication_state = CommunicationStatus.ESTABLISHED
+        for fqdn in controller_component_manager._subarrays.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._subracks.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._stations.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._subarray_beams.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._station_beams.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        assert (
+            controller_component_manager._communication_state
+            == CommunicationStatus.ESTABLISHED
+        )
         controller_component_manager.on()
 
         for proxy in subrack_proxies:
@@ -154,24 +182,30 @@ class TestControllerComponentManager:
 
         # pretend to receive events
         for fqdn in subrack_fqdns:
-            controller_component_manager._subrack_power_state_changed(
-                fqdn, PowerState.ON
+            controller_component_manager.component_state_changed_callback(
+                {"power_state": PowerState.ON}, fqdn
             )
         for fqdn in station_fqdns:
-            controller_component_manager._station_power_state_changed(
-                fqdn, PowerState.ON
+            controller_component_manager.component_state_changed_callback(
+                {"power_state": PowerState.ON}, fqdn
             )
+        controller_component_manager.component_state_changed_callback(
+            {"power_state": PowerState.ON}
+        )
         controller_component_manager.off()
 
         # pretend to receive events
-        for fqdn in station_fqdns:
-            controller_component_manager._station_power_state_changed(
-                fqdn, PowerState.OFF
+        for fqdn in subrack_fqdns:
+            controller_component_manager.component_state_changed_callback(
+                {"power_state": PowerState.OFF}, fqdn
             )
         for fqdn in station_fqdns:
-            controller_component_manager._station_power_state_changed(
-                fqdn, PowerState.OFF
+            controller_component_manager.component_state_changed_callback(
+                {"power_state": PowerState.OFF}, fqdn
             )
+        controller_component_manager.component_state_changed_callback(
+            {"power_state": PowerState.OFF}
+        )
 
     def test_power_events(
         self: TestControllerComponentManager,

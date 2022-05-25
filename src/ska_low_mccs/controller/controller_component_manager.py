@@ -471,7 +471,6 @@ class ControllerComponentManager(MccsComponentManager):
         :param fqdn: fqdn of changed device
         :param communication_state: new status
         """
-        print(f"ppppppppppppppppppppppp {fqdn} {communication_state}")
         if fqdn not in self._device_communication_states:
             self.logger.warning(
                 f"Received a communication status changed event for device {fqdn} "
@@ -482,9 +481,6 @@ class ControllerComponentManager(MccsComponentManager):
             return
 
         self._device_communication_states[fqdn] = communication_state
-        print(self._device_communication_states)
-        #         if self.communication_state == CommunicationStatus.DISABLED:
-        #             return
         self._evaluate_communication_state()
 
     def _evaluate_communication_state(
@@ -494,38 +490,16 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        print("evaluationevaluationevaluation")
         with self.__communication_state_lock:
             for communication_state in [
                 CommunicationStatus.DISABLED,
                 CommunicationStatus.NOT_ESTABLISHED,
                 CommunicationStatus.ESTABLISHED,
             ]:
-                print("evaluate", self._device_communication_states)
                 if communication_state in self._device_communication_states.values():
                     break
-            print(
-                "evaluate final ",
-                communication_state,
-            )
             self.update_communication_state(communication_state)
             self.update_component_state({"fault": False})
-
-    #             if (
-    #                 CommunicationStatus.DISABLED
-    #                 in self._device_communication_states.values()
-    #             ):
-    #                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-    #             elif (
-    #                 CommunicationStatus.NOT_ESTABLISHED
-    #                 in self._device_communication_states.values()
-    #             ):
-    #                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-    #             else:
-    # #                 if not self.communication_state == CommunicationStatus.ESTABLISHED:
-    # #                     self.communication_state_changed_callback(None, CommunicationStatus)
-    #                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
-    #                 self.update_component_fault(False)
 
     def component_state_changed_callback(
         self: ControllerComponentManager,

@@ -21,7 +21,6 @@ from ska_tango_base.control_model import (
 from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
-from ska_low_mccs.cluster_manager.cluster_simulator import JobStatus
 from ska_low_mccs.component import (
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,

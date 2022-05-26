@@ -1,4 +1,11 @@
-# from ska_low_mccs.testing.mock import MockCallable
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""This module implements testing for mockcallable_deque."""
 
 import unittest
 from typing import Callable
@@ -15,8 +22,7 @@ def mock_callback_deque_factory(
     mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallableDeque]:
     """
-    Return a factory that returns a new mock callback using a deque each time it is
-    called.
+    Return a new mock callback factory using a deque each time it is called.
 
     Use this fixture in tests that need more than one mock_callback. If
     your tests only needs a single mock callback, it is simpler to use
@@ -43,7 +49,7 @@ def component_state_changed_callback(
     """
     Return a mock callback for component manager communication status.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
@@ -53,15 +59,19 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-"""
-This function allows testing of the new MockCallableDeque class to ensure that
-methods that search for entries in the deque find and return the correct calls.
-"""
 
 
 def test_mock_callable_deque(
     component_state_changed_callback: MockCallableDeque,
 ):
+    """
+    This function allows testing of the new MockCallableDeque class.
+    
+    It ensures that
+    methods that search for entries in the deque find and return the correct calls.
+    
+    :param component_state_changed_callback: callback called when state changes
+    """
     # Fill our deque which records calls to component_state_changed_callback
     component_state_changed_callback(
         {"power_state": PowerState.UNKNOWN}, fqdn="low-mccs/tile/0002"

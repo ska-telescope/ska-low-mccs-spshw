@@ -84,7 +84,7 @@ class _StationProxy(DeviceComponentManager):
         :param channel_blocks: The number of channel blocks to assign to the
             subarray.
 
-        :return: a result code.
+        :return: a result code
         """
         channel_blocks_to_allocate = []
         for _ in range(channel_blocks):
@@ -318,15 +318,10 @@ class ControllerComponentManager(MccsComponentManager):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
-        print("DDDDDDDDDDDD", communication_state_changed_callback)
         self._communication_state_changed_callback = (
             communication_state_changed_callback
         )
         self._component_state_changed_callback = component_state_changed_callback
-        # TODO: Replace the below callbacks with component_state_changed_callback
-        # and remove references throughout.
-        # self._subrack_power_state_changed = component_state_changed_callback
-        # self._station_power_state_changed = component_state_changed_callback
         self._station_beam_health_changed_callback = component_state_changed_callback
 
         self.__communication_state_lock = threading.Lock()
@@ -342,12 +337,12 @@ class ControllerComponentManager(MccsComponentManager):
 
         for fqdn in subrack_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
-            self._subrack_power_states[fqdn] = PowerState.UNKNOWN
+            # self._subrack_power_states[fqdn] = PowerState.UNKNOWN
             self._device_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in station_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
-            self._station_power_states[fqdn] = PowerState.UNKNOWN
+            # self._station_power_states[fqdn] = PowerState.UNKNOWN
             self._device_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in subarray_beam_fqdns:
@@ -369,7 +364,7 @@ class ControllerComponentManager(MccsComponentManager):
                 fqdn,
                 logger,
                 max_workers,
-                functools.partial(self._communication_state_changed_callback, fqdn),
+                functools.partial(self._device_communication_state_changed, fqdn),
                 functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in subarray_fqdns
@@ -379,7 +374,7 @@ class ControllerComponentManager(MccsComponentManager):
                 fqdn,
                 logger,
                 max_workers,
-                functools.partial(self._communication_state_changed_callback, fqdn),
+                functools.partial(self._device_communication_state_changed, fqdn),
                 functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in subrack_fqdns
@@ -390,7 +385,7 @@ class ControllerComponentManager(MccsComponentManager):
                 subarray_fqdns,
                 logger,
                 max_workers,
-                functools.partial(self._communication_state_changed_callback, fqdn),
+                functools.partial(self._device_communication_state_changed, fqdn),
                 functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in station_fqdns
@@ -400,7 +395,7 @@ class ControllerComponentManager(MccsComponentManager):
                 fqdn,
                 logger,
                 max_workers,
-                functools.partial(self._communication_state_changed_callback, fqdn),
+                functools.partial(self._device_communication_state_changed, fqdn),
                 functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in subarray_beam_fqdns
@@ -410,7 +405,7 @@ class ControllerComponentManager(MccsComponentManager):
                 fqdn,
                 logger,
                 max_workers,
-                functools.partial(self._communication_state_changed_callback, fqdn),
+                functools.partial(self._device_communication_state_changed, fqdn),
                 functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in station_beam_fqdns
@@ -425,10 +420,7 @@ class ControllerComponentManager(MccsComponentManager):
 
     def start_communicating(self: ControllerComponentManager) -> None:
         """Establish communication with the station components."""
-        print(f"initial power state -------------------{self.power_state}")
-        print(self._device_power_states)
         super().start_communicating()
-        print(self._device_power_states)
 
         for subarray_proxy in self._subarrays.values():
             subarray_proxy.start_communicating()
@@ -440,10 +432,6 @@ class ControllerComponentManager(MccsComponentManager):
             subarray_beam_proxy.start_communicating()
         for station_beam_proxy in self._station_beams.values():
             station_beam_proxy.start_communicating()
-
-        # self.update_communication_state(CommunicationStatus.ESTABLISHED)
-        # with self._power_state_lock:
-        #    self._component_state_changed_callback({"power_state": PowerState.ON})
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
@@ -460,7 +448,7 @@ class ControllerComponentManager(MccsComponentManager):
         for station_beam_proxy in self._station_beams.values():
             station_beam_proxy.stop_communicating()
 
-    def communication_state_changed_callback(
+    def _device_communication_state_changed(
         self: ControllerComponentManager,
         fqdn: str,
         communication_state: CommunicationStatus,
@@ -501,43 +489,22 @@ class ControllerComponentManager(MccsComponentManager):
             self.update_communication_state(communication_state)
             self.update_component_state({"fault": False})
 
-    def component_state_changed_callback(
-        self: ControllerComponentManager,
-        state_change: dict[str, Any],
-        fqdn: Optional[str] = None,
-    ) -> None:
-        """
-        Handle communication changes.
-
-        :param fqdn: fqdn of changed device
-        :param communication_state: new status
-        """
-        print("in compnent_changed", self._device_power_states)
-        if "power_state" in state_change.keys():
-            print("in compnent_changed", self._device_power_states)
-            power_state = state_change.get("power_state")
-            with self.__communication_state_lock:
-                self._device_power_states[fqdn] = power_state
-                print("in compnent_changed", self._device_power_states)
-            self._evaluate_power_state()
-
-    #     def _subrack_power_state_changed(
+    #     def component_state_changed_callback(
     #         self: ControllerComponentManager,
-    #         fqdn: str,
-    #         power_state: PowerState,
+    #         state_change: dict[str, Any],
+    #         fqdn: Optional[str] = None,
     #     ) -> None:
-    #         with self.__communication_state_lock:
-    #             self._subrack_power_states[fqdn] = power_state
-    #         self._evaluate_power_state()
+    #         """
+    #         Handle communication changes.
     #
-    #     def _station_power_state_changed(
-    #         self: ControllerComponentManager,
-    #         fqdn: str,
-    #         power_state: PowerState,
-    #     ) -> None:
-    #         with self.__communication_state_lock:
-    #             self._station_power_states[fqdn] = power_state
-    #         self._evaluate_power_state()
+    #         :param state_change: new status
+    #         :param fqdn: fqdn of changed device
+    #         """
+    #         if "power_state" in state_change.keys():
+    #             power_state = state_change.get("power_state")
+    #             with self.__communication_state_lock:
+    #                 self._device_power_states[fqdn] = power_state
+    #             self._evaluate_power_state()
 
     def _evaluate_power_state(self: ControllerComponentManager) -> None:
         # Many callback threads could be hitting this method at the same time, so it's
@@ -551,13 +518,7 @@ class ControllerComponentManager(MccsComponentManager):
                 PowerState.STANDBY,
                 PowerState.ON,
             ]:
-                print("evaluate", self._device_power_states)
-                if (
-                    power_state
-                    in self._device_power_states.values()
-                    #                    power_state in self._subrack_power_states.values()
-                    #                    or power_state in self._station_power_states.values()
-                ):
+                if power_state in self._device_power_states.values():
                     break
             self.logger.info(
                 "In ControllerComponentManager._evaluatePowerState with:\n"
@@ -565,7 +526,6 @@ class ControllerComponentManager(MccsComponentManager):
                 f"\tstations: {self._station_power_states}\n"
                 f"\tresult: {str(power_state)}"
             )
-            print("evaluate final ", self._device_power_states, " with ", power_state)
             self.update_component_state({"power_state": power_state})
 
     def _subarray_health_changed(
@@ -743,9 +703,7 @@ class ControllerComponentManager(MccsComponentManager):
 
         :returns: task status and message
         """
-        msg = self.submit_task(self._on, task_callback=task_callback)
-        print(f"WWWWWWWWWWWWWWWWWW {msg}")
-        return msg
+        return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
         self: ControllerComponentManager,
@@ -758,15 +716,12 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        print("2WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        print("3WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
 
         results = [station_proxy.on() for station_proxy in self._stations.values()] + [
             subrack_proxy.on() for subrack_proxy in self._subracks.values()
         ]
-        print("results ", results)
         completed = True
         for result in results:
             if result[0] == TaskStatus.FAILED:
@@ -857,7 +812,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         :raises ValueError: if trying to assign a station not in the controller's Stations
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02d}"
 
@@ -936,14 +892,16 @@ class ControllerComponentManager(MccsComponentManager):
                     ].write_subarray_id(subarray_id)
 
         # TODO wait for the respective LRC's to complete, whilst reporting progress
-        if ResultCode.FAILED == result_code:
-            task_callback(
-                status=TaskStatus.FAILED, result="The allocate command has failed"
-            )
-        else:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The allocate command has completed"
-            )
+        if task_callback:
+            if ResultCode.FAILED == result_code:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The allocate command has failed"
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="The allocate command has completed",
+                )
 
     @check_communicating
     @check_on

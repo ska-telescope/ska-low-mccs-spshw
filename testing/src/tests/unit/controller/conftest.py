@@ -288,6 +288,49 @@ def controller_component_manager(
 
 
 @pytest.fixture()
+def mock_controller_component_manager(
+    subarray_fqdns: Iterable[str],
+    subrack_fqdns: Iterable[str],
+    station_fqdns: Iterable[str],
+    subarray_beam_fqdns: Iterable[str],
+    station_beam_fqdns: Iterable[str],
+    logger: logging.Logger,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
+) -> ControllerComponentManager:
+    """
+    Return a controller component manager in simulation mode.
+
+    :param subarray_fqdns: FQDNS of all subarray devices
+    :param subrack_fqdns: FQDNS of all subrack devices
+    :param station_fqdns: FQDNS of all station devices
+    :param subarray_beam_fqdns: FQDNS of all subarray beam devices
+    :param station_beam_fqdns: FQDNS of all station beam devices
+    :param logger: the logger to be used by this object.
+    :param max_workers: nos of threads
+    :param communication_state_changed_callback: callback to be called
+        when the status of the communications channel between the
+        component manager and its component changes
+    :param component_state_changed_callback: callback to be called
+        when the component state changes
+
+    :return: a component manager for the MCCS controller device
+    """
+    return ControllerComponentManager(
+        subarray_fqdns,
+        subrack_fqdns,
+        station_fqdns,
+        subarray_beam_fqdns,
+        station_beam_fqdns,
+        logger,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
+
+
+@pytest.fixture()
 def mock_subarray_factory() -> MockSubarrayBuilder:
     """
     Fixture that provides a factory for mock subarrays.
@@ -440,7 +483,7 @@ def mock_component_manager(
     makes calls to callbacks signaling that communication is established
     and the component is off.
 
-    :param mocker: pytest wrapper for unittest.mock
+    :param mocker: pytest wrapper for unittest.mockunittest.mock.Mock
     :param unique_id: a unique id used to check Tango layer functionality
 
     :return: a mock component manager

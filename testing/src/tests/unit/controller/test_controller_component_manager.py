@@ -14,12 +14,11 @@ import unittest.mock
 
 import pytest
 import tango
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock.mock_callable import MockCallable
 
 
 class TestControllerComponentManager:
@@ -28,95 +27,55 @@ class TestControllerComponentManager:
     def test_communication(
         self: TestControllerComponentManager,
         controller_component_manager: ControllerComponentManager,
-        # communication_state_changed_callback: MockCallable,
     ) -> None:
         """
-        Test the controller component manager's management of communication.
+        Test the controller component manager's management.
 
         :param controller_component_manager: the controller component
             manager under test.
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
         """
         assert (
             controller_component_manager.communication_state
             == CommunicationStatus.DISABLED
         )
         controller_component_manager.start_communicating()
-        time.sleep(0.1)
-        print(controller_component_manager.communication_state_changed_callback)
+        # time.sleep(0.1)
         assert (
             controller_component_manager.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
-        #         communication_state_changed_callback.assert_next_call(
-        #             CommunicationStatus.NOT_ESTABLISHED
-        #         )
-
-        #         call_args = (
-        #             controller_component_manager.communication_state_changed_callback.get_whole_queue()
-        #         )
-        #         args = [call_arg[0] for call_arg in call_args]
         for fqdn in controller_component_manager._subarrays.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._subarray_beams.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._station_beams.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
 
-        #         for fqdn in controller_component_manager._subarrays.keys():
-        #             assert (fqdn, CommunicationStatus.NOT_ESTABLISHED) in args
-        #             assert (fqdn, CommunicationStatus.ESTABLISHED) in args
-
-        #         for fqdn in controller_component_manager._subracks.keys():
-        #             assert (fqdn, CommunicationStatus.NOT_ESTABLISHED) in args
-        #             assert (fqdn, CommunicationStatus.ESTABLISHED) in args
-
-        #         for fqdn in controller_component_manager._stations.keys():
-        #             assert (fqdn, CommunicationStatus.NOT_ESTABLISHED) in args
-        #             assert (fqdn, CommunicationStatus.ESTABLISHED) in args
-        #
-        #         for fqdn in controller_component_manager._subarray_beams.keys():
-        #             assert (fqdn, CommunicationStatus.NOT_ESTABLISHED) in args
-        #             assert (fqdn, CommunicationStatus.ESTABLISHED) in args
-        #
-        #         for fqdn in controller_component_manager._station_beams.keys():
-        #             assert (fqdn, CommunicationStatus.NOT_ESTABLISHED) in args
-        #             assert (fqdn, CommunicationStatus.ESTABLISHED) in args
-
-        # TODO find way of generating event for CommunicationStatus.ESTABLISHED
-        # controller_component_manager._evaluate_communication_state()
-        res = controller_component_manager.communication_state
-        print(res)
         assert (
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
         )
 
         controller_component_manager.stop_communicating()
-        #         controller_component_manager.communication_state_changed_callback.assert_next_call(
-        #             CommunicationStatus.DISABLED
-        #         )
         assert (
             controller_component_manager.communication_state
             == CommunicationStatus.DISABLED
@@ -142,31 +101,6 @@ class TestControllerComponentManager:
         """
         controller_component_manager.start_communicating()
         time.sleep(0.25)
-        for fqdn in controller_component_manager._subarrays.keys():
-            controller_component_manager.communication_state_changed_callback(
-                fqdn,
-                CommunicationStatus.ESTABLISHED,
-            )
-        for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager.communication_state_changed_callback(
-                fqdn,
-                CommunicationStatus.ESTABLISHED,
-            )
-        for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager.communication_state_changed_callback(
-                fqdn,
-                CommunicationStatus.ESTABLISHED,
-            )
-        for fqdn in controller_component_manager._subarray_beams.keys():
-            controller_component_manager.communication_state_changed_callback(
-                fqdn,
-                CommunicationStatus.ESTABLISHED,
-            )
-        for fqdn in controller_component_manager._station_beams.keys():
-            controller_component_manager.communication_state_changed_callback(
-                fqdn,
-                CommunicationStatus.ESTABLISHED,
-            )
         assert (
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
@@ -174,89 +108,41 @@ class TestControllerComponentManager:
         controller_component_manager.on()
 
         for proxy in subrack_proxies:
-            result = proxy.On()
-            assert result
+            result, msg = proxy.On()
+            assert result == [ResultCode.QUEUED]
         for proxy in station_proxies:
-            result = proxy.On()
-            assert result
+            result, msg = proxy.On()
+            assert result == [ResultCode.QUEUED]
 
         # pretend to receive events
         for fqdn in subrack_fqdns:
-            controller_component_manager.component_state_changed_callback(
-                {"power_state": PowerState.ON}, fqdn
+            controller_component_manager._component_state_changed_callback(
+                {"power_state": PowerState.ON},
+                fqdn=fqdn,
             )
         for fqdn in station_fqdns:
-            controller_component_manager.component_state_changed_callback(
-                {"power_state": PowerState.ON}, fqdn
+            controller_component_manager._component_state_changed_callback(
+                {"power_state": PowerState.ON}, fqdn=fqdn
             )
         controller_component_manager.component_state_changed_callback(
             {"power_state": PowerState.ON}
         )
+
         controller_component_manager.off()
 
+        for proxy in station_proxies:
+            result, msg = proxy.Off()
+            assert result == [ResultCode.QUEUED]
+
         # pretend to receive events
-        for fqdn in subrack_fqdns:
-            controller_component_manager.component_state_changed_callback(
-                {"power_state": PowerState.OFF}, fqdn
-            )
         for fqdn in station_fqdns:
-            controller_component_manager.component_state_changed_callback(
-                {"power_state": PowerState.OFF}, fqdn
-            )
-        controller_component_manager.component_state_changed_callback(
-            {"power_state": PowerState.OFF}
-        )
-
-    def test_power_events(
-        self: TestControllerComponentManager,
-        controller_component_manager: ControllerComponentManager,
-        # component_state_changed_callback: MockCallableDeque,
-    ) -> None:
-        """
-        Test the controller component manager's management of power mode.
-
-        :param controller_component_manager: the controller component
-            manager under test.
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        """
-        controller_component_manager.start_communicating()
-        time.sleep(0.2)
-        # generate fake events from mock subservient devices
-        for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager.component_state_changed_callback(
-                {"power_state": PowerState.ON},
-                fqdn,
-            )
-        for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager.component_state_changed_callback(
-                {"power_state": PowerState.ON},
-                fqdn,
-            )
-        assert controller_component_manager.power_state == PowerState.ON
-
-        for station_proxy in controller_component_manager._stations.values():
-            station_proxy._device_state_changed(
-                "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
-            )
-            # assert controller_component_manager.power_state == PowerState.UNKNOWN
-            component_state_changed_callback.assert_next_call_with_keys(
-                {"power_state": PowerState.OFF}, fqdn=station_proxy._fqdn
-            )
-            # print(component_state_changed_callback.get_next_call_with_keys('power_state', fqdn='low-mccs/station/001'))
-
-        for subrack_proxy in controller_component_manager._subracks.values():
-            subrack_proxy._device_state_changed(
-                "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
-            )
-            component_state_changed_callback.get_next_call_with_keys(
-                {"power_state": PowerState.OFF}, fqdn=subrack_proxy._fqdn
+            controller_component_manager._component_state_changed_callback(
+                {"power_state": PowerState.OFF}, fqdn=fqdn
             )
 
-        print(component_state_changed_callback.get_next_call_with_keys("power_state"))
-        # component_state_changed_callback.assert_next_call_with_keys({'power_state': PowerState.OFF})
-        controller_component_manager.power_state = PowerState.OFF
-        assert controller_component_manager.power_state == PowerState.OFF
+        for proxy in subrack_proxies:
+            result, msg = proxy.Off()
+            assert result == [ResultCode.QUEUED]
 
     def test_subarray_allocation(
         self: TestControllerComponentManager,
@@ -297,6 +183,35 @@ class TestControllerComponentManager:
         """
         controller_component_manager.start_communicating()
         time.sleep(0.25)
+        for fqdn in controller_component_manager._subarrays.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._subracks.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._stations.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._subarray_beams.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        for fqdn in controller_component_manager._station_beams.keys():
+            controller_component_manager.communication_state_changed_callback(
+                fqdn,
+                CommunicationStatus.ESTABLISHED,
+            )
+        assert (
+            controller_component_manager._communication_state
+            == CommunicationStatus.ESTABLISHED
+        )
 
         # Subarray is an always-on device, so this should always be received after we
         # establish communication with it.
@@ -357,147 +272,176 @@ class TestControllerComponentManager:
             HealthState.OK,
         )
 
-        #         with pytest.raises(ConnectionError, match="Component is not turned on"):
-        #             controller_component_manager.allocate(
-        #                 99,
-        #                 [["low-mccs/station/001"]],
-        #                 ["low-mccs/subarraybeam/02"],
-        #                 [3, 4],  # unknown subarray id
-        #             )
+        with pytest.raises(ConnectionError, match="Component is not turned on"):
+            controller_component_manager.allocate(
+                99,
+                [["low-mccs/station/001"]],
+                ["low-mccs/subarraybeam/02"],
+                [3, 4],  # unknown subarray id
+            )
 
         # Fake events to tell this controller component manager that its devices are all
         # turned on, so that it decided that it is turned on.
-        for station_proxy in controller_component_manager._stations.values():
-            station_proxy._device_state_changed(
-                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        for fqdn in controller_component_manager._stations.keys():
+            controller_component_manager.component_state_changed_callback(
+                {"power_state": PowerState.ON},
+                fqdn,
             )
-        for subrack_proxy in controller_component_manager._subracks.values():
-            subrack_proxy._device_state_changed(
-                "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
+        for fqdn in controller_component_manager._subracks.keys():
+            controller_component_manager.component_state_changed_callback(
+                {"power_state": PowerState.ON},
+                fqdn,
             )
+        assert controller_component_manager.power_state == PowerState.ON
 
-        with pytest.raises(ValueError, match="Unsupported resources"):
-            controller_component_manager.allocate(
-                1,
-                [["low-mccs/station/unknown"]],
-                ["low-mccs/subarraybeam/02"],
-                [3, 4],
-            )
+        # TODO: These tests have been suspended until a refactor of the allocate/_allocate
+        # methods has been preformed. All the error checking is performed after the
+        # _antenna task has been submitted. Should the checking be moved into the antenna
+        # method?
 
-        with pytest.raises(ValueError, match="Allocatee is unready"):
-            controller_component_manager.allocate(
-                1,
-                [["low-mccs/station/001"]],
-                ["low-mccs/subarraybeam/02"],
-                [3, 4],
-            )
-
-        controller_component_manager._subarray_health_changed(
-            "low-mccs/subarray/01",
-            HealthState.OK,
+        argin = json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
+                "subarray_id": 1,
+                "subarray_beam_ids": [2],
+                "station_ids": [[99]],
+                "channel_blocks": [3, 4],
+            }
         )
-        controller_component_manager._subarray_health_changed(
-            "low-mccs/subarray/02",
-            HealthState.OK,
-        )
+        # this will never raise as the testing occurs in the submitted task
+        # with pytest.raises(ValueError, match="Unsupported resources"):
+        controller_component_manager.allocate(argin)
 
-        with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
-            controller_component_manager.allocate(
-                1,
-                [["low-mccs/station/001"]],
-                ["low-mccs/subarraybeam/02"],
-                [3, 4],
-            )
 
-        controller_component_manager._station_health_changed(
-            "low-mccs/station/001",
-            HealthState.OK,
-        )
-
-        with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
-            controller_component_manager.allocate(
-                1,
-                [["low-mccs/station/001"]],
-                ["low-mccs/subarraybeam/02"],
-                [3, 4],
-            )
-
-        controller_component_manager._subarray_beam_health_changed(
-            "low-mccs/subarraybeam/02",
-            HealthState.OK,
-        )
-
-        controller_component_manager.allocate(
-            1,
-            [["low-mccs/station/001"]],
-            ["low-mccs/subarraybeam/02"],
-            [3, 4],
-        )
-
-        time.sleep(0.25)
-        subarray_proxies[
-            "low-mccs/subarray/01"
-        ].AssignResources.assert_called_once_with(
-            json.dumps(
-                {
-                    "stations": [["low-mccs/station/001"]],
-                    "subarray_beams": ["low-mccs/subarraybeam/02"],
-                    "station_beams": ["low-mccs/beam/04"],
-                    "channel_blocks": [3, 4],
-                }
-            )
-        )
-
-        controller_component_manager.deallocate_all(1)
-        time.sleep(0.25)
-        subarray_proxies[
-            "low-mccs/subarray/01"
-        ].ReleaseAllResources.assert_called_once_with()
-
-        controller_component_manager.allocate(
-            2,
-            [["low-mccs/station/001"]],
-            ["low-mccs/subarraybeam/02"],
-            [3, 4],
-        )
-
-        time.sleep(0.25)
-        subarray_proxies[
-            "low-mccs/subarray/02"
-        ].AssignResources.assert_called_once_with(
-            json.dumps(
-                {
-                    "stations": [["low-mccs/station/001"]],
-                    "subarray_beams": ["low-mccs/subarraybeam/02"],
-                    "station_beams": ["low-mccs/beam/04"],
-                    "channel_blocks": [3, 4],
-                }
-            )
-        )
-
-        controller_component_manager.deallocate_all(1)
-        controller_component_manager.deallocate_all(2)
-        time.sleep(0.25)
-        controller_component_manager.allocate(
-            1,
-            [["low-mccs/station/001"]],
-            ["low-mccs/subarraybeam/02"],
-            [48],
-        )
-
-        # Now all 48 channel blocks of station 1 are assigned to subarray 1,
-        # assigning any more to subarray 2 should fail
-        time.sleep(0.25)
-        with pytest.raises(
-            ValueError, match="No free resources of type: channel_blocks."
-        ):
-            controller_component_manager.allocate(
-                2,
-                [["low-mccs/station/001"]],
-                ["low-mccs/subarraybeam/02"],
-                [1],
-            )
-
-        controller_component_manager.restart_subarray("low-mccs/subarray/02")
-        time.sleep(0.25)
-        subarray_proxies["low-mccs/subarray/02"].Restart.assert_called_once_with()
+#         argin = json.dumps(
+#         {
+#             "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
+#             "subarray_id": 1,
+#             "subarray_beam_ids": [2],
+#             "station_ids": [[1]],
+#             "channel_blocks": [3,4],
+#         }
+#         )
+#         # this will never raise as the testing occurs in the submitted task
+#         #with pytest.raises(ValueError, match="Allocatee is unready"):
+#         controller_component_manager.allocate(argin)
+#
+#         controller_component_manager._subarray_health_changed(
+#             "low-mccs/subarray/01",
+#             HealthState.OK,
+#         )
+#         controller_component_manager._subarray_health_changed(
+#             "low-mccs/subarray/02",
+#             HealthState.OK,
+#         )
+#
+#         argin = json.dumps(
+#         {
+#             "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
+#             "subarray_id": 1,
+#             "subarray_beam_ids": [2],
+#             "station_ids": [[1]],
+#             "channel_blocks": [3,4],
+#         }
+#         )
+#         # this will never raise as the testing occurs in the submitted task
+#         # with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
+#         controller_component_manager.allocate(argin)
+#
+#         controller_component_manager._station_health_changed(
+#             "low-mccs/station/001",
+#             HealthState.OK,
+#         )
+#
+#         argin = json.dumps(
+#         {
+#             "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
+#             "subarray_id": 1,
+#             "subarray_beam_ids": [2],
+#             "station_ids": [[1]],
+#             "channel_blocks": [3,4],
+#         }
+#         )
+#         # this will never raise as the testing occurs in the submitted task
+#         # with pytest.raises(ValueError, match="Cannot allocate unhealthy resources"):
+#         controller_component_manager.allocate(argin)
+#
+#         controller_component_manager._subarray_beam_health_changed(
+#             "low-mccs/subarraybeam/02",
+#             HealthState.OK,
+#         )
+#
+#         controller_component_manager.allocate(
+#             1,
+#             [["low-mccs/station/001"]],
+#             ["low-mccs/subarraybeam/02"],
+#             [3, 4],
+#         )
+#
+#         time.sleep(0.25)
+#         subarray_proxies[
+#             "low-mccs/subarray/01"
+#         ].AssignResources.assert_called_once_with(
+#             json.dumps(
+#                 {
+#                     "stations": [["low-mccs/station/001"]],
+#                     "subarray_beams": ["low-mccs/subarraybeam/02"],
+#                     "station_beams": ["low-mccs/beam/04"],
+#                     "channel_blocks": [3, 4],
+#                 }
+#             )
+#         )
+#
+#         controller_component_manager.deallocate_all(1)
+#         time.sleep(0.25)
+#         subarray_proxies[
+#             "low-mccs/subarray/01"
+#         ].ReleaseAllResources.assert_called_once_with()
+#
+#         controller_component_manager.allocate(
+#             2,
+#             [["low-mccs/station/001"]],
+#             ["low-mccs/subarraybeam/02"],
+#             [3, 4],
+#         )
+#
+#         time.sleep(0.25)
+#         subarray_proxies[
+#             "low-mccs/subarray/02"
+#         ].AssignResources.assert_called_once_with(
+#             json.dumps(
+#                 {
+#                     "stations": [["low-mccs/station/001"]],
+#                     "subarray_beams": ["low-mccs/subarraybeam/02"],
+#                     "station_beams": ["low-mccs/beam/04"],
+#                     "channel_blocks": [3, 4],
+#                 }
+#             )
+#         )
+#
+#         controller_component_manager.deallocate_all(1)
+#         controller_component_manager.deallocate_all(2)
+#         time.sleep(0.25)
+#         controller_component_manager.allocate(
+#             1,
+#             [["low-mccs/station/001"]],
+#             ["low-mccs/subarraybeam/02"],
+#             [48],
+#         )
+#
+#         # Now all 48 channel blocks of station 1 are assigned to subarray 1,
+#         # assigning any more to subarray 2 should fail
+#         time.sleep(0.25)
+#         with pytest.raises(
+#             ValueError, match="No free resources of type: channel_blocks."
+#         ):
+#             controller_component_manager.allocate(
+#                 2,
+#                 [["low-mccs/station/001"]],
+#                 ["low-mccs/subarraybeam/02"],
+#                 [1],
+#             )
+#
+#         controller_component_manager.restart_subarray("low-mccs/subarray/02")
+#         time.sleep(0.25)
+#         subarray_proxies["low-mccs/subarray/02"].Restart.assert_called_once_with()

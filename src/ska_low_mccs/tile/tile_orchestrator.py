@@ -452,7 +452,6 @@ class TileOrchestrator:
         self._component_state_changed_callback({"power_state": PowerState.OFF})
 
     def _report_tpm_on(self: TileOrchestrator) -> None:
-        print("TPM POWERING ON")
         self._tpm_power_state = PowerState.ON
         self._component_state_changed_callback({"power_state": PowerState.ON})
 

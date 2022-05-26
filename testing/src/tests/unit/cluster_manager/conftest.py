@@ -40,23 +40,6 @@ def component_state_changed_callback(
 
 
 @pytest.fixture()
-def communication_status_changed_callback(
-    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for communication change.
-
-    :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the communication status
-        of a component manager changed.
-    """
-    return mock_callback_deque_factory()
-
-
-@pytest.fixture()
 def max_workers() -> int:
     """
     Return the number of maximum worker threads.
@@ -80,7 +63,7 @@ def cluster_simulator() -> ClusterSimulator:
 def cluster_simulator_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[Any], None],
 ) -> ClusterSimulatorComponentManager:
     """
@@ -88,7 +71,7 @@ def cluster_simulator_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: the maximum number of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -99,7 +82,7 @@ def cluster_simulator_component_manager(
     return ClusterSimulatorComponentManager(
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -108,7 +91,7 @@ def cluster_simulator_component_manager(
 def cluster_component_manager(
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[Any], None],
 ) -> ClusterComponentManager:
     """
@@ -116,7 +99,7 @@ def cluster_component_manager(
 
     :param logger: the logger to be used by this object.
     :param max_workers: the maximum number of worker threads
-    :param communication_status_changed_callback: callback to be
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
@@ -129,6 +112,6 @@ def cluster_component_manager(
         logger,
         max_workers,
         SimulationMode.TRUE,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )

@@ -164,7 +164,9 @@ class MccsAntenna(SKABaseDevice):
         )
 
     def component_state_changed_callback(
-        self: MccsAntenna, state_change: dict[str, Any]
+        self: MccsAntenna,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
     ) -> None:
         """
         Handle change in the state of the component.
@@ -174,6 +176,65 @@ class MccsAntenna(SKABaseDevice):
 
         :param state_change: a dict containing the state change(s)
             of the component.
+        :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is an antenna.
+
+        :raises ValueError: unknown fqdn
+        """
+        if fqdn is None:
+            health_state_changed_callback = self._health_changed
+            power_state_changed_callback = self._component_power_state_changed
+        else:
+            device_family = fqdn.split("/")[1]
+            if device_family == "apiu":
+                # health_state_changed_callback = self._health_model.apiu_health_changed
+                power_state_changed_callback = (
+                    self.component_manager._apiu_power_state_changed
+                )
+            elif device_family == "tile":
+                # health_state_changed_callback = functools.partial(
+                #     self._health_model.tile_health_changed, fqdn
+                # )
+                # power_state_changed_callback = functools.partial(
+                #     self.component_manager._tile_power_state_changed, fqdn
+                # )
+                pass
+            else:
+                raise ValueError(
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                )
+
+        if "fault" in state_change.keys():
+            is_fault = state_change.get("fault")
+            if is_fault:
+                self.op_state_model.perform_action("component_fault")
+                self._health_model.component_fault(True)
+            else:
+                power_state_changed_callback(self.component_manager.power_state)
+                self._health_model.component_fault(False)
+
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            health_state_changed_callback(health)
+
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            with self.component_manager.power_state_lock:
+                self.component_manager.set_power_state(power_state, fqdn=fqdn)
+                if power_state:
+                    power_state_changed_callback(power_state)
+
+    def _component_power_state_changed(
+        self: MccsAntenna,
+        power_state: PowerState,
+    ) -> None:
+        """
+        Handle change in the power mode of the component.
+
+        This is a callback hook, called by the component manager when
+        the power mode of the component changes. It is implemented here
+        to drive the op_state.
+
+        :param power_state: the power mode of the component.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -181,28 +242,24 @@ class MccsAntenna(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-        if "fault" in state_change.keys():
-            is_fault = state_change.get("fault")
-            if is_fault:
-                self.op_state_model.perform_action("component_fault")
-                self._health_model.component_fault(True)
-            else:
-                self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_state]
-                )
-                self._health_model.component_fault(False)
 
-        if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
-            if self._health_state != health:
-                self._health_state = health
-                self.push_change_event("healthState", health)
+        self.op_state_model.perform_action(action_map[power_state])
 
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            self.component_manager.set_power_state(power_state)
-            if power_state:
-                self.op_state_model.perform_action(action_map[power_state])
+    def _health_changed(self: MccsAntenna, health: HealthState) -> None:
+        """
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :param health: the new health value
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     # ----------
     # Attributes

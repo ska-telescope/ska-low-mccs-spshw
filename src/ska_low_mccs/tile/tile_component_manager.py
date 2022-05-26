@@ -603,7 +603,6 @@ class TileComponentManager(MccsComponentManager):
         # Pass this as a callback, rather than the method that is calls,
         # so that self._tpm_component_manager is resolved when the
         # callback is called, not when it is registered.
-        print("CALLING START COMMS WITH TPM")
         self._tpm_component_manager.start_communicating()
 
     def _stop_communicating_with_tpm(self: TileComponentManager) -> None:
@@ -675,7 +674,6 @@ class TileComponentManager(MccsComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-        print(f"TPM POWER EVENT: {event_value}")
         self._tpm_power_state_changed(event_value)
 
     def _stop_communicating_with_subrack(self: TileComponentManager) -> None:
@@ -735,13 +733,12 @@ class TileComponentManager(MccsComponentManager):
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        self.set_power_state(power_state["power_state"])
-        # self._component_state_changed_callback(power_state)
+        self.set_power_state(power_state)
         self.logger.debug(
             f"power state: {self.power_state}, communication status: {self.communication_state}"
         )
         if self.communication_state == CommunicationStatus.ESTABLISHED:
-            if power_state["power_state"] == PowerState.ON:
+            if power_state == PowerState.ON:
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):

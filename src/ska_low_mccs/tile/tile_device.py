@@ -349,7 +349,7 @@ class MccsTile(SKABaseDevice):
 
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
-            self.component_manager.set_power_state(power_state)
+            self.component_manager.update_tpm_power_state(power_state)
             if power_state:
                 self.op_state_model.perform_action(action_map[power_state])
 

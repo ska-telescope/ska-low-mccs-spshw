@@ -22,7 +22,7 @@ from ska_low_mccs import MccsAntenna, MccsDeviceProxy
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs.testing.mock import MockCallable, MockCallableDeque, MockDeviceBuilder
 
 
 @pytest.fixture()
@@ -80,36 +80,36 @@ def max_workers() -> int:
 
 @pytest.fixture()
 def component_state_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for antenna state change.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the component manager
         detects that the state of its component has changed.
     """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def communication_status_changed_callback(
-    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for communication change.
-
-    :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the communication status
-        of a component manager changed.
-    """
     return mock_callback_deque_factory()
+
+
+# @pytest.fixture()
+# def communication_state_changed_callback(
+#     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+# ) -> unittest.mock.Mock:
+#     """
+#     Return a mock callback for communication change.
+
+#     :param mock_callback_deque_factory: fixture that provides a mock callback
+#         factory (i.e. an object that returns mock callbacks when
+#         called).
+
+#     :return: a mock callback to be called when the communication status
+#         of a component manager changed.
+#     """
+#     return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -119,7 +119,7 @@ def antenna_apiu_proxy(
     apiu_antenna_id: int,
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: MockCallable,
+    communication_state_changed_callback: MockCallable,
     component_state_changed_callback: MockCallable,
 ) -> _ApiuProxy:
     """
@@ -132,7 +132,7 @@ def antenna_apiu_proxy(
     :param apiu_antenna_id: the id of the antenna in the APIU device
     :param logger: a loger for the antenna component manager to use
     :param max_workers: the maximum worker threads available
-    :param communication_status_changed_callback: callback to be called
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_state_changed_callback: callback to be called
@@ -145,7 +145,7 @@ def antenna_apiu_proxy(
         apiu_antenna_id,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -157,7 +157,7 @@ def antenna_tile_proxy(
     tile_antenna_id: int,
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: MockCallableDeque,
     component_state_changed_callback: Callable[[Any], None],
 ) -> _TileProxy:
     """
@@ -170,7 +170,7 @@ def antenna_tile_proxy(
     :param tile_antenna_id: the id of the antenna in the tile device
     :param logger: a loger for the antenna component manager to use
     :param max_workers: the maximum worker threads available
-    :param communication_status_changed_callback: callback to be called
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_state_changed_callback: callback to be called
@@ -183,7 +183,7 @@ def antenna_tile_proxy(
         tile_antenna_id,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -197,7 +197,7 @@ def antenna_component_manager(
     tile_antenna_id: int,
     logger: logging.Logger,
     max_workers: int,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[Any], None],
 ) -> AntennaComponentManager:
     """
@@ -210,7 +210,7 @@ def antenna_component_manager(
     :param tile_antenna_id: the id of the antenna in the tile device
     :param logger: a loger for the antenna component manager to use
     :param max_workers: the maximum worker threads available
-    :param communication_status_changed_callback: callback to be called
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
     :param component_state_changed_callback: callback to be called
@@ -225,7 +225,7 @@ def antenna_component_manager(
         tile_antenna_id,
         logger,
         max_workers,
-        communication_status_changed_callback,
+        communication_state_changed_callback,
         component_state_changed_callback,
     )
 
@@ -290,7 +290,7 @@ def mock_tile() -> unittest.mock.Mock:
 
     This has no tile-specific functionality at present.
 
-    :return: a mock MccsApiu device.
+    :return: a mock Mccs device.
     """
     builder = MockDeviceBuilder()
     return builder()
@@ -365,7 +365,7 @@ def patched_antenna_device_class(
         def MockAntennaPoweredOn(self: PatchedAntennaDevice) -> None:
             are_antennas_on = list(initial_are_antennas_on)
             are_antennas_on[self.LogicalApiuAntennaId - 1] = True
-            self.component_manager._apiu_proxy._antenna_power_mode_changed(
+            self.component_manager._apiu_proxy._antenna_power_state_changed(
                 "areAntennasOn",
                 are_antennas_on,
                 tango.AttrQuality.ATTR_VALID,

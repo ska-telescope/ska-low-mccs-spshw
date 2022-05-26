@@ -19,7 +19,7 @@ from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
-from ska_low_mccs.testing.mock import MockCallable
+from ska_low_mccs.testing.mock import MockCallable, MockCallableDeque
 
 
 class TestAntennaApiuProxy:
@@ -65,6 +65,7 @@ class TestAntennaApiuProxy:
         mock_apiu_device_proxy: unittest.mock.Mock,
         initial_are_antennas_on: list[bool],
         apiu_antenna_id: int,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test that this antenna APIU proxy can control the power mode of the antenna.
@@ -75,7 +76,9 @@ class TestAntennaApiuProxy:
         :param initial_are_antennas_on: whether each antenna is
             initially on in the APIU
         :param apiu_antenna_id: the id of the antenna in its APIU
-            device.
+            device
+        :param component_state_changed_callback: callback to be called
+            when the state of the component changes.
         """
         with pytest.raises(
             ConnectionError,
@@ -83,26 +86,37 @@ class TestAntennaApiuProxy:
         ):
             antenna_apiu_proxy.on()
 
-        assert antenna_apiu_proxy.power_state is PowerState.UNKNOWN
-
         antenna_apiu_proxy.start_communicating()
         time.sleep(0.1)
+
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"power_state": PowerState.OFF}
+        )
+        antenna_apiu_proxy.power_state = PowerState.OFF
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"power_state": PowerState.OFF}
+        )
 
         # communication status is ESTABLISHED because MccsAPIU's state
         # is OFF, from which it can be inferred that the antenna itself
         # is powered off
         assert antenna_apiu_proxy.power_state == PowerState.OFF
-        assert antenna_apiu_proxy.supplied_power_mode == PowerState.OFF
+        assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
-        assert antenna_apiu_proxy.on() == ResultCode.QUEUED
+        assert antenna_apiu_proxy.on() == (TaskStatus.QUEUED, "Task queued")
         mock_apiu_device_proxy.On.assert_next_call()
 
         # Fake an event that tells this proxy that the APIU has been turned on.
         antenna_apiu_proxy._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        assert antenna_apiu_proxy.power_state == PowerState.ON
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"power_state": PowerState.ON}
+        )
 
+        antenna_apiu_proxy.power_state = PowerState.ON
+
+        assert antenna_apiu_proxy.power_state == PowerState.ON
         assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
         time.sleep(0.1)
@@ -160,7 +174,7 @@ class TestAntennaTileProxy:
     def test_communication(
         self: TestAntennaTileProxy,
         antenna_tile_proxy: _TileProxy,
-        communication_state_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test that this proxy refuses to try to invoke power commands on the antenna.
@@ -172,6 +186,7 @@ class TestAntennaTileProxy:
         """
         assert antenna_tile_proxy.communication_state == CommunicationStatus.DISABLED
         antenna_tile_proxy.start_communicating()
+        time.sleep(0.1)
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -180,6 +195,7 @@ class TestAntennaTileProxy:
         )
 
         antenna_tile_proxy.stop_communicating()
+        time.sleep(0.1)
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
@@ -265,6 +281,7 @@ class TestAntennaComponentManager:
         mock_apiu_device_proxy: unittest.mock.Mock,
         initial_are_antennas_on: list[bool],
         apiu_antenna_id: int,
+        component_state_changed_callback: MockCallableDeque,
     ) -> None:
         """
         Test the power commands.
@@ -276,23 +293,37 @@ class TestAntennaComponentManager:
         :param initial_are_antennas_on: whether each antenna is
             initially on in the APIU
         :param apiu_antenna_id: the id of the antenna in its APIU
-            device.
+            device
+        :param component_state_changed_callback: callback to be called
+            when the state of the component changes.
         """
-        assert antenna_component_manager.power_state is PowerState.UNKNOWN
-
         antenna_component_manager.start_communicating()
         time.sleep(0.1)
+
+        # print(f"Queue: {component_state_changed_callback.get_whole_queue()}")
+        component_state_changed_callback.assert_in_deque(
+            {"power_state": PowerState.OFF}
+        )
+        antenna_component_manager.power_state = PowerState.OFF
+
         assert antenna_component_manager.power_state == PowerState.OFF  # APIU is off
 
         antenna_component_manager._apiu_proxy._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        time.sleep(0.1)
+        time.sleep(0.2)
+        antenna_component_manager._apiu_power_state_changed(PowerState.ON)
 
         assert antenna_component_manager.power_state == PowerState.OFF
         # APIU is on but antenna is off
 
-        assert antenna_component_manager.on() == ResultCode.OK
+        task_callback_on = MockCallable()
+        assert antenna_component_manager.on(task_callback_on) == (
+            TaskStatus.QUEUED,
+            "Task queued",
+        )
+
+        # antenna_component_manager.power_state = PowerState.ON
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
         # The power state won't update until an event confirms that the antenna is on.
@@ -304,9 +335,15 @@ class TestAntennaComponentManager:
         antenna_component_manager._apiu_proxy._antenna_power_state_changed(
             "areAntennasOn", are_antennas_on, tango.AttrQuality.ATTR_VALID
         )
+        component_state_changed_callback.assert_last_call(
+            {"power_state": PowerState.ON},
+            fqdn=antenna_component_manager._apiu_proxy._fqdn,
+        )
+        antenna_component_manager.power_state = PowerState.ON
+
         assert antenna_component_manager.power_state == PowerState.ON
 
-        assert antenna_component_manager.on() is None
+        assert antenna_component_manager.on() == (TaskStatus.QUEUED, "Task queued")
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()
         assert antenna_component_manager.power_state == PowerState.ON
 
@@ -318,9 +355,14 @@ class TestAntennaComponentManager:
 
         # Fake an event that tells this proxy that the antenna is now off as requested
         are_antennas_on[apiu_antenna_id - 1] = False
-        antenna_component_manager._apiu_proxy._antenna_power_mode_changed(
+        antenna_component_manager._apiu_proxy._antenna_power_state_changed(
             "areAntennasOn", are_antennas_on, tango.AttrQuality.ATTR_VALID
         )
+        component_state_changed_callback.assert_last_call(
+            {"power_state": PowerState.OFF},
+            fqdn=antenna_component_manager._apiu_proxy._fqdn,
+        )
+        antenna_component_manager.power_state = PowerState.OFF
         assert antenna_component_manager.power_state == PowerState.OFF
 
         assert antenna_component_manager.off() is None
@@ -329,7 +371,7 @@ class TestAntennaComponentManager:
 
         with pytest.raises(
             NotImplementedError,
-            match="Antenna has no standby mode.",
+            match="Antenna has no standby state.",
         ):
             antenna_component_manager.standby()
 
@@ -337,6 +379,7 @@ class TestAntennaComponentManager:
         self: TestAntennaComponentManager,
         antenna_component_manager: AntennaComponentManager,
         communication_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
         apiu_antenna_id: int,
         mock_apiu_device_proxy: unittest.mock.Mock,
     ) -> None:
@@ -353,24 +396,33 @@ class TestAntennaComponentManager:
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param component_state_changed_callback: callback to be called
+            when the state of the component changes
         :param apiu_antenna_id: This antenna's position in its APIU
         :param mock_apiu_device_proxy: a mock device proxy to a
             APIU device.
         """
         antenna_component_manager.start_communicating()
+        time.sleep(0.1)
+
+        # Check for power state off callback, then update component manager accordingly
+        component_state_changed_callback.assert_in_deque(
+            {"power_state": PowerState.OFF}
+        )
+        antenna_component_manager.power_state = PowerState.OFF
 
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        # communication_state_changed_callback.assert_next_call(
-        #     CommunicationStatus.ESTABLISHED
-        # )
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
 
-        task_status, message = antenna_component_manager.on()
+        on_command_callback = MockCallable()
+        task_status, message = antenna_component_manager.on(on_command_callback)
         assert (task_status, message) == (TaskStatus.QUEUED, "Task queued")
+
+        # time.sleep(0.5)
 
         # no action taken initially because the APIU is switched off
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()

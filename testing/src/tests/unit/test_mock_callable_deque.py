@@ -5,7 +5,8 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module implements testing for mockcallable_deque."""
+"""This module contains the tests of the mock callable deque."""
+from __future__ import annotations
 
 import unittest
 from typing import Callable
@@ -22,7 +23,7 @@ def mock_callback_deque_factory(
     mock_callback_not_called_timeout: float,
 ) -> Callable[[], MockCallableDeque]:
     """
-    Return a new mock callback factory using a deque each time it is called.
+    Return a mock callable deque factory.
 
     Use this fixture in tests that need more than one mock_callback. If
     your tests only needs a single mock callback, it is simpler to use
@@ -50,7 +51,7 @@ def component_state_changed_callback(
     Return a mock callback for component manager communication status.
 
     :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
+        deque factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the communication status
@@ -59,18 +60,15 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-
-
 def test_mock_callable_deque(
     component_state_changed_callback: MockCallableDeque,
 ):
     """
-    This function allows testing of the new MockCallableDeque class.
-    
-    It ensures that
-    methods that search for entries in the deque find and return the correct calls.
-    
-    :param component_state_changed_callback: callback called when state changes
+    Test the functionality of the deque.
+
+    :param component_state_changed_callback: mock callback
+
+    :raises AssertionError: not failed correctly
     """
     # Fill our deque which records calls to component_state_changed_callback
     component_state_changed_callback(
@@ -161,7 +159,7 @@ def test_mock_callable_deque(
         component_state_changed_callback.get_next_call_with_keys(
             "power_state", fqdn="low-mccs/apiu/001"
         )
-        == None
+        is None
     )
 
     # we consumed some calls during the above block, so our deque now consists of the following calls
@@ -183,7 +181,7 @@ def test_mock_callable_deque(
             "power_state", fqdn="low-mccs/tile/0002"
         )
         component_state_changed_callback.assert_not_called_with_keys("is_configured")
-    except:
+    except Exception:
         failed_correctly = True
     if not failed_correctly:
         raise AssertionError(
@@ -212,7 +210,7 @@ def test_mock_callable_deque(
         component_state_changed_callback.assert_next_call_with_keys(
             {"power_state": PowerState.UNKNOWN}
         )
-    except:
+    except Exception:
         failed_correctly = True
     if not failed_correctly:
         raise AssertionError(

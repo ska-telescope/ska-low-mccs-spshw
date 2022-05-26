@@ -155,7 +155,10 @@ class TestMccsAntenna:
             "state",
             device_state_changed_callback,
         )
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+
+        time.sleep(0.1)
+
+        device_state_changed_callback.assert_last_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
 
         with pytest.raises(
@@ -165,7 +168,7 @@ class TestMccsAntenna:
             _ = device_under_test.voltage
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
@@ -214,7 +217,7 @@ class TestMccsAntenna:
             "state",
             device_state_changed_callback,
         )
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        device_state_changed_callback.assert_last_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
 
         with pytest.raises(
@@ -223,10 +226,12 @@ class TestMccsAntenna:
         ):
             _ = device_under_test.current
 
+        time.sleep(0.1)
+
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
-        device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+        assert device_under_test.state() == tango.DevState.OFF
 
         device_under_test.MockApiuOn()
 
@@ -273,7 +278,7 @@ class TestMccsAntenna:
             "state",
             device_state_changed_callback,
         )
-        device_state_changed_callback.assert_next_change_event(tango.DevState.DISABLE)
+        device_state_changed_callback.assert_last_change_event(tango.DevState.DISABLE)
         assert device_under_test.state() == tango.DevState.DISABLE
 
         with pytest.raises(
@@ -283,7 +288,7 @@ class TestMccsAntenna:
             _ = device_under_test.temperature
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
         device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
@@ -624,6 +629,8 @@ class TestMccsAntenna:
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
+        time.sleep(0.1)
+
         assert device_under_test.state() == tango.DevState.DISABLE
         with pytest.raises(
             tango.DevFailed,
@@ -631,7 +638,10 @@ class TestMccsAntenna:
         ):
             _ = device_under_test.On()
 
+        time.sleep(0.1)
+
         device_under_test.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
         time.sleep(0.1)
@@ -641,10 +651,14 @@ class TestMccsAntenna:
 
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.QUEUED
-        assert "_OnCommand" in message
+        assert message.split("_")[-1] == "On"
 
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
         # At this point the APIU should turn the antenna on, then fire a change event.
         # so let's fake that.
+        print("")
+        print("")
+        print("------------CALLING MOCK ANTENNA ON-------------")
         device_under_test.MockAntennaPoweredOn()
+        time.sleep(0.1)
         assert device_under_test.state() == tango.DevState.ON

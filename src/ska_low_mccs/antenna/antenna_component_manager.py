@@ -98,11 +98,13 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
+        print(f"Power on the antenna...")
         if self.supplied_power_state == PowerState.ON:
             return None
         return self._power_up_antenna()
 
     def _power_up_antenna(self: _ApiuProxy) -> ResultCode:
+        print(f"powerup...")
         assert self._proxy is not None  # for the type checker
         ([result_code], _) = self._proxy.PowerUpAntenna(self._logical_antenna_id)
         return result_code
@@ -114,6 +116,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :return: a result code.
         """
+        print(f"XXXXX apiuproxy power_off suppliedPS={self.supplied_power_state}")
         if self.supplied_power_state == PowerState.OFF:
             return None
         return self._power_down_antenna()
@@ -210,7 +213,17 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             if event_value[self._logical_antenna_id - 1]
             else PowerState.OFF
         )
+        # self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
+        # self.update_supplied_power_state(
+        #     # PowerState.ON
+        #     # if event_value[self._logical_antenna_id - 1]
+        #     # else PowerState.OFF
+        #     power_state
+        # )
         self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
+        self.update_supplied_power_state(
+            power_state
+        )
 
 
 class _TileProxy(DeviceComponentManager):
@@ -564,6 +577,7 @@ class AntennaComponentManager(MccsComponentManager):
 
         :returns: task status and message
         """
+        print(f"!!!XXX!! on command")
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(

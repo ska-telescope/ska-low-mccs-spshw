@@ -523,7 +523,6 @@ class TileComponentManager(MccsComponentManager):
                 component_state_changed_callback,
             )
         )
-
         self._tile_orchestrator = TileOrchestrator(
             self._start_communicating_with_subrack,
             self._stop_communicating_with_subrack,
@@ -532,7 +531,7 @@ class TileComponentManager(MccsComponentManager):
             self._turn_off_tpm,
             self._turn_on_tpm,
             self.update_communication_state,
-            self.update_tpm_power_state,
+            component_state_changed_callback,
             logger,
         )
 
@@ -734,13 +733,12 @@ class TileComponentManager(MccsComponentManager):
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        self.set_power_state(power_state["power_state"])
-        # self._component_state_changed_callback(power_state)
+        self.set_power_state(power_state)
         self.logger.debug(
             f"power state: {self.power_state}, communication status: {self.communication_state}"
         )
         if self.communication_state == CommunicationStatus.ESTABLISHED:
-            if power_state["power_state"] == PowerState.ON:
+            if power_state == PowerState.ON:
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
@@ -1017,7 +1015,6 @@ class TileComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
-        print("IN INIT--")
         try:
             return self.submit_task(self._initialise, task_callback=task_callback)
         except ConnectionError as comm_err:
@@ -1058,6 +1055,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def download_firmware(
         self: TileComponentManager,
         argin: str,
@@ -1123,6 +1121,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def get_arp_table(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1179,6 +1178,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def start_acquisition(
         self: TileComponentManager,
         argin: str,
@@ -1242,6 +1242,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def cpld_flash_write(
         self: TileComponentManager,
         argin: str,
@@ -1304,6 +1305,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def post_synchronisation(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1361,6 +1363,7 @@ class TileComponentManager(MccsComponentManager):
             )
             return
 
+    @check_communicating
     def sync_fpgas(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,

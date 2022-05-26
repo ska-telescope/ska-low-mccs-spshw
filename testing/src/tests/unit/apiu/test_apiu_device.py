@@ -116,7 +116,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -160,7 +160,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -196,7 +196,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -234,7 +234,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -247,6 +247,7 @@ class TestMccsAPIU:
         [[result_code], [message]] = device_under_test.PowerUpAntenna(1)
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "PowerUpAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -256,6 +257,7 @@ class TestMccsAPIU:
         [[result_code], [message]] = device_under_test.PowerUpAntenna(1)
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "PowerUpAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -284,7 +286,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -297,12 +299,14 @@ class TestMccsAPIU:
         [[result_code], [message]] = device_under_test.PowerDownAntenna(1)
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "PowerDownAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         _ = device_under_test.PowerUpAntenna(1)
+        time.sleep(0.1)
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -312,6 +316,7 @@ class TestMccsAPIU:
         [[result_code], [message]] = device_under_test.PowerDownAntenna(1)
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "PowerDownAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)

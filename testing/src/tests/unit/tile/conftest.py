@@ -13,7 +13,6 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
-import pytest_mock
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
@@ -437,6 +436,7 @@ def tile_component_manager(
         component_state_changed_callback,
     )
 
+
 @pytest.fixture()
 def mock_tile_component_manager(
     simulation_mode: SimulationMode,
@@ -457,7 +457,6 @@ def mock_tile_component_manager(
 
     (This is a pytest fixture.)
 
-    :param tango_harness: a test harness for MCCS tango devices
     :param simulation_mode: the initial simulation mode of this
         component manager
     :param test_mode: the initial test mode of this component manager
@@ -493,26 +492,6 @@ def mock_tile_component_manager(
         component_state_changed_callback,
     )
 
-# @pytest.fixture()
-# def mock_component_manager(
-#     mocker: pytest_mock.mocker,  # type: ignore[valid-type]
-#     unique_id: str,
-# ) -> unittest.mock.Mock:
-#     """
-#     Return a mock component manager.
-
-#     The mock component manager is a simple mock.
-
-#     :param mocker: pytest wrapper for unittest.mock
-#     :param unique_id: a unique id used to check Tango layer functionality
-
-#     :return: a mock component manager
-#     """
-#     mock = mocker.Mock()  # type: ignore[attr-defined]
-#     mock.return_value = unique_id, ResultCode.QUEUED
-
-#     return mock
-
 
 @pytest.fixture()
 def patched_tile_device_class(
@@ -521,7 +500,7 @@ def patched_tile_device_class(
     """
     Return a tile device class patched with extra methods for testing.
 
-    :param mock_component_manager: A mock component manager.
+    :param mock_tile_component_manager: A mock component manager.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -544,19 +523,24 @@ def patched_tile_device_class(
 
         def create_component_manager(
             self: PatchedTileDevice,
-        ) -> unittest.mock.Mock:
+        ) -> TileComponentManager:
             """
             Return a mock component manager instead of the usual one.
 
             :return: a mock component manager
             """
             # self._communication_state: Optional[CommunicationStatus] = None
-
-            # mock_component_manager._communication_state_changed_callback = (
-            #     self._communication_state_changed_callback
-            # )
-            mock_tile_component_manager.component_state_changed_callback = (
+            mock_tile_component_manager._communication_state_changed_callback = (
+                self._component_communication_state_changed
+            )
+            mock_tile_component_manager._component_state_changed_callback = (
                 self.component_state_changed_callback
+            )
+            mock_tile_component_manager._tile_orchestrator._component_state_changed_callback = (
+                self.component_state_changed_callback
+            )
+            mock_tile_component_manager._tile_orchestrator._communication_state_changed_callback = (
+                self._component_communication_state_changed
             )
             return mock_tile_component_manager
 

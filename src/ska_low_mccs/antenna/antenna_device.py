@@ -8,7 +8,6 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-import functools
 from typing import Any, List, Optional, Tuple
 
 import tango
@@ -178,6 +177,8 @@ class MccsAntenna(SKABaseDevice):
         :param state_change: a dict containing the state change(s)
             of the component.
         :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is an antenna.
+
+        :raises ValueError: unknown fqdn
         """
         if fqdn is None:
             health_state_changed_callback = self._health_changed

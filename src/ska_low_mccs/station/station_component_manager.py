@@ -14,7 +14,6 @@ import logging
 import threading
 from typing import Callable, Optional, Sequence
 
-import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState

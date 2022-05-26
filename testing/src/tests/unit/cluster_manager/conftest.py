@@ -21,6 +21,7 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulatorComponentManager,
 )
 
+
 @pytest.fixture()
 def component_state_changed_callback(
     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],

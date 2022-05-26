@@ -115,7 +115,6 @@ class DeviceComponentManager(MccsComponentManager):
                 f"Could not connect to '{self._fqdn}'"
             ) from dev_failed
         self.update_communication_state(CommunicationStatus.ESTABLISHED)
-        print(f"XXXX updated com state")
 
         # TODO: Determine if we need this IF
         # if self._health_changed_callback is not None:
@@ -305,7 +304,9 @@ class DeviceComponentManager(MccsComponentManager):
         :param event_value: the new state
         :param event_quality: the quality of the change event
         """
-        print(f"XXXX _device_state_changed for {self._fqdn}, {event_name}->{event_value}")
+        print(
+            f"XXXX _device_state_changed for {self._fqdn}, {event_name}->{event_value}"
+        )
         assert (
             event_name.lower() == "state"
         ), f"state changed callback called but event_name is {event_name}."

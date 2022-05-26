@@ -509,8 +509,9 @@ class ControllerComponentManager(MccsComponentManager):
         """
         Handle communication changes.
 
+        :param state_change: dict containing
+            state change values
         :param fqdn: fqdn of changed device
-        :param communication_state: new status
         """
         print("in compnent_changed", self._device_power_states)
         if "power_state" in state_change.keys():

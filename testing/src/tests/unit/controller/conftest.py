@@ -27,6 +27,7 @@ from ska_low_mccs.controller import (
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import (  # MockChangeEventCallback,
     MockCallable,
+    MockCallableDeque,
     MockDeviceBuilder,
     MockSubarrayBuilder,
 )

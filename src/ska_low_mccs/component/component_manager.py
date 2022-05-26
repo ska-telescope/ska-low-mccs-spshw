@@ -165,7 +165,9 @@ class MccsComponentManager(
         :param communication_state: the new communication status of the
             component manager.
         """
-        print(f"XXXX update_communication_state {communication_state}, {self._communication_state_changed_callback}")
+        print(
+            f"XXXX update_communication_state {communication_state}, {self._communication_state_changed_callback}"
+        )
         if self._communication_state != communication_state:
             with self.__communication_lock:
                 self._communication_state = communication_state

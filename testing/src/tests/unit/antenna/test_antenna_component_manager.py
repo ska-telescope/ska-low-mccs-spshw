@@ -84,8 +84,6 @@ class TestAntennaApiuProxy:
         ):
             antenna_apiu_proxy.on()
 
-        assert antenna_apiu_proxy.power_state is PowerState.UNKNOWN
-
         antenna_apiu_proxy.start_communicating()
         time.sleep(0.1)
 
@@ -289,11 +287,8 @@ class TestAntennaComponentManager:
         :param apiu_antenna_id: the id of the antenna in its APIU
             device.
         """
-        assert antenna_component_manager.power_state is PowerState.UNKNOWN
-
         antenna_component_manager.start_communicating()
         time.sleep(0.1)
-
 
         # print(f"Queue: {component_state_changed_callback.get_whole_queue()}")
         component_state_changed_callback.assert_in_deque({'power_state': PowerState.OFF})

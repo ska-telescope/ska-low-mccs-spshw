@@ -510,7 +510,7 @@ def mock_component_manager(
 
 @pytest.fixture()
 def patched_controller_device_class(
-    mock_component_manager: unittest.mock.Mock,
+    mock_controller_component_manager: ControllerComponentManager,
 ) -> type[MccsController]:
     """
     Return a controller device that is patched with a mock component manager.
@@ -527,7 +527,7 @@ def patched_controller_device_class(
 
         def create_component_manager(
             self: PatchedMccsController,
-        ) -> unittest.mock.Mock:
+        ) -> ControllerComponentManager:
             """
             Return a mock component manager instead of the usual one.
 
@@ -536,12 +536,12 @@ def patched_controller_device_class(
             self._communication_state: Optional[CommunicationStatus] = None
             self._component_power_state: Optional[PowerState] = None
 
-            mock_component_manager._communication_state_changed_callback = (
+            mock_controller_component_manager._communication_state_changed_callback = (
                 self._communication_state_changed_callback
             )
-            mock_component_manager._component_state_changed_callback = (
+            mock_controller_component_manager._component_state_changed_callback = (
                 self._component_state_changed_callback
             )
-            return mock_component_manager
+            return mock_controller_component_manager
 
     return PatchedMccsController

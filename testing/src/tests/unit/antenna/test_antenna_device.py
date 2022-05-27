@@ -641,8 +641,8 @@ class TestMccsAntenna:
         time.sleep(0.1)
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        #device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
         time.sleep(0.1)
 

@@ -184,3 +184,7 @@ image:
   image: "{{.Values.low_mccs.image.image}}"
   tag: "{{.Values.low_mccs.image.tag}}"
   pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

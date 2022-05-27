@@ -435,6 +435,7 @@ class ControllerComponentManager(MccsComponentManager):
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
+        print("CALLING SUPER STOP COMMS")
         super().stop_communicating()
 
         for subarray_proxy in self._subarrays.values():
@@ -469,6 +470,8 @@ class ControllerComponentManager(MccsComponentManager):
             return
 
         self._device_communication_states[fqdn] = communication_state
+        if self.communication_state == CommunicationStatus.DISABLED:
+            return
         self._evaluate_communication_state()
 
     def _evaluate_communication_state(
@@ -479,15 +482,32 @@ class ControllerComponentManager(MccsComponentManager):
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
         with self.__communication_state_lock:
-            for communication_state in [
-                CommunicationStatus.DISABLED,
-                CommunicationStatus.NOT_ESTABLISHED,
-                CommunicationStatus.ESTABLISHED,
-            ]:
-                if communication_state in self._device_communication_states.values():
-                    break
-            self.update_communication_state(communication_state)
-            self.update_component_state({"fault": False})
+            if (
+                CommunicationStatus.DISABLED
+                in self._device_communication_states.values()
+            ):
+                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+            elif (
+                CommunicationStatus.NOT_ESTABLISHED
+                in self._device_communication_states.values()
+            ):
+                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+            else:
+                self.update_communication_state(CommunicationStatus.ESTABLISHED)
+                self.update_component_state({"fault": False})
+
+        # with self.__communication_state_lock:
+        #     for communication_state in [
+        #         CommunicationStatus.DISABLED,
+        #         CommunicationStatus.NOT_ESTABLISHED,
+        #         CommunicationStatus.ESTABLISHED,
+        #     ]:
+        #         if communication_state in self._device_communication_states.values():
+        #             break
+        #     print("---------EVAL COMMS")
+        #     print(communication_state)
+        #     self.update_communication_state(communication_state)
+        #     self.update_component_state({"fault": False})
 
     #     def component_state_changed_callback(
     #         self: ControllerComponentManager,
@@ -522,8 +542,7 @@ class ControllerComponentManager(MccsComponentManager):
                     break
             self.logger.info(
                 "In ControllerComponentManager._evaluatePowerState with:\n"
-                f"\tsubracks: {self._subrack_power_states}\n"
-                f"\tstations: {self._station_power_states}\n"
+                f"\tdevices: {self._device_power_states}\n"
                 f"\tresult: {str(power_state)}"
             )
             self.update_component_state({"power_state": power_state})

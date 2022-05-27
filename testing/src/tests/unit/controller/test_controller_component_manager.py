@@ -74,10 +74,14 @@ class TestControllerComponentManager:
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
         )
-
+        print("#######################")
+        print("#######################")
+        print("#######################")
+        print("#######################")
         controller_component_manager.stop_communicating()
+        time.sleep(0.1)
         assert (
-            controller_component_manager.communication_state
+            controller_component_manager._communication_state
             == CommunicationStatus.DISABLED
         )
 
@@ -184,27 +188,27 @@ class TestControllerComponentManager:
         controller_component_manager.start_communicating()
         time.sleep(0.25)
         for fqdn in controller_component_manager._subarrays.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._communication_state_changed_callback(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._communication_state_changed_callback(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._communication_state_changed_callback(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._subarray_beams.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._communication_state_changed_callback(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._station_beams.keys():
-            controller_component_manager.communication_state_changed_callback(
+            controller_component_manager._communication_state_changed_callback(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
@@ -283,12 +287,12 @@ class TestControllerComponentManager:
         # Fake events to tell this controller component manager that its devices are all
         # turned on, so that it decided that it is turned on.
         for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager.component_state_changed_callback(
+            controller_component_manager._component_state_changed_callback(
                 {"power_state": PowerState.ON},
                 fqdn,
             )
         for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager.component_state_changed_callback(
+            controller_component_manager._component_state_changed_callback(
                 {"power_state": PowerState.ON},
                 fqdn,
             )

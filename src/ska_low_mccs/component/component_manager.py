@@ -147,7 +147,7 @@ class MccsComponentManager(
         """Break off communicating with the component."""
         if self.communication_state == CommunicationStatus.DISABLED:
             return
-
+        print("IN STOP COMMS")
         self.update_communication_state(CommunicationStatus.DISABLED)
         state = {"power_state": None, "fault": None}
         self.update_component_state(state)
@@ -165,15 +165,16 @@ class MccsComponentManager(
         :param communication_state: the new communication status of the
             component manager.
         """
-        print(
-            f"XXXX update_communication_state {communication_state}, {self._communication_state_changed_callback}"
-        )
+        print("")
+        print(self)
+        print(f"{communication_state} COMMS BEFORE: {self._communication_state}")
         if self._communication_state != communication_state:
             with self.__communication_lock:
                 self._communication_state = communication_state
                 if self._communication_state_changed_callback is not None:
-                    print("XXX  calling callback...")
+                    print(f"XXX  calling callback...{self._communication_state_changed_callback}")
                     self._communication_state_changed_callback(communication_state)
+        print(f"{communication_state} COMMS AFTER: {self._communication_state}")
 
     @property
     def is_communicating(self: MccsComponentManager) -> bool:
@@ -223,9 +224,10 @@ class MccsComponentManager(
         This is a helper method for use by subclasses.
         :param state_change: pass thru.
         """
+        print(f"IN UPDATE STATE WITH: {state_change}")
         if "power_state" in state_change.keys():
             if self._power_state != state_change.get("power_state"):
-                with self.__communication_lock:
+                with self._power_state_lock:
                     self._power_state = state_change.get("power_state")
         if "fault" in state_change.keys():
             self._faulty = state_change.get("fault")

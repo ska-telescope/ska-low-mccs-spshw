@@ -23,6 +23,7 @@ from ska_tango_base.control_model import (
 )
 
 from ska_low_mccs import MccsController, MccsDeviceProxy, release
+from ska_low_mccs.controller.controller_component_manager import ControllerComponentManager
 from ska_low_mccs.testing.mock import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -85,7 +86,7 @@ class TestMccsController:
     def test_adminMode(
         self: TestMccsController,
         device_under_test: MccsDeviceProxy,
-        mock_component_manager: unittest.mock.Mock,
+        mock_component_manager: ControllerComponentManager,
     ) -> None:
         """
         Test adminMode.
@@ -98,11 +99,16 @@ class TestMccsController:
         """
         assert device_under_test.adminMode == AdminMode.OFFLINE
         assert device_under_test.state() == tango.DevState.UNKNOWN
-
+        print("--------------")
+        print(device_under_test)
+        print(device_under_test.adminMode)
+        print(device_under_test.component_manager)
         device_under_test.adminMode = AdminMode.ONLINE
-        mock_component_manager.start_communicating.assert_called_once_with()
 
         time.sleep(0.2)
+
+        mock_component_manager.start_communicating.assert_called_once_with()
+
         assert device_under_test.adminMode == AdminMode.ONLINE
         assert device_under_test.state() == tango.DevState.OFF
 
@@ -135,6 +141,7 @@ class TestMccsController:
             implements the device command
         :param unique_id: a unique id used to check Tango layer functionality
         """
+        print(device_under_test)
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.adminMode == AdminMode.ONLINE
         [[result_code], [uid]] = getattr(device_under_test, device_command)()

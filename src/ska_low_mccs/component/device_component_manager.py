@@ -83,7 +83,6 @@ class DeviceComponentManager(MccsComponentManager):
         task_status, response = self.submit_task(
             self._connect_to_device, args=[self._event_callbacks], task_callback=None
         )
-        print(f"XXX  start_communicating {task_status}, {response}")
 
     def _connect_to_device(
         self: DeviceComponentManager,
@@ -304,9 +303,6 @@ class DeviceComponentManager(MccsComponentManager):
         :param event_value: the new state
         :param event_quality: the quality of the change event
         """
-        print(
-            f"XXXX _device_state_changed for {self._fqdn}, {event_name}->{event_value}"
-        )
         assert (
             event_name.lower() == "state"
         ), f"state changed callback called but event_name is {event_name}."
@@ -327,8 +323,6 @@ class DeviceComponentManager(MccsComponentManager):
                         {"power_state": PowerState.STANDBY}
                     )
                 elif event_value == tango.DevState.ON:
-                    print(f"HEEEEERE: {self}")
-                    print(self._component_state_changed_callback)
                     self._component_state_changed_callback(
                         {"power_state": PowerState.ON}
                     )

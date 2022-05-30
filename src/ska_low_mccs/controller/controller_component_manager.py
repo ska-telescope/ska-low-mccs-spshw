@@ -375,7 +375,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._device_communication_state_changed, fqdn),
-                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
+                functools.partial(self._device_power_state_changed, fqdn=fqdn),
             )
             for fqdn in subrack_fqdns
         }
@@ -386,7 +386,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._device_communication_state_changed, fqdn),
-                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
+                functools.partial(self._device_power_state_changed, fqdn=fqdn),
             )
             for fqdn in station_fqdns
         }
@@ -435,7 +435,6 @@ class ControllerComponentManager(MccsComponentManager):
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
-        print("CALLING SUPER STOP COMMS")
         super().stop_communicating()
 
         for subarray_proxy in self._subarrays.values():
@@ -496,35 +495,16 @@ class ControllerComponentManager(MccsComponentManager):
                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
                 self.update_component_state({"fault": False})
 
-        # with self.__communication_state_lock:
-        #     for communication_state in [
-        #         CommunicationStatus.DISABLED,
-        #         CommunicationStatus.NOT_ESTABLISHED,
-        #         CommunicationStatus.ESTABLISHED,
-        #     ]:
-        #         if communication_state in self._device_communication_states.values():
-        #             break
-        #     print("---------EVAL COMMS")
-        #     print(communication_state)
-        #     self.update_communication_state(communication_state)
-        #     self.update_component_state({"fault": False})
 
-    #     def component_state_changed_callback(
-    #         self: ControllerComponentManager,
-    #         state_change: dict[str, Any],
-    #         fqdn: Optional[str] = None,
-    #     ) -> None:
-    #         """
-    #         Handle communication changes.
-    #
-    #         :param state_change: new status
-    #         :param fqdn: fqdn of changed device
-    #         """
-    #         if "power_state" in state_change.keys():
-    #             power_state = state_change.get("power_state")
-    #             with self.__communication_state_lock:
-    #                 self._device_power_states[fqdn] = power_state
-    #             self._evaluate_power_state()
+    def _device_power_state_changed(
+        self: ControllerComponentManager,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
+    ) -> None:
+        with self.__power_state_lock:
+            if fqdn:
+                self._device_power_states[fqdn] = state_change["power_state"]
+        self._evaluate_power_state()
 
     def _evaluate_power_state(self: ControllerComponentManager) -> None:
         # Many callback threads could be hitting this method at the same time, so it's

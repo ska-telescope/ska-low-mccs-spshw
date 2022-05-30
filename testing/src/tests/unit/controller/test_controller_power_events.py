@@ -17,7 +17,7 @@ import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 
-from ska_low_mccs import MccsDeviceProxy
+from ska_low_mccs import MccsDeviceProxy, MccsController
 from ska_low_mccs.controller import ControllerComponentManager
 
 
@@ -77,7 +77,7 @@ def patched_controller_device_class(
 
             return mock_controller_component_manager
 
-    return PatchedStationDevice
+    return PatchedControllerDevice
 
 
 @pytest.fixture()

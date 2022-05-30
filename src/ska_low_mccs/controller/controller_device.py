@@ -210,7 +210,6 @@ class MccsController(SKABaseDevice):
         if "power_state" in state_change.keys():
             with self._power_state_lock:
                 power_state = state_change.get("power_state")
-                #                self.component_manager.power_state = power_state
                 if fqdn:
                     self.component_manager._device_power_states[fqdn] = power_state
                 if self._communication_state == CommunicationStatus.ESTABLISHED:

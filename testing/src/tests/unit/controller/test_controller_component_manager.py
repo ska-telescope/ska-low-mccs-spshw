@@ -188,27 +188,27 @@ class TestControllerComponentManager:
         controller_component_manager.start_communicating()
         time.sleep(0.25)
         for fqdn in controller_component_manager._subarrays.keys():
-            controller_component_manager._communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager._communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager._communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._subarray_beams.keys():
-            controller_component_manager._communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
         for fqdn in controller_component_manager._station_beams.keys():
-            controller_component_manager._communication_state_changed_callback(
+            controller_component_manager._device_communication_state_changed(
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
@@ -287,16 +287,16 @@ class TestControllerComponentManager:
         # Fake events to tell this controller component manager that its devices are all
         # turned on, so that it decided that it is turned on.
         for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager._component_state_changed_callback(
+            controller_component_manager._device_power_state_changed(
                 {"power_state": PowerState.ON},
                 fqdn,
             )
         for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager._component_state_changed_callback(
+            controller_component_manager._device_power_state_changed(
                 {"power_state": PowerState.ON},
                 fqdn,
             )
-        assert controller_component_manager.power_state == PowerState.ON
+        assert controller_component_manager._power_state == PowerState.ON
 
         # TODO: These tests have been suspended until a refactor of the allocate/_allocate
         # methods has been preformed. All the error checking is performed after the

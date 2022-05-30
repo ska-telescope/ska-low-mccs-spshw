@@ -403,6 +403,8 @@ class TestMccsClusterManagerDevice:
         lrc_status_changed_callback.assert_next_change_event(
             None, tango._tango.AttrQuality.ATTR_VALID
         )
+        lrc_result = lrc_result_changed_callback.get_next_call()
+        assert lrc_result[0][1] == ("", "")
 
         ([result_code], [message]) = device_under_test.StopJob(
             next(iter(ClusterSimulator.OPEN_JOBS))

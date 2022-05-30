@@ -9,27 +9,26 @@
 from __future__ import annotations
 
 import functools
-import json
 import time
-import unittest.mock
+from typing import Type
 
 import pytest
 import tango
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs import MccsController, MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager
+from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture
 def patched_controller_device_class(
-    mock_controller_component_manager: ControerComponentManager,
+    mock_controller_component_manager: ControllerComponentManager,
 ) -> Type[MccsController]:
     """
     Return a station device class, patched with extra methods for testing.
 
-    :param mock_station_component_manager: A fixture that provides a partially mocked component manager
+    :param mock_controller_component_manager: A fixture that provides a partially mocked component manager
             which has access to the component_state_changed_callback.
 
     :return: a patched station device class, patched with extra methods
@@ -84,8 +83,8 @@ def device_to_load(
     """
     Fixture that specifies the device to be loaded for testing.
 
-    :param patched_station_device_class: fixture returning an instance of
-        a patched station device.
+    :param patched_controller_device_class: fixture returning an instance of
+        a patched controller device.
 
     :return: specification of the device to be loaded
     """
@@ -116,7 +115,7 @@ class TestControllerPowerEvents:
     """Tests of the controller component manager."""
 
     def test_power_events(
-        self: TestControllerComponentManager,
+        self: TestControllerPowerEvents,
         controller_component_manager: ControllerComponentManager,
     ) -> None:
         """

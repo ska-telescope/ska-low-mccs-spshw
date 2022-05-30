@@ -160,12 +160,11 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        [[result_code], [uid]] = getattr(device_under_test, device_command)()
-        assert result_code == ResultCode.QUEUED
-        assert uid.split("_")[-1] == device_command
-        method = getattr(mock_component_manager, component_method)
-        method.assert_called_once()
-        assert len(method.call_args[0]) == 1
+        with pytest.raises(
+            tango.DevFailed,
+            match="Command Reset not allowed when the device is in DISABLE state",
+        ):
+            device_under_test.Reset()
 
     def test_buildState(
         self: TestMccsController,

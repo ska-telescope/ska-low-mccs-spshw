@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsStationBeam"
         devices:
-        - name: "low_mccs/beam/01"
+        - name: "low-mccs/beam/01"
           properties:
           - name: "BeamId"
             values:
@@ -24,7 +24,7 @@ server:
       classes:
       - name: "MccsStationBeam"
         devices:
-        - name: "low_mccs/beam/02"
+        - name: "low-mccs/beam/02"
           properties:
           - name: "BeamId"
             values:
@@ -36,7 +36,7 @@ server:
       classes:
       - name: "MccsStationBeam"
         devices:
-        - name: "low_mccs/beam/03"
+        - name: "low-mccs/beam/03"
           properties:
           - name: "BeamId"
             values:
@@ -48,7 +48,7 @@ server:
       classes:
       - name: "MccsStationBeam"
         devices:
-        - name: "low_mccs/beam/04"
+        - name: "low-mccs/beam/04"
           properties:
           - name: "BeamId"
             values:

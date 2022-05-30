@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsSubarrayBeam"
         devices:
-        - name: "low_mccs/subarraybeam/01"
+        - name: "low-mccs/subarraybeam/01"
           properties:
           - name: "SubarrayBeamId"
             values:
@@ -24,7 +24,7 @@ server:
       classes:
       - name: "MccsSubarrayBeam"
         devices:
-        - name: "low_mccs/subarraybeam/02"
+        - name: "low-mccs/subarraybeam/02"
           properties:
           - name: "SubarrayBeamId"
             values:
@@ -36,7 +36,7 @@ server:
       classes:
       - name: "MccsSubarrayBeam"
         devices:
-        - name: "low_mccs/subarraybeam/03"
+        - name: "low-mccs/subarraybeam/03"
           properties:
           - name: "SubarrayBeamId"
             values:
@@ -48,7 +48,7 @@ server:
       classes:
       - name: "MccsSubarrayBeam"
         devices:
-        - name: "low_mccs/subarraybeam/04"
+        - name: "low-mccs/subarraybeam/04"
           properties:
           - name: "SubarrayBeamId"
             values:

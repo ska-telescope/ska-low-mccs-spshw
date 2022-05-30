@@ -416,7 +416,6 @@ class TestMccsClusterManagerDevice:
         assert message, "IN_PROGRESS" in lrc_status[0][1]
         lrc_status = lrc_status_changed_callback.get_next_call()
         assert "FAILED" in lrc_status[0][1]
-        print(f"LRC result: {lrc_result_changed_callback.get_next_call()}")
 
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (
@@ -541,7 +540,6 @@ Communication with component is not established.\""
         assert message, "FAILED" in lrc_status[0][1]
 
         lrc_result = lrc_result_changed_callback.get_next_call()
-        print(f"LRC Result: {lrc_result}")
         assert (
             lrc_result[0][1][1]
             == "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
@@ -620,7 +618,6 @@ Communication with component is not established.\""
         )
 
         lrc_id, lrc_status = device_under_test.longRunningCommandStatus
-        print(lrc_id, lrc_status)
         assert lrc_id == message
         assert lrc_status == "FAILED"
 
@@ -629,9 +626,6 @@ Communication with component is not established.\""
         ([result_code], [message]) = device_under_test.PingMasterPool()
         assert result_code == ResultCode.QUEUED
         assert message.split("_")[-1] == "PingMasterPool"
-
-        print(f"LRC status: {lrc_status_changed_callback.get_next_call()}")
-        print(f"lrcStatus: {device_under_test.longRunningCommandStatus}")
 
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (

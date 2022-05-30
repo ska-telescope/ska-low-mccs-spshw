@@ -74,10 +74,6 @@ class TestControllerComponentManager:
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
         )
-        print("#######################")
-        print("#######################")
-        print("#######################")
-        print("#######################")
         controller_component_manager.stop_communicating()
         time.sleep(0.1)
         assert (

@@ -495,7 +495,6 @@ class ControllerComponentManager(MccsComponentManager):
                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
                 self.update_component_state({"fault": False})
 
-
     def _device_power_state_changed(
         self: ControllerComponentManager,
         state_change: dict[str, Any],

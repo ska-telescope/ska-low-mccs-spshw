@@ -300,7 +300,6 @@ class TestAntennaComponentManager:
         antenna_component_manager.start_communicating()
         time.sleep(0.1)
 
-        # print(f"Queue: {component_state_changed_callback.get_whole_queue()}")
         component_state_changed_callback.assert_in_deque(
             {"power_state": PowerState.OFF}
         )

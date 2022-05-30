@@ -1046,7 +1046,6 @@ class TestMccsTileCommands:
             "Device": 1,
         }
         json_arg = json.dumps(arg)
-        print("json_arg", json_arg)
         [[result_code], [message]] = tile_device.WriteRegister(json_arg)
         assert result_code == ResultCode.OK
         assert "WriteRegister" in message.split("_")[-1]

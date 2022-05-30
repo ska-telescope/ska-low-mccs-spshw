@@ -271,7 +271,6 @@ class TestMccsSubarray:
 
     #     # GetVersionInfo appears to have changed. Maybe missing a cmd obj
     #     version_info = device_under_test.GetVersionInfo()
-    #     print(version_info)
     #     # assert result_code == TaskStatus.QUEUED
     #     # assert "GetVersionInfo" in unique_id
 
@@ -1020,5 +1019,4 @@ class TestMccsSubarray:
             state_change, fqdn=fqdn
         )
         dev_final_health_state = device_under_test.examine_health_model(fqdn)
-        print(fqdn, target_health_state, dev_final_health_state)
         assert dev_final_health_state == target_health_state

@@ -8,6 +8,7 @@
 """This module contains the tests of the controller component manager."""
 from __future__ import annotations
 
+import functools
 import json
 import time
 import unittest.mock
@@ -17,7 +18,7 @@ import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 
-from ska_low_mccs import MccsDeviceProxy, MccsController
+from ska_low_mccs import MccsController, MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager
 
 
@@ -52,27 +53,23 @@ def patched_controller_device_class(
             :return: a mock component manager
             """
             mock_controller_component_manager._component_state_changed_callback = (
-                self.component_state_changed_callback
-            )
-            mock_station_component_manager._apiu_proxy._component_state_changed_callback = functools.partial(
-                mock_station_component_manager._component_state_changed_callback,
-                fqdn=mock_station_component_manager._apiu_fqdn,
+                self._component_state_changed_callback
             )
             for (
-                tile_fqdn,
-                tile_proxy,
-            ) in mock_station_component_manager._tile_proxies.items():
-                tile_proxy._component_state_changed_callback = functools.partial(
-                    mock_station_component_manager._component_state_changed_callback,
-                    fqdn=tile_fqdn,
+                subrack_fqdn,
+                subrack_proxy,
+            ) in mock_controller_component_manager._subracks.items():
+                subrack_proxy._component_state_changed_callback = functools.partial(
+                    mock_controller_component_manager._component_state_changed_callback,
+                    fqdn=subrack_fqdn,
                 )
             for (
-                antenna_fqdn,
-                antenna_proxy,
-            ) in mock_station_component_manager._antenna_proxies.items():
-                antenna_proxy._component_state_changed_callback = functools.partial(
-                    mock_station_component_manager._component_state_changed_callback,
-                    fqdn=antenna_fqdn,
+                station_fqdn,
+                station_proxy,
+            ) in mock_controller_component_manager._stations.items():
+                station_proxy._component_state_changed_callback = functools.partial(
+                    mock_controller_component_manager._component_state_changed_callback,
+                    fqdn=station_fqdn,
                 )
 
             return mock_controller_component_manager
@@ -134,59 +131,15 @@ class TestControllerPowerEvents:
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
         )
-        #         print(controller_component_manager._component_state_changed_callback.get_whole_queue())
-        #         controller_component_manager._component_state_changed_callback.assert_next_call_with_keys(
-        #             {"power_state": PowerState.UNKNOWN})
-        # assert controller_component_manager.power_state == PowerState.UNKNOWN
+        assert controller_component_manager.power_state == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():
             station_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-            # assert controller_component_manager.power_state == PowerState.UNKNOWN
-            # controller_component_manager.component_state_changed_callback.assert_not_called()
+            assert controller_component_manager.power_state == PowerState.UNKNOWN
         for subrack_proxy in controller_component_manager._subracks.values():
             subrack_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-        controller_component_manager._component_state_changed_callback.assert_next_call_with_keys(
-            {"power_state": PowerState.OFF}
-        )
         assert controller_component_manager.power_state == PowerState.OFF
-
-
-#         # generate fake events from mock subservient devices
-#         for fqdn in controller_component_manager._stations.keys():
-#             controller_component_manager._component_state_changed_callback(
-#                 {"power_state": PowerState.ON},
-#                 fqdn=fqdn,
-#             )
-#         for fqdn in controller_component_manager._subracks.keys():
-#             controller_component_manager._component_state_changed_callback(
-#                 {"power_state": PowerState.ON},
-#                 fqdn=fqdn,
-#             )
-#         controller_component_manager._component_state_changed_callback.assert_next_call_with_keys(
-#                      {"power_state": PowerState.ON})
-#
-#         for station_proxy in controller_component_manager._stations.values():
-#             station_proxy._device_state_changed(
-#                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
-#             )
-#             station_proxy.component_state_changed_callback(
-#                 {"power_state": PowerState.OFF}
-#             )
-#             print(station_proxy.component_state_changed_callback)
-#             station_proxy._device_state_changed.assert_next_call_with_keys(
-#                 {'power_state': PowerState.OFF}, fqdn=station_proxy._fqdn)
-#
-#         for subrack_proxy in controller_component_manager._subracks.values():
-#             #             subrack_proxy._device_state_changed(
-#             #                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
-#             #             )
-#             subrack_proxy.component_state_changed_callback(
-#                 {"power_state": PowerState.OFF}
-#             )
-#         # print(component_state_changed_callback.get_next_call_with_keys("power_state"))
-#         # controller_component_manager.power_state = PowerState.OFF
-#         assert controller_component_manager.power_state == PowerState.OFF

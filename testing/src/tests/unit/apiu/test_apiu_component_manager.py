@@ -119,7 +119,6 @@ class TestApiuCommon:
             apiu_component_manager.on()
             time.sleep(0.1)
             expected_arguments = {"power_state": PowerState.ON}
-            print(type(component_state_changed_callback))
             component_state_changed_callback.assert_in_deque(expected_arguments)
             apiu_component_manager.power_state = PowerState.ON
             return apiu_component_manager

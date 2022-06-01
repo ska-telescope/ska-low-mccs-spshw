@@ -307,29 +307,28 @@ class DeviceComponentManager(MccsComponentManager):
             event_name.lower() == "state"
         ), f"state changed callback called but event_name is {event_name}."
 
-        if self._component_state_changed_callback:
-            if event_value == tango.DevState.FAULT and not self.faulty:
-                self._component_state_changed_callback({"fault": True})
-            elif event_value != tango.DevState.FAULT and self.faulty:
-                self._component_state_changed_callback({"fault": False})
+        if event_value == tango.DevState.FAULT and not self.faulty:
+            self.update_component_state({"fault": True})
+        elif event_value != tango.DevState.FAULT and self.faulty:
+            self.update_component_state({"fault": False})
 
-            with self._power_state_lock:
-                if event_value == tango.DevState.OFF:
-                    self._component_state_changed_callback(
-                        {"power_state": PowerState.OFF}
-                    )
-                elif event_value == tango.DevState.STANDBY:
-                    self._component_state_changed_callback(
-                        {"power_state": PowerState.STANDBY}
-                    )
-                elif event_value == tango.DevState.ON:
-                    self._component_state_changed_callback(
-                        {"power_state": PowerState.ON}
-                    )
-                else:  # INIT, DISABLE, UNKNOWN, FAULT
-                    self._component_state_changed_callback(
-                        {"power_state": PowerState.UNKNOWN}
-                    )
+        with self._power_state_lock:
+            if event_value == tango.DevState.OFF:
+                self.update_component_state(
+                    {"power_state": PowerState.OFF}
+                )
+            elif event_value == tango.DevState.STANDBY:
+                self.update_component_state(
+                    {"power_state": PowerState.STANDBY}
+                )
+            elif event_value == tango.DevState.ON:
+                self.update_component_state(
+                    {"power_state": PowerState.ON}
+                )
+            else:  # INIT, DISABLE, UNKNOWN, FAULT
+                self.update_component_state(
+                    {"power_state": PowerState.UNKNOWN}
+                )
 
     def _device_health_state_changed(
         self: DeviceComponentManager,

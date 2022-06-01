@@ -8,6 +8,7 @@
 """This module implements component management for station beams."""
 from __future__ import annotations
 
+import functools
 import json
 import logging
 import threading
@@ -156,7 +157,7 @@ class StationBeamComponentManager(MccsComponentManager):
                     self.logger,
                     self._max_workers,
                     self._device_communication_state_changed,
-                    self._component_state_changed_callback,
+                    functools.partial(self._component_state_changed_callback, fqdn=self._station_fqdn),
                 )
                 if communicating:
                     self._station_proxy.start_communicating()
@@ -471,5 +472,4 @@ class StationBeamComponentManager(MccsComponentManager):
 
         if task_callback is not None:
             task_callback(TaskStatus.COMPLETED, result="Apply pointing has completed.")
-
         return self._station_proxy.apply_pointing(station_pointing_args)

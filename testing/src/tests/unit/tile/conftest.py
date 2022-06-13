@@ -25,6 +25,7 @@ from tango.server import command
 from ska_low_mccs import MccsDeviceProxy, MccsTile
 from ska_low_mccs.testing import TangoHarness
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs.testing.mock.mock_callable import MockCallable
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
@@ -152,6 +153,15 @@ def mock_subrack_device_proxy(
     :return: a mock device proxy to an subrack device.
     """
     return MccsDeviceProxy(subrack_fqdn, logger)
+
+@pytest.fixture()
+def mock_task_callback() -> MockCallable:
+    """
+    Return a MockCallable for use as a task_callback.
+
+    :return: a mock callable to be called when the state of a task changes.
+    """
+    return MockCallable()
 
 
 @pytest.fixture()

@@ -238,11 +238,10 @@ class MccsSubrack(SKABaseDevice):
             PowerState.ON: "component_on",
             PowerState.UNKNOWN: "component_unknown",
         }
-
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
             self.component_manager.set_power_state(power_state)
-            if power_state:
+            if power_state is not None:
                 self.op_state_model.perform_action(action_map[power_state])
 
         if "fault" in state_change.keys():

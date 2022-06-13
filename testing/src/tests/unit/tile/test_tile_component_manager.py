@@ -16,7 +16,7 @@ from typing import Any, Callable, Union
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import ResultCode, TaskStatus
 from ska_tango_base.control_model import (
     CommunicationStatus,
     PowerState,
@@ -207,6 +207,7 @@ class TestTileComponentManager:
         communication_state_changed_callback: MockCallable,
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
+        mock_task_callback: MockCallable,
     ) -> None:
         """
         Test that eventual consistency semantics of the on command.
@@ -225,11 +226,17 @@ class TestTileComponentManager:
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
         """
-        with pytest.raises(
-            ConnectionError,
-            match="TPM cannot be turned off / on when not online.",
-        ):
-            tile_component_manager.on()
+        tile_component_manager.on(task_callback=mock_task_callback)
+        mock_task_callback.assert_next_call(status=TaskStatus.QUEUED)
+
+        # For some reason we cannot compare the equality of the Exception objects directly.
+        #mock_task_callback.assert_next_call(status=TaskStatus.FAILED, exception=ConnectionError("TPM cannot be turned off / on when not online."))
+
+        _,kwargs = mock_task_callback.get_next_call()
+        assert kwargs['status'] == TaskStatus.FAILED
+        exc = kwargs['exception']
+        assert exc.args == ('TPM cannot be turned off / on when not online.',)
+        assert isinstance(exc, ConnectionError)
 
         tile_component_manager.start_communicating()
 
@@ -240,7 +247,9 @@ class TestTileComponentManager:
         # mock an event from subrack announcing it to be turned off
         tile_component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
 
-        assert tile_component_manager.on() == ResultCode.QUEUED
+        result_code, message = tile_component_manager.on()
+        assert result_code == TaskStatus.QUEUED
+        assert message == "Task queued"
 
         # no action taken initialially because the subrack is switched off
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()

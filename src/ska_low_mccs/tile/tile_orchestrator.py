@@ -15,7 +15,7 @@ import threading
 from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
 
 import yaml
-from ska_tango_base.commands import ResultCode
+from ska_tango_base.commands import ResultCode, TaskStatus
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 
@@ -280,7 +280,8 @@ class TileOrchestrator:
         with self.__lock:
             self._act(Stimulus.DESIRE_OFFLINE)
 
-    def desire_on(self: TileOrchestrator) -> ResultCode:
+    def desire_on(self: TileOrchestrator, task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,) -> ResultCode:
         """
         Advise that the operator desires the TPM to be on.
 
@@ -288,11 +289,18 @@ class TileOrchestrator:
             could not commenced immediately, or the initial result of
             commencing the command
         """
-        with self.__lock:
-            self._tpm_power_state_on = PowerState.ON
-            return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
+        try:
+            with self.__lock:
+                self._tpm_power_state_on = PowerState.ON
+                result_code = cast(ResultCode, self._act(Stimulus.DESIRE_ON))
+        except Exception as exc:
+            if task_callback is not None:
+                task_callback(status=TaskStatus.FAILED, exception=exc)
+            raise exc
+        return result_code
 
-    def desire_off(self: TileOrchestrator) -> ResultCode:
+    def desire_off(self: TileOrchestrator, task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,) -> ResultCode:
         """
         Advise that the operator desires the TPM to be off.
 
@@ -300,8 +308,14 @@ class TileOrchestrator:
             could not commenced immediately, or the initial result of
             commencing the command
         """
-        with self.__lock:
-            return cast(ResultCode, self._act(Stimulus.DESIRE_OFF))
+        try:
+            with self.__lock:
+                result_code =  cast(ResultCode, self._act(Stimulus.DESIRE_OFF))
+        except Exception as exc:
+            if task_callback is not None:
+                task_callback(status=TaskStatus.FAILED, exception=exc)
+            raise exc
+        return result_code
 
     def desire_standby(self: TileOrchestrator) -> ResultCode:
         """
@@ -444,7 +458,6 @@ class TileOrchestrator:
         self: TileOrchestrator,
     ) -> None:
         self._tpm_power_state = PowerState.NO_SUPPLY
-        # Should the following line be called with NO_SUPPLY?
         self._component_state_changed_callback({"power_state": PowerState.OFF})
 
     def _report_tpm_off(self: TileOrchestrator) -> None:

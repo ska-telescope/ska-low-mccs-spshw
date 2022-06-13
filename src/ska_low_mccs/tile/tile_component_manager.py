@@ -552,23 +552,25 @@ class TileComponentManager(MccsComponentManager):
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_offline()
 
-    def off(self: TileComponentManager) -> ResultCode:
+    def off(self: TileComponentManager, task_callback: Callable = None) -> ResultCode:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
-        :return: a result code, or None if there was nothing to do.
+        :return: a result code and a unique_id or message.
         """
-        return self._tile_orchestrator.desire_off()
+        result_code, unique_id = self.submit_task(self._tile_orchestrator.desire_off, args=[], task_callback=task_callback)
+        return result_code, unique_id
 
-    def on(self: TileComponentManager) -> ResultCode:
+    def on(self: TileComponentManager, task_callback: Callable = None) -> tuple[ResultCode, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
-        :return: a result code, or None if there was nothing to do.
+        :return: a result code and a unique_id or message.
         """
-        return self._tile_orchestrator.desire_on()
+        result_code, unique_id = self.submit_task(self._tile_orchestrator.desire_on, args=[], task_callback=task_callback)
+        return result_code, unique_id
 
-    def standby(self: TileComponentManager) -> ResultCode:
+    def standby(self: TileComponentManager, task_callback: Callable = None) -> ResultCode:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 

@@ -48,10 +48,13 @@ class MccsAntenna(SKABaseDevice):
 
         This is overridden here to change the Tango serialisation model.
         """
+        print("Antenna init_device start ###############################", self.get_state())
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         super().init_device()
+        self.PushChanges()
+        print("Antenna init_device stop ###############################", self.get_state())
 
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
@@ -180,10 +183,11 @@ class MccsAntenna(SKABaseDevice):
 
         :raises ValueError: unknown fqdn
         """
-        if fqdn is None:
-            health_state_changed_callback = self._health_changed
-            power_state_changed_callback = self._component_power_state_changed
-        else:
+#        if fqdn is None:
+        health_state_changed_callback = self._health_changed
+        power_state_changed_callback = self._component_power_state_changed
+#        else:
+        if fqdn is not None:
             device_family = fqdn.split("/")[1]
             if device_family == "apiu":
                 # health_state_changed_callback = self._health_model.apiu_health_changed

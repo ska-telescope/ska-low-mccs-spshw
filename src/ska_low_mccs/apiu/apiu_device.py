@@ -53,11 +53,13 @@ class MccsAPIU(SKABaseDevice):
 
         This is overridden here to change the Tango serialisation model.
         """
+        print("APIU init_device start ###############################")
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         self._power_state_lock = threading.RLock()
         super().init_device()
+        print("APIU init_device stop ###############################", self.get_state())
 
     def _init_state_model(self: MccsAPIU) -> None:
         super()._init_state_model()

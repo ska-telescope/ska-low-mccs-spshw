@@ -416,7 +416,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: ApiuComponentManager,
         antenna: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_on_antenna slow task.
 
@@ -427,15 +427,16 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: A tuple containing a ResultCode and a response message
         """
-        return self.submit_task(
+        result = self.submit_task(
             self._turn_on_antenna, args=[antenna], task_callback=task_callback
         )
+        return result
 
     def power_down_antenna(
         self: ApiuComponentManager,
         antenna: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_off_antenna slow task.
 
@@ -452,7 +453,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def power_up(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_on_antennas slow task.
 
@@ -466,7 +467,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def power_down(
         self: ApiuComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_off_antennas slow task.
 

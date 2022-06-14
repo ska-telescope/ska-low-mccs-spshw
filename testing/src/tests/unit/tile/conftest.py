@@ -154,6 +154,7 @@ def mock_subrack_device_proxy(
     """
     return MccsDeviceProxy(subrack_fqdn, logger)
 
+
 @pytest.fixture()
 def mock_task_callback() -> MockCallable:
     """

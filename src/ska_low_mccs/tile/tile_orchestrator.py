@@ -15,8 +15,9 @@ import threading
 from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
 
 import yaml
-from ska_tango_base.commands import ResultCode, TaskStatus
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 
 @enum.unique
@@ -280,15 +281,19 @@ class TileOrchestrator:
         with self.__lock:
             self._act(Stimulus.DESIRE_OFFLINE)
 
-    def desire_on(self: TileOrchestrator, task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,) -> ResultCode:
+    def desire_on(
+        self: TileOrchestrator,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Advise that the operator desires the TPM to be on.
 
-        :return: a result code: either ResultCode.QUEUED if the command
-            could not commenced immediately, or the initial result of
-            commencing the command
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             with self.__lock:
                 self._tpm_power_state_on = PowerState.ON
@@ -296,38 +301,72 @@ class TileOrchestrator:
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
-            raise exc
-        return result_code
+            return
 
-    def desire_off(self: TileOrchestrator, task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,) -> ResultCode:
+        if task_callback:
+            if result_code == ResultCode.OK:
+                task_callback(status=TaskStatus.COMPLETED, result="Tile on completed")
+            else:
+                task_callback(status=TaskStatus.FAILED, result="Tile on failed")
+
+    def desire_off(
+        self: TileOrchestrator,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> ResultCode:
         """
         Advise that the operator desires the TPM to be off.
 
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
         :return: a result code: either ResultCode.QUEUED if the command
             could not commenced immediately, or the initial result of
             commencing the command
         """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             with self.__lock:
-                result_code =  cast(ResultCode, self._act(Stimulus.DESIRE_OFF))
+                result_code = cast(ResultCode, self._act(Stimulus.DESIRE_OFF))
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
-            raise exc
-        return result_code
+            return
+        if task_callback:
+            if result_code == ResultCode.OK:
+                task_callback(status=TaskStatus.COMPLETED, result="Tile off completed")
+            else:
+                task_callback(status=TaskStatus.FAILED, result="Tile off failed")
 
-    def desire_standby(self: TileOrchestrator) -> ResultCode:
+    def desire_standby(
+        self: TileOrchestrator,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Advise that the operator desires the TPM to be standby.
 
-        :return: a result code: either ResultCode.QUEUED if the command
-            could not commenced immediately, or the initial result of
-            commencing the command
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
-        with self.__lock:
-            self._tpm_power_state_on = PowerState.STANDBY
-            return cast(ResultCode, self._act(Stimulus.DESIRE_ON))
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            with self.__lock:
+                self._tpm_power_state_on = PowerState.STANDBY
+                result_code = cast(ResultCode, self._act(Stimulus.DESIRE_ON))
+        except Exception as exc:
+            if task_callback is not None:
+                task_callback(status=TaskStatus.FAILED, exception=exc)
+            return
+        if task_callback:
+            if result_code == ResultCode.OK:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="Tile standby completed"
+                )
+            else:
+                task_callback(status=TaskStatus.FAILED, result="Tile standby failed")
 
     def update_subrack_communication_state(
         self: TileOrchestrator,

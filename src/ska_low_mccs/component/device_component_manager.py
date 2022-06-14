@@ -314,21 +314,13 @@ class DeviceComponentManager(MccsComponentManager):
 
         with self._power_state_lock:
             if event_value == tango.DevState.OFF:
-                self.update_component_state(
-                    {"power_state": PowerState.OFF}
-                )
+                self.update_component_state({"power_state": PowerState.OFF})
             elif event_value == tango.DevState.STANDBY:
-                self.update_component_state(
-                    {"power_state": PowerState.STANDBY}
-                )
+                self.update_component_state({"power_state": PowerState.STANDBY})
             elif event_value == tango.DevState.ON:
-                self.update_component_state(
-                    {"power_state": PowerState.ON}
-                )
+                self.update_component_state({"power_state": PowerState.ON})
             else:  # INIT, DISABLE, UNKNOWN, FAULT
-                self.update_component_state(
-                    {"power_state": PowerState.UNKNOWN}
-                )
+                self.update_component_state({"power_state": PowerState.UNKNOWN})
 
     def _device_health_state_changed(
         self: DeviceComponentManager,

@@ -181,8 +181,12 @@ class TestHealthManagement:
         controller.add_change_event_callback(
             "state", controller_device_state_changed_callback
         )
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.UNKNOWN)
-        controller_device_state_changed_callback.assert_next_change_event(tango.DevState.INIT)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.INIT
+        )
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.DISABLE
         )

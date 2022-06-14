@@ -33,9 +33,9 @@ def devices_to_load() -> DevicesToLoadType:
         "devices": [
             {"name": "apiu_001", "proxy": MccsDeviceProxy},
             {"name": "antenna_000001", "proxy": MccsDeviceProxy},
-#             {"name": "antenna_000002", "proxy": MccsDeviceProxy},
-#             {"name": "antenna_000003", "proxy": MccsDeviceProxy},
-#             {"name": "antenna_000004", "proxy": MccsDeviceProxy},
+            #             {"name": "antenna_000002", "proxy": MccsDeviceProxy},
+            #             {"name": "antenna_000003", "proxy": MccsDeviceProxy},
+            #             {"name": "antenna_000004", "proxy": MccsDeviceProxy},
         ],
     }
 

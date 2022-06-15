@@ -163,7 +163,7 @@ class TestSubrackTileIntegration:
         # so it transitions to OFF state.
         tile_device_state_changed_callback.assert_next_change_event(tango.DevState.OFF)
         assert tile_device.state() == tango.DevState.OFF
-        
+
         [result_code], [unique_id] = subrack_device.On()
         # The subrack device tells the upstream power supply to power the subrack on.
         # Once the upstream power supply has powered the subrack on, the subrack device
@@ -182,7 +182,11 @@ class TestSubrackTileIntegration:
         )
         assert subrack_device.tpm1PowerState == PowerState.OFF
 
-        lrc_result_changed_callback.assert_next_call('longrunningcommandresult', (unique_id, f'"On command has completed"'), tango._tango.AttrQuality.ATTR_VALID)
+        lrc_result_changed_callback.assert_next_call(
+            "longrunningcommandresult",
+            (unique_id, '"On command has completed"'),
+            tango.AttrQuality.ATTR_VALID,
+        )
 
         # The tile device is notified that its subrack is on. It now has communication
         # with its TPM. The first thing it does is subscribe to change events on the
@@ -204,12 +208,16 @@ class TestSubrackTileIntegration:
         args = lrc_result_changed_callback.get_next_call()
         assert "_PowerOnTpm" in args[0][1][0]
         assert args[0][1][1] == f'"Subrack TPM {tpm_id} turn on tpm task has completed"'
-        
+
         [[result_code], [unique_id]] = subrack_device.PowerOffTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOffTpm" in unique_id
 
-        lrc_result_changed_callback.assert_next_call('longrunningcommandresult', (unique_id, f'"Subrack TPM {tpm_id} turn off tpm task has completed"'), tango._tango.AttrQuality.ATTR_VALID)
+        lrc_result_changed_callback.assert_next_call(
+            "longrunningcommandresult",
+            (unique_id, f'"Subrack TPM {tpm_id} turn off tpm task has completed"'),
+            tango.AttrQuality.ATTR_VALID,
+        )
 
         # A third party has told the subrack device to turn the TPM off. The subrack
         # device tells the subrack to turn the TPM off. The subrack device detects that

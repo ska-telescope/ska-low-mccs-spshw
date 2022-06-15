@@ -12,7 +12,7 @@ from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 

@@ -12,7 +12,6 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 from ska_tango_base.executor import TaskStatus
 

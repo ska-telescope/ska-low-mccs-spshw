@@ -331,7 +331,7 @@ class TestMccsClusterManagerDevice:
 
         # Initialisation event.
         lrc_status_changed_callback.assert_next_change_event(
-            None, tango._tango.AttrQuality.ATTR_VALID
+            None, tango.AttrQuality.ATTR_VALID
         )
 
         ([result_code], [message]) = device_under_test.StartJob(
@@ -401,7 +401,7 @@ class TestMccsClusterManagerDevice:
         )
         # Initialisation event.
         lrc_status_changed_callback.assert_next_change_event(
-            None, tango._tango.AttrQuality.ATTR_VALID
+            None, tango.AttrQuality.ATTR_VALID
         )
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert lrc_result[0][1] == ("", "")
@@ -523,11 +523,11 @@ Communication with component is not established.\""
         )
         # Initialisation event.
         lrc_status_changed_callback.assert_next_change_event(
-            None, tango._tango.AttrQuality.ATTR_VALID
+            None, tango.AttrQuality.ATTR_VALID
         )
         # Initialisation event.
         lrc_result_changed_callback.assert_next_change_event(
-            ("", ""), tango._tango.AttrQuality.ATTR_VALID
+            ("", ""), tango.AttrQuality.ATTR_VALID
         )
 
         ([result_code], [message]) = device_under_test.ClearJobStats()
@@ -592,11 +592,11 @@ Communication with component is not established.\""
 
         # Initialisation event.
         lrc_status_changed_callback.assert_next_change_event(
-            None, tango._tango.AttrQuality.ATTR_VALID
+            None, tango.AttrQuality.ATTR_VALID
         )
         # Initialisation event.
         lrc_result_changed_callback.assert_next_change_event(
-            ("", ""), tango._tango.AttrQuality.ATTR_VALID
+            ("", ""), tango.AttrQuality.ATTR_VALID
         )
 
         ([result_code], [message]) = device_under_test.PingMasterPool()

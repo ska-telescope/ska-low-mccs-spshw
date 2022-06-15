@@ -15,7 +15,7 @@ from typing import Callable
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, PowerState
+from ska_tango_base.control_model import AdminMode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.testing.mock import MockDeviceBuilder
@@ -243,7 +243,6 @@ class TestMccsIntegration:
         ([result_code], _) = stationbeam_1.ApplyPointing()
         assert result_code == ResultCode.QUEUED
 
-        
         # we need to do this the long way because if Tango is numpy-enabled, then the
         # component manager will be called with an array not a list.
         (args, kwargs) = mock_tile_1.SetPointingDelay.get_next_call()

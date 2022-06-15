@@ -16,13 +16,13 @@ from typing import Any, Callable, Union
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_tango_base.commands import ResultCode, TaskStatus
 from ska_tango_base.control_model import (
     CommunicationStatus,
     PowerState,
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.tile import (
@@ -225,17 +225,20 @@ class TestTileComponentManager:
         :param subrack_tpm_id: This tile's position in its subrack
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
+        :param mock_task_callback: callback for tasks
         """
         tile_component_manager.on(task_callback=mock_task_callback)
         mock_task_callback.assert_next_call(status=TaskStatus.QUEUED)
 
         # For some reason we cannot compare the equality of the Exception objects directly.
-        #mock_task_callback.assert_next_call(status=TaskStatus.FAILED, exception=ConnectionError("TPM cannot be turned off / on when not online."))
+        # mock_task_callback.assert_next_call(
+        #    status=TaskStatus.FAILED,
+        #    exception=ConnectionError("TPM cannot be turned off / on when not online."))
 
-        _,kwargs = mock_task_callback.get_next_call()
-        assert kwargs['status'] == TaskStatus.FAILED
-        exc = kwargs['exception']
-        assert exc.args == ('TPM cannot be turned off / on when not online.',)
+        _, kwargs = mock_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.FAILED
+        exc = kwargs["exception"]
+        assert exc.args == ("TPM cannot be turned off / on when not online.",)
         assert isinstance(exc, ConnectionError)
 
         tile_component_manager.start_communicating()

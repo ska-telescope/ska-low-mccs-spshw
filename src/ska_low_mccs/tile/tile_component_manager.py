@@ -556,27 +556,39 @@ class TileComponentManager(MccsComponentManager):
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
-        :return: a result code and a unique_id or message.
-        """
-        result_code, unique_id = self.submit_task(self._tile_orchestrator.desire_off, args=[], task_callback=task_callback)
-        return result_code, unique_id
-
-    def on(self: TileComponentManager, task_callback: Callable = None) -> tuple[ResultCode, str]:
-        """
-        Tell the upstream power supply proxy to turn the tpm on.
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code and a unique_id or message.
         """
-        result_code, unique_id = self.submit_task(self._tile_orchestrator.desire_on, args=[], task_callback=task_callback)
-        return result_code, unique_id
+        return self.submit_task(
+            self._tile_orchestrator.desire_off, args=[], task_callback=task_callback
+        )
 
-    def standby(self: TileComponentManager, task_callback: Callable = None) -> ResultCode:
+    def on(
+        self: TileComponentManager, task_callback: Callable = None
+    ) -> tuple[ResultCode, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a result code and a unique_id or message.
+        """
+        return self.submit_task(
+            self._tile_orchestrator.desire_on, args=[], task_callback=task_callback
+        )
+
+    def standby(self: TileComponentManager, task_callback: Callable = None) -> None:
+        """
+        Tell the upstream power supply proxy to turn the tpm on.
+
+        :param task_callback: Update task state, defaults to None
 
         :return: a result code, or None if there was nothing to do.
         """
-        return self._tile_orchestrator.desire_standby()
+        return self.submit_task(
+            self._tile_orchestrator.desire_standby, args=[], task_callback=task_callback
+        )
 
     # def component_progress_changed(self: TileComponentManager, progress: int) -> None:
     #     """

@@ -157,7 +157,9 @@ class StationBeamComponentManager(MccsComponentManager):
                     self.logger,
                     self._max_workers,
                     self._device_communication_state_changed,
-                    functools.partial(self._component_state_changed_callback, fqdn=self._station_fqdn),
+                    functools.partial(
+                        self._component_state_changed_callback, fqdn=self._station_fqdn
+                    ),
                 )
                 if communicating:
                     self._station_proxy.start_communicating()

@@ -15,7 +15,7 @@ from typing import Callable, Iterable, cast
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
+from ska_tango_base.control_model import AdminMode, HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
@@ -248,7 +248,7 @@ class TestMccsIntegration:
         time.sleep(0.2)
 
         # TODO: this is inconsistent
-        '''controller_device_state_changed_callback.assert_last_change_event(
+        """controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.DISABLE
         )
         subarray_1_device_state_changed_callback.assert_last_change_event(
@@ -264,7 +264,7 @@ class TestMccsIntegration:
 
         station_2_device_state_changed_callback.assert_last_change_event(
             tango.DevState.DISABLE
-        )'''
+        )"""
 
         controller.adminMode = AdminMode.ONLINE
         subarray_1.adminMode = AdminMode.ONLINE
@@ -282,7 +282,7 @@ class TestMccsIntegration:
         # will be ON too. Therefore controller will already be ON.
 
         # TODO: callbacks are not being called
-        '''subarray_1_device_state_changed_callback.assert_last_change_event(
+        """subarray_1_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
         )
         subarray_2_device_state_changed_callback.assert_last_change_event(
@@ -296,7 +296,7 @@ class TestMccsIntegration:
         )
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
-        )'''
+        )"""
 
         assert subarray_1.state() == tango.DevState.ON
         assert subarray_2.state() == tango.DevState.ON
@@ -324,7 +324,7 @@ class TestMccsIntegration:
         time.sleep(0.2)
 
         # TODO: callback not called here:
-        #subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.EMPTY)
+        # subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.EMPTY)
         assert subarray_1.obsState == ObsState.EMPTY
 
         # check initial state
@@ -345,13 +345,13 @@ class TestMccsIntegration:
         time.sleep(0.2)
 
         # TODO: this callback is not being called and obs state is EMPTY
-        #subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.IDLE)
-        #assert subarray_1.obsState == ObsState.IDLE
-        
+        # subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.IDLE)
+        # assert subarray_1.obsState == ObsState.IDLE
+
         print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")
         print(subarray_1.stationFQDNs)
         print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")
-        
+
         # check that station_1 and only station_1 is allocated
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
         assert list(station_fqdns) == [station_1.dev_name()]
@@ -370,7 +370,7 @@ class TestMccsIntegration:
 
         time.sleep(0.2)
         # check no side-effects
-        #station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
+        # station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
         print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")
         print(subarray_1.stationFQDNs)
         print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")

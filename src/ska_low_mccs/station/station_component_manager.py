@@ -319,6 +319,7 @@ class StationComponentManager(MccsComponentManager):
                 f"\tiles: {self._tile_power_states}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
+            print(f"XXX SCM powerstate->{evaluated_power_state}")
             self.update_component_state({"power_state": evaluated_power_state})
 
     def set_power_state(

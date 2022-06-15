@@ -43,16 +43,16 @@ def patched_station_device_class() -> type[MccsStation]:
 
         @command(dtype_in=int)
         def FakeSubservientDevicesPowerState(
-            self: PatchedStationDevice, power_mode: int
+            self: PatchedStationDevice, power_state: int
         ) -> None:
-            power_mode = PowerState(power_mode)
-            with self.component_manager._power_mode_lock:
-                self.component_manager._apiu_power_mode = power_mode
-                for fqdn in self.component_manager._tile_power_modes:
-                    self.component_manager._tile_power_modes[fqdn] = power_mode
-                for fqdn in self.component_manager._antenna_power_modes:
-                    self.component_manager._antenna_power_modes[fqdn] = power_mode
-            self.component_manager._evaluate_power_mode()
+            power_state = PowerState(power_state)
+            with self.component_manager._power_state_lock:
+                self.component_manager._apiu_power_state = power_state
+                for fqdn in self.component_manager._tile_power_states:
+                    self.component_manager._tile_power_states[fqdn] = power_state
+                for fqdn in self.component_manager._antenna_power_states:
+                    self.component_manager._antenna_power_states[fqdn] = power_state
+            self.component_manager._evaluate_power_state()
 
     return PatchedStationDevice
 
@@ -339,6 +339,7 @@ class TestMccsIntegrationTmc:
         controller_device_state_changed_callback: MockChangeEventCallback,
         subarray_device_obs_state_changed_callback: MockChangeEventCallback,
         lrc_result_changed_callback: MockChangeEventCallback,
+        controller_device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that we can turn the controller on.
@@ -360,6 +361,7 @@ class TestMccsIntegrationTmc:
         :param lrc_result_changed_callback: a callback to
             be used to subscribe to device LRC result changes
         """
+        time.sleep(0.2)
         assert controller.state() == tango.DevState.DISABLE
         assert subrack.state() == tango.DevState.DISABLE
         assert subarray_1.state() == tango.DevState.DISABLE
@@ -380,14 +382,23 @@ class TestMccsIntegrationTmc:
             tango.DevState.DISABLE
         )
 
+        controller.add_change_event_callback(
+            "adminMode",
+            controller_device_admin_mode_changed_callback,
+        )
+        controller_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+
         # register a callback so we can block on obsState changes
         # instead of sleeping
         subarray_1.add_change_event_callback(
             "obsState", subarray_device_obs_state_changed_callback
         )
-        subarray_device_obs_state_changed_callback.assert_next_change_event(
-            ObsState.EMPTY
-        )
+        # subarray_device_obs_state_changed_callback.assert_last_change_event(
+        #     ObsState.EMPTY
+        # )
+
+        # controller.adminMode = AdminMode.ONLINE
+        # time.sleep(0.1)
 
         subarray_1.adminMode = AdminMode.ONLINE
         subarray_2.adminMode = AdminMode.ONLINE
@@ -402,9 +413,21 @@ class TestMccsIntegrationTmc:
         time.sleep(0.1)
         controller.adminMode = AdminMode.ONLINE
 
+        time.sleep(1.5)
+        print(f"XXX state changed cb:{controller_device_state_changed_callback.get_whole_queue()}")
+
+        time.sleep(0.2)
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
-        )
+        ) # III
+
+
+        # controller_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+
+        time.sleep(0.2)
+        controller_device_state_changed_callback.assert_last_change_event(
+            tango.DevState.ON
+        ) # II
 
         # Make the station think it has received events from its APIU,
         # tiles and antennas, telling it they are all OFF. This makes

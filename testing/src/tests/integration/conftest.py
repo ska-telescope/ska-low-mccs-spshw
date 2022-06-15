@@ -89,6 +89,23 @@ def controller_device_state_changed_callback(
     """
     return state_changed_callback_factory()
 
+@pytest.fixture()
+def controller_device_admin_mode_changed_callback(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for controller device admin mode change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback to be registered with the
+        controller via a change event subscription, so that it gets called
+        when the device admin mode changes.
+    """
+    return mock_change_event_callback_factory("adminMode")
+
 
 @pytest.fixture()
 def subarray_device_obs_state_changed_callback(

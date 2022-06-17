@@ -166,6 +166,8 @@ class MccsController(SKABaseDevice):
         # comms is established. This leads to problems.
         # Eventually we should figure out a more elegant way to handle
         # this.
+
+        print(f"XXX _communication_state_changed_callback {communication_state}")
         self._communication_state = communication_state
 
         if communication_state == CommunicationStatus.DISABLED:
@@ -201,6 +203,7 @@ class MccsController(SKABaseDevice):
         :param state_change: the state of the component.
         :param fqdn: The fqdn of the device.
         """
+        print(f"XXX _component_state_changed_callback: {state_change}, {fqdn}")
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
@@ -218,21 +221,26 @@ class MccsController(SKABaseDevice):
 
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
-            if self._health_state != health:
-                self._health_state = cast(HealthState, health)
-                self.push_change_event("healthState", health)
-
-        if "station_health_state" in state_change.keys():
-            station_health = state_change.get("station_health_state")
-            self._health_model.station_health_changed(fqdn, station_health)
-
-        if "station_beam_health_state" in state_change.keys():
-            station_beam_health = state_change.get("station_beam_health_state")
-            self._health_model.station_beam_health_changed(fqdn, station_beam_health)
-
-        if "subarray_beam_health_state" in state_change.keys():
-            subarray_beam_health = state_change.get("subarray_beam_health_state")
-            self._health_model.subarray_beam_health_changed(fqdn, subarray_beam_health)
+            if fqdn:
+                device_family = fqdn.split("/")[1]
+                if device_family == "subarray":
+                    self.component_manager._subarray_health_changed(fqdn, health)
+                elif device_family == "station":
+                    self.component_manager._station_health_changed(fqdn, health)
+                    self._health_model.station_health_changed(fqdn, health)
+                elif device_family == "subarray_beam":
+                    self.component_manager._subarray_beam_health_changed(fqdn, health)
+                    self._health_model.subarray_beam_health_changed(fqdn, health)
+                elif device_family == "beam":
+                    self.component_manager._station_beam_health_changed(fqdn, health)
+                    self._health_model.station_beam_health_changed(fqdn, health)
+                elif device_family == "subrack":
+                    # self.component_manager._station_beam_health_changed(fqdn, health)
+                    self._health_model.subrack_health_changed(fqdn, health)
+            else:
+                if self._health_state != health:
+                    self._health_state = cast(HealthState, health)
+                    self.push_change_event("healthState", health)
 
         if "fault" in state_change.keys():
             is_fault = state_change.get("fault")

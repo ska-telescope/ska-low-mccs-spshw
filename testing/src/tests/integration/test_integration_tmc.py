@@ -410,10 +410,10 @@ class TestMccsIntegrationTmc:
         subarray_beam_3.adminMode = AdminMode.ONLINE
         subarray_beam_4.adminMode = AdminMode.ONLINE
 
-        time.sleep(0.1)
+        time.sleep(0.2)
         controller.adminMode = AdminMode.ONLINE
 
-        time.sleep(1.5)
+        time.sleep(2)
         print(f"XXX state changed cb:{controller_device_state_changed_callback.get_whole_queue()}")
 
         time.sleep(0.2)

@@ -375,7 +375,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._device_communication_state_changed, fqdn),
-                functools.partial(self._device_power_state_changed, fqdn=fqdn),
+                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in subrack_fqdns
         }
@@ -386,7 +386,7 @@ class ControllerComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._device_communication_state_changed, fqdn),
-                functools.partial(self._device_power_state_changed, fqdn=fqdn),
+                functools.partial(self._component_state_changed_callback, fqdn=fqdn),
             )
             for fqdn in station_fqdns
         }
@@ -494,16 +494,6 @@ class ControllerComponentManager(MccsComponentManager):
             else:
                 self.update_communication_state(CommunicationStatus.ESTABLISHED)
                 self.update_component_state({"fault": False})
-
-    def _device_power_state_changed(
-        self: ControllerComponentManager,
-        state_change: dict[str, Any],
-        fqdn: Optional[str] = None,
-    ) -> None:
-        with self.__power_state_lock:
-            if fqdn:
-                self._device_power_states[fqdn] = state_change["power_state"]
-        self._evaluate_power_state()
 
     def _evaluate_power_state(self: ControllerComponentManager) -> None:
         # Many callback threads could be hitting this method at the same time, so it's

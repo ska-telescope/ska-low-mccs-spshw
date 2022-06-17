@@ -343,6 +343,7 @@ class MccsDeviceProxy:
         :param attribute_data: the attribute data to be unpacked and
             used to call the callback
         """
+        print(f"!!XXXX Callback {callback} | {attribute_data.name}, {attribute_data.value}")
         callback(attribute_data.name, attribute_data.value, attribute_data.quality)
 
     def _process_event(

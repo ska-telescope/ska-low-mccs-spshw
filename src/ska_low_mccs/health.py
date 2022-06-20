@@ -68,6 +68,7 @@ class HealthModel:
         required.
         """
         health_state = self.evaluate_health()
+        print(f"XXXX update_health {self._health_state} -> {health_state}")
         if self._health_state != health_state:
             self._health_state = health_state
             health = {"health_state": health_state}
@@ -83,8 +84,10 @@ class HealthModel:
 
         :return: the new health state.
         """
+        print(f"XXXX evaluate_health communicating?... {self._communicating}")
         if not self._communicating:
             return HealthState.UNKNOWN
+        print(f"XXXX evaluate_health fauly?... {self._faulty}")
         if self._faulty:
             return HealthState.FAILED
         return HealthState.OK

@@ -214,6 +214,8 @@ class TestMccsController:
         # its subsidiary devices, but hasn't heard from them (because in
         # unit testing these devices are mocked out), so its healthState
         # is UNKNOWN
+        device_under_test.adminMode = AdminMode.ONLINE
+        assert device_under_test.adminMode == AdminMode.ONLINE
         device_under_test.add_change_event_callback(
             "healthState",
             device_health_state_changed_callback,

@@ -214,7 +214,9 @@ class MccsController(SKABaseDevice):
             with self._power_state_lock:
                 power_state = state_change.get("power_state")
                 if fqdn:
-                    self.component_manager._device_power_states[fqdn] = power_state
+                    device_family = fqdn.split("/")[1]
+                    if device_family in ["station", "subrack"]:
+                        self.component_manager._device_power_states[fqdn] = power_state
                 if self._communication_state == CommunicationStatus.ESTABLISHED:
                     self.op_state_model.perform_action(action_map[power_state])
                 self.component_manager._evaluate_power_state()

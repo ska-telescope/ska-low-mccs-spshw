@@ -337,12 +337,10 @@ class ControllerComponentManager(MccsComponentManager):
 
         for fqdn in subrack_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
-            # self._subrack_power_states[fqdn] = PowerState.UNKNOWN
             self._device_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in station_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
-            # self._station_power_states[fqdn] = PowerState.UNKNOWN
             self._device_power_states[fqdn] = PowerState.UNKNOWN
 
         for fqdn in subarray_beam_fqdns:

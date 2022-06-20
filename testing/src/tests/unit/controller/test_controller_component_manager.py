@@ -283,12 +283,12 @@ class TestControllerComponentManager:
         # Fake events to tell this controller component manager that its devices are all
         # turned on, so that it decided that it is turned on.
         for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager._device_power_state_changed(
+            controller_component_manager._device_state_changed(
                 {"power_state": PowerState.ON},
                 fqdn,
             )
         for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager._device_power_state_changed(
+            controller_component_manager._device_state_changed(
                 {"power_state": PowerState.ON},
                 fqdn,
             )

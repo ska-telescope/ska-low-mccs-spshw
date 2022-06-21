@@ -325,7 +325,7 @@ class ControllerComponentManager(MccsComponentManager):
         self._station_beam_health_changed_callback = component_state_changed_callback
 
         self.__communication_state_lock = threading.Lock()
-        self.__power_state_lock = threading.Lock()
+        # self.__power_state_lock = threading.Lock()
         self._device_communication_states: dict[str, CommunicationStatus] = {}
         self._device_power_states: dict[str, PowerState] = {}
 
@@ -498,21 +498,21 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self.__power_state_lock:
-            for power_state in [
-                PowerState.UNKNOWN,
-                PowerState.OFF,
-                PowerState.STANDBY,
-                PowerState.ON,
-            ]:
-                if power_state in self._device_power_states.values():
-                    break
-            self.logger.info(
-                "In ControllerComponentManager._evaluatePowerState with:\n"
-                f"\tdevices: {self._device_power_states}\n"
-                f"\tresult: {str(power_state)}"
-            )
-            self.update_component_state({"power_state": power_state})
+        # with self.__power_state_lock:
+        for power_state in [
+            PowerState.UNKNOWN,
+            PowerState.OFF,
+            PowerState.STANDBY,
+            PowerState.ON,
+        ]:
+            if power_state in self._device_power_states.values():
+                break
+        self.logger.info(
+            "In ControllerComponentManager._evaluatePowerState with:\n"
+            f"\tdevices: {self._device_power_states}\n"
+            f"\tresult: {str(power_state)}"
+        )
+        self.update_component_state({"power_state": power_state})
 
     def _subarray_health_changed(
         self: ControllerComponentManager,

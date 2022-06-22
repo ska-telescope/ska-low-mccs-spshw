@@ -183,7 +183,7 @@ class MccsController(SKABaseDevice):
         elif self._component_power_state == PowerState.UNKNOWN:
             self.op_state_model.perform_action("component_unknown")
         else:  # self._component_power_state is None
-            pass  # wait for a power mode update
+            pass  # wait for a power state update
 
         self._health_model.is_communicating(
             communication_state == CommunicationStatus.ESTABLISHED
@@ -212,7 +212,11 @@ class MccsController(SKABaseDevice):
         }
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
-            if fqdn:
+            if fqdn is None:
+                print(f"XXXX power_state change -> ({power_state})")
+                if self._communication_state == CommunicationStatus.ESTABLISHED:
+                    self.op_state_model.perform_action(action_map[power_state])
+            else:
                 device_family = fqdn.split("/")[1]
                 if device_family in ["station", "subrack"]:
                     # XXXX move lock in here to avoid recursion?
@@ -221,12 +225,14 @@ class MccsController(SKABaseDevice):
                     with self._power_state_lock:
                         self.component_manager._device_power_states[fqdn] = power_state
                         self.component_manager._evaluate_power_state()
-            if self._communication_state == CommunicationStatus.ESTABLISHED:
-                self.op_state_model.perform_action(action_map[power_state])
 
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
-            if fqdn:
+            if fqdn is None:
+                if self._health_state != health:
+                    self._health_state = cast(HealthState, health)
+                    self.push_change_event("healthState", health)
+            else:
                 device_family = fqdn.split("/")[1]
                 if device_family == "subarray":
                     self.component_manager._subarray_health_changed(fqdn, health)
@@ -241,10 +247,6 @@ class MccsController(SKABaseDevice):
                 elif device_family == "subrack":
                     self.component_manager._subrack_health_changed(fqdn, health)
                     self._health_model.subrack_health_changed(fqdn, health)
-            else:
-                if self._health_state != health:
-                    self._health_state = cast(HealthState, health)
-                    self.push_change_event("healthState", health)
 
         if "fault" in state_change.keys():
             is_fault = state_change.get("fault")

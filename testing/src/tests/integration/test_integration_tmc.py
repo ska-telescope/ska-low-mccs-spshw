@@ -45,6 +45,7 @@ def patched_station_device_class() -> type[MccsStation]:
         def FakeSubservientDevicesPowerState(
             self: PatchedStationDevice, power_state: int
         ) -> None:
+            print(f"XXXX PatchedStationDevice FakeSubservientDevicesPowerState->{power_state}")
             power_state = PowerState(power_state)
             with self.component_manager._power_state_lock:
                 self.component_manager._apiu_power_state = power_state

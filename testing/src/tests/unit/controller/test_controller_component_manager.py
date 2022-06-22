@@ -280,18 +280,14 @@ class TestControllerComponentManager:
                 [3, 4],  # unknown subarray id
             )
 
-        # Fake events to tell this controller component manager that its devices are all
-        # turned on, so that it decided that it is turned on.
+        # Callbacks are handled in the device, so need to tell the
+        # component manager explicitly that each device is ON
         for fqdn in controller_component_manager._stations.keys():
-            controller_component_manager._device_state_changed(
-                {"power_state": PowerState.ON},
-                fqdn,
-            )
+            controller_component_manager._device_power_states[fqdn] = PowerState.ON
         for fqdn in controller_component_manager._subracks.keys():
-            controller_component_manager._device_state_changed(
-                {"power_state": PowerState.ON},
-                fqdn,
-            )
+            controller_component_manager._device_power_states[fqdn] = PowerState.ON
+        controller_component_manager._evaluate_power_state()
+
         assert controller_component_manager._power_state == PowerState.ON
 
         # TODO: These tests have been suspended until a refactor of the allocate/_allocate

@@ -163,7 +163,6 @@ class StationComponentManager(MccsComponentManager):
             functools.partial(self._device_communication_state_changed, apiu_fqdn),
             functools.partial(component_state_changed_callback, fqdn=apiu_fqdn),
         )
-        # self._antenna_proxies = [
         self._antenna_proxies = {
             antenna_fqdn: DeviceComponentManager(
                 antenna_fqdn,
@@ -176,8 +175,6 @@ class StationComponentManager(MccsComponentManager):
             )
             for antenna_fqdn in antenna_fqdns
         }
-        # ]
-        # self._tile_proxies = [
         self._tile_proxies = {
             tile_fqdn: _TileProxy(
                 tile_fqdn,
@@ -190,7 +187,6 @@ class StationComponentManager(MccsComponentManager):
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         }
-        # ]
 
         super().__init__(
             logger,

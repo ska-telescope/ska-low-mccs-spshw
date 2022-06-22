@@ -322,15 +322,10 @@ class ControllerComponentManager(MccsComponentManager):
             communication_state_changed_callback
         )
         self._component_state_changed_callback = component_state_changed_callback
-        self._station_beam_health_changed_callback = component_state_changed_callback
 
         self.__communication_state_lock = threading.Lock()
-        # self.__power_state_lock = threading.Lock()
         self._device_communication_states: dict[str, CommunicationStatus] = {}
         self._device_power_states: dict[str, PowerState] = {}
-
-        self._station_power_states: dict[str, PowerState] = {}
-        self._subrack_power_states: dict[str, PowerState] = {}
 
         for fqdn in subarray_fqdns:
             self._device_communication_states[fqdn] = CommunicationStatus.DISABLED
@@ -478,6 +473,7 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
+        print(f"_evaluate_communication_state com_states={self._device_communication_states}")
         with self.__communication_state_lock:
             if (
                 CommunicationStatus.DISABLED
@@ -494,11 +490,6 @@ class ControllerComponentManager(MccsComponentManager):
                 self.update_component_state({"fault": False})
 
     def _evaluate_power_state(self: ControllerComponentManager) -> None:
-        # Many callback threads could be hitting this method at the same time, so it's
-        # possible (likely) that the GIL will suspend a thread between checking if it
-        # need to update, and actually updating. This leads to callbacks appearing out
-        # of order, which breaks tests. Therefore we need to serialise access.
-        # with self.__power_state_lock:
         for power_state in [
             PowerState.UNKNOWN,
             PowerState.OFF,
@@ -512,6 +503,7 @@ class ControllerComponentManager(MccsComponentManager):
             f"\tdevices: {self._device_power_states}\n"
             f"\tresult: {str(power_state)}"
         )
+        print(f"XXX evaluating controller power state -> {power_state}")
         self.update_component_state({"power_state": power_state})
 
     def _subarray_health_changed(

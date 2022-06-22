@@ -330,6 +330,26 @@ class MccsStation(SKAObsDevice):
                 self.logger.error(f"Attempt to set status resulted in exception {e}")
                 raise
             self.logger.info(f"Device state changed from {self.get_state()} to {state}")
+            try:
+                self.push_change_event("state")
+            except Exception as e:
+                self.logger.error(f"Attempt to push state change event resulted in exception {e}")
+                raise
+            try:
+                self.push_archive_event("state")
+            except Exception as e:
+                self.logger.error(f"Attempt to push state archive event resulted in exception {e}")
+                raise
+            try:
+                self.push_change_event("status")
+            except Exception as e:
+                self.logger.error(f"Attempt to push status change event resulted in exception {e}")
+                raise
+            try:
+                self.push_archive_event("status")
+            except Exception as e:
+                self.logger.error(f"Attempt to push status archive event resulted in exception {e}")
+                raise
 
     # ----------
     # Attributes

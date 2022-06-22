@@ -272,7 +272,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_state_lock:
             self._antenna_power_states[fqdn] = power_state
-        self._evaluate_power_state()
+            self._evaluate_power_state()
 
     @threadsafe
     def _tile_power_state_changed(
@@ -282,7 +282,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_state_lock:
             self._tile_power_states[fqdn] = power_state
-        self._evaluate_power_state()
+            self._evaluate_power_state()
 
     @threadsafe
     def _apiu_power_state_changed(
@@ -291,7 +291,7 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         with self._power_state_lock:
             self._apiu_power_state = power_state
-        self._evaluate_power_state()
+            self._evaluate_power_state()
         if power_state is PowerState.ON and self._on_called:
             self._on_called = False
             _ = self._turn_on_tiles_and_antennas()

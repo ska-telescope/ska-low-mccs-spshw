@@ -287,6 +287,14 @@ class TestPowerManagement:
             controller_device_state_changed_callback,
         )
         assert "state" in controller._change_event_subscription_ids
+
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.INIT
+        )
+
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.DISABLE
         )
@@ -314,6 +322,7 @@ class TestPowerManagement:
 
         for device in devices:
             device.adminMode = AdminMode.ONLINE
+        time.sleep(0.1)
 
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
@@ -334,8 +343,9 @@ class TestPowerManagement:
             "longRunningCommandResult".casefold()
             in controller._change_event_subscription_ids
         )
+
         time.sleep(0.1)  # allow event system time to run
-        initial_lrc_result = ("", "", "")
+        initial_lrc_result = ("", "")
         assert controller.longRunningCommandResult == initial_lrc_result
         lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 

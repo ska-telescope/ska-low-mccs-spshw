@@ -130,6 +130,7 @@ class TestControllerPowerEvents:
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
         )
+        time.sleep(0.1)
         assert controller_component_manager.power_state == PowerState.UNKNOWN
 
         for station_proxy in controller_component_manager._stations.values():

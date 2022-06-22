@@ -196,6 +196,9 @@ class TestMccsController:
     def test_healthState(
         self: TestMccsController,
         device_under_test: MccsDeviceProxy,
+        subarray_beam_fqdns: list[str],
+        station_beam_fqdns: list[str],
+        station_fqdns: list[str],
         mock_component_manager: unittest.mock.Mock,
         device_health_state_changed_callback: MockChangeEventCallback,
     ) -> None:
@@ -237,7 +240,15 @@ class TestMccsController:
         mock_component_manager._component_state_changed_callback(
             {"health_state": HealthState.OK}, "low-mccs/subrack/01"
         )
-        device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
+
+        for beam_fqdn in subarray_beam_fqdns + station_beam_fqdns + station_fqdns:
+            mock_component_manager._component_state_changed_callback(
+                {"health_state": HealthState.OK}, beam_fqdn
+            )
+        
+        # time.sleep(0.2)
+        # device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
+        device_health_state_changed_callback.assert_last_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK
 
     def test_controlMode(

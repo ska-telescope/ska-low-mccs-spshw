@@ -533,6 +533,20 @@ class ControllerComponentManager(MccsComponentManager):
         # subscribed to.
         self._resource_manager.set_ready(fqdn, health is not None)
 
+    def _subrack_health_changed(
+        self: ControllerComponentManager,
+        fqdn: str,
+        health: HealthState | None,
+    ) -> None:
+        """
+        Handle a change in the health of a subrack.
+
+        :param fqdn: the FQDN of the subrack whose health has changed.
+        :param health: the new health state of the subrack, or None if
+            the subrack's health should not be taken into account.
+        """
+        self._resource_manager.set_health("subracks", fqdn, health in [HealthState.OK, HealthState.DEGRADED])
+
     def _subarray_beam_health_changed(
         self: ControllerComponentManager,
         fqdn: str,
@@ -552,8 +566,6 @@ class ControllerComponentManager(MccsComponentManager):
             fqdn,
             health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
-        if self._subarray_beam_health_changed_callback is not None:
-            self._subarray_beam_health_changed_callback(fqdn, health)
 
     def _station_beam_health_changed(
         self: ControllerComponentManager,
@@ -574,8 +586,6 @@ class ControllerComponentManager(MccsComponentManager):
             fqdn,
             health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
-        if self._station_beam_health_changed_callback is not None:
-            self._station_beam_health_changed_callback(fqdn, health)
 
     @check_communicating
     def off(

@@ -232,13 +232,14 @@ class MccsController(SKABaseDevice):
                     self.component_manager._subarray_health_changed(fqdn, health)
                 elif device_family == "station":
                     self._health_model.station_health_changed(fqdn, health)
-                elif device_family == "subarray_beam":
+                elif device_family == "subarraybeam":
                     self.component_manager._subarray_beam_health_changed(fqdn, health)
                     self._health_model.subarray_beam_health_changed(fqdn, health)
                 elif device_family == "beam":
                     self.component_manager._station_beam_health_changed(fqdn, health)
                     self._health_model.station_beam_health_changed(fqdn, health)
                 elif device_family == "subrack":
+                    self.component_manager._subrack_health_changed(fqdn, health)
                     self._health_model.subrack_health_changed(fqdn, health)
             else:
                 if self._health_state != health:

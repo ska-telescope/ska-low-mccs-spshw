@@ -86,6 +86,7 @@ clusters of Docker containers.
    with a development environment, then you will need to install Docker,
    install Git, and clone our repo; follow the instructions at
    :doc:`setup_development_environment`.
+
 #. Install kubectl. There are various ways to do this. On Ubuntu, one
    way is:
 
@@ -129,7 +130,7 @@ Start the cluster manager
 
    .. code-block:: bash
 
-      make make DRIVER=docker all // As we are using docker driver
+      make DRIVER=docker all // As we are using docker driver
 
    If deploying to a memory-constrained machine, the memory provided to
    minikube can be reduced from the 8Gb default:
@@ -193,7 +194,7 @@ The basic steps to deploying MCCS are:
 
    .. code-block:: bash
 
-      make VALUES_FILE=values-demo.yaml install-chart
+      make VALUES_FILE=values-demo.yaml k8s-install-chart
 
    Similarly, if you want to deploy on the PSI cluster this can be
    controlled using the `VALUES_FILE=values-psi.yaml` environment
@@ -202,7 +203,7 @@ The basic steps to deploying MCCS are:
 
    .. code-block:: bash
 
-      make RELEASE_NAME=mccs-psi VALUES_FILE=values-demo.yaml install-chart
+      make RELEASE_NAME=mccs-psi VALUES_FILE=values-demo.yaml k8s-install-chart
 
 #. Monitor the cluster to make sure it comes up okay. 
 
@@ -255,7 +256,7 @@ There is no harm in leaving minikube running all the time. But if you
 
    cd ~/ska-cicd-deploy-minikube
    make minikube-clean
-   make minikube-delete
+   minikube-delete
 
 
 Set up Grafana

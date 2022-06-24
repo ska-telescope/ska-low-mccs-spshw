@@ -5,24 +5,24 @@ state "Cluster running MCCS" as ClusterRunningMCCS
 ClusterNotReady --> ClusterReady 
 note on link
   cd ~/ska-cicd-deploy-minikube
-  make all
+  make DRIVER=docker all
 end note
 
 ClusterReady --> ClusterNotReady
 note on link
   cd ~/ska-cicd-deploy-minikube
-  make clean
+  make minikube-clean
 end note
 
 ClusterReady --> ClusterRunningMCCS
 note on link
   cd ~/ska-low-mccs
-  make devimage
-  make install-chart
+  make oci-build
+  make k8s-install-chart
 end note
 
 ClusterRunningMCCS --> ClusterReady
 note on link
   cd ~/ska-low-mccs
-  make uninstall-chart
+  make k8s-uninstall-chart
 end note

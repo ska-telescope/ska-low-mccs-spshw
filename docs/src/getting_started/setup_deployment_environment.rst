@@ -86,6 +86,7 @@ clusters of Docker containers.
    with a development environment, then you will need to install Docker,
    install Git, and clone our repo; follow the instructions at
    :doc:`setup_development_environment`.
+
 #. Install kubectl. There are various ways to do this. On Ubuntu, one
    way is:
 
@@ -129,7 +130,7 @@ Start the cluster manager
 
    .. code-block:: bash
 
-      make all
+      make DRIVER=docker all // As we are using docker driver
 
    If deploying to a memory-constrained machine, the memory provided to
    minikube can be reduced from the 8Gb default:
@@ -172,9 +173,9 @@ The basic steps to deploying MCCS are:
    .. code-block:: bash
 
       cd ~/ska-low.mccs
-      make devimage
+      make oci-build
 
-   The ``make devimage`` command must be rerun whenever the code is
+   The ``make oci-build`` command must be rerun whenever the code is
    edited. The first time this command is run it can take a very long
    time because it has to download gigabytes of data. It may time out:
    just rerun it.
@@ -183,7 +184,7 @@ The basic steps to deploying MCCS are:
 
    .. code-block:: bash
 
-      make install-chart
+      make k8s-install-chart
 
    This too may take a very long time the first time it is run.
 
@@ -193,7 +194,7 @@ The basic steps to deploying MCCS are:
 
    .. code-block:: bash
 
-      make VALUES_FILE=values-demo.yaml install-chart
+      make VALUES_FILE=values-demo.yaml k8s-install-chart
 
    Similarly, if you want to deploy on the PSI cluster this can be
    controlled using the `VALUES_FILE=values-psi.yaml` environment
@@ -202,16 +203,15 @@ The basic steps to deploying MCCS are:
 
    .. code-block:: bash
 
-      make RELEASE_NAME=mccs-psi VALUES_FILE=values-demo.yaml install-chart
+      make RELEASE_NAME=mccs-psi VALUES_FILE=values-demo.yaml k8s-install-chart
 
-#. Monitor the cluster to make sure it comes up okay. There are two
-   tools available for this:
+#. Monitor the cluster to make sure it comes up okay. 
 
    * To monitor the cluster yourself:
    
      .. code-block:: bash
    
-        make watch
+        k9s
 
      After the image has been deployed to the cluster, you should see
      the device containers be created, and then the devices initialise.
@@ -219,43 +219,16 @@ The basic steps to deploying MCCS are:
      automatically restarted. After several minutes, the cluster should
      stabilise and you will see that all devices are `Running` (except
      for the configuration pod, which will be `Completed`).
-
-   * To block until the cluster is ready:
-
-     .. code-block:: bash
    
-        make wait
-   
-     This command blocks for up to 180 seconds, waiting for the cluster
-     to be ready. If running on a CPU-constrained machine, 180 seconds
-     may not be enough; in that case the wait time can be changed with
-     the `MAX_WAIT` variable:
+      .. code-block:: shell-session
 
-     .. code-block:: bash
-   
-        make MAX_WAIT=300s wait
-
-     Because this option blocks until the cluster is ready, it can be
-     useful for queueing up commands. For example, to deploy MCCS, wait
-     for the cluster to be ready, and then run the tests:
-   
+        $ make k8s-install-chart; k9s
+      
      .. code-block:: shell-session
 
-        $ make install-chart; make wait; make functional-test
-
-     Note that on slower machines, `make wait` may time out. This need
-     not mean that there is a problem with the cluster; it is just
-     taking a long time. If `make wait` is timing out for you, you won't
-     be able to use it. You will need to monitor the cluster for
-     readiness yourself:
-   
-     .. code-block:: shell-session
-
-        $ make install-chart
-        $ make watch  # watch the cluster yourself and exit when it is ready
-        $ make functional-test
-
-
+        $ make k8s-install-chart
+        $ k9s # watch the cluster yourself using the k9s GUI application and exit when it is ready
+        
 Using the MCCS Deployment
 -------------------------
 Now that the cluster is running, what can you do with it? See the
@@ -268,7 +241,7 @@ Once you have finished with the deployment, you can tear it down:
 
 .. code-block:: bash
 
-   make uninstall-chart
+   make k8s-uninstall-chart
 
 Note that this does not teardown the minikube deployment, it simply
 unloads the MCCS charts.
@@ -282,7 +255,8 @@ There is no harm in leaving minikube running all the time. But if you
 .. code-block:: bash
 
    cd ~/ska-cicd-deploy-minikube
-   make clean
+   make minikube-clean
+   minikube-delete
 
 
 Set up Grafana

@@ -534,7 +534,7 @@ def patched_controller_device_class(
             :return: a mock component manager
             """
             self._communication_state: Optional[CommunicationStatus] = None
-            self._component_power_state: Optional[PowerState] = None
+            # self._component_power_state: Optional[PowerState] = None
 
             mock_component_manager._communication_state_changed_callback = (
                 self._communication_state_changed_callback

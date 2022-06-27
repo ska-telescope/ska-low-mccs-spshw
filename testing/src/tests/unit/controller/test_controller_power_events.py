@@ -124,8 +124,12 @@ class TestControllerPowerEvents:
         :param controller_component_manager: the controller component
             manager under test.
         """
+        time.sleep(0.2)
         controller_component_manager.start_communicating()
-        time.sleep(0.1)
+        # component_state_changed_callback.assert_next_call(
+        #     {"power_state": PowerState.ON}
+        # )
+        time.sleep(0.2)
         assert (
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED

@@ -67,13 +67,10 @@ class HealthModel:
         the ``health_state`` attribute, calling the callback if
         required.
         """
-        print(f"XXXX evaluate_health()")
         health_state = self.evaluate_health()
-        print(f"XXXX update_health {self._health_state} -> {health_state}")
         if self._health_state != health_state:
             self._health_state = health_state
             health = {"health_state": health_state}
-            print(f"XXXX calling state_changed_callback with {health}")
             self._component_state_changed_callback(health)
 
     def evaluate_health(self: HealthModel) -> HealthState:
@@ -86,14 +83,10 @@ class HealthModel:
 
         :return: the new health state.
         """
-        print(f"XXXX evaluate_health communicating?... {self._communicating}")
         if not self._communicating:
-            print(f"XXXX why am I here?")
             return HealthState.UNKNOWN
-        print(f"XXXX evaluate_health fauly?... {self._faulty}")
         if self._faulty:
             return HealthState.FAILED
-        print(f"returning {HealthState.OK}")
         return HealthState.OK
 
     def component_fault(self: HealthModel, faulty: bool) -> None:

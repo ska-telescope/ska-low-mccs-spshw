@@ -222,7 +222,7 @@ The basic steps to deploying MCCS are:
    
       .. code-block:: shell-session
 
-        $ make k8s-install-chart; k9s
+         $ make k8s-install-chart; k9s
       
      .. code-block:: shell-session
 

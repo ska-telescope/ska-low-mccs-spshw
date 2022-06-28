@@ -151,7 +151,8 @@ Start the cluster manager
 
    .. code-block:: bash
 
-      make minikube-delete
+      make minikube-clean
+      minikube-delete
       make MEM=16384mb CPUS=8 all
 
 #. **IMPORTANT** Because we are using docker as our driver, the

@@ -151,7 +151,8 @@ Start the cluster manager
 
    .. code-block:: bash
 
-      make delete
+      make minikube-clean
+      minikube-delete
       make MEM=16384mb CPUS=8 all
 
 #. **IMPORTANT** Because we are using docker as our driver, the
@@ -172,7 +173,7 @@ The basic steps to deploying MCCS are:
 
    .. code-block:: bash
 
-      cd ~/ska-low.mccs
+      cd ~/ska-low-mccs
       make oci-build
 
    The ``make oci-build`` command must be rerun whenever the code is
@@ -222,7 +223,7 @@ The basic steps to deploying MCCS are:
    
       .. code-block:: shell-session
 
-        $ make k8s-install-chart; k9s
+         $ make k8s-install-chart; k9s
       
      .. code-block:: shell-session
 

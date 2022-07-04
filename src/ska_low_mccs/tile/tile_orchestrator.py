@@ -301,7 +301,7 @@ class TileOrchestrator:
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
-            return
+            raise exc
 
         if task_callback:
             if result_code == ResultCode.OK:
@@ -332,7 +332,7 @@ class TileOrchestrator:
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
-            return
+            raise exc
         if task_callback:
             if result_code == ResultCode.OK:
                 task_callback(status=TaskStatus.COMPLETED, result="Tile off completed")
@@ -359,7 +359,7 @@ class TileOrchestrator:
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
-            return
+            raise exc
         if task_callback:
             if result_code == ResultCode.OK:
                 task_callback(

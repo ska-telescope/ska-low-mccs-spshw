@@ -234,6 +234,9 @@ class TestTileComponentManager:
         # mock_task_callback.assert_next_call(
         #    status=TaskStatus.FAILED,
         #    exception=ConnectionError("TPM cannot be turned off / on when not online."))
+        time.sleep(0.1)
+        _, kwargs = mock_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
 
         _, kwargs = mock_task_callback.get_next_call()
         assert kwargs["status"] == TaskStatus.FAILED
@@ -253,6 +256,7 @@ class TestTileComponentManager:
         result_code, message = tile_component_manager.on()
         assert result_code == TaskStatus.QUEUED
         assert message == "Task queued"
+        time.sleep(0.1)
 
         # no action taken initialially because the subrack is switched off
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()

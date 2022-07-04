@@ -425,8 +425,8 @@ class TestMccsIntegrationTmc:
 
         # controller_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
 
-        time.sleep(0.2)
-        controller_device_state_changed_callback.assert_last_change_event(
+        # time.sleep(0.2)
+        controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.ON
         )
 

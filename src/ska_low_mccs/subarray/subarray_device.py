@@ -47,6 +47,7 @@ class MccsSubarray(SKASubarray):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
+        super().InitCommand(self).do()
         super().init_device()
 
     def _init_state_model(self: MccsSubarray) -> None:
@@ -102,6 +103,10 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             """
+            print("XXXX Subarray InitCommand do()")
+            print(f"XXXX super() = {super()}")
+            print(f"XXXX device = {self._device}")
+            # super().do()
             self._device.set_change_event("stationFQDNs", True, True)
             self._device.set_archive_event("stationFQDNs", True, True)
 

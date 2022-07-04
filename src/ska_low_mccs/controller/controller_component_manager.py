@@ -56,6 +56,7 @@ class _StationProxy(DeviceComponentManager):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
+        print(f"XXXX in station proxy")
         self._channel_block_pool = ResourcePool(channel_blocks=range(1, 49))
         self._resource_manager = ResourceManager(
             subarray_fqdns,
@@ -352,6 +353,7 @@ class ControllerComponentManager(MccsComponentManager):
             range(1, 49),
         )
 
+        print("XXXX Subarrays...")
         self._subarrays: dict[str, _SubarrayProxy] = {
             fqdn: _SubarrayProxy(
                 fqdn,
@@ -362,6 +364,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_fqdns
         }
+        print("XXXX Subracks...")
         self._subracks: dict[str, DeviceComponentManager] = {
             fqdn: DeviceComponentManager(
                 fqdn,
@@ -372,6 +375,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subrack_fqdns
         }
+        print("XXXX Stations...")
         self._stations: dict[Hashable, _StationProxy] = {
             fqdn: _StationProxy(
                 fqdn,
@@ -383,6 +387,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in station_fqdns
         }
+        print("XXXX Subarray Beams...")
         self._subarray_beams: dict[Hashable, _SubarrayBeamProxy] = {
             fqdn: _SubarrayBeamProxy(
                 fqdn,
@@ -393,6 +398,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_beam_fqdns
         }
+        print("XXXX Station Beams...")
         self._station_beams: dict[Hashable, _StationBeamProxy] = {
             fqdn: _StationBeamProxy(
                 fqdn,

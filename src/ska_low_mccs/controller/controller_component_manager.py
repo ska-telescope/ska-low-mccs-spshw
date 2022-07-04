@@ -830,22 +830,30 @@ class ControllerComponentManager(MccsComponentManager):
                 )
             )
 
-        self._resource_manager.allocate(
-            subarray_fqdn,
-            subarray_beams=subarray_beam_fqdns,
-            station_beams=station_beam_fqdns,
-            channel_blocks=channel_blocks,
-        )
+        # This is horrific and needs a better solution to handle the scope of the trapped exception.
+        exc = None
+        allocate_result_code = None
+        try:
+            self._resource_manager.allocate(
+                subarray_fqdn,
+                subarray_beams=subarray_beam_fqdns,
+                station_beams=station_beam_fqdns,
+                channel_blocks=channel_blocks,
+            )
+        except ValueError as e:
+            exc=e
+            allocate_result_code = ResultCode.FAILED
 
-        result_code = self._subarrays[subarray_fqdn].assign_resources(
+
+        assign_result_code = self._subarrays[subarray_fqdn].assign_resources(
             station_fqdns,
             subarray_beam_fqdns,
             station_beam_fqdns,
             channel_blocks,
         )
 
-        # don't forget to release resources if allocate was unsuccessful:
-        if result_code == ResultCode.FAILED:
+        # don't forget to release resources if allocate or assign were unsuccessful:
+        if ResultCode.FAILED in [assign_result_code, allocate_result_code]:
             self._release_all(subarray_id)
         else:
             for i, subarray_beam_fqdn in enumerate(subarray_beam_fqdns):
@@ -866,10 +874,15 @@ class ControllerComponentManager(MccsComponentManager):
 
         # TODO wait for the respective LRC's to complete, whilst reporting progress
         if task_callback:
-            if ResultCode.FAILED == result_code:
-                task_callback(
-                    status=TaskStatus.FAILED, result="The allocate command has failed"
-                )
+            if ResultCode.FAILED in [assign_result_code, allocate_result_code]:
+                if exc:
+                    task_callback(
+                        status=TaskStatus.FAILED, result=f"The allocate command has failed with the exception: {exc}"
+                    )
+                else:
+                    task_callback(
+                        status=TaskStatus.FAILED, result="The allocate command has failed"
+                    )
             else:
                 task_callback(
                     status=TaskStatus.COMPLETED,

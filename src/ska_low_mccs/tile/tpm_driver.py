@@ -20,7 +20,7 @@ import copy
 import logging
 import threading
 import time
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, Callable, Optional, cast
 
 # import numpy as np
 from pyaavs.tile import Tile as Tile12
@@ -594,8 +594,8 @@ class TpmDriver(MccsComponentManager):
     def _download_firmware(
         self: TpmDriver,
         bitfile: str,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Download the provided firmware bitfile onto the TPM.
@@ -604,7 +604,8 @@ class TpmDriver(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         is_programmed = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
@@ -617,15 +618,16 @@ class TpmDriver(MccsComponentManager):
             self._firmware_name = bitfile
             self._tpm_status = TpmStatus.PROGRAMMED
 
-        if is_programmed:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result="The download firmware task has completed",
-            )
-        else:
-            task_callback(
-                status=TaskStatus.FAILED, result="The download firmware task has failed"
-            )
+        if task_callback:
+            if is_programmed:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="The download firmware task has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The download firmware task has failed"
+                )
 
     def erase_fpga(self: TpmDriver) -> None:
         """Erase FPGA programming to reduce FPGA power consumption."""
@@ -643,16 +645,16 @@ class TpmDriver(MccsComponentManager):
 
     def _initialise(
         self: TpmDriver,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
-    ):
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Download firmware, if not already downloaded, and initializes tile.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        if task_callback is not None:
+        if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         #
         # If not programmed, program it.
@@ -691,7 +693,7 @@ class TpmDriver(MccsComponentManager):
             self.logger.debug("Lock released")
             self._tpm_status = TpmStatus.INITIALISED
             self.logger.debug("TpmDriver: initialisation completed")
-            if task_callback is not None:
+            if task_callback:
                 task_callback(
                     status=TaskStatus.COMPLETED,
                     result="The initialisation task has completed",
@@ -699,13 +701,12 @@ class TpmDriver(MccsComponentManager):
         else:
             self._tpm_status = TpmStatus.UNPROGRAMMED
             self.logger.error("TpmDriver: Cannot initialise board")
-            if task_callback is not None:
+            if task_callback:
                 task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The initialisation task has failed",
+                    status=TaskStatus.COMPLETED, result="The initialisation task has failed"
                 )
 
-    def initialise(self: TpmDriver, task_callback: Optional[Callable] = None) -> None:
+    def initialise(self: TpmDriver, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
         """
         Download firmware, if not already downloaded, and initializes tile.
 

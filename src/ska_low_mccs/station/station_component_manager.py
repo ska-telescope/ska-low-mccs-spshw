@@ -345,7 +345,7 @@ class StationComponentManager(MccsComponentManager):
                 )
 
     @property
-    def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
+    def power_state_lock(self: MccsComponentManager) -> threading.RLock:
         """
         Return the power state lock of this component manager.
 
@@ -356,7 +356,7 @@ class StationComponentManager(MccsComponentManager):
     def off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the _off method.
 
@@ -364,6 +364,7 @@ class StationComponentManager(MccsComponentManager):
         `self._off` for execution.
 
         :param task_callback: Update task state, defaults to None
+
         :return: a result code and response message
         """
         return self.submit_task(self._off, task_callback=task_callback)
@@ -372,8 +373,8 @@ class StationComponentManager(MccsComponentManager):
     def _off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
-    ) -> ResultCode:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Turn off this station.
 
@@ -420,7 +421,7 @@ class StationComponentManager(MccsComponentManager):
     def _on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn on this station.
@@ -511,7 +512,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         delays: list[float],
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Apply the pointing configuration by setting the delays on each tile.
@@ -584,7 +585,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         station_id: int,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Configure the station.

@@ -189,7 +189,7 @@ class SubrackSimulator(ObjectComponent):
 
     def set_progress_changed_callback(
         self: SubrackSimulator,
-        component_state_changed_callback: Optional[Callable[[int], None]],
+        component_state_changed_callback: Optional[Callable[[], None]],
     ) -> None:
         """
         Set the callback to be called when the progress value changes.

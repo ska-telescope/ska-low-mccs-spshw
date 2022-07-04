@@ -8,7 +8,7 @@
 """This module implements the MCCS transient buffer device."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
@@ -83,7 +83,6 @@ class MccsTransientBuffer(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # super().do()
             self._build_state = release.get_release_info()
             self._version_id = release.version
 
@@ -132,7 +131,7 @@ class MccsTransientBuffer(SKABaseDevice):
         :param state_change: dictionary of state change parameters.
         """
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)

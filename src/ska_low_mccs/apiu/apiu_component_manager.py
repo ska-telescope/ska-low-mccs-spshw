@@ -313,12 +313,13 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the attribute value
         """
+        
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
 
     def on(
         self: ApiuComponentManager,
-        task_callback: Callable = None,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.

@@ -26,7 +26,7 @@ from ska_low_mccs_common.component import (
 __all__ = ["AntennaComponentManager"]
 
 
-class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
+class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
     """A proxy to an antenna's APIU."""
 
     def __init__(
@@ -55,6 +55,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
 
         :raises AssertionError: if parameters are out of bounds
         """
+        print("_ApiuProxy __init__ start #########################################")
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
@@ -69,13 +70,14 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
         )
+        print("_ApiuProxy __init__ stop #########################################")
 
     def stop_communicating(self: _ApiuProxy) -> None:
         """Cease communicating with the APIU device."""
         super().stop_communicating()
         self._antenna_change_registered = False
 
-    def reset(self: _ApiuProxy) -> None:
+    def reset(self: _ApiuProxy, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
         """
         Reset the antenna; this is not implemented.
 
@@ -217,7 +219,7 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
         #     # else PowerState.OFF
         #     power_state
         # )
-        self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
+        self._component_state_changed_callback({"power_state": power_state})
         self.update_supplied_power_state(power_state)
 
 
@@ -245,7 +247,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[[dict[str, Any]]], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -275,7 +277,7 @@ class _TileProxy(DeviceComponentManager):
             component_state_changed_callback,
         )
 
-    def off(self: _TileProxy) -> None:
+    def off(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Turn the antenna off; this is not implemented.
 
@@ -291,7 +293,7 @@ class _TileProxy(DeviceComponentManager):
             "Antenna power state is not controlled via Tile device."
         )
 
-    def standby(self: _TileProxy) -> None:
+    def standby(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Put the antenna into standby state; this is not implemented.
 
@@ -308,7 +310,7 @@ class _TileProxy(DeviceComponentManager):
             "Antenna power state is not controlled via Tile device."
         )
 
-    def on(self: _TileProxy) -> None:
+    def on(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Turn the antenna on; this is not implemented.
 
@@ -324,12 +326,15 @@ class _TileProxy(DeviceComponentManager):
             "Antenna power state is not controlled via Tile device."
         )
 
-    def reset(self: _TileProxy) -> None:
+    def reset(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Reset the antenna; this is not implemented.
 
         This raises NotImplementedError because the antenna is passive
         hardware and cannot meaningfully be reset.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
 
         :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
@@ -527,7 +532,7 @@ class AntennaComponentManager(MccsComponentManager):
         )
 
     @property
-    def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
+    def power_state_lock(self: MccsComponentManager) -> threading.RLock:
         """
         Return the power state lock of this component manager.
 
@@ -535,8 +540,10 @@ class AntennaComponentManager(MccsComponentManager):
         """
         return self._power_state_lock
 
+    # TODO should this be a submitted task in line with the base classes??
+    # TODO should the decorator be uncommented
     # @check_communicating
-    def off(self: AntennaComponentManager) -> ResultCode | None:
+    def off(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Turn the antenna off.
 
@@ -546,9 +553,11 @@ class AntennaComponentManager(MccsComponentManager):
         """
         with self._power_state_lock:
             self._target_power_state = PowerState.OFF
-        return self._review_power()
+        # TODO sort out the return code
+        #return self._review_power()
+        return TaskStatus.COMPLETED, "Ignore return code for now"
 
-    def standby(self: AntennaComponentManager) -> None:
+    def standby(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Put the antenna into standby state; this is not implemented.
 
@@ -560,8 +569,9 @@ class AntennaComponentManager(MccsComponentManager):
         """
         raise NotImplementedError("Antenna has no standby state.")
 
+    # TODO should the decorator be uncommented
     # @check_communicating
-    def on(self: AntennaComponentManager, task_callback: Callable = None):
+    def on(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.
 
@@ -576,8 +586,8 @@ class AntennaComponentManager(MccsComponentManager):
 
     def _on(
         self: AntennaComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn the antenna on.
@@ -586,18 +596,22 @@ class AntennaComponentManager(MccsComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             with self._power_state_lock:
                 self._target_power_state = PowerState.ON
+            # TODO should deal with the return code here
             self._review_power()
         except Exception as ex:
-            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
 
         # Indicate that the task has completed
-        task_callback(
-            status=TaskStatus.COMPLETED, result="This slow task has completed"
-        )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="This slow task has completed"
+            )
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
         with self._power_state_lock:
@@ -624,12 +638,14 @@ class AntennaComponentManager(MccsComponentManager):
                 return result_code
             return ResultCode.QUEUED
 
-    def reset(self: AntennaComponentManager) -> None:
+    def reset(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
         """
         Reset the antenna; this is not implemented.
 
         This raises NotImplementedError because the antenna is passive
         hardware and cannot meaningfully be reset.
+
+        :param task_callback: Update task state, defaults to None
 
         :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the

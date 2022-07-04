@@ -44,7 +44,7 @@ class _StationProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -531,7 +531,7 @@ class ControllerComponentManager(MccsComponentManager):
         # subscribed to.
         self._resource_manager.set_ready(fqdn, health is not None)
 
-    def _subrack_health_changed(
+    def _station_health_changed_callback(
         self: ControllerComponentManager,
         fqdn: str,
         health: HealthState | None,
@@ -547,7 +547,7 @@ class ControllerComponentManager(MccsComponentManager):
             "subracks", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
         )
 
-    def _subarray_beam_health_changed(
+    def _subarray_beam_health_changed_callback(
         self: ControllerComponentManager,
         fqdn: str,
         health: HealthState | None,
@@ -567,7 +567,7 @@ class ControllerComponentManager(MccsComponentManager):
             health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
 
-    def _station_beam_health_changed(
+    def _station_beam_health_changed_callback(
         self: ControllerComponentManager,
         fqdn: str,
         health: HealthState | None,
@@ -604,8 +604,8 @@ class ControllerComponentManager(MccsComponentManager):
 
     def _off(
         self: ControllerComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn off the MCCS subsystem.
@@ -651,8 +651,8 @@ class ControllerComponentManager(MccsComponentManager):
 
     def _standby(
         self: ControllerComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Put the MCCS subsystem into low power standby mode.
@@ -660,7 +660,8 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         results = [
             station_proxy.standby() for station_proxy in self._stations.values()
@@ -671,14 +672,15 @@ class ControllerComponentManager(MccsComponentManager):
             if result[0] == TaskStatus.FAILED:
                 completed = False
                 break
-        if completed:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The standby command has completed"
-            )
-        else:
-            task_callback(
-                status=TaskStatus.FAILED, result="The standby command has failed"
-            )
+        if task_callback:
+            if completed:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="The standby command has completed"
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The standby command has failed"
+                )
 
     @check_communicating
     def on(
@@ -698,8 +700,8 @@ class ControllerComponentManager(MccsComponentManager):
 
     def _on(
         self: ControllerComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn on the MCCS subsystem.
@@ -797,8 +799,8 @@ class ControllerComponentManager(MccsComponentManager):
         station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Allocate resources to a subarray.
@@ -955,18 +957,15 @@ class ControllerComponentManager(MccsComponentManager):
             )
         else:
             return (
-                ResultCode.FAILED,
-                (
-                    "Currently Release can only be used to release all "
-                    "resources from a subarray."
-                ),
+                TaskStatus.FAILED,
+                "Currently Release can only be used to release all resources from a subarray.",
             )
 
     def _release_all(
         self: ControllerComponentManager,
         subarray_id: int,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Deallocate all resources from a subarray.
@@ -998,18 +997,16 @@ class ControllerComponentManager(MccsComponentManager):
         for station_proxy in self._stations.values():
             station_proxy.release_from_subarray(subarray_fqdn)
 
-        results = self._subarrays[subarray_fqdn].release_all_resources()
+        result = self._subarrays[subarray_fqdn].release_all_resources()
         # TODO wait for the respective LRC's to complete, whilst reporting progress
-        if ResultCode.FAILED == results[0]:
-            if task_callback:
+        if task_callback:
+            if ResultCode.FAILED == result:
                 task_callback(
                     status=TaskStatus.FAILED, result="The release command has failed"
                 )
-        else:
-            if task_callback:
+            else:
                 task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The release command has completed",
+                    status=TaskStatus.COMPLETED, result="The release command has completed"
                 )
 
     @check_communicating
@@ -1042,7 +1039,7 @@ class ControllerComponentManager(MccsComponentManager):
         self: ControllerComponentManager,
         subarray_fqdn: str,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Deallocate all resources from a subarray.
@@ -1052,15 +1049,17 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         self._resource_manager.deallocate_from(subarray_fqdn)
 
         results = self._subarrays[subarray_fqdn].restart()
-        if ResultCode.FAILED in results:
-            task_callback(
-                status=TaskStatus.FAILED, result="The restart command has failed"
-            )
-        else:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The restart command has completed"
-            )
+        if task_callback:
+            if ResultCode.FAILED in results:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The restart command has failed"
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="The restart command has completed"
+                )

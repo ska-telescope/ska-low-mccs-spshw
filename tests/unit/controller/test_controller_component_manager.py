@@ -260,19 +260,19 @@ class TestControllerComponentManager:
         ]._device_state_changed(
             "state", tango.DevState.ON, tango.AttrQuality.ATTR_VALID
         )
-        controller_component_manager._station_beam_health_changed(
+        controller_component_manager._station_beam_health_changed_callback(
             "low-mccs/beam/01",
             HealthState.OK,
         )
-        controller_component_manager._station_beam_health_changed(
+        controller_component_manager._station_beam_health_changed_callback(
             "low-mccs/beam/02",
             HealthState.OK,
         )
-        controller_component_manager._station_beam_health_changed(
+        controller_component_manager._station_beam_health_changed_callback(
             "low-mccs/beam/03",
             HealthState.OK,
         )
-        controller_component_manager._station_beam_health_changed(
+        controller_component_manager._station_beam_health_changed_callback(
             "low-mccs/beam/04",
             HealthState.OK,
         )

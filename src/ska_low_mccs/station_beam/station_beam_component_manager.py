@@ -343,7 +343,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `configure` slow task.
@@ -392,7 +392,7 @@ class StationBeamComponentManager(MccsComponentManager):
         antenna_weights: list[float],
         phase_centre: list[float],
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Configure this station beam for scanning.
@@ -427,7 +427,7 @@ class StationBeamComponentManager(MccsComponentManager):
     def apply_pointing(
         self: StationBeamComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the apply_pointing slow task.
@@ -447,14 +447,13 @@ class StationBeamComponentManager(MccsComponentManager):
     def _apply_pointing(
         self: StationBeamComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
-    ) -> ResultCode:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Apply the configured pointing to this station beam's station.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-        :return: a result code
         """
         if task_callback is not None:
             task_callback(TaskStatus.IN_PROGRESS)
@@ -469,7 +468,7 @@ class StationBeamComponentManager(MccsComponentManager):
         ] + zipped_delays_and_rates
 
         assert self._station_proxy is not None
+        self._station_proxy.apply_pointing(station_pointing_args)
 
         if task_callback is not None:
             task_callback(TaskStatus.COMPLETED, result="Apply pointing has completed.")
-        return self._station_proxy.apply_pointing(station_pointing_args)

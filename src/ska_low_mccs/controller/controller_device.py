@@ -254,7 +254,7 @@ class MccsController(SKABaseDevice):
                     self._health_model.subrack_health_changed(fqdn, health)
 
         if "fault" in state_change.keys():
-            is_fault = state_change.get("fault")
+            is_fault = cast(bool, state_change.get("fault"))
             if is_fault:
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)

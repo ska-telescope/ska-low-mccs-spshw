@@ -8,7 +8,7 @@
 """This module implements the MCCS tel state device."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import ska_low_mccs_common.release as release
 import tango
@@ -126,7 +126,7 @@ class MccsTelState(SKATelState):
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:
-                self._health_state = health
+                self._health_state = cast(HealthState, health)
                 self.push_change_event("healthState", health)
 
     # ----------

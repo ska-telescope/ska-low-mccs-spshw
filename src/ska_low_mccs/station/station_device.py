@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, List, Optional, Tuple
+from typing import Any, cast, List, Optional, Tuple
 
 import ska_low_mccs_common.release as release
 import tango
@@ -256,11 +256,11 @@ class MccsStation(SKAObsDevice):
                     power_state_changed_callback(power_state)
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             health_state_changed_callback(health)
 
         if "is_configured" in state_change.keys():
-            is_configured = state_change.get("is_configured")
+            is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
 
     def _component_power_state_changed(

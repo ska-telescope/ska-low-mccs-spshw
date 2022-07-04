@@ -19,7 +19,7 @@ import queue
 import time
 import warnings
 from datetime import datetime
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 import fire
 import numpy as np
@@ -322,7 +322,7 @@ class Pointing(object):
 
     def _delays_from_altitude_azimuth(
         self: Pointing, altitude: float, azimuth: float
-    ) -> List[float]:
+    ) -> list[float]:
         """
         Calculate the delay using a target altitude Azimuth.
 
@@ -353,7 +353,7 @@ class Pointing(object):
         declination: float,
         time: float,
         location: float,
-    ) -> List[Angle]:
+    ) -> list[Angle]:
         """
         Calculate the altitude and azimuth coordinates of a sky object.
 

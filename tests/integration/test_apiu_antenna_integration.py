@@ -102,11 +102,11 @@ class TestApiuAntennaIntegration:
         # adminMode is written.
         # We haven't provided a memorized value for adminMode, so these devices
         # initialise to DISABLE state...
-        time.sleep(2)
         state = antenna_device.state()
         assert state == DevState.DISABLE
         state = apiu_device.state()
         assert state == DevState.DISABLE
+        assert False
 
         # ... except for the tile device, which is mocked to always be in ON state
         assert mock_tile_device.state() == DevState.ON

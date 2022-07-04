@@ -180,7 +180,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
             if "obs_state" in state_change.keys():
                 configured_changed = state_change.get("obs_state")
-                self._obs_state_model.obs_state = configured_changed
+                self._obs_state_model._obs_state = configured_changed
 
     # ----------
     # Attributes

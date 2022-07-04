@@ -8,7 +8,7 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, cast, List, Optional, Tuple
 
 import tango
 from ska_control_model import (
@@ -217,7 +217,7 @@ class MccsAntenna(SKABaseDevice):
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             health_state_changed_callback(health)
 
         if "power_state" in state_change.keys():

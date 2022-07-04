@@ -282,7 +282,7 @@ class TileOrchestrator:
     def desire_on(
         self: TileOrchestrator,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Advise that the operator desires the TPM to be on.
@@ -313,7 +313,7 @@ class TileOrchestrator:
     def desire_off(
         self: TileOrchestrator,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Advise that the operator desires the TPM to be off.
@@ -342,7 +342,7 @@ class TileOrchestrator:
     def desire_standby(
         self: TileOrchestrator,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Advise that the operator desires the TPM to be standby.

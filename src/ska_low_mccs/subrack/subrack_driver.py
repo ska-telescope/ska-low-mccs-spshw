@@ -70,7 +70,7 @@ class SubrackDriver(MccsComponentManager):
         port: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        tpm_present: Optional[list[bool]] = None,
+        tpm_present: Optional[List[bool]] = None,
     ) -> None:
         """
         Initialise a new instance and tries to connect to the given IP and port.
@@ -84,7 +84,7 @@ class SubrackDriver(MccsComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
             component state changes
-        :param tpm_present: List of TPMs which are expected to be
+        :param tpm_present: list of TPMs which are expected to be
             present in the subrack. Usually from Tango database.
         """
         self.logger = logger
@@ -129,8 +129,8 @@ class SubrackDriver(MccsComponentManager):
     def _connect_to_subrack(
         self: SubrackDriver,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
-    ) -> tuple[ResultCode, str]:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Establish communication with the subrack, then start monitoring.
 
@@ -140,20 +140,24 @@ class SubrackDriver(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
 
-        :return: a result code and message
+        :return: a TaskStatus and message
         """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         connected = self._client.connect()
         target_connection = f"{self._ip}:{str(self._port)}"
         if connected:
             self.update_communication_state(CommunicationStatus.ESTABLISHED)
             message = f"Connected to {target_connection}"
             self.logger.info(message)
-            return ResultCode.OK, message
+            if task_callback:
+                task_callback(status=TaskStatus.COMPLETED)
 
         self.logger.error("status:ERROR")
         message = f"Failed to connect to {target_connection}"
         self.logger.info(message)
-        return ResultCode.FAILED, message
+        if task_callback:
+            task_callback(status=TaskStatus.FAILED)
 
     def stop_communicating(self: SubrackDriver) -> None:
         """Stop communicating with the subrack."""

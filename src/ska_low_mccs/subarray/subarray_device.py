@@ -10,7 +10,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, cast, Callable, List, Optional, Tuple
 
 import ska_low_mccs_common.release as release
 import tango
@@ -136,10 +136,10 @@ class MccsSubarray(SKASubarray):
             if fqdn is None:
                 # Do regular health update. This device called the callback.
                 if self._health_state != health:
-                    self._health_state = health
+                    self._health_state = cast(HealthState, health)
                     self.push_change_event("healthState", health)
             else:
-                valid_device_types: dict(str, Callable) = {
+                valid_device_types: dict[str, Callable] = {
                     "station": self._health_model.station_health_changed,
                     "beam": self._health_model.station_beam_health_changed,
                     "subarraybeam": self._health_model.subarray_beam_health_changed,
@@ -159,7 +159,7 @@ class MccsSubarray(SKASubarray):
         # resources should be passed in the dict's value as a list of sets
         # to be extracted here.
         if "resources_changed" in state_change.keys():
-            resources = state_change.get("resources_changed")
+            resources = cast(list[set], state_change.get("resources_changed"))
             station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
             station_beam_fqdns = resources[2]
@@ -413,7 +413,7 @@ class MccsSubarray(SKASubarray):
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Scan(
         self: MccsSubarray,
-        argin: dict[str, Any],
+        argin: str,
     ) -> DevVarLongStringArrayType:
         """
         Start scanning.
@@ -423,9 +423,9 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-        scan_id = argin["scan_id"]
-        start_time = argin["start_time"]
-
+        configuration = json.loads(argin)
+        scan_id = configuration["scan_id"]
+        start_time = configuration["start_time"]
         handler = self.get_command_object("Scan")
         (return_code, unique_id) = handler(scan_id, start_time)
         return ([return_code], [unique_id])

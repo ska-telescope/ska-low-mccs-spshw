@@ -58,7 +58,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_beam_locked_changed_callback(
         self: SubarrayBeam,
-        is_beam_locked_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        is_beam_locked_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is locked changes.

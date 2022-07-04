@@ -12,7 +12,7 @@ import json
 import logging
 import threading
 import time
-from typing import Any, Callable, Optional, Tuple, cast
+from typing import Any, Callable, Optional, cast
 
 import tango
 from ska_control_model import (
@@ -297,7 +297,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        max_workers,
+        max_workers: int,
         tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
@@ -374,7 +374,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         """
         simulation_mode: SimulationMode  # typehint only
 
-        (simulation_mode, _) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
+        (simulation_mode, _) = cast(tuple[SimulationMode, TestMode], self.switcher_mode)
         return simulation_mode
 
     @simulation_mode.setter
@@ -390,7 +390,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         test_mode: TestMode  # typehints only
 
         (simulation_mode, test_mode) = cast(
-            Tuple[SimulationMode, TestMode], self.switcher_mode
+            tuple[SimulationMode, TestMode], self.switcher_mode
         )
         if simulation_mode != value:
             communicating = self.is_communicating
@@ -408,7 +408,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         :return: the test mode
         """
         test_mode: TestMode  # typehint only
-        (_, test_mode) = cast(Tuple[SimulationMode, TestMode], self.switcher_mode)
+        (_, test_mode) = cast(tuple[SimulationMode, TestMode], self.switcher_mode)
         return cast(TestMode, test_mode)
 
     @test_mode.setter
@@ -422,7 +422,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         test_mode: TestMode  # typehint only
 
         (simulation_mode, test_mode) = cast(
-            Tuple[SimulationMode, TestMode], self.switcher_mode
+            tuple[SimulationMode, TestMode], self.switcher_mode
         )
 
         if test_mode != value:
@@ -530,7 +530,7 @@ class TileComponentManager(MccsComponentManager):
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_offline()
 
-    def off(self: TileComponentManager, task_callback: Callable = None) -> ResultCode:
+    def off(self: TileComponentManager, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
@@ -543,8 +543,8 @@ class TileComponentManager(MccsComponentManager):
         )
 
     def on(
-        self: TileComponentManager, task_callback: Callable = None
-    ) -> tuple[ResultCode, str]:
+        self: TileComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
@@ -556,7 +556,7 @@ class TileComponentManager(MccsComponentManager):
             self._tile_orchestrator.desire_on, args=[], task_callback=task_callback
         )
 
-    def standby(self: TileComponentManager, task_callback: Callable = None) -> None:
+    def standby(self: TileComponentManager, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
@@ -671,6 +671,7 @@ class TileComponentManager(MccsComponentManager):
         self._subrack_proxy = None
 
     # Converted to a LRC, in subrack
+    # This code only tells you if the command was submitted NOT the result
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], _) = self._subrack_proxy.PowerOffTpm(self._subrack_tpm_id)
@@ -682,6 +683,7 @@ class TileComponentManager(MccsComponentManager):
         return result_code
 
     # Converted to a LRC, in subrack
+    # This code only tells you if the command was submitted NOT the result
     def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], _) = self._subrack_proxy.PowerOnTpm(self._subrack_tpm_id)
@@ -709,7 +711,7 @@ class TileComponentManager(MccsComponentManager):
         self._tile_orchestrator.update_tpm_communication_state(communication_state)
 
     def update_tpm_power_state(
-        self: TileComponentManager, power_state: Optional[PowerState]
+        self: TileComponentManager, power_state: PowerState
     ) -> None:
         """
         Update the power state, calling callbacks as required.
@@ -1318,6 +1320,64 @@ class TileComponentManager(MccsComponentManager):
             return
 
     @check_communicating
+<<<<<<< HEAD
+=======
+    def get_arp_table(
+        self: TileComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the get arp_table slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
+        """
+        return self.submit_task(self._get_arp_table, task_callback=task_callback)
+
+    def _get_arp_table(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Get arp table using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            # TODO This returns diddly squat let alone any data
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).get_arp_table()
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Arp table task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(status=TaskStatus.COMPLETED, result="Arp table has completed")
+            return
+
+    @check_communicating
+>>>>>>> 9ae67d5f (MCCS-1038 type hints and static type checking)
     def start_acquisition(
         self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:

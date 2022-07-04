@@ -12,7 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 import json
 import types
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import Any, Callable, Optional, Type
 
 import tango
 from fire import Fire
@@ -127,7 +127,7 @@ class MccsTileCli(metaclass=CliMeta):
         self._dp = tango.DeviceProxy(f"low-mccs/tile/{self.tile_number:04}")
 
     @command_result_as_string
-    def connect(self: MccsTileCli) -> Tuple[ResultCode, str]:
+    def connect(self: MccsTileCli) -> tuple[ResultCode, str]:
         """
         Connect to the hardware.
 
@@ -164,7 +164,7 @@ class MccsTileCli(metaclass=CliMeta):
         self: MccsTileCli,
         timestamp: Optional[str] = None,
         seconds: float = 0.2,
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Transmit a snapshot containing beamformed data.
 
@@ -190,7 +190,7 @@ class MccsTileCli(metaclass=CliMeta):
         wait_seconds: int = 0,
         timestamp: Optional[str] = None,
         seconds: float = 0.2,
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Transmit channelised data continuously.
 
@@ -227,7 +227,7 @@ class MccsTileCli(metaclass=CliMeta):
         last_channel: int = 511,
         timestamp: Optional[str] = None,
         seconds: float = 0.2,
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Transmit a snapshot 0f channelized data totalling number_of_samples spectra.
 
@@ -257,7 +257,7 @@ class MccsTileCli(metaclass=CliMeta):
         sync: bool = False,
         timestamp: Optional[str] = None,
         seconds: float = 0.2,
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Transmit a snapshot containing raw antenna data.
 
@@ -280,7 +280,7 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def ConfigureIntegratedBeamData(
         self: MccsTileCli, integration_time: float = 0.5
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Configure the transmission of integrated beam data with the integration time.
 
@@ -296,7 +296,7 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def ConfigureIntegratedChannelData(
         self: MccsTileCli, integration_time: float = 0.5
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Configure the transmission of integrated channel data with the integration time.
 
@@ -314,7 +314,7 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def StartBeamformer(
         self: MccsTileCli, start_time: int = 0, duration: int = -1
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Start the beamformer at the specified time delay.
 
@@ -331,7 +331,7 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.command_inout("StartBeamformer", jstr)
 
     @command_result_as_string
-    def StopBeamformer(self: MccsTileCli) -> Tuple[ResultCode, str]:
+    def StopBeamformer(self: MccsTileCli) -> tuple[ResultCode, str]:
         """
         Stop the beamformer.
 
@@ -344,7 +344,7 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def LoadPointingDelay(
         self: MccsTileCli, load_time: int = 0
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Load the pointing delays at the specified time delay.
 

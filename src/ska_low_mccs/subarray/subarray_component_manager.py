@@ -243,8 +243,8 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         resource_spec: dict,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
-    ) -> None:
+        task_abort_event: Optional[threading.Event] = None,
+   ) -> None:
         """
         Assign resources to this subarray.
 
@@ -730,7 +730,7 @@ class SubarrayComponentManager(
     def _deconfigure(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Deconfigure resources.
@@ -786,7 +786,7 @@ class SubarrayComponentManager(
     def _obsreset(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Reset the observation by returning to unconfigured state.
@@ -824,7 +824,7 @@ class SubarrayComponentManager(
     def _restart(  # type: ignore[override]
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Restart the subarray by returning to unresourced state.
@@ -868,7 +868,7 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         argin: list[int],
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Send the transient buffer.

@@ -111,7 +111,7 @@ class MccsAPIU(SKABaseDevice):
             self: MccsAPIU.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
+            Initialise the attributes and properties of the :py:class:`.MccsAPIU`., globvar
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -203,7 +203,7 @@ class MccsAPIU(SKABaseDevice):
             self._are_antennas_on: list[bool]  # typehint only
             are_antennas_on = state_change.get("are_antennas_on")
             if self._are_antennas_on != are_antennas_on:
-                self._are_antennas_on = cast(List[bool], are_antennas_on)
+                self._are_antennas_on = cast(list[bool], are_antennas_on)
                 self.push_change_event("areAntennasOn", self._are_antennas_on)
 
     # ----------
@@ -469,8 +469,6 @@ class MccsAPIU(SKABaseDevice):
 # ----------
 # Run server
 # ----------
-
-
 def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.

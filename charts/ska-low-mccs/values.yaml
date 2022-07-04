@@ -18,6 +18,16 @@ annotations:
   app.gitlab.com/env: CI_ENVIRONMENT_SLUG
 
 global:
+  sub-system:
+    ska-tango-base:
+      enabled: false
+    taranta:
+      enabled: false
+    archiver:
+      enabled: false
+  annotations:
+    app.gitlab.com/app: taranta
+    app.gitlab.com/env: taranta
   minikube: true
   tango_host: databaseds-tango-base-test:10000
 
@@ -39,8 +49,52 @@ dsconfig:
   image:
     registry: artefact.skao.int
     image: ska-tango-images-tango-dsconfig
-    tag: 1.5.3
+    tag: 1.5.1
     pullPolicy: IfNotPresent
+  itango:
+    image:
+      registry: artefact.skao.int
+      image: ska-tango-images-tango-itango
+      tag: 9.3.6
+      pullPolicy: IfNotPresent
+
+ska-tango-base:
+  enabled: true
+  vnc:
+    enabled: true
+  tangorest:
+    enabled: true
+
+ska-taranta:
+  enabled: true
+  ingress:
+    enabled: true
+    nginx: true
+    hostname: k8s.stfc.skao.int
+  tangogql:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 600m # 600m = 0.6 CPU
+        memory: 512Mi # 512Mi = 0.5 GB mem
+      limits:
+        cpu: 1000m # 1000m = 1 CPU
+        memory: 1024Mi # 1024Mi = 1 GB mem
+
+
+ska-taranta-dashboard:
+  ingress:
+    enabled: true
+    nginx: true
+    hostname: test-taranta.k8s.stfc.skao.int
+
+ska-taranta-auth:
+  ingress:
+    enabled: true
+    nginx: true
+    hostname: test-taranta.k8s.stfc.skao.int
+
+
 
 resources:
   limits:
@@ -57,7 +111,7 @@ low_mccs:
   image:
     registry: artefact.skao.int
     image: ska-low-mccs
-    tag: 0.9.1 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    tag: 0.9.1-dirty #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     pullPolicy: IfNotPresent
 
 
@@ -126,5 +180,3 @@ mccs_cli:
 nodeSelector: {}
 
 affinity: {}
-
-tolerations: []

@@ -21,7 +21,7 @@ class SubarrayHealthModel(HealthModel):
 
     def __init__(
         self: SubarrayHealthModel,
-        health_changed_callback: Callable[[dict[str, Any]], None],
+        health_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.

@@ -36,7 +36,7 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new APIU proxy instance.
@@ -247,7 +247,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -361,7 +361,7 @@ class AntennaComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.

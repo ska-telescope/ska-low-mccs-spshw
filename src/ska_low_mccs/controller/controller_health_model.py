@@ -25,7 +25,7 @@ class ControllerHealthModel(HealthModel):
         subrack_fqdns: Sequence[str],
         subarray_beam_fqdns: Sequence[str],
         station_beam_fqdns: Sequence[str],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.

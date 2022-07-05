@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Hashable, Optional, cast
 
 from ska_control_model import (
     CommunicationStatus,
@@ -47,7 +47,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -221,7 +221,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -254,7 +254,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         subrack_ip: str,
         subrack_port: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -289,10 +289,10 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         )
         super().__init__(
             {
-                (SimulationMode.FALSE): subrack_driver,
-                (SimulationMode.TRUE): subrack_simulator,
+                cast(Hashable, SimulationMode.FALSE): subrack_driver,
+                cast(Hashable, SimulationMode.TRUE): subrack_simulator,
             },
-            (initial_simulation_mode),
+            initial_simulation_mode,
         )
 
     @property
@@ -342,7 +342,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         subrack_ip: str,
         subrack_port: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
         _initial_power_state: PowerState = PowerState.OFF,
     ) -> None:
         """

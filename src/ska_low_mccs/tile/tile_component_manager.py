@@ -65,7 +65,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -228,7 +228,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -260,7 +260,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -303,7 +303,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         tpm_cpld_port: int,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -450,7 +450,7 @@ class TileComponentManager(MccsComponentManager):
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
         _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """

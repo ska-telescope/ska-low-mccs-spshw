@@ -69,7 +69,7 @@ class SubrackDriver(MccsComponentManager):
         ip: str,
         port: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
         tpm_present: Optional[List[bool]] = None,
     ) -> None:
         """

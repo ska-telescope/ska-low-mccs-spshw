@@ -25,7 +25,7 @@ class SubarrayBeam(ObjectComponent):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -58,7 +58,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_beam_locked_changed_callback(
         self: SubarrayBeam,
-        is_beam_locked_changed_callback: Callable[[dict[str, Any]], None],
+        is_beam_locked_changed_callback: Callable,
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is locked changes.
@@ -71,7 +71,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_configured_changed_callback(
         self: SubarrayBeam,
-        is_configured_changed_callback: Optional[Callable[[dict[str, bool]], None]],
+        is_configured_changed_callback: Callable,
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is configured changes.

@@ -16,6 +16,7 @@ import tango
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.executor import TaskStatus
+from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
 
@@ -47,7 +48,6 @@ class MccsSubarray(SKASubarray):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
-        super().InitCommand(self).do()
         super().init_device()
 
     def _init_state_model(self: MccsSubarray) -> None:
@@ -90,7 +90,7 @@ class MccsSubarray(SKASubarray):
                 ),
             )
 
-    class InitCommand(DeviceInitCommand):
+    class InitCommand(SKAObsDevice.InitCommand):
         """Command class for device initialisation."""
 
         def do(  # type: ignore[override]
@@ -106,12 +106,13 @@ class MccsSubarray(SKASubarray):
             print("XXXX Subarray InitCommand do()")
             print(f"XXXX super() = {super()}")
             print(f"XXXX device = {self._device}")
-            # super().do()
             self._device.set_change_event("stationFQDNs", True, True)
             self._device.set_archive_event("stationFQDNs", True, True)
 
             self._device._build_state = release.get_release_info()
             self._device._version_id = release.version
+
+            super().do()
 
             return (ResultCode.OK, "Init command started")
 

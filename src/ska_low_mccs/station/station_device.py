@@ -147,6 +147,8 @@ class MccsStation(SKAObsDevice):
             self._device.set_change_event("transientBufferFQDN", True, False)
             self._device.set_archive_event("transientBufferFQDN", True, False)
 
+            super().do()
+
             return (ResultCode.OK, "Initialisation complete")
 
     def is_On_allowed(self: MccsStation) -> bool:

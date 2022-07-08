@@ -47,7 +47,6 @@ class MccsStationBeam(SKAObsDevice):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
-        # super().InitCommand(self).do()
         super().init_device()
 
     def _init_state_model(self: MccsStationBeam) -> None:
@@ -114,6 +113,8 @@ class MccsStationBeam(SKAObsDevice):
             """
             self._device._build_state = release.get_release_info()
             self._device._version_id = release.version
+
+            super().do()
 
             return (ResultCode.OK, "Initialisation complete")
 

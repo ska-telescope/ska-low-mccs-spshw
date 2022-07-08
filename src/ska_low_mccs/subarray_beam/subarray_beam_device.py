@@ -43,7 +43,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
-        super().InitCommand(self).do()
+        # super().InitCommand(self).do()
         super().init_device()
 
     def _init_state_model(self: MccsSubarrayBeam) -> None:
@@ -92,7 +92,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                 ),
             )
 
-    class InitCommand(DeviceInitCommand):
+    class InitCommand(SKAObsDevice.InitCommand):
         """
         A class for :py:class:`~.MccsSubarrayBeam`'s Init command.
 

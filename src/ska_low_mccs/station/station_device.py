@@ -108,7 +108,7 @@ class MccsStation(SKAObsDevice):
                 ),
             )
 
-    class InitCommand(DeviceInitCommand):
+    class InitCommand(SKAObsDevice.InitCommand):
         """
         A class for :py:class:`~.MccsStation`'s Init command.
 

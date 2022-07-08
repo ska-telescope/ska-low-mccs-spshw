@@ -183,7 +183,7 @@ class TestPowerManagement:
         # state changes performed during device inittialisation to be picked up by the  
         # first polling cycle.
         #time.sleep(0.1)
-        time.sleep(0.3)
+        time.sleep(0.4)
 
         # putting controller online makes it transition to UNKNOWN because it doesn't
         # yet know the state of its stations and subracks
@@ -192,7 +192,7 @@ class TestPowerManagement:
         controller.adminMode = AdminMode.ONLINE
         #time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.3)
+        time.sleep(0.4)
         assert controller.state() == tango.DevState.UNKNOWN
 
         # putting a station online makes it transition to UNKNOWN because it doesn't yet
@@ -204,7 +204,7 @@ class TestPowerManagement:
             station.adminMode = AdminMode.ONLINE
         #time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.3)
+        time.sleep(0.4)
         self._check_states(stations + [controller], tango.DevState.UNKNOWN)
 
         # putting an antenna online makes it transition to UNKNOWN because it needs its
@@ -225,7 +225,7 @@ class TestPowerManagement:
             antenna.adminMode = AdminMode.ONLINE
         #time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.3)
+        time.sleep(0.4)
         self._check_states(antennas + stations + [controller], tango.DevState.UNKNOWN)
 
         # putting the APIU online makes it transition to OFF because it knows it is off.
@@ -240,7 +240,7 @@ class TestPowerManagement:
             apiu.adminMode = AdminMode.ONLINE
         #time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.3)
+        time.sleep(0.4)
         #self._check_states(apius + antennas, tango.DevState.OFF)
         self._check_states(apius, tango.DevState.OFF)
         self._check_states(antennas, tango.DevState.OFF)
@@ -255,7 +255,7 @@ class TestPowerManagement:
             tile.adminMode = AdminMode.ONLINE
         #time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.3)
+        time.sleep(0.4)
         self._check_states(tiles + stations + [controller], tango.DevState.UNKNOWN)
 
         # putting the subrack online will make it transition to OFF (having detected
@@ -267,7 +267,7 @@ class TestPowerManagement:
         subrack.adminMode = AdminMode.ONLINE
         #time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.3)
+        time.sleep(0.4)
         self._check_states(
             tiles + stations + [controller] + [subrack], tango.DevState.OFF
         )
@@ -313,7 +313,13 @@ class TestPowerManagement:
         )
         assert "state" in controller._change_event_subscription_ids
 
-        time.sleep(0.3)
+        time.sleep(0.4)
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.UNKNOWN
+        )
+        controller_device_state_changed_callback.assert_next_change_event(
+            tango.DevState.INIT
+        )
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.DISABLE
         )

@@ -160,6 +160,7 @@ class _SubarrayProxy(DeviceComponentManager):
         :return: a result code.
         """
         assert self._proxy is not None
+
         ([result_code], _) = self._proxy.ReleaseAllResources()
         return result_code
 
@@ -836,9 +837,8 @@ class ControllerComponentManager(MccsComponentManager):
                 )
             )
 
-        # This is horrific and needs a better solution to handle the scope of the trapped exception.
-        exc = None
-        allocate_result_code = None
+        # This needs a better solution to handle the scope of the trapped exception.
+        allocate_exc = None
         try:
             self._resource_manager.allocate(
                 subarray_fqdn,
@@ -846,17 +846,20 @@ class ControllerComponentManager(MccsComponentManager):
                 station_beams=station_beam_fqdns,
                 channel_blocks=channel_blocks,
             )
+            allocate_result_code = ResultCode.OK
         except ValueError as e:
-            exc=e
             allocate_result_code = ResultCode.FAILED
+            allocate_exc = e
 
-
-        assign_result_code = self._subarrays[subarray_fqdn].assign_resources(
+        if allocate_result_code == ResultCode.OK:
+            assign_result_code = self._subarrays[subarray_fqdn].assign_resources(
             station_fqdns,
             subarray_beam_fqdns,
             station_beam_fqdns,
             channel_blocks,
-        )
+            )
+        else:
+            assign_result_code = ResultCode.FAILED
 
         # don't forget to release resources if allocate or assign were unsuccessful:
         if ResultCode.FAILED in [assign_result_code, allocate_result_code]:
@@ -880,15 +883,14 @@ class ControllerComponentManager(MccsComponentManager):
 
         # TODO wait for the respective LRC's to complete, whilst reporting progress
         if task_callback:
-            if ResultCode.FAILED in [assign_result_code, allocate_result_code]:
-                if exc:
-                    task_callback(
-                        status=TaskStatus.FAILED, result=f"The allocate command has failed with the exception: {exc}"
-                    )
-                else:
-                    task_callback(
-                        status=TaskStatus.FAILED, result="The allocate command has failed"
-                    )
+            if allocate_result_code == ResultCode.FAILED:
+                task_callback(
+                    status=TaskStatus.FAILED, result=f"The allocate command has failed. Exception message: {allocate_exc}"
+                )
+            elif assign_result_code == ResultCode.FAILED:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The assign command has failed"
+                )
             else:
                 task_callback(
                     status=TaskStatus.COMPLETED,
@@ -937,7 +939,8 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         subarray_fqdn = f"low-mccs/subarray/{subarray_id:02}"
 
@@ -946,7 +949,6 @@ class ControllerComponentManager(MccsComponentManager):
             return
 
         self._resource_manager.deallocate_from(subarray_fqdn)
-
         station_beams = allocated.get("station_beams", [])
         for station_beam_fqdn in station_beams:
             self._station_beams[station_beam_fqdn].write_subarray_id(0)
@@ -962,13 +964,15 @@ class ControllerComponentManager(MccsComponentManager):
         results = self._subarrays[subarray_fqdn].release_all_resources()
         # TODO wait for the respective LRC's to complete, whilst reporting progress
         if ResultCode.FAILED == results[0]:
-            task_callback(
-                status=TaskStatus.FAILED, result="The release command has failed"
-            )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The release command has failed"
+                )
         else:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The release command has completed"
-            )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="The release command has completed"
+                )
 
     @check_communicating
     @check_on

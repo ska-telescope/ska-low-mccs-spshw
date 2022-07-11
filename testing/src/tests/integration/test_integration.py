@@ -245,9 +245,12 @@ class TestMccsIntegration:
             "obsState", subarray_1_obs_state_changed_callback
         )
 
+        # It seems that we need a fairly long sleep to allow time for all the relevant events
+        # to be pushed by the polled PushChanges command
         time.sleep(0.2)
 
-        # TODO: this is inconsistent
+        # TODO: This occansionally segfaults with warnings from Tango stating that
+        # the event channel is not responding. Find out why.
         """controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.DISABLE
         )
@@ -276,12 +279,15 @@ class TestMccsIntegration:
         print(f"controller power state: {controller.power_state}")
         print(f"controller admin mode: {controller.adminMode}")
 
+        # It seems that we need a fairly long sleep to allow time for all the relevant events
+        # to be pushed by the polled PushChanges command
         time.sleep(0.2)
 
         # Subracks are mocked ON. APIUs, Antennas and Tiles are mocked ON, so stations
         # will be ON too. Therefore controller will already be ON.
 
-        # TODO: callbacks are not being called
+        # TODO: This occansionally segfaults with warnings from Tango stating that
+        # the event channel is not responding. Find out why.
         """subarray_1_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
         )
@@ -303,28 +309,13 @@ class TestMccsIntegration:
         assert station_1.state() == tango.DevState.ON
         assert station_2.state() == tango.DevState.ON
 
-        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-        print("controller state: ", controller.state())
-        print("subarray_1 state: ", subarray_1.state())
-        print("subarray_2 state: ", subarray_2.state())
-        print("station_1 state: ", station_1.state())
-        print("station_2 state: ", station_2.state())
-        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-        print("controller power state: ", controller.power_state)
-        print("subarray_1 power state: ", subarray_1.power_state)
-        print("subarray_2 power state: ", subarray_2.power_state)
-        print("station_1 power state: ", station_1.power_state)
-        print("station_2 power state: ", station_2.power_state)
-        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-
         # TODO: Subarray is ON, and resources are all healthy, but there's a small
         # chance that the controller hasn't yet received all the events telling it so.
         # We need a better way to handle this than taking a short nap with our fingers
         # crossed.
-        time.sleep(0.2)
+        time.sleep(0.4)
 
-        # TODO: callback not called here:
-        # subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.EMPTY)
+        subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.EMPTY)
         assert subarray_1.obsState == ObsState.EMPTY
 
         # check initial state
@@ -343,14 +334,8 @@ class TestMccsIntegration:
         assert result_code == ResultCode.QUEUED
 
         time.sleep(0.2)
-
-        # TODO: this callback is not being called and obs state is EMPTY
-        # subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.IDLE)
-        # assert subarray_1.obsState == ObsState.IDLE
-
-        print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")
-        print(subarray_1.stationFQDNs)
-        print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")
+        subarray_1_obs_state_changed_callback.assert_last_change_event(ObsState.IDLE)
+        assert subarray_1.obsState == ObsState.IDLE
 
         # check that station_1 and only station_1 is allocated
         station_fqdns: Iterable = cast(Iterable, subarray_1.stationFQDNs)
@@ -359,21 +344,22 @@ class TestMccsIntegration:
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
-        with pytest.raises(tango.DevFailed, match="Cannot allocate resources"):
-            _ = call_with_json(
+        result_code, unique_id = call_with_json(
                 controller.Allocate,
                 subarray_id=2,
                 station_ids=[[1]],
                 subarray_beam_ids=[1],
                 channel_blocks=[2],
-            )
+                )
 
         time.sleep(0.2)
+        assert [controller.longRunningCommandResult[0]] == unique_id
+
+        # A subarray/station beam cannot be allocated to multiple subarrays.
+        assert "The allocate command has failed with the exception: Cannot allocate resources:" and "subarraybeam" or "beam" in controller.longRunningCommandResult[1]
+
         # check no side-effects
         # station_fqdns = cast(Iterable, subarray_1.stationFQDNs)
-        print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")
-        print(subarray_1.stationFQDNs)
-        print("£££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££££")
         assert list(station_fqdns) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
 

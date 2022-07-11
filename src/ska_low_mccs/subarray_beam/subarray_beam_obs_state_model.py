@@ -22,7 +22,7 @@ class SubarrayBeamObsStateModel:
     def __init__(
         self: SubarrayBeamObsStateModel,
         logger: logging.Logger,
-        obs_state_changed_callback: Callable[[dict[str,ObsState]], None],
+        obs_state_changed_callback: Callable[[dict[str, ObsState]], None],
     ) -> None:
         """
         Initialise a new instance.

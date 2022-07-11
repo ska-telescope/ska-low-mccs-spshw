@@ -8,7 +8,7 @@
 """An implementation of a health model for subarray beams."""
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel

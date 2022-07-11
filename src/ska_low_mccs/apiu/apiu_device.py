@@ -111,7 +111,7 @@ class MccsAPIU(SKABaseDevice):
             self: MccsAPIU.InitCommand,
         ) -> tuple[ResultCode, str]:
             """
-            Initialise the attributes and properties of the :py:class:`.MccsAPIU`., globvar
+            Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

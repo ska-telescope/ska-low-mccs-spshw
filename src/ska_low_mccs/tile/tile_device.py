@@ -12,7 +12,7 @@ import itertools
 import json
 import logging
 import os.path
-from typing import Any, cast, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_control_model import (
@@ -1653,7 +1653,7 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("GetArpTable")
         return_code, unique_id = handler()
-        #TODO If this returns DEVVARLONGSTRINGARRAY where's the Arp table?????
+        # TODO If this returns DEVVARLONGSTRINGARRAY where's the Arp table?????
         return ([return_code], [unique_id])
 
     class SetBeamFormerRegionsCommand(FastCommand):
@@ -2783,7 +2783,7 @@ class MccsTile(SKABaseDevice):
 
             :returns: whether the command is allowed
             """
-            return self.adminMode == AdminMode.MAINTENANCE
+            return self.adminMode == AdminMode.MAINTENANCE  # type: ignore[attr-defined]
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

@@ -26,7 +26,7 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 import threading
 import time
-from typing import Any, Callable, List, Optional, cast
+from typing import Callable, List, Optional, cast
 
 from ska_control_model import CommunicationStatus, PowerState, ResultCode
 from ska_low_mccs_common.component import MccsComponentManager, WebHardwareClient
@@ -139,8 +139,6 @@ class SubrackDriver(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a TaskStatus and message
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)

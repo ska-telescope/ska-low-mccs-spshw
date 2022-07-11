@@ -107,9 +107,7 @@ class ApiuSimulator(ObjectComponent):
             component faults (or stops faulting)
         """
         self._is_faulty = initial_fault
-        self._fault_callback: Optional[
-            Callable
-        ] = component_state_changed_callback
+        self._fault_callback: Optional[Callable] = component_state_changed_callback
         self._antenna_power_changed_callback: Optional[
             Callable
         ] = component_state_changed_callback

@@ -387,7 +387,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self.component_power_state_changed,
         )
         super().__init__(
-            hardware_component_manager,
+            cast(MccsComponentManager, hardware_component_manager),
             power_supply_component_manager,
             logger,
             max_workers,
@@ -500,7 +500,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         ).simulation_mode = mode
 
     def on(
-        self: MccsComponentManager, task_callback: Optional[Callable] = None
+        self: SubrackComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.
@@ -515,7 +515,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
-        self: MccsComponentManager,
+        self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -535,9 +535,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_abort_event and task_abort_event.is_set():
-            task_callback(
-                status=TaskStatus.ABORTED, result="On command has been aborted"
-            )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="On command has been aborted"
+                )
             return
         if task_callback:
             task_callback(
@@ -545,7 +546,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             )
 
     def off(
-        self: MccsComponentManager, task_callback: Optional[Callable] = None
+        self: SubrackComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the off slow task.

@@ -8,7 +8,7 @@
 """An implementation of a health model for a controller."""
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel

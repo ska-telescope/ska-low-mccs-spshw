@@ -106,7 +106,6 @@ class TestApiuAntennaIntegration:
         assert state == DevState.DISABLE
         state = apiu_device.state()
         assert state == DevState.DISABLE
-        assert False
 
         # ... except for the tile device, which is mocked to always be in ON state
         assert mock_tile_device.state() == DevState.ON
@@ -160,7 +159,7 @@ class TestApiuAntennaIntegration:
         # antennas managed by the APIU. The APIU device knows that the antenna is off...
         assert not apiu_device.isAntennaOn(1)
         # ... and fires a change event...
-        time.sleep(0.1)
+        time.sleep(0.2)
         # ... which is received by the antenna. The antenna device now knows that its
         # antenna is powered off, so it stays in state OFF.
         assert antenna_device.state() == DevState.OFF
@@ -173,10 +172,9 @@ class TestApiuAntennaIntegration:
         time.sleep(0.1)
 
         assert apiu_device.IsAntennaOn(1)
-        # It fires a change event which is received by the antenna device. The antenna
-        # device now knows that its antenna is powered on, so it transitions to
-        # state ON.
-        time.sleep(0.1)
+        # It fires a change event which is received by the antenna device. The antenna device now knows that
+        # its antenna is powered on, so it transitions to state ON.
+        time.sleep(0.2)
         assert antenna_device.state() == DevState.ON
 
         apiu_device.PowerDownAntenna(1)

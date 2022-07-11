@@ -530,7 +530,9 @@ class TileComponentManager(MccsComponentManager):
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_offline()
 
-    def off(self: TileComponentManager, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+    def off(
+        self: TileComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
@@ -556,7 +558,9 @@ class TileComponentManager(MccsComponentManager):
             self._tile_orchestrator.desire_on, args=[], task_callback=task_callback
         )
 
-    def standby(self: TileComponentManager, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+    def standby(
+        self: TileComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
@@ -1218,7 +1222,7 @@ class TileComponentManager(MccsComponentManager):
         try:
             return self.submit_task(self._initialise, task_callback=task_callback)
         except ConnectionError as comm_err:
-            return comm_err
+            return (TaskStatus.FAILED, f"Tile Connection Error {comm_err}")
 
     def _initialise(
         self: TileComponentManager,

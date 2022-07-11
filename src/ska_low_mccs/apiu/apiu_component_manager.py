@@ -21,6 +21,7 @@ from ska_control_model import (
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
     DriverSimulatorSwitchingComponentManager,
+    MccsComponentManager,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
     check_communicating,
@@ -223,7 +224,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             _initial_power_mode,
         )
         super().__init__(
-            hardware_component_manager,
+            cast(MccsComponentManager, hardware_component_manager),
             power_supply_component_manager,
             logger,
             max_workers,
@@ -313,7 +314,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the attribute value
         """
-        
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
 
@@ -499,7 +499,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_on_antenna(antenna)
+            cast(
+                ApiuComponentManager, self._hardware_component_manager
+            ).turn_on_antenna(antenna)
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -533,7 +535,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_off_antenna(antenna)
+            cast(
+                ApiuComponentManager, self._hardware_component_manager
+            ).turn_off_antenna(antenna)
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -565,7 +569,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_on_antennas()
+            cast(
+                ApiuComponentManager, self._hardware_component_manager
+            ).turn_on_antennas()
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -598,7 +604,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_off_antennas()
+            cast(
+                ApiuComponentManager, self._hardware_component_manager
+            ).turn_off_antennas()
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")

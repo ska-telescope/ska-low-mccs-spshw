@@ -209,10 +209,10 @@ class SubarrayComponentManager(
         return set(self._stations.keys())
 
     @check_communicating
-    def assign(
+    def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resource_spec: dict,
-        task_callback: Optional[Callable] = None,
+        resource_spec: set[str],
+        task_callback: Optional[Callable[[], None]] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `AssignResources` slow command.
@@ -239,7 +239,7 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _assign(  # type: ignore[override]
+    def _assign(
         self: SubarrayComponentManager,
         resource_spec: dict,
         task_callback: Optional[Callable] = None,
@@ -418,7 +418,7 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _release(  # type: ignore[override]
+    def _release(
         self: SubarrayComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
@@ -448,9 +448,8 @@ class SubarrayComponentManager(
         raise NotImplementedError("MCCS Subarray cannot partially release resources.")
 
     @check_communicating
-    def release_all(
-        self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
+    def release_all(  # type: ignore[override]
+        self: SubarrayComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `ReleaseAllResources` slow command.
@@ -467,7 +466,7 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _release_all(  # type: ignore[override]
+    def _release_all(
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
@@ -527,7 +526,7 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _configure(  # type: ignore[override]
+    def _configure(
         self: SubarrayComponentManager,
         configuration: dict[str, Any],
         task_callback: Optional[Callable] = None,
@@ -639,7 +638,7 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _scan(  # type: ignore[override]
+    def _scan(
         self: SubarrayComponentManager,
         scan_id: int,
         start_time: float,
@@ -660,10 +659,8 @@ class SubarrayComponentManager(
 
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
-            if proxy_result_code == ResultCode.FAILED:
-                if task_callback is not None:
-                    task_callback(status=TaskStatus.FAILED, result="Scan has failed.")
-                    return
+            if proxy_result_code == ResultCode.FAILED and task_callback is not None:
+                task_callback(status=TaskStatus.FAILED, result="Scan has failed.")
         self._component_state_changed_callback({"scanning_changed": True})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
@@ -676,7 +673,7 @@ class SubarrayComponentManager(
         """
         Submit the `end_scan` slow command.
 
-        :param task_callback: Update task state, defaults to None
+        :param task_callback: Update tas
 
         :return: A task status and response message.
         """
@@ -686,14 +683,13 @@ class SubarrayComponentManager(
             task_callback=task_callback,
         )
 
-    @check_communicating
-    def _end_scan(  # type: ignore[override]
+    def _end_scan(
         self: SubarrayComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
     ) -> None:
         """
-        End scanning.
+        Submit the `end_scan` slow command.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None

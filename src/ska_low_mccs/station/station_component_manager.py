@@ -12,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Any, Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -446,10 +446,12 @@ class StationComponentManager(MccsComponentManager):
                 task_callback(status=task_status)
             return
         self._on_called = True
-        result_code, _ = self._apiu_proxy.on()
-        # TODO: Monitor the APIU On command status and update the Station On command
-        # status accordingly.
-        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+        # result_code, _ = self._apiu_proxy.on()
+        task_status, _ = self._apiu_proxy.on()
+        # TODO: Monitor the APIU On command status and update the Station On command status accordingly.
+        # check return codes!!!!!!!!!!!
+        if task_status == TaskStatus.QUEUED:
+            # if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             task_status = TaskStatus.COMPLETED
         else:
             task_status = TaskStatus.FAILED
@@ -562,7 +564,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the configure method.
 

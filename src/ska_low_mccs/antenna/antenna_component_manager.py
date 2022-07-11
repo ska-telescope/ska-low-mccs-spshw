@@ -11,7 +11,7 @@ from __future__ import annotations
 import functools
 import logging
 import threading
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -77,12 +77,16 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
         super().stop_communicating()
         self._antenna_change_registered = False
 
-    def reset(self: _ApiuProxy, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+    def reset(
+        self: _ApiuProxy, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Reset the antenna; this is not implemented.
 
         This raises NotImplementedError because the antenna is passive
         hardware and cannot meaningfully be reset.
+
+        :param task_callback: Update task state, defaults to None
 
         :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
@@ -277,13 +281,17 @@ class _TileProxy(DeviceComponentManager):
             component_state_changed_callback,
         )
 
-    def off(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def off(
+        self: _TileProxy, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the antenna off; this is not implemented.
 
         This raises NotImplementedError because the antenna's power state
         is not controlled via the Tile device; it is controlled via the
         APIU device.
+
+        :param task_callback: Update task state, defaults to None
 
         :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
@@ -293,7 +301,9 @@ class _TileProxy(DeviceComponentManager):
             "Antenna power state is not controlled via Tile device."
         )
 
-    def standby(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def standby(
+        self: _TileProxy, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Put the antenna into standby state; this is not implemented.
 
@@ -302,6 +312,8 @@ class _TileProxy(DeviceComponentManager):
         controlled via the Tile device; it is controlled via the APIU
         device.
 
+        :param task_callback: Update task state, defaults to None
+
         :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
@@ -310,7 +322,9 @@ class _TileProxy(DeviceComponentManager):
             "Antenna power state is not controlled via Tile device."
         )
 
-    def on(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def on(
+        self: _TileProxy, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the antenna on; this is not implemented.
 
@@ -318,6 +332,8 @@ class _TileProxy(DeviceComponentManager):
         is not controlled via the Tile device; it is controlled via the
         APIU device.
 
+        :param task_callback: Update task state, defaults to None
+
         :raises NotImplementedError: because the antenna's power state is
             not controlled via the Tile device; it is controlled via the
             APIU device.
@@ -326,7 +342,9 @@ class _TileProxy(DeviceComponentManager):
             "Antenna power state is not controlled via Tile device."
         )
 
-    def reset(self: _TileProxy, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def reset(
+        self: _TileProxy, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Reset the antenna; this is not implemented.
 
@@ -543,26 +561,34 @@ class AntennaComponentManager(MccsComponentManager):
     # TODO should this be a submitted task in line with the base classes??
     # TODO should the decorator be uncommented
     # @check_communicating
-    def off(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def off(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the antenna off.
 
         It does so by telling the APIU to turn the right antenna off.
+
+        :param task_callback: Update task state, defaults to None
 
         :return: a ResultCode, or None if there was nothing to do
         """
         with self._power_state_lock:
             self._target_power_state = PowerState.OFF
         # TODO sort out the return code
-        #return self._review_power()
+        # return self._review_power()
         return TaskStatus.COMPLETED, "Ignore return code for now"
 
-    def standby(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def standby(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Put the antenna into standby state; this is not implemented.
 
         This raises NotImplementedError because the antenna has no
         standby state.
+
+        :param task_callback: Update task state, defaults to None
 
         :raises NotImplementedError: because the antenna has no standby
             state.
@@ -571,7 +597,9 @@ class AntennaComponentManager(MccsComponentManager):
 
     # TODO should the decorator be uncommented
     # @check_communicating
-    def on(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def on(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.
 
@@ -638,7 +666,9 @@ class AntennaComponentManager(MccsComponentManager):
                 return result_code
             return ResultCode.QUEUED
 
-    def reset(self: AntennaComponentManager, task_callback: Optional[Callable]=None) -> tuple[TaskStatus, str]:
+    def reset(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Reset the antenna; this is not implemented.
 

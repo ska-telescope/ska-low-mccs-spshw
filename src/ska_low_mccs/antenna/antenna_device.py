@@ -8,7 +8,7 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import Any, cast, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_control_model import (

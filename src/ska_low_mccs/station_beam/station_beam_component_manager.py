@@ -12,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Any, Callable, Optional, cast
+from typing import Callable, Optional, cast
 
 from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (

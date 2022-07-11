@@ -10,7 +10,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import Any, cast, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple, cast
 
 import ska_low_mccs_common.release as release
 import tango

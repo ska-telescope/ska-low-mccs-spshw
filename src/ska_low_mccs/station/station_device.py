@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, cast, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import ska_low_mccs_common.release as release
 import tango
@@ -224,7 +224,7 @@ class MccsStation(SKAObsDevice):
         else:
             device_family = fqdn.split("/")[1]
             if device_family == "apiu":
-                health_state_changed_callback = self._health_model.apiu_health_changed
+                health_state_changed_callback = self._health_model.apiu_health_changed  # type: ignore[assignment]
                 power_state_changed_callback = (
                     self.component_manager._apiu_power_state_changed
                 )

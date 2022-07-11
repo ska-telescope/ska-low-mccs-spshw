@@ -8,7 +8,7 @@
 """An implementation of a health model for station beams."""
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel

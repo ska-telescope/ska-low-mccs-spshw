@@ -675,7 +675,8 @@ class ControllerComponentManager(MccsComponentManager):
         if task_callback:
             if completed:
                 task_callback(
-                    status=TaskStatus.COMPLETED, result="The standby command has completed"
+                    status=TaskStatus.COMPLETED,
+                    result="The standby command has completed",
                 )
             else:
                 task_callback(
@@ -1006,7 +1007,8 @@ class ControllerComponentManager(MccsComponentManager):
                 )
             else:
                 task_callback(
-                    status=TaskStatus.COMPLETED, result="The release command has completed"
+                    status=TaskStatus.COMPLETED,
+                    result="The release command has completed",
                 )
 
     @check_communicating
@@ -1053,13 +1055,15 @@ class ControllerComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         self._resource_manager.deallocate_from(subarray_fqdn)
 
-        results = self._subarrays[subarray_fqdn].restart()
+        # TODO does this return ResultCode or TaskStatus
+        result = self._subarrays[subarray_fqdn].restart()
         if task_callback:
-            if ResultCode.FAILED in results:
+            if ResultCode.FAILED == result:
                 task_callback(
                     status=TaskStatus.FAILED, result="The restart command has failed"
                 )
             else:
                 task_callback(
-                    status=TaskStatus.COMPLETED, result="The restart command has completed"
+                    status=TaskStatus.COMPLETED,
+                    result="The restart command has completed",
                 )

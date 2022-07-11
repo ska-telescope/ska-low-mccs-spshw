@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from ska_control_model import CommunicationStatus, ResultCode
 from ska_low_mccs_common.component import ObjectComponent
@@ -25,7 +25,7 @@ class SubarrayBeam(ObjectComponent):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Optional[Callable] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -58,7 +58,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_beam_locked_changed_callback(
         self: SubarrayBeam,
-        is_beam_locked_changed_callback: Callable,
+        is_beam_locked_changed_callback: Optional[Callable] = None,
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is locked changes.
@@ -71,7 +71,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_configured_changed_callback(
         self: SubarrayBeam,
-        is_configured_changed_callback: Callable,
+        is_configured_changed_callback: Optional[Callable] = None,
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is configured changes.

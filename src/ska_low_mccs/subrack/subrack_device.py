@@ -12,7 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import threading
-from typing import Any, cast, List, Optional, Tuple, cast
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_control_model import (
@@ -258,7 +258,9 @@ class MccsSubrack(SKABaseDevice):
                 self.push_change_event("healthState", health)
 
         if "tpm_power_states" in state_change.keys():
-            tpm_power_states = cast(List[PowerState], state_change.get("tpm_power_states"))
+            tpm_power_states = cast(
+                List[PowerState], state_change.get("tpm_power_states")
+            )
             with self._tpm_power_states_lock:
                 for i in range(SubrackData.TPM_BAY_COUNT):
                     if self._tpm_power_states[i] != tpm_power_states[i]:

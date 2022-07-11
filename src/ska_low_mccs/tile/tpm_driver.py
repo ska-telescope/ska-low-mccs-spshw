@@ -626,7 +626,8 @@ class TpmDriver(MccsComponentManager):
                 )
             else:
                 task_callback(
-                    status=TaskStatus.FAILED, result="The download firmware task has failed"
+                    status=TaskStatus.FAILED,
+                    result="The download firmware task has failed",
                 )
 
     def erase_fpga(self: TpmDriver) -> None:
@@ -703,10 +704,13 @@ class TpmDriver(MccsComponentManager):
             self.logger.error("TpmDriver: Cannot initialise board")
             if task_callback:
                 task_callback(
-                    status=TaskStatus.COMPLETED, result="The initialisation task has failed"
+                    status=TaskStatus.COMPLETED,
+                    result="The initialisation task has failed",
                 )
 
-    def initialise(self: TpmDriver, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+    def initialise(
+        self: TpmDriver, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Download firmware, if not already downloaded, and initializes tile.
 

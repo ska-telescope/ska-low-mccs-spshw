@@ -162,9 +162,7 @@ class SubrackSimulator(ObjectComponent):
         self._tpm_present = tpm_present[0 : self._bay_count]
         self._tpm_supply_fault = [0] * self._bay_count
 
-        self._are_tpms_on_changed_callback: Optional[
-            Callable
-        ] = None
+        self._are_tpms_on_changed_callback: Optional[Callable] = None
         self._component_state_changed_callback: Optional[
             Callable
         ] = component_state_changed_callback

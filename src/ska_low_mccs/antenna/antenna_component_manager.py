@@ -55,7 +55,6 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
 
         :raises AssertionError: if parameters are out of bounds
         """
-        print("_ApiuProxy __init__ start #########################################")
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
@@ -70,7 +69,6 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
         )
-        print("_ApiuProxy __init__ stop #########################################")
 
     def stop_communicating(self: _ApiuProxy) -> None:
         """Cease communicating with the APIU device."""

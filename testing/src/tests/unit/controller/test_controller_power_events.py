@@ -116,7 +116,8 @@ class TestControllerPowerEvents:
 
     def test_power_events(
         self: TestControllerPowerEvents,
-        controller_component_manager: ControllerComponentManager,
+        device_under_test: MccsDeviceProxy,
+        mock_controller_component_manager: ControllerComponentManager,
     ) -> None:
         """
         Test the controller component manager's management of power mode.
@@ -125,25 +126,22 @@ class TestControllerPowerEvents:
             manager under test.
         """
         time.sleep(0.2)
-        controller_component_manager.start_communicating()
-        # component_state_changed_callback.assert_next_call(
-        #     {"power_state": PowerState.ON}
-        # )
+        mock_controller_component_manager.start_communicating()
         time.sleep(0.2)
         assert (
-            controller_component_manager._communication_state
+            mock_controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
         )
         time.sleep(0.1)
-        assert controller_component_manager.power_state == PowerState.UNKNOWN
+        assert mock_controller_component_manager.power_state == PowerState.UNKNOWN
 
-        for station_proxy in controller_component_manager._stations.values():
+        for station_proxy in mock_controller_component_manager._stations.values():
             station_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-            assert controller_component_manager.power_state == PowerState.UNKNOWN
-        for subrack_proxy in controller_component_manager._subracks.values():
+            assert mock_controller_component_manager.power_state == PowerState.UNKNOWN
+        for subrack_proxy in mock_controller_component_manager._subracks.values():
             subrack_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
-        assert controller_component_manager.power_state == PowerState.OFF
+        assert mock_controller_component_manager.power_state == PowerState.OFF

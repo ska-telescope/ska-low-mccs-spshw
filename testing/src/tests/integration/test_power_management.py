@@ -179,10 +179,10 @@ class TestPowerManagement:
         # sleep enough time for single polling cycle for each device to complete. This
         # is because (as of v0.13 of the base classes) state changes are only passed to
         # the Tango layer by the polled base class command PushChanges. Because polling
-        # only starts after device initialisation, we need to allow enough time for the 
-        # state changes performed during device inittialisation to be picked up by the  
+        # only starts after device initialisation, we need to allow enough time for the
+        # state changes performed during device inittialisation to be picked up by the
         # first polling cycle.
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         time.sleep(0.4)
 
         # putting controller online makes it transition to UNKNOWN because it doesn't
@@ -190,7 +190,7 @@ class TestPowerManagement:
         assert controller.adminMode == AdminMode.OFFLINE
         assert controller.state() == tango.DevState.DISABLE
         controller.adminMode = AdminMode.ONLINE
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)
         assert controller.state() == tango.DevState.UNKNOWN
@@ -202,7 +202,7 @@ class TestPowerManagement:
             assert station.adminMode == AdminMode.OFFLINE
             assert station.state() == tango.DevState.DISABLE
             station.adminMode = AdminMode.ONLINE
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)
         self._check_states(stations + [controller], tango.DevState.UNKNOWN)
@@ -223,7 +223,7 @@ class TestPowerManagement:
             assert antenna.adminMode == AdminMode.OFFLINE
             assert antenna.state() == tango.DevState.DISABLE
             antenna.adminMode = AdminMode.ONLINE
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)
         self._check_states(antennas + stations + [controller], tango.DevState.UNKNOWN)
@@ -235,13 +235,13 @@ class TestPowerManagement:
         for apiu in apius:
             assert apiu.adminMode == AdminMode.OFFLINE
             assert apiu.state() == tango.DevState.DISABLE
-            # PAC: I noticed that putting the APIU online makes it pass through ON before 
+            # PAC: I noticed that putting the APIU online makes it pass through ON before
             # it transitions to OFF... is this intended?
             apiu.adminMode = AdminMode.ONLINE
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)
-        #self._check_states(apius + antennas, tango.DevState.OFF)
+        # self._check_states(apius + antennas, tango.DevState.OFF)
         self._check_states(apius, tango.DevState.OFF)
         self._check_states(antennas, tango.DevState.OFF)
         self._check_states(stations + [controller], tango.DevState.UNKNOWN)
@@ -253,7 +253,7 @@ class TestPowerManagement:
             assert tile.adminMode == AdminMode.OFFLINE
             assert tile.state() == tango.DevState.DISABLE
             tile.adminMode = AdminMode.ONLINE
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)
         self._check_states(tiles + stations + [controller], tango.DevState.UNKNOWN)
@@ -265,7 +265,7 @@ class TestPowerManagement:
         assert subrack.adminMode == AdminMode.OFFLINE
         assert subrack.state() == tango.DevState.DISABLE
         subrack.adminMode = AdminMode.ONLINE
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)
         self._check_states(

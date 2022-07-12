@@ -345,18 +345,22 @@ class TestMccsIntegration:
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
         result_code, unique_id = call_with_json(
-                controller.Allocate,
-                subarray_id=2,
-                station_ids=[[1]],
-                subarray_beam_ids=[1],
-                channel_blocks=[2],
-                )
+            controller.Allocate,
+            subarray_id=2,
+            station_ids=[[1]],
+            subarray_beam_ids=[1],
+            channel_blocks=[2],
+        )
 
         time.sleep(0.2)
         assert [controller.longRunningCommandResult[0]] == unique_id
 
         # A subarray/station beam cannot be allocated to multiple subarrays.
-        assert "The allocate command has failed with the exception: Cannot allocate resources:" and "subarraybeam" or "beam" in controller.longRunningCommandResult[1]
+        assert (
+            "The allocate command has failed with the exception: Cannot allocate resources:"
+            and "subarraybeam"
+            or "beam" in controller.longRunningCommandResult[1]
+        )
 
         # check no side-effects
         # station_fqdns = cast(Iterable, subarray_1.stationFQDNs)

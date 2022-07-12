@@ -89,6 +89,7 @@ def controller_device_state_changed_callback(
     """
     return state_changed_callback_factory()
 
+
 @pytest.fixture()
 def controller_device_admin_mode_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],

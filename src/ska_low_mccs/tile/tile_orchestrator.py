@@ -291,6 +291,9 @@ class TileOrchestrator:
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises Exception: if the TileOrchestrator encounters an
+            unhandled case
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -313,16 +316,15 @@ class TileOrchestrator:
         self: TileOrchestrator,
         task_callback: Optional[Callable] = None,
         task_abort_event: threading.Event = None,
-    ) -> ResultCode:
+    ) -> None:
         """
         Advise that the operator desires the TPM to be off.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
 
-        :return: a result code: either ResultCode.QUEUED if the command
-            could not commenced immediately, or the initial result of
-            commencing the command
+        :raises Exception: if the TileOrchestrator encounters an
+            unhandled case
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -349,6 +351,9 @@ class TileOrchestrator:
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises Exception: if the TileOrchestrator encounters an
+            unhandled case
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)

@@ -474,7 +474,9 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        print(f"_evaluate_communication_state com_states={self._device_communication_states}")
+        print(
+            f"_evaluate_communication_state com_states={self._device_communication_states}"
+        )
         with self.__communication_state_lock:
             if (
                 CommunicationStatus.DISABLED
@@ -537,7 +539,9 @@ class ControllerComponentManager(MccsComponentManager):
         :param health: the new health state of the subrack, or None if
             the subrack's health should not be taken into account.
         """
-        self._resource_manager.set_health("subracks", fqdn, health in [HealthState.OK, HealthState.DEGRADED])
+        self._resource_manager.set_health(
+            "subracks", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
+        )
 
     def _subarray_beam_health_changed(
         self: ControllerComponentManager,
@@ -846,10 +850,10 @@ class ControllerComponentManager(MccsComponentManager):
 
         if allocate_result_code == ResultCode.OK:
             assign_result_code = self._subarrays[subarray_fqdn].assign_resources(
-            station_fqdns,
-            subarray_beam_fqdns,
-            station_beam_fqdns,
-            channel_blocks,
+                station_fqdns,
+                subarray_beam_fqdns,
+                station_beam_fqdns,
+                channel_blocks,
             )
         else:
             assign_result_code = ResultCode.FAILED
@@ -878,7 +882,8 @@ class ControllerComponentManager(MccsComponentManager):
         if task_callback:
             if allocate_result_code == ResultCode.FAILED:
                 task_callback(
-                    status=TaskStatus.FAILED, result=f"The allocate command has failed. Exception message: {allocate_exc}"
+                    status=TaskStatus.FAILED,
+                    result=f"The allocate command has failed. Exception message: {allocate_exc}",
                 )
             elif assign_result_code == ResultCode.FAILED:
                 task_callback(
@@ -964,7 +969,8 @@ class ControllerComponentManager(MccsComponentManager):
         else:
             if task_callback:
                 task_callback(
-                    status=TaskStatus.COMPLETED, result="The release command has completed"
+                    status=TaskStatus.COMPLETED,
+                    result="The release command has completed",
                 )
 
     @check_communicating

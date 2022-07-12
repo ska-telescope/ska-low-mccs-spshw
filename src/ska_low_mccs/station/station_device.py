@@ -13,7 +13,7 @@ import functools
 from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
@@ -335,22 +335,30 @@ class MccsStation(SKAObsDevice):
             try:
                 self.push_change_event("state")
             except Exception as e:
-                self.logger.error(f"Attempt to push state change event resulted in exception {e}")
+                self.logger.error(
+                    f"Attempt to push state change event resulted in exception {e}"
+                )
                 raise
             try:
                 self.push_archive_event("state")
             except Exception as e:
-                self.logger.error(f"Attempt to push state archive event resulted in exception {e}")
+                self.logger.error(
+                    f"Attempt to push state archive event resulted in exception {e}"
+                )
                 raise
             try:
                 self.push_change_event("status")
             except Exception as e:
-                self.logger.error(f"Attempt to push status change event resulted in exception {e}")
+                self.logger.error(
+                    f"Attempt to push status change event resulted in exception {e}"
+                )
                 raise
             try:
                 self.push_archive_event("status")
             except Exception as e:
-                self.logger.error(f"Attempt to push status archive event resulted in exception {e}")
+                self.logger.error(
+                    f"Attempt to push status archive event resulted in exception {e}"
+                )
                 raise
 
     # ----------

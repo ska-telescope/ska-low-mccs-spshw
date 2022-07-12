@@ -122,8 +122,12 @@ class TestControllerPowerEvents:
         """
         Test the controller component manager's management of power mode.
 
-        :param controller_component_manager: the controller component
-            manager under test.
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_controller_component_manager:  A fixture that provides a
+            partially mocked component manager which has access to the
+            component_state_changed_callback.
         """
         time.sleep(0.2)
         mock_controller_component_manager.start_communicating()

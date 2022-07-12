@@ -360,6 +360,8 @@ class TestMccsIntegrationTmc:
             be used to subscribe to subarray obs state change
         :param lrc_result_changed_callback: a callback to
             be used to subscribe to device LRC result changes
+        :param controller_device_admin_mode_changed_callback:  a callback
+            to be used to subscribe to controller admin_mode changes
         """
         time.sleep(0.2)
         assert controller.state() == tango.DevState.DISABLE
@@ -386,7 +388,9 @@ class TestMccsIntegrationTmc:
             "adminMode",
             controller_device_admin_mode_changed_callback,
         )
-        controller_device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        controller_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.OFFLINE
+        )
 
         # register a callback so we can block on obsState changes
         # instead of sleeping
@@ -412,8 +416,6 @@ class TestMccsIntegrationTmc:
 
         time.sleep(0.2)
         controller.adminMode = AdminMode.ONLINE
-
-        
 
         time.sleep(0.2)
         controller_device_state_changed_callback.assert_next_change_event(
@@ -492,7 +494,9 @@ class TestMccsIntegrationTmc:
         assert subarray_1.stationFQDNs is None
         assert subarray_2.stationFQDNs is None
 
-        subarray_device_obs_state_changed_callback.assert_last_change_event(ObsState.EMPTY)
+        subarray_device_obs_state_changed_callback.assert_last_change_event(
+            ObsState.EMPTY
+        )
 
         # allocate station_1 to subarray_1
         ([result_code], [message]) = call_with_json(

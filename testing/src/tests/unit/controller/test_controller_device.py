@@ -208,6 +208,12 @@ class TestMccsController:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param subarray_beam_fqdns: list of subarraybeam fqdns to check the
+            callbacks from
+        :param station_beam_fqdns: list of stationbeam fqdns to check the
+            callbacks from
+        :param station_fqdns: list of station fqdns to check the callbacks
+            from
         :param mock_component_manager: a mock component manager that has
             been patched into the device under test
         :param device_health_state_changed_callback: a callback that we
@@ -245,7 +251,7 @@ class TestMccsController:
             mock_component_manager._component_state_changed_callback(
                 {"health_state": HealthState.OK}, beam_fqdn
             )
-        
+
         # time.sleep(0.2)
         # device_health_state_changed_callback.assert_next_change_event(HealthState.UNKNOWN)
         device_health_state_changed_callback.assert_last_change_event(HealthState.OK)

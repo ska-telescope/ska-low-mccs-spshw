@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command

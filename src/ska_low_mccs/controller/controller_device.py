@@ -167,7 +167,6 @@ class MccsController(SKABaseDevice):
         # Eventually we should figure out a more elegant way to handle
         # this.
 
-        print(f"XXX _communication_state_changed_callback {communication_state}")
         self._communication_state = communication_state
 
         if communication_state == CommunicationStatus.DISABLED:
@@ -203,7 +202,6 @@ class MccsController(SKABaseDevice):
         :param state_change: the state of the component.
         :param fqdn: The fqdn of the device.
         """
-        print(f"XXX _component_state_changed_callback: {state_change}, {fqdn}")
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
@@ -213,15 +211,11 @@ class MccsController(SKABaseDevice):
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
             if fqdn is None:
-                print(f"XXXX power_state change -> ({power_state})")
                 if self._communication_state == CommunicationStatus.ESTABLISHED:
                     self.op_state_model.perform_action(action_map[power_state])
             else:
                 device_family = fqdn.split("/")[1]
                 if device_family in ["station", "subrack"]:
-                    # XXXX move lock in here to avoid recursion?
-                    # _evaluate_power_state calls update_component_state which calls this
-                    # callback, but with no fqdn - so it's safe in this if block
                     with self._power_state_lock:
                         self.component_manager._device_power_states[fqdn] = power_state
                         self.component_manager._evaluate_power_state()

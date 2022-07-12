@@ -224,9 +224,7 @@ class MccsComponentManager(
                     self._power_state = state_change.get("power_state")
         if "fault" in state_change.keys():
             self._faulty = state_change.get("fault")
-        print(f"XXXX about to execute {self._component_state_changed_callback}")
         if self._component_state_changed_callback is not None:
-            print(f"XXXX telling it {state_change}")
             self._component_state_changed_callback(state_change)
 
     @property

@@ -103,9 +103,6 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             """
-            print("XXXX Subarray InitCommand do()")
-            print(f"XXXX super() = {super()}")
-            print(f"XXXX device = {self._device}")
             self._device.set_change_event("stationFQDNs", True, True)
             self._device.set_archive_event("stationFQDNs", True, True)
 

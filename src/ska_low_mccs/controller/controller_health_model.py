@@ -106,11 +106,9 @@ class ControllerHealthModel(HealthModel):
             subarray beam, or None if the subarray beam's admin mode
             indicates that its health should not be rolled up.
         """
-        print(f"XXXX updating SubarrayBeam health {subarray_beam_fqdn}->{subarray_beam_health}")
         if self._subarray_beam_health.get(subarray_beam_fqdn) != subarray_beam_health:
             self._subarray_beam_health[subarray_beam_fqdn] = subarray_beam_health
             self.update_health()
-        print(f"XXXX subarray beam healths: {self._subarray_beam_health}")
 
     def station_beam_health_changed(
         self: ControllerHealthModel,
@@ -153,18 +151,13 @@ class ControllerHealthModel(HealthModel):
             HealthState.DEGRADED,
         ]:
             if controller_health == health:
-                print(f"XXX controller health is {health}")
                 return health
             if health in self._station_health.values():
-                print(f"XXX station health is {health}")
                 return health
             if health in self._subrack_health.values():
-                print(f"XXX subrack health is {health}")
                 return health
             if health in self._subarray_beam_health.values():
-                print(f"XXX subarray beam health is {health}")
                 return health
             if health in self._station_beam_health.values():
-                print(f"XXX station beam health is {health}")
                 return health
         return HealthState.OK

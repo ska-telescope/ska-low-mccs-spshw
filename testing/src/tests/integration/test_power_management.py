@@ -289,6 +289,13 @@ class TestPowerManagement:
             be used to subscribe to controller state change
         """
         controller = tango_harness.get_device("low-mccs/control/control")
+
+        controller.add_change_event_callback(
+            "state",
+            controller_device_state_changed_callback,
+        )
+        assert "state" in controller._change_event_subscription_ids
+
         subrack = tango_harness.get_device("low-mccs/subrack/01")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
@@ -307,20 +314,8 @@ class TestPowerManagement:
         antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
         antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
 
-        controller.add_change_event_callback(
-            "state",
-            controller_device_state_changed_callback,
-        )
-        assert "state" in controller._change_event_subscription_ids
-
         time.sleep(0.4)
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.UNKNOWN
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.INIT
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
+        controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.DISABLE
         )
 

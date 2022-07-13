@@ -8,6 +8,7 @@
 """This module contains integration tests of health management in MCCS."""
 from __future__ import annotations
 
+import time
 import unittest.mock
 from typing import Callable
 
@@ -158,6 +159,11 @@ class TestHealthManagement:
             callback to be used to subscribe to controller state change
         """
         controller = tango_harness.get_device("low-mccs/control/control")
+
+        controller.add_change_event_callback(
+            "state", controller_device_state_changed_callback
+        )
+
         subrack = tango_harness.get_device("low-mccs/subrack/01")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
@@ -176,18 +182,12 @@ class TestHealthManagement:
         antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
         antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
 
+        time.sleep(0.4)
+
         # register a callback so we can block on state changes
         # instead of sleeping
-        controller.add_change_event_callback(
-            "state", controller_device_state_changed_callback
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.UNKNOWN
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.INIT
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
+
+        controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.DISABLE
         )
 

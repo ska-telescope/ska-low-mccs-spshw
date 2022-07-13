@@ -183,6 +183,7 @@ class TestApiuAntennaIntegration:
         # A third party has told the APIU device to turn the antenna off.
         # The APIU device tells its APIU to turn the antenna off.
         # Once it is off, the APIU device detects that the antenna is off...
+        time.sleep(0.1)
         assert not apiu_device.IsAntennaOn(1)
 
         # ... and fires a change event...

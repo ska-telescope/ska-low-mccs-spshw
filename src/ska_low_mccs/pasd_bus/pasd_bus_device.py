@@ -623,7 +623,7 @@ class MccsPasdBus(SKABaseDevice):
         """
         Return information about the FNDH.
 
-        :param argin:fndh to get info from
+        :param argin: fndh to get info from
 
         :return: A tuple containing a result code and a
             unique id to identify the command in the queue.

@@ -315,13 +315,7 @@ class TestPowerManagement:
         antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
 
         time.sleep(0.4)
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.UNKNOWN
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
-            tango.DevState.INIT
-        )
-        controller_device_state_changed_callback.assert_next_change_event(
+        controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.DISABLE
         )
 

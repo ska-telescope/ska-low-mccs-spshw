@@ -1081,7 +1081,7 @@ class TileComponentManager(MccsComponentManager):
         This method returns immediately after it is submitted for execution.
 
         :param argin: can either be the design name returned from
-            :py:meth:`.GetFirmwareAvailable` command, or a path to a
+            GetFirmwareAvailable command, or a path to a
             file
         :param task_callback: Update task state, defaults to None
 

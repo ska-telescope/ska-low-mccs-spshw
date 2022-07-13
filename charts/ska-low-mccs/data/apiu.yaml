@@ -1,16 +1,16 @@
 name: "apiu-{{.Release.Name}}"
 function: ska-low-mccs-apiu
 domain: ska-low-mccs
-instances: ["apiu_001", "apiu_002"]
+instances: ["apiu-001", "apiu-002"]
 entrypoints:
-  - name: "apiu.MccsApiu"
+  - name: "apiu.MccsAPIU"
     path: "/app/src/ska_low_mccs/apiu/apiu_device.py"
 server: 
-  name: "MccsApiu"
+  name: "MccsAPIU"
   instances:
-    - name: "apiu_001"
+    - name: "apiu-001"
       classes:
-      - name: "MccsApiu"
+      - name: "MccsAPIU"
         devices:
         - name: "low_mccs/apiu/001"
           properties:
@@ -23,9 +23,9 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "apiu_002"
+    - name: "apiu-002"
       classes:
-      - name: "MccsApiu"
+      - name: "MccsAPIU"
         devices:
         - name: "low_mccs/apiu/002"
           properties:
@@ -45,3 +45,7 @@ image:
   image: "{{.Values.low_mccs.image.image}}"
   tag: "{{.Values.low_mccs.image.tag}}"
   pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

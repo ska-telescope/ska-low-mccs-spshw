@@ -1,14 +1,14 @@
 name: "tile-{{.Release.Name}}"
 function: ska-low-mccs-tile
 domain: ska-low-mccs
-instances: ["tile_0001", "tile_0002", "tile_0003", "tile_0004"]
+instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004"]
 entrypoints:
   - name: "tile.MccsTile"
     path: "/app/src/ska_low_mccs/tile/tile_device.py"
 server: 
   name: "MccsTile"
   instances:
-    - name: "tile"
+    - name: "tile-0001"
       classes:
       - name: "MccsTile"
         devices:
@@ -44,6 +44,10 @@ server:
             - name: "__value"
               values:
               - "1"
+    - name: "tile-0002"
+      classes:
+      - name: "MccsTile"
+        devices:
         - name: "low_mccs/tile/0002"
           properties:
           - name: "TileId"
@@ -76,6 +80,10 @@ server:
             - name: "__value"
               values:
               - "1"
+    - name: "tile-0003"
+      classes:
+      - name: "MccsTile"
+        devices:
         - name: "low_mccs/tile/0003"
           properties:
           - name: "TileId"
@@ -108,6 +116,10 @@ server:
             - name: "__value"
               values:
               - "1"
+    - name: "tile-0004"
+      classes:
+      - name: "MccsTile"
+        devices:
         - name: "low_mccs/tile/0004"
           properties:
           - name: "TileId"
@@ -147,3 +159,7 @@ image:
   image: "{{.Values.low_mccs.image.image}}"
   tag: "{{.Values.low_mccs.image.tag}}"
   pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

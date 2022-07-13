@@ -1,14 +1,14 @@
 name: "subrack-{{.Release.Name}}"
 function: ska-low-mccs-subrack
 domain: ska-low-mccs
-instances: ["subrack_01"]
+instances: ["subrack-01"]
 entrypoints:
   - name: "subrack.MccsSubrack"
     path: "/app/src/ska_low_mccs/subrack/subrack_device.py"
 server: 
   name: "MccsSubrack"
   instances:
-    - name: "subrack_01"
+    - name: "subrack-01"
       classes:
       - name: "MccsSubrack"
         devices:
@@ -36,3 +36,7 @@ image:
   image: "{{.Values.low_mccs.image.image}}"
   tag: "{{.Values.low_mccs.image.tag}}"
   pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

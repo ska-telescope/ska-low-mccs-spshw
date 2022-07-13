@@ -1,14 +1,14 @@
 name: "subarray-{{.Release.Name}}"
 function: ska-low-mccs-subarray
 domain: ska-low-mccs
-instances: ["subarray_01", "subarray_02"]
+instances: ["subarray-01", "subarray-02"]
 entrypoints:
   - name: "subarray.MccsSubarray"
     path: "/app/src/ska_low_mccs/subarray/subarray_device.py"
 server: 
   name: "MccsSubarray"
   instances:
-    - name: "subarray_01"
+    - name: "subarray-01"
       classes:
       - name: "MccsSubarray"
         devices:
@@ -21,7 +21,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "subarray_02"
+    - name: "subarray-02"
       classes:
       - name: "MccsSubarray"
         devices:
@@ -41,3 +41,7 @@ image:
   image: "{{.Values.low_mccs.image.image}}"
   tag: "{{.Values.low_mccs.image.tag}}"
   pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

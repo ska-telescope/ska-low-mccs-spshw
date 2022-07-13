@@ -1,15 +1,15 @@
 name: "antenna-{{.Release.Name}}"
 function: ska-low-mccs-antenna
 domain: ska-low-mccs
-instances: ["antenna_000001", "antenna_000002", "antenna_000003", "antenna_000004",
-            "antenna_000005", "antenna_000006", "antenna_000007", "antenna_000008"]
+instances: ["antenna-000001", "antenna-000002", "antenna-000003", "antenna-000004",
+            "antenna-000005", "antenna-000006", "antenna-000007", "antenna-000008"]
 entrypoints:
   - name: "antenna.MccsAntenna"
     path: "/app/src/ska_low_mccs/antenna/antenna_device.py"
 server: 
   name: "MccsAntenna"
   instances:
-    - name: "antenna_000001"
+    - name: "antenna-000001"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -30,7 +30,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "antenna_000002"
+    - name: "antenna-000002"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -51,7 +51,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "antenna_000003"
+    - name: "antenna-000003"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -72,7 +72,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "antenna_000004"
+    - name: "antenna-000004"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -93,7 +93,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "antenna_000005"
+    - name: "antenna-000005"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -114,7 +114,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "antenna_000006"
+    - name: "antenna-000006"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -135,7 +135,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "antenna_000007"
+    - name: "antenna-000007"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -156,7 +156,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - "3"
-    - name: "antenna_000008"
+    - name: "antenna-000008"
       classes:
       - name: "MccsAntenna"
         devices:
@@ -184,3 +184,7 @@ image:
   image: "{{.Values.low_mccs.image.image}}"
   tag: "{{.Values.low_mccs.image.tag}}"
   pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

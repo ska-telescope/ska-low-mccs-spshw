@@ -12,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Any, Callable, Hashable, Iterable, Optional
+from typing import Callable, Hashable, Iterable, Optional
 
 from ska_control_model import (
     CommunicationStatus,
@@ -998,7 +998,7 @@ class ControllerComponentManager(MccsComponentManager):
         for station_proxy in self._stations.values():
             station_proxy.release_from_subarray(subarray_fqdn)
 
-        result = self._subarrays[subarray_fqdn].release_all_resources()
+        result_code = self._subarrays[subarray_fqdn].release_all_resources()
         # TODO wait for the respective LRC's to complete, whilst reporting progress
         if task_callback:
             if ResultCode.FAILED == result:

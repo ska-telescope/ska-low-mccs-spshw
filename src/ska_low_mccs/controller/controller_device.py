@@ -220,7 +220,7 @@ class MccsController(SKABaseDevice):
             PowerState.UNKNOWN: "component_unknown",
         }
         if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
+            power_state = cast(PowerState, state_change.get("power_state"))
             if fqdn is None:
                 if self._communication_state == CommunicationStatus.ESTABLISHED:
                     self.op_state_model.perform_action(action_map[power_state])
@@ -232,10 +232,10 @@ class MccsController(SKABaseDevice):
                         self.component_manager._evaluate_power_state()
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             if fqdn is None:
                 if self._health_state != health:
-                    self._health_state = cast(HealthState, health)
+                    self._health_state = health
                     self.push_change_event("healthState", health)
             else:
                 device_family = fqdn.split("/")[1]

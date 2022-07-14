@@ -556,26 +556,51 @@ class AntennaComponentManager(MccsComponentManager):
         """
         return self._power_state_lock
 
-    # TODO should this be a submitted task in line with the base classes??
     # TODO should the decorator be uncommented
     # @check_communicating
-    def off(
-        self: AntennaComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    def off(self: AntennaComponentManager, task_callback: Callable = None) -> tuple[TaskStatus,str]:
+        """
+        Submit the off slow task.
+
+        This method returns immediately after it submitted
+        `self._off` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :returns: task status and message
+        """
+        return self.submit_task(self._off, task_callback=task_callback)
+
+    def _off(
+        self: AntennaComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Turn the antenna off.
 
         It does so by telling the APIU to turn the right antenna off.
 
         :param task_callback: Update task state, defaults to None
-
-        :return: a ResultCode, or None if there was nothing to do
+        :param task_abort_event: Check for abort, defaults to None
         """
-        with self._power_state_lock:
-            self._target_power_state = PowerState.OFF
-        # TODO sort out the return code
-        # return self._review_power()
-        return TaskStatus.COMPLETED, "Ignore return code for now"
+        # Indicate that the task has started
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            with self._power_state_lock:
+                self._target_power_state = PowerState.OFF
+            # TODO should deal with the return code here
+            self._review_power()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+
+        # Indicate that the task has completed
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="This slow task has completed"
+            )
 
     def standby(
         self: AntennaComponentManager, task_callback: Optional[Callable] = None

@@ -11,10 +11,10 @@ from __future__ import annotations
 import logging
 import random
 import unittest.mock
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
-from ska_tango_base.control_model import PowerState, SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.apiu import (
     ApiuComponentManager,
@@ -22,8 +22,7 @@ from ska_low_mccs.apiu import (
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
 )
-from ska_low_mccs.component import CommunicationStatus
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable
 
 
 @pytest.fixture()
@@ -39,20 +38,32 @@ def apiu_antenna_count() -> int:
 
 
 @pytest.fixture()
-def component_antenna_power_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+
+    (This is a pytest fixture.)
+
+    :return: the number of worker threads
+    """
+    return 1
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback for when the power mode of a component's antenna changes.
+    Return a mock callback for when the state of a component changes.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
-    :return: a mock callback to be called when the power mode of a
-        component's antenna changes.
+    :return: a mock callback to be called when the state of a
+        component changes.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -69,26 +80,24 @@ def initial_power_mode() -> PowerState:
 @pytest.fixture()
 def apiu_simulator(
     apiu_antenna_count: int,
+    component_state_changed_callback: MockCallable,
     initial_fault: bool = False,
-    #    component_fault_callback: MockCallable,
 ) -> ApiuSimulator:
     """
-    Return an APIU simulator.
-
-    (This is a pytest fixture.)
+    Return an APIU simulator (This is a pytest fixture).
 
     :param apiu_antenna_count: the number of antennas in the APIU
+    :param component_state_changed_callback: callback to be called when the
+            component faults (or stops faulting)
     :param initial_fault: whether the simulator should start by
         simulating a fault.
 
     :return: an APIU simulator
     """
-    #     :param component_fault_callback: callback to be called when the
-    #         component faults (or stops faulting)
     return ApiuSimulator(
         apiu_antenna_count,
+        component_state_changed_callback,
         initial_fault,
-        #        component_fault_callback,
     )
 
 
@@ -96,10 +105,9 @@ def apiu_simulator(
 def apiu_simulator_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    component_antenna_power_changed_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> ApiuSimulatorComponentManager:
     """
     Return an APIU simulator component manager.
@@ -108,25 +116,21 @@ def apiu_simulator_component_manager(
 
     :param apiu_antenna_count: the number of antennas in the APIU
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_antenna_power_changed_callback: callback to be
-        called when the power mode of an antenna changes
+    :param component_state_changed_callback: callback to be
+        called when the state changes
 
     :return: an APIU simulator component manager.
     """
     return ApiuSimulatorComponentManager(
         apiu_antenna_count,
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
-        component_antenna_power_changed_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -134,10 +138,9 @@ def apiu_simulator_component_manager(
 def switching_apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_fault_callback: Callable[[bool], None],
-    component_antenna_power_changed_callback: MockCallable,
+    max_workers,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingApiuComponentManager:
     """
     Return an component manager that switched between APIU driver and simulator.
@@ -146,15 +149,12 @@ def switching_apiu_component_manager(
 
     :param apiu_antenna_count: the number of antennas in the APIU
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_antenna_power_changed_callback: callback to be
-        called when the power mode of an antenna changes
+    :param component_state_changed_callback: callback to be called when the
+        component state changes
 
     :return: an APIU component manager in simulation mode.
     """
@@ -162,10 +162,9 @@ def switching_apiu_component_manager(
         SimulationMode.TRUE,
         apiu_antenna_count,
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
-        component_antenna_power_changed_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -173,11 +172,9 @@ def switching_apiu_component_manager(
 def apiu_component_manager(
     apiu_antenna_count: int,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    component_antenna_power_changed_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
     initial_power_mode: PowerState,
 ) -> ApiuComponentManager:
     """
@@ -187,17 +184,12 @@ def apiu_component_manager(
 
     :param apiu_antenna_count: the number of antennas in the APIU
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be
-        called when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_antenna_power_changed_callback: callback to be
-        called when the power mode of an antenna changes
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
     :param initial_power_mode: the initial power mode of the simulated
         power supply.
 
@@ -207,11 +199,9 @@ def apiu_component_manager(
         SimulationMode.TRUE,
         apiu_antenna_count,
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
-        component_antenna_power_changed_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
         initial_power_mode,
     )
 

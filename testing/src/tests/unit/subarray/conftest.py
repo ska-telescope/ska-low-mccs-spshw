@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 import tango
@@ -18,317 +18,95 @@ from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
+from ska_low_mccs.testing.mock import (  # MockChangeEventCallback,
     MockCallable,
-    MockChangeEventCallback,
+    MockCallableDeque,
     MockDeviceBuilder,
 )
 
 
 @pytest.fixture()
-def assign_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[["dict[str, Any]"], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
 
-    To be called when the subarray completes a resource assignment.
+    To be called when the subarray's state changes.
+    A side effect function is passed in to update the DUT's state
 
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        factory which uses a double-ended queue (i.e. an object that returns mock callbacks when
         called).
 
-    :return: a mock callback to be called when the subarray completes a
-        resource assignment
+    :return: a mock callback to be called when the subarray's state changes.
     """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def release_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when the subarray completes a resource release.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the subarray completes a
-        resource release
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def configure_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when the subarray completes a configuration.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the subarray completes a
-        configuration
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def abort_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when the subarray completes an abort.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the subarray completes an
-        abort
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def obsreset_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback.
-
-    To be called when the subarray completes an observation
-    reset.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the subarray completes an
-        observation reset.
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def restart_completed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when the subarray completes a restart.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the subarray completes a
-        restart.
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def resources_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when the subarray's resources change.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the subarray's resources
-        change
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def configured_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when whether the subarray is configured changes.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when whether the subarray is
-        configured changes
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def scanning_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when whether the subarray is scanning changes.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when whether the subarray is
-        scanning changes
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def obs_fault_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback to be called when an observation fault occurs or stops.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when whether the subarray is
-        experiencing an observation fault changes
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def station_health_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for a change in the health of one of the subarray's stations.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the component manager
-        detects that one of its stations has changed health.
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def subarray_beam_health_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for a change in the health of one of the subarray's beams.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the component manager
-        detects that one of its subarray beams has changed health.
-    """
-    return mock_callback_factory()
-
-
-@pytest.fixture()
-def station_beam_health_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for a change in the health of one of the subarray's beams.
-
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the component manager
-        detects that one of its station beams has changed health.
-    """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
 def subarray_component_manager(
     tango_harness: TangoHarness,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    assign_completed_callback: MockCallable,
-    release_completed_callback: MockCallable,
-    configure_completed_callback: MockCallable,
-    abort_completed_callback: MockCallable,
-    obsreset_completed_callback: MockCallable,
-    restart_completed_callback: MockCallable,
-    resources_changed_callback: MockCallable,
-    configured_changed_callback: MockCallable,
-    scanning_changed_callback: MockCallable,
-    obs_fault_callback: MockCallable,
-    station_health_changed_callback: MockCallable,
-    subarray_beam_health_changed_callback: MockCallable,
-    station_beam_health_changed_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
 ) -> SubarrayComponentManager:
     """
     Return a subarray component manager.
 
+    This fixture is identical to `mock_subarray_component_manager` except for the inclusion of `tango_harness`.
+    Without `tango_harness` the component manager tests experience errors.
+    This fixture is used to test subarray_component_manager.
+
     :param tango_harness: a test harness for MCCS tango devices
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: Maximum number of workers in the thread pool.
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param assign_completed_callback: callback to be called when the
-        component completes a resource assignment.
-    :param release_completed_callback: callback to be called when
-        the component completes a resource release.
-    :param configure_completed_callback: callback to be called when
-        the component completes a configuration.
-    :param abort_completed_callback: callback to be called when the
-        component completes an abort.
-    :param obsreset_completed_callback: callback to be called when
-        the component completes an observation reset.
-    :param restart_completed_callback: callback to be called when
-        the component completes a restart.
-    :param resources_changed_callback: callback to be called when this
-        subarray's resources change
-    :param configured_changed_callback: callback to be called when
-        whether the subarray is configured changes
-    :param scanning_changed_callback: callback to be called when whether
-        the subarray is scanning changes
-    :param obs_fault_callback: callback to be called when whether the
-        subarray is experiencing an observation fault changes.
-    :param station_health_changed_callback: a callback to be called when
-        the health of one of this subarray's stations changes
-    :param subarray_beam_health_changed_callback: a callback to be
-        called when the health of one of this subarray's subarray beams
-        changes
-    :param station_beam_health_changed_callback: a callback to be
-        called when the health of one of this subarray's station beams
-        changes
+    :param component_state_changed_callback: callback to be called when the
+        component's state changes.
 
-    :return: a station beam component manager
+    :return: a subarray component manager
     """
     return SubarrayComponentManager(
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        assign_completed_callback,
-        release_completed_callback,
-        configure_completed_callback,
-        abort_completed_callback,
-        obsreset_completed_callback,
-        restart_completed_callback,
-        resources_changed_callback,
-        configured_changed_callback,
-        scanning_changed_callback,
-        obs_fault_callback,
-        station_health_changed_callback,
-        subarray_beam_health_changed_callback,
-        station_beam_health_changed_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
+
+
+@pytest.fixture()
+def mock_subarray_component_manager(
+    logger: logging.Logger,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallableDeque,
+) -> SubarrayComponentManager:
+    """
+    Return a subarray component manager.
+
+    This fixture is identical to the `subarray_component_manager` fixture except for the `tango_harness`
+    which is omitted here to avoid a circular reference.
+    This fixture is used to test subarray_device.
+
+    :param logger: the logger to be used by this object.
+    :param max_workers: Maximum number of workers in the thread pool.
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be called when the
+        component's state changes.
+
+    :return: a subarray component manager
+    """
+    return SubarrayComponentManager(
+        logger,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -632,3 +410,13 @@ def start_time() -> float:
     :return: a scan start time for use in testing.
     """
     return 0.0
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return a value for max_workers for use in testing.
+
+    :return: maximum number of workers in thread pool for use in testing.
+    """
+    return 2

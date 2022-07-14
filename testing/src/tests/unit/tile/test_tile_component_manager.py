@@ -11,16 +11,20 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Union
 
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    PowerState,
+    SimulationMode,
+    TestMode,
+)
+from ska_tango_base.executor import TaskStatus
 
-from ska_low_mccs.component import CommunicationStatus, ExtendedPowerState
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
@@ -42,133 +46,130 @@ class TestTileComponentManager:
     itself.
     """
 
-    @pytest.mark.parametrize("power_mode", list(ExtendedPowerState))
+    @pytest.mark.parametrize("power_state", list(PowerState))
     def test_communication(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
-        communication_status_changed_callback: MockCallable,
-        power_mode: ExtendedPowerState,
+        communication_state_changed_callback: MockCallable,
+        power_state: PowerState,
     ) -> None:
         """
         Test communication between the tile component manager and its tile.
 
         :param tile_component_manager: the tile component manager
             under test
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param power_mode: the power mode of the TPM when we break off
+        :param power_state: the power mode of the TPM when we break off
             comms
         """
         assert (
-            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+            tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
 
         # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
         tile_component_manager.start_communicating()
-
-        communication_status_changed_callback.assert_next_call(
+        time.sleep(0.2)
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
-        if power_mode == ExtendedPowerState.UNKNOWN:
-            tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.UNKNOWN)
-        elif power_mode == ExtendedPowerState.NO_SUPPLY:
-            tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.NO_SUPPLY)
-        elif power_mode == ExtendedPowerState.OFF:
+        if power_state == PowerState.UNKNOWN:
+            tile_component_manager._tpm_power_state_changed(PowerState.UNKNOWN)
+        elif power_state == PowerState.NO_SUPPLY:
+            tile_component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
+        elif power_state == PowerState.OFF:
             pass  # test harness starts with TPM off
-        elif power_mode == ExtendedPowerState.ON:
-            tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.ON)
-            communication_status_changed_callback.assert_next_call(
+        elif power_state == PowerState.ON:
+            tile_component_manager._tpm_power_state_changed(PowerState.ON)
+            communication_state_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
 
         tile_component_manager.stop_communicating()
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
         assert (
-            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+            tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
 
     # TODO: find out if TPM has standby mode, and if so add this case
     @pytest.mark.parametrize(
-        "second_power_mode",
+        "second_power_state",
         [
-            ExtendedPowerState.UNKNOWN,
-            ExtendedPowerState.NO_SUPPLY,
-            ExtendedPowerState.OFF,
-            ExtendedPowerState.ON,
+            PowerState.UNKNOWN,
+            PowerState.NO_SUPPLY,
+            PowerState.OFF,
+            PowerState.ON,
         ],
     )
     @pytest.mark.parametrize(
-        "first_power_mode",
+        "first_power_state",
         [
-            ExtendedPowerState.UNKNOWN,
-            ExtendedPowerState.NO_SUPPLY,
-            ExtendedPowerState.OFF,
-            ExtendedPowerState.ON,
+            PowerState.UNKNOWN,
+            PowerState.NO_SUPPLY,
+            PowerState.OFF,
+            PowerState.ON,
         ],
     )
-    def test_power_mode_changes(
+    def test_power_state_changes(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
-        communication_status_changed_callback: MockCallable,
-        first_power_mode: ExtendedPowerState,
-        second_power_mode: ExtendedPowerState,
+        communication_state_changed_callback: MockCallable,
+        first_power_state: PowerState,
+        second_power_state: PowerState,
     ) -> None:
         """
         Test handling of notifications of TPM power mode changes from the subrack.
 
         :param tile_component_manager: the tile component manager
             under test
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param first_power_mode: the power mode of the initial event
-        :param second_power_mode: the power mode of the subsequent event
+        :param first_power_state: the power mode of the initial event
+        :param second_power_state: the power mode of the subsequent event
         """
         assert (
-            tile_component_manager.communication_status == CommunicationStatus.DISABLED
+            tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
 
         tile_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
         assert (
-            tile_component_manager.communication_status
+            tile_component_manager.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
-        tile_component_manager._tpm_power_mode_changed(first_power_mode)
+        tile_component_manager._tpm_power_state_changed(first_power_state)
 
-        if first_power_mode == ExtendedPowerState.ON:
-            communication_status_changed_callback.assert_next_call(
+        if first_power_state == PowerState.ON:
+            communication_state_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
         else:
-            communication_status_changed_callback.assert_not_called()
+            communication_state_changed_callback.assert_not_called()
 
-        tile_component_manager._tpm_power_mode_changed(second_power_mode)
+        tile_component_manager._tpm_power_state_changed(second_power_state)
 
-        if (
-            first_power_mode != ExtendedPowerState.ON
-            and second_power_mode == ExtendedPowerState.ON
-        ):
-            communication_status_changed_callback.assert_next_call(
+        if first_power_state != PowerState.ON and second_power_state == PowerState.ON:
+            communication_state_changed_callback.assert_next_call(
                 CommunicationStatus.ESTABLISHED
             )
         else:
-            communication_status_changed_callback.assert_not_called()
+            communication_state_changed_callback.assert_not_called()
 
     def test_off_on(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
     ) -> None:
@@ -177,7 +178,7 @@ class TestTileComponentManager:
 
         :param tile_component_manager: the tile component manager
             under test
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param subrack_tpm_id: This tile's position in its subrack
@@ -186,26 +187,27 @@ class TestTileComponentManager:
         """
         tile_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
+        tile_component_manager._tpm_power_state_changed(PowerState.OFF)
 
         tile_component_manager.on()
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.ON)
+        tile_component_manager._tpm_power_state_changed(PowerState.ON)
 
         tile_component_manager.off()
         mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
+        tile_component_manager._tpm_power_state_changed(PowerState.OFF)
 
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
+        mock_task_callback: MockCallable,
     ) -> None:
         """
         Test that eventual consistency semantics of the on command.
@@ -217,35 +219,50 @@ class TestTileComponentManager:
 
         :param tile_component_manager: the tile component manager
             under test
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param subrack_tpm_id: This tile's position in its subrack
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
+        :param mock_task_callback: callback for tasks
         """
-        with pytest.raises(
-            ConnectionError,
-            match="TPM cannot be turned off / on when not online.",
-        ):
-            tile_component_manager.on()
+        tile_component_manager.on(task_callback=mock_task_callback)
+        mock_task_callback.assert_next_call(status=TaskStatus.QUEUED)
+
+        # For some reason we cannot compare the equality of the Exception objects directly.
+        # mock_task_callback.assert_next_call(
+        #    status=TaskStatus.FAILED,
+        #    exception=ConnectionError("TPM cannot be turned off / on when not online."))
+        time.sleep(0.1)
+        _, kwargs = mock_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+
+        _, kwargs = mock_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.FAILED
+        exc = kwargs["exception"]
+        assert exc.args == ("TPM cannot be turned off / on when not online.",)
+        assert isinstance(exc, ConnectionError)
 
         tile_component_manager.start_communicating()
 
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
         # mock an event from subrack announcing it to be turned off
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.NO_SUPPLY)
+        tile_component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
 
-        assert tile_component_manager.on() == ResultCode.QUEUED
+        result_code, message = tile_component_manager.on()
+        assert result_code == TaskStatus.QUEUED
+        assert message == "Task queued"
+        time.sleep(0.1)
 
         # no action taken initialially because the subrack is switched off
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
         # mock an event from subrack announcing it to be turned on
-        tile_component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
+        tile_component_manager._tpm_power_state_changed(PowerState.OFF)
 
         # now that the tile has been notified that the subrack is on,
         # it tells it to turn on its TPM
@@ -269,9 +286,9 @@ class TestStaticSimulatorCommon:
     """
 
     @pytest.fixture()
-    def initial_tpm_power_mode(
+    def initial_tpm_power_state(
         self: TestStaticSimulatorCommon,
-    ) -> ExtendedPowerState:
+    ) -> PowerState:
         """
         Return the initial power mode of the TPM.
 
@@ -281,7 +298,7 @@ class TestStaticSimulatorCommon:
 
         :return: the initial power mode of the TPM.
         """
-        return ExtendedPowerState.ON
+        return PowerState.ON
 
     @pytest.fixture(
         params=[
@@ -297,7 +314,7 @@ class TestStaticSimulatorCommon:
         static_tpm_simulator_component_manager: StaticTpmSimulatorComponentManager,
         switching_tpm_component_manager: SwitchingTpmComponentManager,
         tile_component_manager: TileComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
         request: SubRequest,
     ) -> Union[
         StaticTpmSimulator,
@@ -330,7 +347,7 @@ class TestStaticSimulatorCommon:
             that switches between TPM simulator and TPM driver to return
         :param tile_component_manager: the tile component manager (in
             simulation mode) to return
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         :param request: A pytest object giving access to the requesting test
@@ -341,6 +358,7 @@ class TestStaticSimulatorCommon:
 
         :return: the tile class object under test
         """
+        self.tile_name = request.param
         if request.param == "static_tpm_simulator":
             return static_tpm_simulator
         elif request.param == "static_tpm_simulator_component_manager":
@@ -351,10 +369,19 @@ class TestStaticSimulatorCommon:
             return switching_tpm_component_manager
         elif request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
-            communication_status_changed_callback.assert_next_call(
+            communication_state_changed_callback.assert_next_call(
                 CommunicationStatus.NOT_ESTABLISHED
             )
             time.sleep(0.1)
+            # With the update to v0.13 of the base classes the logic to change the power_state
+            # of a device has been moved from the component manager to the device itself.
+            # This means that during component manager tests we cannot change the power state
+            # or other attributes "naturally" and thus this workaround is used where
+            # we assert the callback was called as we would expect and then manually set the attribute.
+            tile_component_manager._component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.ON}
+            )
+            tile_component_manager.power_state = PowerState.ON
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 
@@ -374,7 +401,6 @@ class TestStaticSimulatorCommon:
             ),
             ("pps_delay", StaticTpmSimulator.PPS_DELAY),
             ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
-            ("arp_table", StaticTpmSimulator.ARP_TABLE),
             ("register_list", list(StaticTpmSimulator.REGISTER_MAP[0].keys())),
         ),
     )
@@ -401,6 +427,17 @@ class TestStaticSimulatorCommon:
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
+        # With the update to v0.13 of the base classes the logic to change the power_state
+        # of a device has been moved from the component manager to the device itself.
+        # This means that during component manager tests we cannot change the power state
+        # or other attributes "naturally" and thus this workaround is used where
+        # we assert the callback was called as we would expect and then manually set the attribute.
+        # We exclude the StaticTpmSimulator as it does not have this callback.
+        if not isinstance(tile, StaticTpmSimulator):
+            tile._component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.ON}
+            )
+            tile.power_state = PowerState.ON
         assert getattr(tile, attribute_name) == expected_value
 
     @pytest.mark.parametrize(
@@ -444,6 +481,18 @@ class TestStaticSimulatorCommon:
             any type, but the test of the attribute is a simple "=="
             equality test.
         """
+        # With the update to v0.13 of the base classes the logic to change the power_state
+        # of a device has been moved from the component manager to the device itself.
+        # This means that during component manager tests we cannot change the power state
+        # or other attributes "naturally" and thus this workaround is used where
+        # we assert the callback was called as we would expect and then manually set the attribute.
+        # We exclude the StaticTpmSimulator as it does not have this callback.
+        if not isinstance(tile, StaticTpmSimulator):
+            tile._component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.ON}
+            )
+            tile.power_state = PowerState.ON
+
         assert getattr(tile, attribute_name) == initial_value
 
         for value in values_to_write:
@@ -453,6 +502,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("command_name", "num_args"),
         (
+            ("get_arp_table", 0),
             ("cpld_flash_write", 1),
             ("set_channeliser_truncation", 1),
             ("set_beamformer_regions", 1),
@@ -474,7 +524,7 @@ class TestStaticSimulatorCommon:
             ("send_beam_data", 0),
             ("stop_data_transmission", 0),
             ("compute_calibration_coefficients", 0),
-            ("start_acquisition", 0),
+            ("start_acquisition", 1),
             ("set_time_delays", 1),
             ("set_csp_rounding", 1),
             ("set_lmc_integrated_download", 3),
@@ -508,7 +558,27 @@ class TestStaticSimulatorCommon:
         :param command_name: the name of the command under test
         :param num_args: the number of args the command takes
         """
+        lrc_list = [
+            "cpld_flash_write",
+            "get_arp_table",
+            "start_acquisition",
+            "post_synchronisation",
+            "sync_fpgas",
+        ]
         args = [mocker.Mock()] * num_args
+        if command_name in lrc_list and self.tile_name == "tile_component_manager":
+            command_name = "_" + command_name
+        # With the update to v0.13 of the base classes the logic to change the power_state
+        # of a device has been moved from the component manager to the device itself.
+        # This means that during component manager tests we cannot change the power state
+        # or other attributes "naturally" and thus this workaround is used where
+        # we assert the callback was called as we would expect and then manually set the attribute.
+        # We exclude the StaticTpmSimulator as it does not have this callback.
+        if not isinstance(tile, StaticTpmSimulator):
+            tile._component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.ON}
+            )
+            tile.power_state = PowerState.ON
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)
 
@@ -527,8 +597,11 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         """
         tile.erase_fpga()
+        time.sleep(0.2)
         assert not tile.is_programmed
+        time.sleep(0.2)
         tile.initialise()
+        time.sleep(2)
         assert tile.is_programmed
         assert tile.firmware_name == "itpm_v1_6.bit"
 
@@ -553,9 +626,12 @@ class TestStaticSimulatorCommon:
         :param mocker: fixture that wraps unittest.mock
         """
         tile.erase_fpga()
+        time.sleep(0.2)
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
+        time.sleep(0.2)
         tile.download_firmware(mock_bitfile)
+        time.sleep(0.2)
         assert tile.is_programmed
 
     @pytest.mark.parametrize("device", (1,))
@@ -762,9 +838,9 @@ class TestDynamicSimulatorCommon:
         return TestMode.NONE
 
     @pytest.fixture()
-    def initial_tpm_power_mode(
+    def initial_tpm_power_state(
         self: TestDynamicSimulatorCommon,
-    ) -> ExtendedPowerState:
+    ) -> PowerState:
         """
         Return the initial power mode of the TPM.
 
@@ -774,7 +850,7 @@ class TestDynamicSimulatorCommon:
 
         :return: the initial power mode of the TPM.
         """
-        return ExtendedPowerState.ON
+        return PowerState.ON
 
     @pytest.fixture(
         params=[
@@ -832,6 +908,15 @@ class TestDynamicSimulatorCommon:
         elif request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
             time.sleep(0.1)
+            # With the update to v0.13 of the base classes the logic to change the power_state
+            # of a device has been moved from the component manager to the device itself.
+            # This means that during component manager tests we cannot change the power state
+            # or other attributes "naturally" and thus this workaround is used where
+            # we assert the callback was called as we would expect and then manually set the attribute.
+            tile_component_manager._component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.ON}
+            )
+            tile_component_manager.power_state = PowerState.ON
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 
@@ -881,7 +966,6 @@ class TestDynamicSimulatorCommon:
             ),
             ("pps_delay", DynamicTpmSimulator.PPS_DELAY),
             ("firmware_available", DynamicTpmSimulator.FIRMWARE_AVAILABLE),
-            ("arp_table", DynamicTpmSimulator.ARP_TABLE),
             (
                 "register_list",
                 list(DynamicTpmSimulator.REGISTER_MAP[0].keys()),
@@ -909,6 +993,13 @@ class TestDynamicSimulatorCommon:
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
+        # With the update to v0.13 of the base classes the logic to change the power_state
+        # of a device has been moved from the component manager to the device itself.
+        # This means that during component manager tests we cannot change the power state
+        # or other attributes "naturally" and thus this workaround is used where
+        # we assert the callback was called as we would expect and then manually set the attribute.
+        # tile._component_state_changed_callback.assert_next_call_with_keys({"power_state": PowerState.ON})
+        # tile.power_state = PowerState.ON
         assert getattr(tile, attribute_name) == expected_value
 
 
@@ -954,41 +1045,40 @@ class TestDriverCommon:
         def __init__(
             self: TestDriverCommon.PatchedTpmDriver,
             logger: logging.Logger,
-            push_change_event: Optional[Callable],
+            max_workers: int,
+            tile_id: int,
             ip: str,
             port: int,
             tpm_version: str,
-            communication_status_changed_callback: Callable[
-                [CommunicationStatus], None
-            ],
-            component_fault_callback: Callable[[bool], None],
+            communication_state_changed_callback: Callable[[CommunicationStatus], None],
+            component_state_changed_callback: Callable[[bool], None],
             aavs_tile: unittest.mock.Mock,
         ) -> None:
             """
             Initialise a new patched TPM driver instance.
 
             :param logger: a logger for this simulator to use
-            :param push_change_event: method to call when the base classes
-                want to send an event
+            :param max_workers: nos of worker threads
+            :param tile_id: the unique ID for the tile
             :param ip: IP address for hardware tile
             :param port: IP address for hardware tile control
             :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-            :param communication_status_changed_callback: callback to be
+            :param communication_state_changed_callback: callback to be
                 called when the status of the communications channel between
                 the component manager and its component changes
-            :param component_fault_callback: callback to be called when the
+            :param component_state_changed_callback: callback to be called when the
                 component faults (or stops faulting)
             :param aavs_tile: a mock of the hardware tile
             """
             super().__init__(
                 logger,
-                push_change_event,
-                1,  # default tile_id
+                max_workers,
+                tile_id,
                 ip,
                 port,
                 tpm_version,
-                communication_status_changed_callback,
-                component_fault_callback,
+                communication_state_changed_callback,
+                component_state_changed_callback,
             )
             self.tile = aavs_tile
 
@@ -996,27 +1086,28 @@ class TestDriverCommon:
     def patched_tpm_driver(
         self: TestDriverCommon,
         logger: logging.Logger,
-        lrc_result_changed_callback: MockChangeEventCallback,
+        max_workers: int,
+        tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
-        communication_status_changed_callback: MockCallable,
-        component_fault_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
         hardware_tile_mock: unittest.mock.Mock,
     ) -> PatchedTpmDriver:
         """
         Return a patched TPM driver.
 
-        :param logger: the logger to be used by this object.
-        :param lrc_result_changed_callback: a callback to
-            be used to subscribe to device LRC result changes
+        :param logger: the logger to be used by this object
+        :param max_workers: nos of worker threads
+        :param tile_id: the unique ID for the tile
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
+        :param component_state_changed_callback: callback to be called when the
             component faults (or stops faulting)
         :param hardware_tile_mock: a mock of the hardware tile
 
@@ -1024,12 +1115,13 @@ class TestDriverCommon:
         """
         return self.PatchedTpmDriver(
             logger,
-            lrc_result_changed_callback,
+            max_workers,
+            tile_id,
             tpm_ip,
             tpm_cpld_port,
             tpm_version,
-            communication_status_changed_callback,
-            component_fault_callback,
+            communication_state_changed_callback,
+            component_state_changed_callback,
             hardware_tile_mock,
         )
 
@@ -1050,19 +1142,19 @@ class TestDriverCommon:
         :param hardware_tile_mock: An hardware tile mock
         """
         hardware_tile_mock.tpm = None
-        assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
+        assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
-            patched_tpm_driver.communication_status
+            patched_tpm_driver.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
         # Wait for the message to execute
         # then check that the connect has been called
         # but the component is still unconnected
-        time.sleep(3.1)
+        time.sleep(0.3)
         hardware_tile_mock.connect.assert_called_with()
         assert (
-            patched_tpm_driver.communication_status
+            patched_tpm_driver.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
@@ -1082,10 +1174,10 @@ class TestDriverCommon:
         :param hardware_tile_mock: An hardware tile mock
         """
         hardware_tile_mock.tpm = True
-        assert patched_tpm_driver.communication_status == CommunicationStatus.DISABLED
+        assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
-            patched_tpm_driver.communication_status
+            patched_tpm_driver.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
@@ -1098,6 +1190,4 @@ class TestDriverCommon:
         # )
 
         # assert patched_tpm_driver._queue_manager._task_result[2] == "Connected to Tile"
-        assert (
-            patched_tpm_driver.communication_status == CommunicationStatus.ESTABLISHED
-        )
+        assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED

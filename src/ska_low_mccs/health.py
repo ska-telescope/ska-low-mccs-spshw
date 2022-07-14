@@ -9,7 +9,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Callable
+from typing import Any, Callable
 
 from ska_tango_base.control_model import HealthState
 
@@ -33,20 +33,21 @@ class HealthModel:
 
     def __init__(
         self: HealthModel,
-        health_changed_callback: Callable[[HealthState], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
-        :param health_changed_callback: callback to be called whenever
+        :param component_state_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
         """
         self._communicating = False
         self._faulty = False
         self._health_state = self.evaluate_health()
-        self._health_changed_callback = health_changed_callback
-        self._health_changed_callback(self._health_state)
+        health = {"health_state": self._health_state}
+        self._component_state_changed_callback = component_state_changed_callback
+        self._component_state_changed_callback(health)
 
     @property
     def health_state(self: HealthModel) -> HealthState:
@@ -69,7 +70,8 @@ class HealthModel:
         health_state = self.evaluate_health()
         if self._health_state != health_state:
             self._health_state = health_state
-            self._health_changed_callback(health_state)
+            health = {"health_state": health_state}
+            self._component_state_changed_callback(health)
 
     def evaluate_health(self: HealthModel) -> HealthState:
         """

@@ -14,7 +14,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 import requests
-from ska_tango_base.control_model import PowerState, SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -24,7 +24,25 @@ from ska_low_mccs.subrack import (
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
 )
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+
+# from ska_low_mccs.testing.mock import MockCallableDeque
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for when the state of a component changes.
+
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the state of a
+        component changes.
+    """
+    return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -42,6 +60,18 @@ def component_tpm_power_changed_callback(
         component's TPM changes.
     """
     return mock_callback_factory()
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+
+    (This is a pytest fixture.)
+
+    :return: the number of worker threads
+    """
+    return 1
 
 
 @pytest.fixture()
@@ -65,7 +95,7 @@ def subrack_port() -> int:
 
 
 @pytest.fixture()
-def initial_power_mode() -> PowerState:
+def initial_power_state() -> PowerState:
     """
     Return the initial power mode of the subrack's simulated power supply.
 
@@ -95,52 +125,41 @@ def subrack_simulator(
 @pytest.fixture()
 def subrack_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    component_progress_changed_callback: MockCallable,
-    component_tpm_power_changed_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubrackSimulatorComponentManager:
     """
     Return a subrack simulator component manager.
 
     (This is a pytest fixture.)
 
-    :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param logger: the logger to be used by this object
+    :param max_workers: nos of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_progress_changed_callback: callback to be
-        called when the progress value changes
-    :param component_tpm_power_changed_callback: callback to be
-        called when the power mode of an tpm changes
+    :param component_state_changed_callback: callback to be
+        called when the state changes
 
     :return: a subrack simulator component manager.
     """
     return SubrackSimulatorComponentManager(
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
-        component_progress_changed_callback,
-        component_tpm_power_changed_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
 @pytest.fixture()
 def switching_subrack_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers,
     subrack_ip: str,
     subrack_port: int,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    component_progress_changed_callback: MockCallable,
-    component_tpm_power_changed_callback: MockCallable,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingSubrackComponentManager:
     """
     Return an component manager that switched between subrack driver and simulator.
@@ -148,32 +167,25 @@ def switching_subrack_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_progress_changed_callback: callback to be
-        called when the progress value changes
-    :param component_tpm_power_changed_callback: callback to be
-        called when the power mode of an tpm changes
+    :param component_state_changed_callback: callback to be called when the
+        component state changes
 
     :return: an subrack component manager in simulation mode.
     """
     return SwitchingSubrackComponentManager(
         SimulationMode.TRUE,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         subrack_ip,
         subrack_port,
-        communication_status_changed_callback,
-        component_fault_callback,
-        component_progress_changed_callback,
-        component_tpm_power_changed_callback,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -181,13 +193,11 @@ def switching_subrack_component_manager(
 def subrack_driver(
     monkeypatch: pytest.MonkeyPatch,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers,
     subrack_ip: str,
     subrack_port: int,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    component_progress_changed_callback: MockCallable,
-    component_tpm_power_changed_callback: MockCallable,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SubrackDriver:
     """
     Return a subrack driver (with HTTP connection monkey-patched).
@@ -196,19 +206,14 @@ def subrack_driver(
 
     :param monkeypatch: the pytest monkey-patching fixture
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_progress_changed_callback: callback to be
-        called when the progress value changes
-    :param component_tpm_power_changed_callback: callback to be
-        called when the power mode of an tpm changes
+    :param component_state_changed_callback: callback to be
+        called when the state changes
 
     :return: an subrack simulator component manager.
     """
@@ -216,6 +221,7 @@ def subrack_driver(
     class MockResponse:
         """A mock class to replace requests.Response."""
 
+        status_code = 200
         ATTRIBUTE_VALUES = {
             "tpm_on_off": [False, False, False],
             "backplane_temperatures": SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
@@ -309,28 +315,23 @@ def subrack_driver(
 
     return SubrackDriver(
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         subrack_ip,
         subrack_port,
-        communication_status_changed_callback,
-        component_fault_callback,
-        component_progress_changed_callback,
-        component_tpm_power_changed_callback,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
 @pytest.fixture()
 def subrack_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
     subrack_ip: str,
     subrack_port: int,
-    communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    component_progress_changed_callback: MockCallable,
-    component_tpm_power_changed_callback: MockCallable,
-    initial_power_mode: PowerState,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    initial_power_state: PowerState,
 ) -> SubrackComponentManager:
     """
     Return an subrack component manager (in simulation mode as specified).
@@ -338,22 +339,15 @@ def subrack_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be
-        called when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param component_progress_changed_callback: callback to be
-        called when the progress value changes
-    :param component_tpm_power_changed_callback: callback to be
-        called when the power mode of an tpm changes
-    :param initial_power_mode: the initial power mode of the simulated
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
+    :param initial_power_state: the initial power mode of the simulated
         power supply.
 
     :return: an subrack component manager in the specified simulation mode.
@@ -361,13 +355,10 @@ def subrack_component_manager(
     return SubrackComponentManager(
         SimulationMode.TRUE,
         logger,
-        lrc_result_changed_callback,
+        max_workers,
         subrack_ip,
         subrack_port,
-        communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
-        component_progress_changed_callback,
-        component_tpm_power_changed_callback,
-        initial_power_mode,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+        initial_power_state,
     )

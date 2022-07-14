@@ -212,15 +212,15 @@ class ClusterSimulator(ObjectComponent):
         self._node_statuses = dict(self.NODE_STATUSES)
         self._job_id_generator = JobIdGenerator(start=2000)
 
-        self._fault_callback: Optional[Callable[[bool], None]] = None
+        self._fault_callback: Optional[Callable[[dict[str, Any]], None]] = None
         self._shadow_master_pool_node_health_changed_callback: Optional[
-            Callable[[list[HealthState]], None]
+            Callable[[dict[str, Any]], None]
         ] = None
         super().__init__()
 
     def set_fault_callback(
         self: ClusterSimulator,
-        fault_callback: Optional[Callable[[bool], None]],
+        fault_callback: Optional[Callable[[dict[str, Any]], None]],
     ) -> None:
         """
         Set the callback to be called when the component faults.
@@ -235,12 +235,12 @@ class ClusterSimulator(ObjectComponent):
         """
         self._fault_callback = fault_callback
         if fault_callback is not None:
-            fault_callback(self._faulty)
+            fault_callback({"fault": self._faulty})
 
     def set_shadow_master_pool_node_health_changed_callback(
         self: ClusterSimulator,
         shadow_master_pool_node_health_changed_callback: Optional[
-            Callable[[list[HealthState]], None]
+            Callable[[dict[str, Any]], None]
         ],
     ) -> None:
         """
@@ -599,7 +599,7 @@ class ClusterSimulator(ObjectComponent):
         creates a unique job id for the job, registers it as a STAGING
         job, and returns the job id.
 
-        :param job_config: specification of the submitted job
+        :param job_config: The specification of the job to be submitted
 
         :return: the job_id
         """
@@ -681,4 +681,4 @@ class ClusterSimulator(ObjectComponent):
             *recovered* from a fault).
         """
         if self._fault_callback is not None:
-            self._fault_callback(faulty)
+            self._fault_callback({"fault": faulty})

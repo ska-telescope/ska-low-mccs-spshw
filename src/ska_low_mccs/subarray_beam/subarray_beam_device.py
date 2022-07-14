@@ -8,17 +8,15 @@
 """This module implements the MCCS subarray beam device."""
 from __future__ import annotations
 
-import json
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command
 
 from ska_low_mccs import release
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.subarray_beam import (
     SubarrayBeamComponentManager,
     SubarrayBeamHealthModel,
@@ -44,15 +42,18 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsSubarrayBeam) -> None:
         super()._init_state_model()
         self._obs_state_model = SubarrayBeamObsStateModel(
-            self.logger, self._update_obs_state
+            self.logger, self.component_state_changed_callback
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubarrayBeamHealthModel(self.health_changed)
+        self._health_model = SubarrayBeamHealthModel(
+            self.component_state_changed_callback
+        )
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -65,19 +66,30 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return SubarrayBeamComponentManager(
             self.logger,
-            self.push_change_event,
-            self._component_communication_status_changed,
-            self._health_model.is_beam_locked_changed,
-            self._obs_state_model.is_configured_changed,
+            self._max_workers,
+            self._component_communication_state_changed,
+            self.component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        args = (self.component_manager, self.op_state_model, self.logger)
-        self.register_command_object("Configure", self.ConfigureCommand(*args))
-        self.register_command_object("Scan", self.ScanCommand(*args))
+        for (command_name, method_name) in [
+            ("Configure", "configure"),
+            ("Scan", "scan"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
+            )
 
     class InitCommand(SKAObsDevice.InitCommand):
         """
@@ -103,25 +115,19 @@ class MccsSubarrayBeam(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            (result_code, message) = super().do()
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
-            device = self.target
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
+            super().do()
 
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
-
-            return (result_code, message)
+            return (ResultCode.OK, "Initialisation complete")
 
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_status_changed(
+    def _component_communication_state_changed(
         self: MccsSubarrayBeam,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -130,7 +136,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -139,29 +145,42 @@ class MccsSubarrayBeam(SKAObsDevice):
             CommunicationStatus.ESTABLISHED: "component_on",  # always-on device
         }
 
-        action = action_map[communication_status]
+        action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
-    def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
+    def component_state_changed_callback(
+        self: MccsSubarrayBeam, state_change: dict[str, Any]
+    ) -> None:
         """
-        Handle change in this device's health state.
+        Handle change in the state of the component.
 
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
+        This is a callback hook, called by the component manager when
+        the state of the component changes.
 
-        :param health: the new health value
+        :param state_change: the state change dict
         """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        if "health_state" in state_change.keys():
+            health = state_change["health_state"]
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
+
+        if "beam_locked" in state_change.keys():
+            beam_locked = state_change["beam_locked"]
+            self._health_model.is_beam_locked_changed(beam_locked)
+
+        if "configured_changed" in state_change.keys():
+            configured_changed = state_change["configured_changed"]
+            self._obs_state_model.is_configured_changed(configured_changed)
+
+            if "obs_state" in state_change.keys():
+                configured_changed = state_change.get("obs_state")
+                self._obs_state_model.obs_state = configured_changed
 
     # ----------
     # Attributes
@@ -329,52 +348,6 @@ class MccsSubarrayBeam(SKAObsDevice):
     # --------
     # Commands
     # --------
-    class ConfigureCommand(ResponseCommand):
-        """Class for handling the Configure(argin) command."""
-
-        SUCCEEDED_MESSAGE = "Configure command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsSubarrayBeam.ConfigureCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Do user-specified Configure functionality.
-
-            This is the do-hook for the
-            :py:meth:`.MccsSubarrayBeam.Configure` command
-
-            :param argin: Configuration specification dict as a json
-                string
-                {
-                "subarray_beam_id": 1,
-                "station_ids": [1,2],
-                "update_rate": 0.0,
-                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
-                "antenna_weights": [1.0, 1.0, 1.0],
-                "phase_centre": [0.0, 0.0],
-                }
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            config_dict = json.loads(argin)
-            result_code = component_manager.configure(
-                config_dict.get("subarray_beam_id"),
-                config_dict.get("station_ids", []),
-                config_dict.get("update_rate"),
-                config_dict.get("channels", []),
-                config_dict.get("sky_coordinates", []),
-                config_dict.get("antenna_weights", []),
-                config_dict.get("phase_centre", []),
-            )
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (result_code, "")
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Configure(self: MccsSubarrayBeam, argin: str) -> DevVarLongStringArrayType:
         """
@@ -387,40 +360,8 @@ class MccsSubarrayBeam(SKAObsDevice):
             information purpose only.
         """
         handler = self.get_command_object("Configure")
-        (result_code, status) = handler(argin)
-        return ([result_code], [status])
-
-    class ScanCommand(ResponseCommand):
-        """Class for handling the Scan(argin) command."""
-
-        SUCCEEDED_MESSAGE = "Scan command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsSubarrayBeam.ScanCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
-
-            :param argin: Scan parameters encoded in a json string
-                {
-                "scan_id": 1,
-                "scan_time": 4
-                }
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            kwargs = json.loads(argin)
-            result_code = component_manager.scan(
-                kwargs.get("scan_id"),
-                kwargs.get("scan_time"),
-            )
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (result_code, "")
+        (result_code, unique_id) = handler(argin)
+        return ([result_code], [unique_id])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Scan(self: MccsSubarrayBeam, argin: str) -> DevVarLongStringArrayType:
@@ -434,8 +375,8 @@ class MccsSubarrayBeam(SKAObsDevice):
             information purpose only.
         """
         handler = self.get_command_object("Scan")
-        (result_code, status) = handler(argin)
-        return ([result_code], [status])
+        (result_code, unique_id) = handler(argin)
+        return ([result_code], [unique_id])
 
 
 # ----------

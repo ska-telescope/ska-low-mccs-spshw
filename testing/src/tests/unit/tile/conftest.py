@@ -10,21 +10,22 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Type
+from typing import Any, Callable
 
 import pytest
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    PowerState,
+    SimulationMode,
+    TestMode,
+)
 from tango.server import command
 
 from ska_low_mccs import MccsDeviceProxy, MccsTile
-from ska_low_mccs.component import ExtendedPowerState
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-)
+from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs.testing.mock.mock_callable import MockCallable
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
@@ -57,6 +58,16 @@ def test_mode() -> TestMode:
     return TestMode.TEST
 
 
+@pytest.fixture
+def unique_id() -> str:
+    """
+    Return a unique ID used to test Tango layer infrastructure.
+
+    :return: a unique ID
+    """
+    return "a unique id"
+
+
 @pytest.fixture()
 def subrack_fqdn() -> str:
     """
@@ -78,30 +89,30 @@ def subrack_tpm_id() -> int:
 
 
 @pytest.fixture()
-def initial_tpm_power_mode() -> ExtendedPowerState:
+def initial_tpm_power_state() -> PowerState:
     """
     Return the initial power mode of the TPM.
 
     :return: the initial power mode of the TPM.
     """
-    return ExtendedPowerState.OFF
+    return PowerState.OFF
 
 
 @pytest.fixture()
 def mock_subrack(
-    subrack_tpm_id: int, initial_tpm_power_mode: ExtendedPowerState
+    subrack_tpm_id: int, initial_tpm_power_state: PowerState
 ) -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsSubrack device.
 
     :param subrack_tpm_id: This tile's position in its subrack
-    :param initial_tpm_power_mode: the initial power mode of the
+    :param initial_tpm_power_state: the initial power mode of the
         specified TPM.
 
     :return: a mock MccsSubrack device.
     """
     builder = MockDeviceBuilder()
-    builder.add_attribute(f"tpm{subrack_tpm_id}PowerState", initial_tpm_power_mode)
+    builder.add_attribute(f"tpm{subrack_tpm_id}PowerState", initial_tpm_power_state)
     builder.add_result_command("PowerOnTpm", ResultCode.OK)
     builder.add_result_command("PowerOffTpm", ResultCode.OK)
     return builder()
@@ -145,7 +156,34 @@ def mock_subrack_device_proxy(
 
 
 @pytest.fixture()
-def tile_power_mode_changed_callback(
+def mock_task_callback() -> MockCallable:
+    """
+    Return a MockCallable for use as a task_callback.
+
+    :return: a mock callable to be called when the state of a task changes.
+    """
+    return MockCallable()
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for when the state of a component changes.
+
+    :param mock_callback_deque_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the state of a
+        component changes.
+    """
+    return mock_callback_deque_factory()
+
+
+@pytest.fixture()
+def tile_power_state_changed_callback(
     subrack_tpm_id: int,
 ) -> MockChangeEventCallback:
     """
@@ -158,6 +196,18 @@ def tile_power_mode_changed_callback(
         when the tile device health state changes.
     """
     return MockChangeEventCallback(f"tpm{subrack_tpm_id}PowerState")
+
+
+@pytest.fixture()
+def max_workers() -> int:
+    """
+    Return the number of worker threads.
+
+    (This is a pytest fixture.)
+
+    :return: the number of worker threads
+    """
+    return 1
 
 
 @pytest.fixture()
@@ -188,6 +238,16 @@ def tpm_version() -> str:
     :return: the TPM version
     """
     return "tpm_v1_6"
+
+
+@pytest.fixture()
+def tile_id() -> int:
+    """
+    Return the tile id.
+
+    :return: the tile id
+    """
+    return 1
 
 
 @pytest.fixture()
@@ -223,9 +283,9 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
 @pytest.fixture()
 def static_tpm_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> StaticTpmSimulatorComponentManager:
     """
     Return an static TPM simulator component manager.
@@ -233,30 +293,29 @@ def static_tpm_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be
+        called when the state changes
 
     :return: a static TPM simulator component manager.
     """
     return StaticTpmSimulatorComponentManager(
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
 @pytest.fixture()
 def dynamic_tpm_simulator_component_manager(
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> DynamicTpmSimulatorComponentManager:
     """
     Return an dynamic TPM simulator component manager.
@@ -264,21 +323,20 @@ def dynamic_tpm_simulator_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be
+        called when the state changes
 
     :return: a static TPM simulator component manager.
     """
     return DynamicTpmSimulatorComponentManager(
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -287,12 +345,13 @@ def switching_tpm_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
+    tile_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    communication_status_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingTpmComponentManager:
     """
     Return a component manager that switches between TPM driver and simulators.
@@ -303,16 +362,16 @@ def switching_tpm_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos. of worker threads
+    :param tile_id: the unique ID for the tile
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be called when the
+        component state changes
 
     :return: a component manager that switches between TPM simulator and
         TPM driver.
@@ -321,13 +380,13 @@ def switching_tpm_component_manager(
         simulation_mode,
         test_mode,
         logger,
-        lrc_result_changed_callback,
-        1,  # default tile_id
+        max_workers,
+        tile_id,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        communication_status_changed_callback,
-        component_fault_callback,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -337,15 +396,15 @@ def tile_component_manager(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
+    max_workers: int,
+    tile_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
     subrack_fqdn: str,
     subrack_tpm_id: int,
-    communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -357,21 +416,19 @@ def tile_component_manager(
         component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
+    :param tile_id: the unique ID for the tile
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param subrack_fqdn: FQDN of the subrack that controls power to
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
-    :param communication_status_changed_callback: callback to be
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be
-        called when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -379,23 +436,82 @@ def tile_component_manager(
         simulation_mode,
         test_mode,
         logger,
-        lrc_result_changed_callback,
-        1,  # default tile_id
+        max_workers,
+        tile_id,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
         subrack_fqdn,
         subrack_tpm_id,
-        communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
 @pytest.fixture()
-def patched_tile_device_class() -> Type[MccsTile]:
+def mock_tile_component_manager(
+    simulation_mode: SimulationMode,
+    test_mode: TestMode,
+    logger: logging.Logger,
+    max_workers: int,
+    tile_id: int,
+    tpm_ip: str,
+    tpm_cpld_port: int,
+    tpm_version: str,
+    subrack_fqdn: str,
+    subrack_tpm_id: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
+) -> TileComponentManager:
+    """
+    Return a tile component manager (in simulation and test mode as specified).
+
+    (This is a pytest fixture.)
+
+    :param simulation_mode: the initial simulation mode of this
+        component manager
+    :param test_mode: the initial test mode of this component manager
+    :param logger: the logger to be used by this object.
+    :param tile_id: the unique ID for the tile
+    :param tpm_ip: the IP address of the tile
+    :param tpm_cpld_port: the port at which the tile is accessed for control
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param subrack_fqdn: FQDN of the subrack that controls power to
+        this tile
+    :param subrack_tpm_id: This tile's position in its subrack
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
+
+    :return: a TPM component manager in the specified simulation mode.
+    """
+    return TileComponentManager(
+        simulation_mode,
+        test_mode,
+        logger,
+        max_workers,
+        tile_id,
+        tpm_ip,
+        tpm_cpld_port,
+        tpm_version,
+        subrack_fqdn,
+        subrack_tpm_id,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+    )
+
+
+@pytest.fixture()
+def patched_tile_device_class(
+    mock_tile_component_manager: TileComponentManager,
+) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
+
+    :param mock_tile_component_manager: A mock component manager.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -416,6 +532,29 @@ def patched_tile_device_class() -> Type[MccsTile]:
         this, we only want to fix it in this one place.
         """
 
+        def create_component_manager(
+            self: PatchedTileDevice,
+        ) -> TileComponentManager:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            # self._communication_state: Optional[CommunicationStatus] = None
+            mock_tile_component_manager._communication_state_changed_callback = (
+                self._component_communication_state_changed
+            )
+            mock_tile_component_manager._component_state_changed_callback = (
+                self.component_state_changed_callback
+            )
+            mock_tile_component_manager._tile_orchestrator._component_state_changed_callback = (
+                self.component_state_changed_callback
+            )
+            mock_tile_component_manager._tile_orchestrator._communication_state_changed_callback = (
+                self._component_communication_state_changed
+            )
+            return mock_tile_component_manager
+
         @command()
         def MockTpmOff(self: PatchedTileDevice) -> None:
             """
@@ -424,7 +563,7 @@ def patched_tile_device_class() -> Type[MccsTile]:
             Make the tile device think it has received a state change
             event from its subrack indicating that the suback is now ON.
             """
-            self.component_manager._tpm_power_mode_changed(ExtendedPowerState.OFF)
+            self.component_manager._tpm_power_state_changed(PowerState.OFF)
 
         @command()
         def MockTpmNoSupply(self: PatchedTileDevice) -> None:
@@ -435,10 +574,10 @@ def patched_tile_device_class() -> Type[MccsTile]:
             event from its subrack indicating that the subrack is now
             OFF.
             """
-            self.component_manager._tpm_power_mode_changed(ExtendedPowerState.NO_SUPPLY)
+            self.component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
-            self.component_manager._tpm_power_mode_changed(ExtendedPowerState.ON)
+            self.component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice

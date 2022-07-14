@@ -11,11 +11,10 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 from typing import Any, Callable, Optional
 
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     MccsComponentManager,
     ObjectComponent,
     check_communicating,
@@ -42,12 +41,11 @@ class ObjectComponentManager(MccsComponentManager):
         self: ObjectComponentManager,
         component: ObjectComponent,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Optional[
+        max_workers: int,
+        communication_state_changed_callback: Optional[
             Callable[[CommunicationStatus], None]
         ],
-        component_power_mode_changed_callback: Optional[Callable[[PowerState], None]],
-        component_fault_callback: Optional[Callable[[bool], None]],
+        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -57,15 +55,12 @@ class ObjectComponentManager(MccsComponentManager):
         :param component: the commponent object to be managed by this
             component manager
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: nos of worker threads
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         :param args: further positional arguments
         :param kwargs: further keyword arguments
         """
@@ -75,12 +70,9 @@ class ObjectComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
-            *args,
-            **kwargs,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: ObjectComponentManager) -> None:
@@ -94,12 +86,12 @@ class ObjectComponentManager(MccsComponentManager):
         if self._fail_communicate:
             raise ConnectionError("Failed to connect")
 
-        self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        self.update_communication_state(CommunicationStatus.ESTABLISHED)
 
-        self._component.set_fault_callback(self.component_fault_changed)
         self._component.set_power_mode_changed_callback(
-            self.component_power_mode_changed
+            self.component_state_changed_callback
         )
+        self._component.set_fault_callback(self.component_state_changed_callback)
 
     @threadsafe
     def stop_communicating(self: ObjectComponentManager) -> None:
@@ -120,42 +112,58 @@ class ObjectComponentManager(MccsComponentManager):
         self._fail_communicate = fail_communicate
         if (
             fail_communicate
-            and self.communication_status == CommunicationStatus.ESTABLISHED
+            and self.communication_state == CommunicationStatus.ESTABLISHED
         ):
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
     @check_communicating
-    def off(self: ObjectComponentManager) -> ResultCode | None:
+    def off(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component off.
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message.
         """
-        return self._component.off()
+        return self._component.off(task_callback)
 
     @check_communicating
-    def standby(self: ObjectComponentManager) -> ResultCode | None:
+    def standby(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message
         """
-        return self._component.standby()
+        return self._component.standby(task_callback)
 
     @check_communicating
-    def on(self: ObjectComponentManager) -> ResultCode | None:
+    def on(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component on.
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message
         """
-        return self._component.on()
+        return self._component.on(task_callback)
 
     @check_communicating
-    def reset(self: ObjectComponentManager) -> ResultCode | None:
+    def reset(
+        self: ObjectComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
 
-        :return: a resultcode, or None if there was nothing to do.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a taskstatus and message
         """
-        return self._component.reset()
+        return self._component.reset(task_callback)

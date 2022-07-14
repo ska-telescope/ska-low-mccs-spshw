@@ -17,9 +17,11 @@ __all__ = [
     "SubrackComponentManager",
     "SubrackDriver",
     "SubrackHealthModel",
+    "FanMode",
 ]
 
 from .subrack_data import SubrackData
+from .subrack_data import FanMode
 from .subrack_simulator import SubrackSimulator
 from .subrack_driver import SubrackDriver
 from .subrack_component_manager import (

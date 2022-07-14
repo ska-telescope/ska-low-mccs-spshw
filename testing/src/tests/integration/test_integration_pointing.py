@@ -241,7 +241,7 @@ class TestMccsIntegration:
         assert station_2.state() == tango.DevState.ON
 
         ([result_code], _) = stationbeam_1.ApplyPointing()
-        assert result_code == ResultCode.OK
+        assert result_code == ResultCode.QUEUED
 
         # we need to do this the long way because if Tango is numpy-enabled, then the
         # component manager will be called with an array not a list.
@@ -270,7 +270,7 @@ class TestMccsIntegration:
         mock_tile_4.SetPointingDelay.assert_not_called()
 
         ([result_code], _) = stationbeam_2.ApplyPointing()
-        assert result_code == ResultCode.OK
+        assert result_code == ResultCode.QUEUED
 
         (args, kwargs) = mock_tile_1.SetPointingDelay.get_next_call()
         assert not kwargs
@@ -297,7 +297,7 @@ class TestMccsIntegration:
         mock_tile_4.SetPointingDelay.assert_not_called()
 
         ([result_code], _) = stationbeam_3.ApplyPointing()
-        assert result_code == ResultCode.OK
+        assert result_code == ResultCode.QUEUED
 
         mock_tile_1.SetPointingDelay.assert_not_called()
         mock_tile_2.SetPointingDelay.assert_not_called()
@@ -324,7 +324,7 @@ class TestMccsIntegration:
         ]
 
         ([result_code], _) = stationbeam_4.ApplyPointing()
-        assert result_code == ResultCode.OK
+        assert result_code == ResultCode.QUEUED
 
         mock_tile_1.SetPointingDelay.assert_not_called()
         mock_tile_2.SetPointingDelay.assert_not_called()

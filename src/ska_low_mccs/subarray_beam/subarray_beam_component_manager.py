@@ -8,14 +8,15 @@
 """This module implements component management for subarray beams."""
 from __future__ import annotations
 
+import json
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    ObjectComponentManager,
-    check_communicating,
-)
+from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.executor import TaskStatus
+
+from ska_low_mccs.component import ObjectComponentManager, check_communicating
 from ska_low_mccs.subarray_beam import SubarrayBeam
 
 __all__ = ["SubarrayBeamComponentManager"]
@@ -27,36 +28,37 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
     def __init__(
         self: SubarrayBeamComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        is_beam_locked_changed_callback: Callable[[bool], None],
-        is_configured_changed_callback: Callable[[bool], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: no. of worker threads
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param is_beam_locked_changed_callback: a callback to be called
-            when whether the beam is locked changes
-        :param is_configured_changed_callback: callback to be called
-            when whether this component manager is configured changes
+        :param component_state_changed_callback: callback to be called
+            when the component state changes
         """
-        self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
-        self._is_configured_changed_callback = is_configured_changed_callback
+        self._is_beam_locked_changed_callback = component_state_changed_callback
+        self._is_configured_changed_callback = component_state_changed_callback
 
         super().__init__(
-            SubarrayBeam(logger),
+            SubarrayBeam(
+                logger,
+                max_workers,
+                communication_state_changed_callback,
+                component_state_changed_callback,
+            ),
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            None,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
+        self._component_state_changed_callback = component_state_changed_callback
 
     __PASSTHROUGH = [
         "subarray_id",
@@ -78,10 +80,10 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """Establish communication with the subarray beam."""
         super().start_communicating()
         cast(SubarrayBeam, self._component).set_is_beam_locked_changed_callback(
-            self._is_beam_locked_changed_callback
+            self._component_state_changed_callback
         )
         cast(SubarrayBeam, self._component).set_is_configured_changed_callback(
-            self._is_configured_changed_callback
+            self._component_state_changed_callback
         )
 
     def stop_communicating(self: SubarrayBeamComponentManager) -> None:
@@ -162,3 +164,114 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """
         # This one-liner is only a method so that we can decorate it.
         setattr(self._component, name, value)
+
+    def configure(
+        self: SubarrayBeamComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the configure slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param argin: Json string containing args
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        config_dict = json.loads(argin)
+
+        return self.submit_task(
+            self._configure,
+            args=[
+                config_dict.get("subarray_beam_id"),
+                config_dict.get("station_ids", []),
+                config_dict.get("update_rate"),
+                config_dict.get("channels", []),
+                config_dict.get("sky_coordinates", []),
+                config_dict.get("antenna_weights", []),
+                config_dict.get("phase_centre", []),
+            ],
+            task_callback=task_callback,
+        )
+
+    def _configure(
+        self,
+        subarray_beam_id: int,
+        station_ids: list[list[int]],
+        update_rate: float,
+        channels: list[list[int]],
+        sky_coordinates: list[float],
+        antenna_weights: list[float],
+        phase_centre: list[float],
+        task_callback: Callable,
+        task_abort_event: threading.Event,
+    ) -> None:
+        """
+        Implement :py:meth:`.MccsSubarrayBeam.Configure` command.
+
+        :param subarray_beam_id: id of this subarray beam.
+        :param station_ids: ids of stations in this subarray beam.
+        :param update_rate: update rate of the scan.
+        :param channels: ids of channels configured for this subarray beam.
+        :param sky_coordinates: sky coordinates for this subarray beam to point at.
+        :param antenna_weights: weights to use for the antennas.
+        :param phase_centre: the phase centre of this subarray beam.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Task abort, defaults to None
+        """
+        self.component_state_changed_callback({"configured_changed": True})
+
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
+        # TODO Ben add config stuff here
+        task_abort_event.wait(20)  # for testing purposes only
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+            return
+
+        task_callback(
+            status=TaskStatus.COMPLETED, result="Configure command completed OK"
+        )
+
+    def scan(self, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+        """
+        Submit the scan slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        return self.submit_task(self._scan, task_callback=task_callback)
+
+    def _scan(
+        self,
+        scan_id: int,
+        scan_time: float,
+        task_callback: Callable,
+        task_abort_event: threading.Event,
+    ) -> None:
+        """
+        Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
+
+        :param scan_id: Scan ID to associte with the data.
+        :param scan_time: Start time/ duration of the scan.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Task abort, defaults to None
+        """
+        task_callback(status=TaskStatus.IN_PROGRESS)
+
+        # TODO Ben add scan_id and scan_time here
+        task_abort_event.wait(20)  # for testing purposes only
+
+        if task_abort_event.is_set():
+            task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+            return
+
+        task_callback(
+            status=TaskStatus.COMPLETED, result="Configure command completed OK"
+        )

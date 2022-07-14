@@ -19,7 +19,6 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu import ApiuSimulator
@@ -66,8 +65,7 @@ class TestMccsAPIU:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert device_under_test.state() == DevState.DISABLE
-        assert device_under_test.status() == "The device is in DISABLE state."
+        assert device_under_test.adminMode == AdminMode.OFFLINE
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE
@@ -118,7 +116,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -162,19 +160,19 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
         time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-up successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUp"
 
         [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-up is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUp"
 
     def test_PowerDown(
         self: TestMccsAPIU,
@@ -198,21 +196,21 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
         time.sleep(0.1)
 
         [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-down is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDown"
 
         _ = device_under_test.PowerUp()
 
         [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "APIU power-down successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDown"
 
     def test_PowerUpAntenna(
         self: TestMccsAPIU,
@@ -236,7 +234,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -247,8 +245,9 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerUpAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-up successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUpAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -256,8 +255,9 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerUpAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-up is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerUpAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -286,7 +286,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
 
         device_under_test.On()
@@ -297,14 +297,16 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerDownAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-down is redundant"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDownAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         _ = device_under_test.PowerUpAntenna(1)
+        time.sleep(0.1)
 
         are_antennas_on = list(device_under_test.areAntennasOn)
         assert are_antennas_on[0]
@@ -312,8 +314,9 @@ class TestMccsAPIU:
         assert len(are_antennas_on) == device_under_test.antennaCount
 
         [[result_code], [message]] = device_under_test.PowerDownAntenna(1)
-        assert result_code == ResultCode.OK
-        assert message == "APIU antenna 1 power-down successful"
+        assert result_code == ResultCode.QUEUED
+        assert message.split("_")[-1] == "PowerDownAntenna"
+        time.sleep(0.1)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)

@@ -9,14 +9,14 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState, SimulationMode
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.apiu import ApiuSimulator
 from ska_low_mccs.component import (
-    CommunicationStatus,
     ComponentManagerWithUpstreamPowerSupply,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
@@ -35,46 +35,36 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Optional[
-            Callable[[list[bool]], None]
-        ] = None,
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
-        :param antenna_count: the number of antennas managed by this
-            APIU
+        :param antenna_count: the number of antennas managed by this APIU
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: Nos of worker threads for async commands.
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_antenna_power_changed_callback: callback to be
-            called when the power mode of an antenna changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
-            ApiuSimulator(antenna_count),
+            ApiuSimulator(antenna_count, component_state_changed_callback),
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
-        self._component_antenna_power_changed_callback = (
-            component_antenna_power_changed_callback
-        )
+        self._component_state_changed_callback = component_state_changed_callback
 
     def start_communicating(self: ApiuSimulatorComponentManager) -> None:
         """Establish communication with the APIU simulator."""
         super().start_communicating()
         cast(ApiuSimulator, self._component).set_antenna_power_changed_callback(
-            self._component_antenna_power_changed_callback
+            self._component_state_changed_callback
         )
 
     def stop_communicating(self: ApiuSimulatorComponentManager) -> None:
@@ -129,7 +119,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
             return self._get_from_component(name)
         return default_value
 
-    @check_communicating
+    # @check_communicating
     def _get_from_component(
         self: ApiuSimulatorComponentManager,
         name: str,
@@ -153,10 +143,9 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Callable[[list[bool]], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -165,25 +154,19 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
             component should start in
         :param antenna_count: number of antennas managed by this APIU
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
-        :param initial_simulation_mode: the simulation mode that the
-            component should start in
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: Nos. of worker threads for async commands.
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_antenna_power_changed_callback: callback to be
-            called when the power mode of an antenna changes
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         apiu_simulator = ApiuSimulatorComponentManager(
             antenna_count,
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
-            component_antenna_power_changed_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
         super().__init__(None, apiu_simulator, initial_simulation_mode)
 
@@ -196,11 +179,9 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         initial_simulation_mode: SimulationMode,
         antenna_count: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Callable[[bool], None],
-        component_antenna_power_changed_callback: Callable[[list[bool]], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _initial_power_mode: PowerState = PowerState.OFF,
     ) -> None:
         """
@@ -211,17 +192,12 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param antenna_count: the number of antennas managed by this
             APIU
         :param logger: a logger for this object to use
-        :param push_change_event: mechanism to inform the base classes
-            what method to call; typically device.push_change_event.
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: nos. of worker threads
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param component_antenna_power_changed_callback: callback to be
-            called when the power mode of an antenna changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         :param _initial_power_mode: the initial power mode of the power
             supply proxy simulator. For testing only, to be removed when
             we start connecting to the real upstream power supply
@@ -231,28 +207,24 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             initial_simulation_mode,
             antenna_count,
             logger,
-            push_change_event,
-            self._hardware_communication_status_changed,
-            self.component_fault_changed,
-            component_antenna_power_changed_callback,
+            max_workers,
+            self._hardware_communication_state_changed,
+            component_state_changed_callback,
         )
-
         power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
-            push_change_event,
-            self._power_supply_communication_status_changed,
-            self.component_power_mode_changed,
+            max_workers,
+            self._power_supply_communication_state_changed,
+            component_state_changed_callback,
             _initial_power_mode,
         )
         super().__init__(
             hardware_component_manager,
             power_supply_component_manager,
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
-            None,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
     @property
@@ -276,22 +248,6 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         cast(
             SwitchingApiuComponentManager, self._hardware_component_manager
         ).simulation_mode = mode
-
-    def off(self: ApiuComponentManager) -> ResultCode | None:
-        """
-        Tell the APIU simulator to turn off.
-
-        This is implemented in the super-class to tell the upstream
-        power supply proxy to turn the APIU hardware off. Here we
-        overrule it so that, should the APIU hardware be turned on
-        again, the antennas will be turned off.
-
-        :return: a result code, or None if there was nothing to do.
-        """
-        cast(
-            SwitchingApiuComponentManager, self._hardware_component_manager
-        ).turn_off_antennas()
-        return super().off()
 
     def __getattr__(
         self: ApiuComponentManager,
@@ -355,3 +311,303 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._hardware_component_manager, name)
+
+    def on(
+        self: ApiuComponentManager,
+        task_callback: Callable = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the on slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(self._on, task_callback=task_callback)
+
+    def _on(
+        self: ApiuComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Tell the APIU to turn on.
+
+        This is implemented in the super-class to tell the upstream
+        power supply proxy to turn the APIU hardware on.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: abort callback
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            super().on()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="On command has completed"
+            )
+
+    def off(
+        self: ApiuComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Tell the apiu to turn off.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(self._off, task_callback=task_callback)
+
+    def _off(
+        self: ApiuComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Tell the APIU simulator to turn off.
+
+        This is implemented in the super-class to tell the upstream
+        power supply proxy to turn the APIU hardware off. Here we
+        overrule it so that, should the APIU hardware be turned on
+        again, the antennas will be turned off.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: abort callback
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingApiuComponentManager, self._hardware_component_manager
+            ).turn_off_antennas()
+            super().off()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Off command has completed"
+            )
+
+    def power_up_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the turn_on_antenna slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param antenna: the antenna to turn on
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        result = self.submit_task(
+            self._turn_on_antenna, args=[antenna], task_callback=task_callback
+        )
+        return result
+
+    def power_down_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the turn_off_antenna slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param antenna: the antenna to turn off
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(
+            self._turn_off_antenna, args=[antenna], task_callback=task_callback
+        )
+
+    def power_up(
+        self: ApiuComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the turn_on_antennas slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(self._turn_on_antennas, task_callback=task_callback)
+
+    def power_down(
+        self: ApiuComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the turn_off_antennas slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a ResultCode and a response message
+        """
+        return self.submit_task(self._turn_off_antennas, task_callback=task_callback)
+
+    def _turn_on_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Turn on the antenna using slow command.
+
+        :param antenna: id of antenna to turn on
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self._hardware_component_manager.turn_on_antenna(antenna)
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The antenna on task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="The antenna on task has completed"
+            )
+
+    def _turn_off_antenna(
+        self: ApiuComponentManager,
+        antenna: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Turn off the antenna using slow command.
+
+        :param antenna: id of antenna to turn on
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self._hardware_component_manager.turn_off_antenna(antenna)
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The antenna off task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="The antenna off task has completed"
+            )
+
+    def _turn_on_antennas(
+        self: ApiuComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Turn on all antennas using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self._hardware_component_manager.turn_on_antennas()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The antenna all on task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The antenna all on task has completed",
+            )
+
+    def _turn_off_antennas(
+        self: ApiuComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Turn off all antennas using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            self._hardware_component_manager.turn_off_antennas()
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="The antenna all off task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The antenna all off task has completed",
+            )

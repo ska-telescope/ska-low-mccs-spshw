@@ -56,14 +56,18 @@ from .device_proxy import MccsDeviceProxy
 
 from .antenna import MccsAntenna
 from .apiu import MccsAPIU
+
 from .cluster_manager import MccsClusterManagerDevice
 from .controller import MccsController
 from .pasd_bus import MccsPasdBus
 from .station import MccsStation
+
 from .station_beam import MccsStationBeam
 from .subarray import MccsSubarray
+
 from .subarray_beam import MccsSubarrayBeam
 from .subrack import MccsSubrack
+
 from .tel_state import MccsTelState
-from .tile import MccsTile  # type: ignore[attr-defined]
+from .tile import MccsTile
 from .transient_buffer import MccsTransientBuffer

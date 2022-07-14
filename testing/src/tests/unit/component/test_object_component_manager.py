@@ -13,9 +13,10 @@ import unittest.mock
 
 import pytest
 import pytest_mock
+from ska_tango_base.control_model import CommunicationStatus
 
-from ska_low_mccs.component import CommunicationStatus, ObjectComponentManager
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.component import ObjectComponentManager
+from ska_low_mccs.testing.mock import MockCallable
 
 
 class TestObjectComponentManager:
@@ -40,10 +41,9 @@ class TestObjectComponentManager:
         self: TestObjectComponentManager,
         component: unittest.mock.Mock,
         logger: logging.Logger,
-        lrc_result_changed_callback: MockChangeEventCallback,
-        communication_status_changed_callback: MockCallable,
-        component_power_mode_changed_callback: MockCallable,
-        component_fault_callback: MockCallable,
+        max_workers: int,
+        communication_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
     ) -> ObjectComponentManager:
         """
         Return a component manager for the component object.
@@ -51,114 +51,108 @@ class TestObjectComponentManager:
         :param component: the component to be managed by the component
             manager.
         :param logger: a logger for the component manager to use
-        :param lrc_result_changed_callback: a callback to
-            be used to subscribe to device LRC result changes
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: nos of threads
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
 
         :return: a component manager for the component object.
         """
         return ObjectComponentManager(
             component,
             logger,
-            lrc_result_changed_callback,
-            communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
     def test_communication(
         self: TestObjectComponentManager,
         component_manager: ObjectComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test communication from the component manager to its component.
 
         :param component_manager: a component manager for the component object.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
-        assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        assert component_manager.communication_state == CommunicationStatus.ESTABLISHED
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
 
     def test_communication_failure(
         self: TestObjectComponentManager,
         component_manager: ObjectComponentManager,
-        communication_status_changed_callback: MockCallable,
+        communication_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test handling of communication failure between component manager and component.
 
         :param component_manager: a component manager for the component object.
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
         """
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
         component_manager.simulate_communication_failure(True)
 
         with pytest.raises(ConnectionError, match="Failed to connect"):
             component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         assert (
-            component_manager.communication_status
-            == CommunicationStatus.NOT_ESTABLISHED
+            component_manager.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
 
         component_manager.simulate_communication_failure(False)
         component_manager.start_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.ESTABLISHED
         )
-        assert component_manager.communication_status == CommunicationStatus.ESTABLISHED
+        assert component_manager.communication_state == CommunicationStatus.ESTABLISHED
 
         component_manager.simulate_communication_failure(True)
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         assert (
-            component_manager.communication_status
-            == CommunicationStatus.NOT_ESTABLISHED
+            component_manager.communication_state == CommunicationStatus.NOT_ESTABLISHED
         )
 
         with pytest.raises(ConnectionError, match="Failed to connect"):
             component_manager.start_communicating()
 
         component_manager.stop_communicating()
-        communication_status_changed_callback.assert_next_call(
+        communication_state_changed_callback.assert_next_call(
             CommunicationStatus.DISABLED
         )
-        assert component_manager.communication_status == CommunicationStatus.DISABLED
+        assert component_manager.communication_state == CommunicationStatus.DISABLED
 
     @pytest.mark.parametrize("command", ["on", "standby", "off", "reset"])
     def test_command(
@@ -186,4 +180,5 @@ class TestObjectComponentManager:
         component_manager.start_communicating()
 
         getattr(component_manager, command)()
-        getattr(component, command).assert_next_call()
+        attr = getattr(component, command)
+        attr.assert_next_call(None)

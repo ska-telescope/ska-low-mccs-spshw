@@ -10,24 +10,19 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
+from ska_tango_base.control_model import CommunicationStatus, PowerState
 from tango.server import command
 
 from ska_low_mccs import MccsAntenna, MccsDeviceProxy
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-)
+from ska_low_mccs.testing.mock import MockCallable, MockCallableDeque, MockDeviceBuilder
 
 
 @pytest.fixture()
@@ -74,20 +69,47 @@ def tile_antenna_id() -> int:
 
 
 @pytest.fixture()
-def antenna_power_mode_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
+def max_workers() -> int:
+    """
+    Return the number of maximum worker threads.
+
+    :return: the number of maximum worker threads.
+    """
+    return 1
+
+
+@pytest.fixture()
+def component_state_changed_callback(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
-    Return a mock callback for antenna power mode change.
+    Return a mock callback for antenna state change.
 
-    :param mock_callback_factory: fixture that provides a mock callback
+    :param mock_callback_deque_factory: fixture that provides a mock callback
         factory (i.e. an object that returns mock callbacks when
         called).
 
     :return: a mock callback to be called when the component manager
-        detects that the power mode of its component has changed.
+        detects that the state of its component has changed.
     """
-    return mock_callback_factory()
+    return mock_callback_deque_factory()
+
+
+# @pytest.fixture()
+# def communication_state_changed_callback(
+#     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+# ) -> unittest.mock.Mock:
+#     """
+#     Return a mock callback for communication change.
+
+#     :param mock_callback_deque_factory: fixture that provides a mock callback
+#         factory (i.e. an object that returns mock callbacks when
+#         called).
+
+#     :return: a mock callback to be called when the communication status
+#         of a component manager changed.
+#     """
+#     return mock_callback_deque_factory()
 
 
 @pytest.fixture()
@@ -96,11 +118,9 @@ def antenna_apiu_proxy(
     apiu_fqdn: str,
     apiu_antenna_id: int,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: MockCallable,
-    component_power_mode_changed_callback: MockCallable,
-    component_fault_callback: MockCallable,
-    antenna_power_mode_changed_callback: MockCallable,
+    max_workers: int,
+    communication_state_changed_callback: MockCallable,
+    component_state_changed_callback: MockCallable,
 ) -> _ApiuProxy:
     """
     Return an antenna APIU proxy for testing.
@@ -111,17 +131,12 @@ def antenna_apiu_proxy(
     :param apiu_fqdn: FQDN of the antenna's APIU device
     :param apiu_antenna_id: the id of the antenna in the APIU device
     :param logger: a loger for the antenna component manager to use
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be called
+    :param max_workers: the maximum worker threads available
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be called
-        when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
-    :param antenna_power_mode_changed_callback: the callback to be called
-        when the power mode of an antenna changes
+    :param component_state_changed_callback: callback to be called
+        when the component state changes
 
     :return: an antenna APIU proxy
     """
@@ -129,11 +144,9 @@ def antenna_apiu_proxy(
         apiu_fqdn,
         apiu_antenna_id,
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
-        antenna_power_mode_changed_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -143,9 +156,9 @@ def antenna_tile_proxy(
     tile_fqdn: str,
     tile_antenna_id: int,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_fault_callback: Callable[[bool], None],
+    max_workers: int,
+    communication_state_changed_callback: MockCallableDeque,
+    component_state_changed_callback: Callable[[Any], None],
 ) -> _TileProxy:
     """
     Return an antenna tile proxy for testing.
@@ -156,13 +169,12 @@ def antenna_tile_proxy(
     :param tile_fqdn: FQDN of the antenna's tile device
     :param tile_antenna_id: the id of the antenna in the tile device
     :param logger: a loger for the antenna component manager to use
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be called
+    :param max_workers: the maximum worker threads available
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be called
+        when the component state changes
 
     :return: an antenna tile proxy for testing
     """
@@ -170,9 +182,9 @@ def antenna_tile_proxy(
         tile_fqdn,
         tile_antenna_id,
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_fault_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -184,10 +196,9 @@ def antenna_component_manager(
     tile_fqdn: str,
     tile_antenna_id: int,
     logger: logging.Logger,
-    lrc_result_changed_callback: MockChangeEventCallback,
-    communication_status_changed_callback: Callable[[CommunicationStatus], None],
-    component_power_mode_changed_callback: Callable[[PowerState], None],
-    component_fault_callback: Callable[[bool], None],
+    max_workers: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[Any], None],
 ) -> AntennaComponentManager:
     """
     Return an antenna component manager.
@@ -198,15 +209,12 @@ def antenna_component_manager(
     :param tile_fqdn: FQDN of the antenna's tile device
     :param tile_antenna_id: the id of the antenna in the tile device
     :param logger: a loger for the antenna component manager to use
-    :param lrc_result_changed_callback: a callback to
-        be used to subscribe to device LRC result changes
-    :param communication_status_changed_callback: callback to be called
+    :param max_workers: the maximum worker threads available
+    :param communication_state_changed_callback: callback to be called
         when the status of the communications channel between the
         component manager and its component changes
-    :param component_power_mode_changed_callback: callback to be called
-        when the component power mode changes
-    :param component_fault_callback: callback to be called when the
-        component faults (or stops faulting)
+    :param component_state_changed_callback: callback to be called
+        when the component state changes
 
     :return: an antenna component manager
     """
@@ -216,10 +224,9 @@ def antenna_component_manager(
         tile_fqdn,
         tile_antenna_id,
         logger,
-        lrc_result_changed_callback,
-        communication_status_changed_callback,
-        component_power_mode_changed_callback,
-        component_fault_callback,
+        max_workers,
+        communication_state_changed_callback,
+        component_state_changed_callback,
     )
 
 
@@ -283,7 +290,7 @@ def mock_tile() -> unittest.mock.Mock:
 
     This has no tile-specific functionality at present.
 
-    :return: a mock MccsAPIU device.
+    :return: a mock Mccs device.
     """
     builder = MockDeviceBuilder()
     return builder()
@@ -358,7 +365,7 @@ def patched_antenna_device_class(
         def MockAntennaPoweredOn(self: PatchedAntennaDevice) -> None:
             are_antennas_on = list(initial_are_antennas_on)
             are_antennas_on[self.LogicalApiuAntennaId - 1] = True
-            self.component_manager._apiu_proxy._antenna_power_mode_changed(
+            self.component_manager._apiu_proxy._antenna_power_state_changed(
                 "areAntennasOn",
                 are_antennas_on,
                 tango.AttrQuality.ATTR_VALID,

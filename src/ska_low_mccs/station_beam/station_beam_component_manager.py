@@ -8,14 +8,17 @@
 """This module implements component management for station beams."""
 from __future__ import annotations
 
+import functools
+import json
 import logging
-from typing import Callable, Optional, cast
+import threading
+from typing import Any, Callable, Optional, cast
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState
+from ska_tango_base.control_model import CommunicationStatus
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.component import (
-    CommunicationStatus,
     DeviceComponentManager,
     MccsComponentManager,
     check_communicating,
@@ -50,28 +53,21 @@ class StationBeamComponentManager(MccsComponentManager):
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        is_beam_locked_changed_callback: Callable[[bool], None],
-        station_health_changed_callback: Callable[[Optional[HealthState]], None],
-        station_fault_changed_callback: Callable[[bool], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param beam_id: the beam id of this station beam
         :param logger: the logger to be used by this object.
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param is_beam_locked_changed_callback: a callback to be called
-            when whether the beam is locked changes
-        :param station_health_changed_callback: a callback to be called
-            when the health of this station beam's station changes.
-        :param station_fault_changed_callback: a callback to be called
-            when the fault state of this station beam's station changes.
+        :param component_state_changed_callback: a callback to be called
+            whenever the state of the station beam changes.
+        :param max_workers: Maximum number of workers in the worker pool. Defaults to None.
         """
         self._subarray_id = 0
         self._beam_id = beam_id
@@ -90,16 +86,14 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_fqdn: Optional[str] = None
         self._station_proxy: Optional[_StationProxy] = None
 
-        self._is_beam_locked_changed_callback = is_beam_locked_changed_callback
-        self._station_health_changed_callback = station_health_changed_callback
-        self._station_fault_changed_callback = station_fault_changed_callback
+        self._component_state_changed_callback = component_state_changed_callback
+        self._max_workers = max_workers
 
         super().__init__(
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            None,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: StationBeamComponentManager) -> None:
@@ -107,7 +101,7 @@ class StationBeamComponentManager(MccsComponentManager):
         super().start_communicating()
 
         if self._station_proxy is None:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
         else:
             self._station_proxy.start_communicating()
 
@@ -118,14 +112,14 @@ class StationBeamComponentManager(MccsComponentManager):
         if self._station_proxy is not None:
             self._station_proxy.stop_communicating()
 
-    def _device_communication_status_changed(
+    def _device_communication_state_changed(
         self: StationBeamComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
-        if communication_status == CommunicationStatus.ESTABLISHED:
-            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
         else:
-            self.update_communication_status(CommunicationStatus.NOT_ESTABLISHED)
+            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
     @property
     def station_fqdn(self: StationBeamComponentManager) -> Optional[str]:
@@ -147,7 +141,7 @@ class StationBeamComponentManager(MccsComponentManager):
 
         :param value: the new station FQDN, or the empty string
         """
-        communicating = self.communication_status != CommunicationStatus.DISABLED
+        communicating = self.communication_state != CommunicationStatus.DISABLED
 
         if self._station_fqdn != value:
             self._station_fqdn = value
@@ -156,16 +150,16 @@ class StationBeamComponentManager(MccsComponentManager):
                 self._station_proxy.stop_communicating()
                 self._station_proxy = None
                 if self._station_fqdn is None:
-                    self.update_communication_status(CommunicationStatus.ESTABLISHED)
+                    self.update_communication_state(CommunicationStatus.ESTABLISHED)
             if self._station_fqdn is not None:
                 self._station_proxy = _StationProxy(
                     self._station_fqdn,
                     self.logger,
-                    self._push_change_event,
-                    self._device_communication_status_changed,
-                    None,
-                    self._station_fault_changed_callback,
-                    self._station_health_changed_callback,
+                    self._max_workers,
+                    self._device_communication_state_changed,
+                    functools.partial(
+                        self._component_state_changed_callback, fqdn=self._station_fqdn
+                    ),
                 )
                 if communicating:
                     self._station_proxy.start_communicating()
@@ -260,8 +254,8 @@ class StationBeamComponentManager(MccsComponentManager):
         """
         if self._is_beam_locked != value:
             self._is_beam_locked = value
-            if self._is_beam_locked_changed_callback is not None:
-                self._is_beam_locked_changed_callback(value)
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback({"beam_locked": value})
 
     @property
     def channels(self: StationBeamComponentManager) -> list[list[int]]:
@@ -349,6 +343,49 @@ class StationBeamComponentManager(MccsComponentManager):
 
     def configure(
         self: StationBeamComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the `configure` slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        :param argin: Configuration specification dict as a json
+                string
+                {
+                "beam_id": 1,
+                "station_ids": [1,2],
+                "update_rate": 0.0,
+                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+                "desired_pointing": [0.0, 180.0, 0.0, 45.0, 0.0],
+                "antenna_weights": [1.0, 1.0, 1.0],
+                "phase_centre": [0.0, 0.0],
+                }
+
+        :return: A return code and a unique command ID.
+        """
+        config_dict = json.loads(argin)
+
+        return self.submit_task(
+            self._configure,
+            args=[
+                config_dict.get("beam_id"),
+                config_dict.get("station_ids"),
+                config_dict.get("update_rate"),
+                config_dict.get("channels", []),
+                config_dict.get("desired_pointing", []),
+                config_dict.get("antenna_weights", []),
+                config_dict.get("phase_centre", []),
+            ],
+            task_callback=task_callback,
+        )
+
+    def _configure(
+        self: StationBeamComponentManager,
         beam_id: int,
         station_id: int,
         update_rate: float,
@@ -356,7 +393,9 @@ class StationBeamComponentManager(MccsComponentManager):
         desired_pointing: list[float],
         antenna_weights: list[float],
         phase_centre: list[float],
-    ) -> ResultCode:
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> None:
         """
         Configure this station beam for scanning.
 
@@ -367,9 +406,12 @@ class StationBeamComponentManager(MccsComponentManager):
         :param desired_pointing: sky coordinates for this beam to point at
         :param antenna_weights: weights to use for the antennas
         :param phase_centre: the phase centre
-
-        :return: a result code
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
         self._beam_id = beam_id
         self._station_id = station_id
         self._channels = list(list(i) for i in channels)  # deep copy
@@ -378,15 +420,47 @@ class StationBeamComponentManager(MccsComponentManager):
         self._antenna_weights = list(antenna_weights)
         self._phase_centre = list(phase_centre)
         # TODO: forward relevant configuration to participating stations
-        return ResultCode.OK
+
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure has completed."
+            )
+
+    def apply_pointing(
+        self: StationBeamComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the apply_pointing slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :return: Task status and response message
+        """
+        return self.submit_task(
+            self._apply_pointing, args=[], task_callback=task_callback
+        )
 
     @check_communicating
-    def apply_pointing(self: StationBeamComponentManager) -> ResultCode:
+    def _apply_pointing(
+        self: StationBeamComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: threading.Event = None,
+    ) -> ResultCode:
         """
         Apply the configured pointing to this station beam's station.
 
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         :return: a result code
         """
+        if task_callback is not None:
+            task_callback(TaskStatus.IN_PROGRESS)
+
         zipped_delays_and_rates = [
             item
             for pair in zip(self.pointing_delay, self.pointing_delay_rate + [0])
@@ -397,4 +471,7 @@ class StationBeamComponentManager(MccsComponentManager):
         ] + zipped_delays_and_rates
 
         assert self._station_proxy is not None
+
+        if task_callback is not None:
+            task_callback(TaskStatus.COMPLETED, result="Apply pointing has completed.")
         return self._station_proxy.apply_pointing(station_pointing_args)

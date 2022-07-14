@@ -100,7 +100,6 @@ class BaseTpmSimulator(ObjectComponent):
         :param logger: a logger for this simulator to use
         """
         self.logger = logger
-
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False
@@ -210,6 +209,16 @@ class BaseTpmSimulator(ObjectComponent):
             meaningfully implemented
         """
         self.logger.debug("TpmSimulator: program_cpld")
+        raise NotImplementedError
+
+    def get_arp_table(self: BaseTpmSimulator) -> None:
+        """
+        Get the arp table.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmSimulator: get_arp_table")
         raise NotImplementedError
 
     def initialise(self: BaseTpmSimulator) -> None:

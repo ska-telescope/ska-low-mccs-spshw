@@ -43,16 +43,16 @@ def patched_station_device_class() -> type[MccsStation]:
 
         @command(dtype_in=int)
         def FakeSubservientDevicesPowerState(
-            self: PatchedStationDevice, power_mode: int
+            self: PatchedStationDevice, power_state: int
         ) -> None:
-            power_mode = PowerState(power_mode)
-            with self.component_manager._power_mode_lock:
-                self.component_manager._apiu_power_mode = power_mode
-                for fqdn in self.component_manager._tile_power_modes:
-                    self.component_manager._tile_power_modes[fqdn] = power_mode
-                for fqdn in self.component_manager._antenna_power_modes:
-                    self.component_manager._antenna_power_modes[fqdn] = power_mode
-            self.component_manager._evaluate_power_mode()
+            power_state = PowerState(power_state)
+            with self.component_manager._power_state_lock:
+                self.component_manager._apiu_power_state = power_state
+                for fqdn in self.component_manager._tile_power_states:
+                    self.component_manager._tile_power_states[fqdn] = power_state
+                for fqdn in self.component_manager._antenna_power_states:
+                    self.component_manager._antenna_power_states[fqdn] = power_state
+            self.component_manager._evaluate_power_state()
 
     return PatchedStationDevice
 
@@ -339,6 +339,7 @@ class TestMccsIntegrationTmc:
         controller_device_state_changed_callback: MockChangeEventCallback,
         subarray_device_obs_state_changed_callback: MockChangeEventCallback,
         lrc_result_changed_callback: MockChangeEventCallback,
+        controller_device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
         Test that we can turn the controller on.
@@ -359,7 +360,10 @@ class TestMccsIntegrationTmc:
             be used to subscribe to subarray obs state change
         :param lrc_result_changed_callback: a callback to
             be used to subscribe to device LRC result changes
+        :param controller_device_admin_mode_changed_callback:  a callback
+            to be used to subscribe to controller admin_mode changes
         """
+        time.sleep(0.2)
         assert controller.state() == tango.DevState.DISABLE
         assert subrack.state() == tango.DevState.DISABLE
         assert subarray_1.state() == tango.DevState.DISABLE
@@ -380,14 +384,25 @@ class TestMccsIntegrationTmc:
             tango.DevState.DISABLE
         )
 
+        controller.add_change_event_callback(
+            "adminMode",
+            controller_device_admin_mode_changed_callback,
+        )
+        controller_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.OFFLINE
+        )
+
         # register a callback so we can block on obsState changes
         # instead of sleeping
         subarray_1.add_change_event_callback(
             "obsState", subarray_device_obs_state_changed_callback
         )
-        subarray_device_obs_state_changed_callback.assert_next_change_event(
-            ObsState.EMPTY
-        )
+        # subarray_device_obs_state_changed_callback.assert_last_change_event(
+        #     ObsState.EMPTY
+        # )
+
+        # controller.adminMode = AdminMode.ONLINE
+        # time.sleep(0.1)
 
         subarray_1.adminMode = AdminMode.ONLINE
         subarray_2.adminMode = AdminMode.ONLINE
@@ -399,9 +414,10 @@ class TestMccsIntegrationTmc:
         subarray_beam_3.adminMode = AdminMode.ONLINE
         subarray_beam_4.adminMode = AdminMode.ONLINE
 
-        time.sleep(0.1)
+        time.sleep(0.2)
         controller.adminMode = AdminMode.ONLINE
 
+        time.sleep(0.2)
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
         )
@@ -444,7 +460,7 @@ class TestMccsIntegrationTmc:
         # Message queue length is non-zero so command is queued
         ([result_code], [unique_id]) = controller.On()
         assert result_code == ResultCode.QUEUED
-        assert "OnCommand" in unique_id
+        assert "On" in unique_id
 
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
@@ -457,13 +473,7 @@ class TestMccsIntegrationTmc:
         station_1.FakeSubservientDevicesPowerState(PowerState.ON)
         station_2.FakeSubservientDevicesPowerState(PowerState.ON)
 
-        # Wait for command to complete
-        lrc_result_changed_callback.assert_long_running_command_result_change_event(
-            unique_id=unique_id,
-            expected_result_code=ResultCode.OK,
-            expected_message="Controller On command completed OK",
-        )
-
+        time.sleep(0.2)
         controller_device_state_changed_callback.assert_last_change_event(
             tango.DevState.ON
         )
@@ -480,6 +490,14 @@ class TestMccsIntegrationTmc:
         # crossed.
         time.sleep(0.5)
 
+        # check initial state
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
+
+        subarray_device_obs_state_changed_callback.assert_last_change_event(
+            ObsState.EMPTY
+        )
+
         # allocate station_1 to subarray_1
         ([result_code], [message]) = call_with_json(
             controller.Allocate,
@@ -488,8 +506,8 @@ class TestMccsIntegrationTmc:
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
-        assert result_code == ResultCode.OK
-        assert "Allocate command completed OK" in message
+        assert result_code == ResultCode.QUEUED
+        assert "Allocate" in message
 
         subarray_device_obs_state_changed_callback.assert_next_change_event(
             ObsState.RESOURCING
@@ -568,7 +586,7 @@ class TestMccsIntegrationTmc:
             release_all=True,
         )
         assert result_code == ResultCode.QUEUED
-        assert "Release command queued" in message
+        assert "Release" in message
 
         subarray_device_obs_state_changed_callback.assert_next_change_event(
             ObsState.RESOURCING
@@ -579,14 +597,7 @@ class TestMccsIntegrationTmc:
 
         ([result_code], [unique_id]) = controller.Off()
         assert result_code == ResultCode.QUEUED
-        assert "OffCommand" in unique_id
-
-        # Wait for command to complete
-        lrc_result_changed_callback.assert_long_running_command_result_change_event(
-            unique_id=unique_id,
-            expected_result_code=ResultCode.OK,
-            expected_message="Controller Off command completed OK",
-        )
+        assert "Off" in unique_id
 
         devices = [
             controller,

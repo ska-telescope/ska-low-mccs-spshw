@@ -40,8 +40,8 @@ class SubarrayBeamObsStateModel:
 
         self._obs_state_changed_callback = obs_state_changed_callback
 
-        assert self._obs_state is not None  # for the type checker
-        self._obs_state_changed_callback(self._obs_state)
+    #         assert self._obs_state is not None  # for the type checker
+    #         self._obs_state_changed_callback({"obs_state": self._obs_state})
 
     def is_configured_changed(
         self: SubarrayBeamObsStateModel,
@@ -62,7 +62,8 @@ class SubarrayBeamObsStateModel:
             return
         if self._obs_state != obs_state:
             self._obs_state = obs_state
-            self._obs_state_changed_callback(obs_state)
+
+        self._obs_state_changed_callback({"obs_state": obs_state})
 
     def _evaluate_obs_state(
         self: SubarrayBeamObsStateModel,

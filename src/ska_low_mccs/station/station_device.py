@@ -9,17 +9,16 @@
 
 from __future__ import annotations
 
-import json
-from typing import List, Optional, Tuple
+import functools
+from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState, PowerState
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
+from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
 import ska_low_mccs.release as release
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station import (
     StationComponentManager,
     StationHealthModel,
@@ -53,6 +52,7 @@ class MccsStation(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsStation) -> None:
@@ -65,7 +65,7 @@ class MccsStation(SKAObsDevice):
             self.APIUFQDN,
             self.AntennaFQDNs,
             self.TileFQDNs,
-            self.health_changed,
+            self.component_state_changed_callback,
         )
         self.set_change_event("healthState", True, False)
 
@@ -83,31 +83,30 @@ class MccsStation(SKAObsDevice):
             self.AntennaFQDNs,
             self.TileFQDNs,
             self.logger,
-            self.push_change_event,
-            self._communication_status_changed,
-            self._component_power_mode_changed,
-            self._health_model.apiu_health_changed,
-            self._health_model.antenna_health_changed,
-            self._health_model.tile_health_changed,
-            self._obs_state_model.is_configured_changed,
+            self._max_workers,
+            self._communication_state_changed,
+            self.component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsStation) -> None:
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
-        self.register_command_object(
-            "Configure",
-            self.ConfigureCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
-        )
-        self.register_command_object(
-            "ApplyPointing",
-            self.ApplyPointingCommand(
-                self.component_manager, self.op_state_model, self.logger
-            ),
-        )
+        for (command_name, method_name) in [
+            ("Configure", "configure"),
+            ("ApplyPointing", "apply_pointing"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=None,
+                ),
+            )
 
     class InitCommand(SKAObsDevice.InitCommand):
         """
@@ -127,64 +126,30 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            (result_code, message) = super().do()
-            device = self.target
-            device._subarray_id = 0
-            device._refLatitude = 0.0
-            device._refLongitude = 0.0
-            device._refHeight = 0.0
-            device._beam_fqdns = []
-            device._transient_buffer_fqdn = ""
-            device._delay_centre = []
-            device._calibration_coefficients = []
-            device._is_calibrated = False
-            device._calibration_job_id = 0
-            device._daq_job_id = 0
-            device._data_directory = ""
+            self._device._subarray_id = 0
+            self._device._refLatitude = 0.0
+            self._device._refLongitude = 0.0
+            self._device._refHeight = 0.0
+            self._device._beam_fqdns = []
+            self._device._transient_buffer_fqdn = ""
+            self._device._delay_centre = []
+            self._device._calibration_coefficients = []
+            self._device._is_calibrated = False
+            self._device._calibration_job_id = 0
+            self._device._daq_job_id = 0
+            self._device._data_directory = ""
 
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
-            device.set_change_event("beamFQDNs", True, True)
-            device.set_archive_event("beamFQDNs", True, True)
-            device.set_change_event("transientBufferFQDN", True, False)
-            device.set_archive_event("transientBufferFQDN", True, False)
+            self._device.set_change_event("beamFQDNs", True, True)
+            self._device.set_archive_event("beamFQDNs", True, True)
+            self._device.set_change_event("transientBufferFQDN", True, False)
+            self._device.set_archive_event("transientBufferFQDN", True, False)
 
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
-            return (result_code, message)
+            super().do()
 
-    class OnCommand(ResponseCommand):
-        """
-        A class for the MccsStation's On() command.
-
-        This class overrides the SKABaseDevice OnCommand to allow for an
-        eventual consistency semantics. This requires an override
-        because the SKABaseDevice OnCommand only allows On() to be run
-        when in OFF state.
-        """
-
-        def do(  # type: ignore[override]
-            self: MccsStation.OnCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Stateless hook for Off() command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            # It's fine to complete this long-running command here
-            # (returning ResultCode.OK), even though the component manager
-            # may not actually be finished turning everything on.
-            # The completion of the original On command to MccsController
-            # is waiting for the various power mode callbacks to be received
-            # rather than completion of the various long-running commands.
-            _ = self.target.on()
-            message = "Station On command completed OK"
-            return (ResultCode.OK, message)
+            return (ResultCode.OK, "Initialisation complete")
 
     def is_On_allowed(self: MccsStation) -> bool:
         """
@@ -203,9 +168,9 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Callbacks
     # ----------
-    def _communication_status_changed(
+    def _communication_state_changed(
         self: MccsStation,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -214,7 +179,7 @@ class MccsStation(SKAObsDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -223,17 +188,80 @@ class MccsStation(SKAObsDevice):
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
 
-        action = action_map[communication_status]
+        action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
-    def _component_power_mode_changed(
+    def component_state_changed_callback(
         self: MccsStation,
-        power_mode: PowerState,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
+    ) -> None:
+        """
+        Handle change in the state of the component.
+
+        This is a callback hook, called by the component manager when
+        the state of the component changes.
+        For the power_state parameter it is implemented here to drive the op_state.
+        For the health parameter it is implemented to update the health attribute
+        and push change events whenever the HealthModel's evaluated health state changes.
+
+        :param state_change: a dict containing the state parameters to be set, and new values.
+        :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is a station.
+
+        :raises ValueError: fqdn not found
+        """
+        if fqdn is None:
+            health_state_changed_callback = self.health_changed
+            power_state_changed_callback = self._component_power_state_changed
+        else:
+            device_family = fqdn.split("/")[1]
+            if device_family == "apiu":
+                health_state_changed_callback = self._health_model.apiu_health_changed
+                power_state_changed_callback = (
+                    self.component_manager._apiu_power_state_changed
+                )
+            elif device_family == "antenna":
+                health_state_changed_callback = functools.partial(
+                    self._health_model.antenna_health_changed, fqdn
+                )
+                power_state_changed_callback = functools.partial(
+                    self.component_manager._antenna_power_state_changed, fqdn
+                )
+            elif device_family == "tile":
+                health_state_changed_callback = functools.partial(
+                    self._health_model.tile_health_changed, fqdn
+                )
+                power_state_changed_callback = functools.partial(
+                    self.component_manager._tile_power_state_changed, fqdn
+                )
+            else:
+                raise ValueError(
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                )
+
+        if "power_state" in state_change.keys():
+            power_state = state_change.get("power_state")
+            with self.component_manager.power_state_lock:
+                self.component_manager.set_power_state(power_state, fqdn=fqdn)
+                if power_state is not None:
+                    power_state_changed_callback(power_state)
+
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            health_state_changed_callback(health)
+
+        if "is_configured" in state_change.keys():
+            is_configured = state_change.get("is_configured")
+            self._obs_state_model.is_configured_changed(is_configured)
+
+    def _component_power_state_changed(
+        self: MccsStation,
+        power_state: PowerState,
     ) -> None:
         """
         Handle change in the power mode of the component.
@@ -242,7 +270,7 @@ class MccsStation(SKAObsDevice):
         the power mode of the component changes. It is implemented here
         to drive the op_state.
 
-        :param power_mode: the power mode of the component.
+        :param power_state: the power mode of the component.
         """
         action_map = {
             PowerState.OFF: "component_off",
@@ -251,7 +279,7 @@ class MccsStation(SKAObsDevice):
             PowerState.UNKNOWN: "component_unknown",
         }
 
-        self.op_state_model.perform_action(action_map[power_mode])
+        self.op_state_model.perform_action(action_map[power_state])
 
     def health_changed(self: MccsStation, health: HealthState) -> None:
         """
@@ -304,6 +332,34 @@ class MccsStation(SKAObsDevice):
                 self.logger.error(f"Attempt to set status resulted in exception {e}")
                 raise
             self.logger.info(f"Device state changed from {self.get_state()} to {state}")
+            try:
+                self.push_change_event("state")
+            except Exception as e:
+                self.logger.error(
+                    f"Attempt to push state change event resulted in exception {e}"
+                )
+                raise
+            try:
+                self.push_archive_event("state")
+            except Exception as e:
+                self.logger.error(
+                    f"Attempt to push state archive event resulted in exception {e}"
+                )
+                raise
+            try:
+                self.push_change_event("status")
+            except Exception as e:
+                self.logger.error(
+                    f"Attempt to push status change event resulted in exception {e}"
+                )
+                raise
+            try:
+                self.push_archive_event("status")
+            except Exception as e:
+                self.logger.error(
+                    f"Attempt to push status archive event resulted in exception {e}"
+                )
+                raise
 
     # ----------
     # Attributes
@@ -476,39 +532,6 @@ class MccsStation(SKAObsDevice):
     # --------
     # Commands
     # --------
-    class ConfigureCommand(ResponseCommand):
-        """Class for handling the Configure() command."""
-
-        SUCCEEDED_MESSAGE = "Configure command completed OK"
-        FAILED_MESSAGE = "Configure command failed"
-
-        def do(  # type: ignore[override]
-            self: MccsStation.ConfigureCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement Configure() command functionality.
-
-            :param argin: Configuration specification dict as a json string
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            configuration = json.loads(argin)
-            station_id = configuration.get("station_id")
-            component_manager = self.target
-            try:
-                result_code = component_manager.configure(station_id)
-            except ValueError as value_error:
-                return (
-                    ResultCode.FAILED,
-                    f"Configure command failed: {value_error}",
-                )
-
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -531,32 +554,6 @@ class MccsStation(SKAObsDevice):
         handler = self.get_command_object("Configure")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
-
-    class ApplyPointingCommand(ResponseCommand):
-        """Class for handling the ApplyPointing(argin) command."""
-
-        SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
-        FAILED_MESSAGE = "ApplyPointing command failed: ValueError in Tile"
-
-        def do(  # type: ignore[override]
-            self: MccsStation.ApplyPointingCommand, argin: list[float]
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement ApplyPointing command functionality.
-
-            :param argin: an array containing a beam index and antenna
-                delays
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.apply_pointing(argin)
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(
         dtype_in="DevVarDoubleArray",

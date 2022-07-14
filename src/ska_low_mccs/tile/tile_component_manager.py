@@ -9,31 +9,37 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState, SimulationMode, TestMode
+from ska_tango_base.control_model import (
+    CommunicationStatus,
+    PowerState,
+    SimulationMode,
+    TestMode,
+)
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.component import (
-    CommunicationStatus,
-    ExtendedPowerState,
+    MccsComponentManager,
     MccsComponentManagerProtocol,
     ObjectComponentManager,
     SwitchingComponentManager,
     check_communicating,
     check_on,
 )
-from ska_low_mccs.component.component_manager import MccsComponentManager
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
     StaticTpmSimulator,
-    TileTime,
     TpmDriver,
 )
 from ska_low_mccs.tile.tile_orchestrator import TileOrchestrator
+from ska_low_mccs.tile.time_util import TileTime
 from ska_low_mccs.tile.tpm_status import TpmStatus
 
 __all__ = [
@@ -56,9 +62,9 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         self: _TpmSimulatorComponentManager,
         tpm_simulator: BaseTpmSimulator,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -66,26 +72,25 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         :param tpm_simulator: the TPM simulator component managed by
             this component manager
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: Nos of worker threads for async commands.
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             tpm_simulator,
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
+        self._component_state_changed_callback = component_state_changed_callback
 
     __PASSTHROUGH = [
         "adc_rms",
-        "arp_table",
+        "get_arp_table",
         "board_temperature",
         "calculate_delay",
         "check_pending_data_requests",
@@ -235,31 +240,32 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: StaticTpmSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: Nos of worker threads for async commands.
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             StaticTpmSimulator(
                 logger,
             ),
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
+
+        self._component_state_changed_callback = component_state_changed_callback
 
 
 class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
@@ -268,30 +274,29 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     def __init__(
         self: DynamicTpmSimulatorComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: Nos of worker threads for async commands.
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             DynamicTpmSimulator(
                 logger,
             ),
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
 
@@ -310,13 +315,13 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers,
         tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_fault_callback: Callable[[bool], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -326,41 +331,40 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         :param initial_test_mode: the simulation mode that the component
             should start in
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
         :param tile_id: the unique ID for the tile
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: Nos. of worker threads for async commands.
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be called when the
+            component state changes
         """
         tpm_driver = TpmDriver(
             logger,
-            push_change_event,
+            max_workers,
             tile_id,
             tpm_ip,
             tpm_cpld_port,
             tpm_version,
-            communication_status_changed_callback,
-            component_fault_callback,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
         dynamic_tpm_simulator_component_manager = DynamicTpmSimulatorComponentManager(
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
         static_tpm_simulator_component_manager = StaticTpmSimulatorComponentManager(
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
         super().__init__(
@@ -460,16 +464,15 @@ class TileComponentManager(MccsComponentManager):
         initial_simulation_mode: SimulationMode,
         initial_test_mode: TestMode,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
+        max_workers: int,
         tile_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
         subrack_fqdn: str,
         subrack_tpm_id: int,
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_power_mode_changed_callback: Callable[[PowerState], None],
-        component_fault_callback: Callable[[bool], None],
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """
@@ -480,8 +483,7 @@ class TileComponentManager(MccsComponentManager):
         :param initial_test_mode: the test mode that the component
             should start in
         :param logger: a logger for this object to use
-        :param push_change_event: method to call when the base classes
-            want to send an event
+        :param max_workers: nos. of worker threads
         :param tile_id: the unique ID for the tile
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
@@ -489,24 +491,22 @@ class TileComponentManager(MccsComponentManager):
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
-        :param communication_status_changed_callback: callback to be
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_power_mode_changed_callback: callback to be
-            called when the component power mode changes
-        :param component_fault_callback: callback to be called when the
-            component faults (or stops faulting)
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         :param _tpm_component_manager: a tpm component manager to use
             instead of creating one. This is provided for testing
             purposes only.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
-
+        self._power_state_lock = threading.RLock()
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
-
-        self._subrack_communication_status = CommunicationStatus.DISABLED
-        self._tpm_communication_status = CommunicationStatus.DISABLED
+        self._component_state_changed_callback = component_state_changed_callback
+        self._subrack_communication_state = CommunicationStatus.DISABLED
+        self._tpm_communication_state = CommunicationStatus.DISABLED
 
         self._tpm_component_manager = (
             _tpm_component_manager
@@ -514,16 +514,15 @@ class TileComponentManager(MccsComponentManager):
                 initial_simulation_mode,
                 initial_test_mode,
                 logger,
-                push_change_event,
+                max_workers,
                 tile_id,
                 tpm_ip,
                 tpm_cpld_port,
                 tpm_version,
-                self._tpm_communication_status_changed,
-                self.component_fault_changed,
+                self._tpm_communication_state_changed,
+                component_state_changed_callback,
             )
         )
-
         self._tile_orchestrator = TileOrchestrator(
             self._start_communicating_with_subrack,
             self._stop_communicating_with_subrack,
@@ -531,8 +530,8 @@ class TileComponentManager(MccsComponentManager):
             self._stop_communicating_with_tpm,
             self._turn_off_tpm,
             self._turn_on_tpm,
-            self.update_communication_status,
-            self.update_tpm_power_mode,
+            self.update_communication_state,
+            component_state_changed_callback,
             logger,
         )
 
@@ -540,10 +539,9 @@ class TileComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            component_power_mode_changed_callback,
-            component_fault_callback,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
     def start_communicating(self: TileComponentManager) -> None:
@@ -554,54 +552,66 @@ class TileComponentManager(MccsComponentManager):
         """Establish communication with the tpm and the upstream power supply."""
         self._tile_orchestrator.desire_offline()
 
-    def off(self: TileComponentManager) -> ResultCode:
+    def off(self: TileComponentManager, task_callback: Callable = None) -> ResultCode:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
-        :return: a result code, or None if there was nothing to do.
-        """
-        return self._tile_orchestrator.desire_off()
+        :param task_callback: Update task state, defaults to None
 
-    def on(self: TileComponentManager) -> ResultCode:
+        :return: a result code and a unique_id or message.
         """
-        Tell the upstream power supply proxy to turn the tpm on.
+        return self.submit_task(
+            self._tile_orchestrator.desire_off, args=[], task_callback=task_callback
+        )
 
-        :return: a result code, or None if there was nothing to do.
-        """
-        return self._tile_orchestrator.desire_on()
-
-    def standby(self: TileComponentManager) -> ResultCode:
+    def on(
+        self: TileComponentManager, task_callback: Callable = None
+    ) -> tuple[ResultCode, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
+        :param task_callback: Update task state, defaults to None
+
+        :return: a result code and a unique_id or message.
+        """
+        return self.submit_task(
+            self._tile_orchestrator.desire_on, args=[], task_callback=task_callback
+        )
+
+    def standby(self: TileComponentManager, task_callback: Callable = None) -> None:
+        """
+        Tell the upstream power supply proxy to turn the tpm on.
+
+        :param task_callback: Update task state, defaults to None
+
         :return: a result code, or None if there was nothing to do.
         """
-        return self._tile_orchestrator.desire_standby()
+        return self.submit_task(
+            self._tile_orchestrator.desire_standby, args=[], task_callback=task_callback
+        )
 
-    def component_progress_changed(self: TileComponentManager, progress: int) -> None:
-        """
-        Handle notification that the component's progress value has changed.
+    # def component_progress_changed(self: TileComponentManager, progress: int) -> None:
+    #     """
+    #     Handle notification that the component's progress value has changed.
 
-        This is a callback hook, to be passed to the managed component.
+    #     This is a callback hook, to be passed to the managed component.
 
-        :param progress: The progress percentage of the long-running command
-        """
-        if self._component_progress_changed_callback is not None:
-            self._component_progress_changed_callback(progress)
+    #     :param progress: The progress percentage of the long-running command
+    #     """
+    #     if self._component_progress_changed_callback is not None:
+    #         self._component_progress_changed_callback(progress)
 
-    def _subrack_communication_status_changed(
+    def _subrack_communication_state_changed(
         self: TileComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the antenna via the APIU.
         """
-        self._tile_orchestrator.update_subrack_communication_status(
-            communication_status
-        )
+        self._tile_orchestrator.update_subrack_communication_state(communication_state)
 
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,
@@ -629,8 +639,7 @@ class TileComponentManager(MccsComponentManager):
         This contains the actual communication logic that is enqueued to
         be run asynchronously.
 
-        :raises ConnectionError: if the attempt to establish
-            communication with the channel fails.
+        :raises ConnectionError: Connection to subrack failed
         """
         # Don't set comms NOT_ESTABLISHED here. It should already have been handled
         # synchronously by the orchestator.
@@ -650,22 +659,22 @@ class TileComponentManager(MccsComponentManager):
 
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             f"tpm{self._subrack_tpm_id}PowerState",
-            self._tpm_power_mode_change_event_received,
+            self._tpm_power_state_change_event_received,
         )
-
+        time.sleep(0.1)
         if unconnected:
-            self._tile_orchestrator.update_subrack_communication_status(
+            self._tile_orchestrator.update_subrack_communication_state(
                 CommunicationStatus.ESTABLISHED
             )
 
-    def _tpm_power_mode_change_event_received(
+    def _tpm_power_state_change_event_received(
         self: TileComponentManager,
         event_name: str,
-        event_value: ExtendedPowerState,
+        event_value: PowerState,
         event_quality: tango.AttrQuality,
     ) -> None:
         """
-        Handle change in tpm power modes.
+        Handle change in tpm power states.
 
         This is a callback that is triggered by an event subscription
         on the subrack device.
@@ -679,7 +688,7 @@ class TileComponentManager(MccsComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-        self._tpm_power_mode_changed(event_value)
+        self._tpm_power_state_changed(event_value)
 
     def _stop_communicating_with_subrack(self: TileComponentManager) -> None:
         self._subrack_proxy = None
@@ -706,50 +715,50 @@ class TileComponentManager(MccsComponentManager):
             )
         return result_code
 
-    def _tpm_power_mode_changed(
+    def _tpm_power_state_changed(
         self: TileComponentManager,
-        power_mode: ExtendedPowerState,
+        power_state: PowerState,
     ) -> None:
-        self._tile_orchestrator.update_tpm_power_mode(power_mode)
+        self._tile_orchestrator.update_tpm_power_state(power_state)
 
-    def _tpm_communication_status_changed(
+    def _tpm_communication_state_changed(
         self: TileComponentManager,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle a change in status of communication with the tpm.
 
-        :param communication_status: the status of communication with
+        :param communication_state: the status of communication with
             the tpm.
         """
-        self._tile_orchestrator.update_tpm_communication_status(communication_status)
+        self._tile_orchestrator.update_tpm_communication_state(communication_state)
 
-    def update_tpm_power_mode(
-        self: TileComponentManager, power_mode: Optional[PowerState]
+    def update_tpm_power_state(
+        self: TileComponentManager, power_state: Optional[PowerState]
     ) -> None:
         """
-        Update the power mode, calling callbacks as required.
+        Update the power state, calling callbacks as required.
 
-        If power mode is ON, then the TPM is checked for initialisation,
+        If power state is ON, then the TPM is checked for initialisation,
         and initialised if not already so.
 
-        :param power_mode: the new power mode of the component. This can
+        :param power_state: the new power state of the component. This can
             be None, in which case the internal value is updated but no
             callback is called. This is useful to ensure that the
             callback is called next time a real value is pushed.
         """
-        self.update_component_power_mode(power_mode)
+        self.set_power_state(power_state)
         self.logger.debug(
-            f"power mode: {self.power_mode}, communication status: {self.communication_status}"
+            f"power state: {self.power_state}, communication status: {self.communication_state}"
         )
-        if self.communication_status == CommunicationStatus.ESTABLISHED:
-            if power_mode == PowerState.ON:
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
+            if power_state == PowerState.ON:
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
                     self.initialise()
                 self._tile_time.set_reference_time(self.tile_reference_time)
-            if power_mode == PowerState.STANDBY:
+            if power_state == PowerState.STANDBY:
                 self.erase_fpga()
                 self._tile_time.set_reference_time(0)
 
@@ -805,12 +814,12 @@ class TileComponentManager(MccsComponentManager):
 
         :return: the TPM status
         """
-        if self.power_mode == PowerState.UNKNOWN:
-            self.logger.debug("power mode UNKNOWN")
+        if self.power_state == PowerState.UNKNOWN:
+            self.logger.debug("power state UNKNOWN")
             status = TpmStatus.UNKNOWN
-        elif self.power_mode != PowerState.ON:
+        elif self.power_state != PowerState.ON:
             status = TpmStatus.OFF
-        elif self.communication_status != CommunicationStatus.ESTABLISHED:
+        elif self.communication_state != CommunicationStatus.ESTABLISHED:
             status = TpmStatus.UNCONNECTED
         else:
             status = cast(
@@ -867,7 +876,7 @@ class TileComponentManager(MccsComponentManager):
 
     __PASSTHROUGH = [
         "adc_rms",
-        "arp_table",
+        "get_arp_table",
         "board_temperature",
         "calculate_delay",
         "check_pending_data_requests",
@@ -1005,3 +1014,430 @@ class TileComponentManager(MccsComponentManager):
         """
         # This one-liner is only a method so that we can decorate it.
         setattr(self._tpm_component_manager, name, value)
+
+    @check_communicating
+    def initialise(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the initialise slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        try:
+            return self.submit_task(self._initialise, task_callback=task_callback)
+        except ConnectionError as comm_err:
+            return comm_err
+
+    def _initialise(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Initialise the tpm using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(SwitchingTpmComponentManager, self._tpm_component_manager).initialise()
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Initialise tpm task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Initialise tpm task has completed",
+            )
+            return
+
+    @check_communicating
+    def download_firmware(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the download_firmware slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param argin: can either be the design name returned from
+            GetFirmwareAvailable command, or a path to a
+            file
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        return self.submit_task(
+            self._download_firmware, args=[argin], task_callback=task_callback
+        )
+
+    def _download_firmware(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Download tpm firmware using slow command.
+
+        :param argin: can either be the design name returned or a path to a file
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).download_firmware(argin)
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="Download tpm firmware task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Download tpm firmware has completed",
+            )
+            return
+
+    @check_communicating
+    def get_arp_table(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the get arp_table slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        return self.submit_task(self._get_arp_table, task_callback=task_callback)
+
+    def _get_arp_table(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Get arp table using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).get_arp_table()
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Arp table task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Arp table has completed",
+            )
+            return
+
+    @check_communicating
+    def start_acquisition(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the start_acquisition slow task.
+
+        :param argin: json dictionary with optional keywords
+
+        * StartTime - (int) start time
+        * Delay - (int) delay start
+
+        :param task_callback: Update task state, defaults to None
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        return self.submit_task(
+            self._start_acquisition, args=[argin], task_callback=task_callback
+        )
+
+    def _start_acquisition(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Start acquisition using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        :param argin: JSON string
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).start_acquisition(argin)
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Start acquisition task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Start acquisition has completed",
+            )
+            return
+
+    @check_communicating
+    def cpld_flash_write(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the cpld_flash_write slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param argin: is the path to a file containing the required CPLD firmware
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        return self.submit_task(
+            self._cpld_flash_write, args=[argin], task_callback=task_callback
+        )
+
+    def _cpld_flash_write(
+        self: TileComponentManager,
+        bitfile: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Cpld flash write using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        :param bitfile: bitfile name
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).cpld_flash_write(bitfile)
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Cpld flash write task aborted"
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Cpld flash write has completed",
+            )
+            return
+
+    @check_communicating
+    def post_synchronisation(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the post_synchronisation slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        return self.submit_task(self._post_synchronisation, task_callback=task_callback)
+
+    def _post_synchronisation(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Post synchronisation using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).post_synchronisation()
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="Post synchronisation task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Post synchronisation has completed",
+            )
+            return
+
+    @check_communicating
+    def sync_fpgas(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the sync_fpgas slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to identify the command
+        """
+        return self.submit_task(self._sync_fpgas, task_callback=task_callback)
+
+    def _sync_fpgas(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Fpgas synchronization using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(SwitchingTpmComponentManager, self._tpm_component_manager).sync_fpgas()
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="Fpgas synchronization task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Fpgas synchronization has completed",
+            )
+            return
+
+    def set_power_state(self: TileComponentManager, power_state: PowerState) -> None:
+        """
+        Set the power state of the tile.
+
+        :param power_state: The desired power state
+        """
+        with self._power_state_lock:
+            self.power_state = power_state

@@ -14,6 +14,7 @@ from typing import Union, cast
 import pytest
 from _pytest.fixtures import SubRequest  # for type hinting
 from ska_tango_base.control_model import HealthState, SimulationMode
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.cluster_manager import (
     ClusterComponentManager,
@@ -21,7 +22,7 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulatorComponentManager,
 )
 from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
-from ska_low_mccs.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs.testing.mock import MockCallable
 
 
 class TestClusterCommon:
@@ -130,12 +131,16 @@ class TestClusterCommon:
         :param status: the job status for which stats reporting is under
             test
         """
-        job_status = JobStatus[status.upper()]
-        assert (
-            getattr(cluster, f"jobs_{status}") == ClusterSimulator.JOB_STATS[job_status]
-        )
-        cluster.clear_job_stats()
-        assert getattr(cluster, f"jobs_{status}") == 0
+        if isinstance(cluster, ClusterSimulator):
+            job_status = JobStatus[status.upper()]
+            assert (
+                getattr(cluster, f"jobs_{status}")
+                == ClusterSimulator.JOB_STATS[job_status]
+            )
+            cluster.clear_job_stats()
+            assert getattr(cluster, f"jobs_{status}") == 0
+        elif isinstance(cluster, ClusterComponentManager):
+            assert cluster.clear_job_stats() == (TaskStatus.QUEUED, "Task queued")
 
     @pytest.mark.parametrize(
         "status", ("staging", "starting", "running", "killing", "unreachable")
@@ -161,20 +166,23 @@ class TestClusterCommon:
         :param status: the job status for which stats reporting is under
             test
         """
-        jobs = ClusterSimulator.OPEN_JOBS.keys()
-        job_status = JobStatus[status.upper()]
-        jobs_of_status = [
-            job for job in jobs if cluster.get_job_status(job) == job_status
-        ]
+        if isinstance(cluster, ClusterSimulator):
+            jobs = ClusterSimulator.OPEN_JOBS.keys()
+            job_status = JobStatus[status.upper()]
+            jobs_of_status = [
+                job for job in jobs if cluster.get_job_status(job) == job_status
+            ]
 
-        assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
+            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
 
-        cluster.stop_job(jobs_of_status.pop())
-        assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
-        assert cluster.jobs_killed == ClusterSimulator.JOB_STATS[JobStatus.KILLED] + 1
+            cluster.stop_job(jobs_of_status.pop())
+            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
+            assert (
+                cluster.jobs_killed == ClusterSimulator.JOB_STATS[JobStatus.KILLED] + 1
+            )
 
-        cluster.clear_job_stats()
-        assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
+            cluster.clear_job_stats()
+            assert getattr(cluster, f"jobs_{status}") == len(jobs_of_status)
 
     @pytest.mark.parametrize(
         "resource",
@@ -294,11 +302,14 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
-        with pytest.raises(
-            NotImplementedError,
-            match="ClusterSimulator.ping_master_pool has not been implemented",
-        ):
-            assert cluster.ping_master_pool() is None
+        if isinstance(cluster, ClusterSimulator):
+            with pytest.raises(
+                NotImplementedError,
+                match="ClusterSimulator.ping_master_pool has not been implemented",
+            ):
+                assert cluster.ping_master_pool() is None
+        elif isinstance(cluster, ClusterComponentManager):
+            assert cluster.ping_master_pool() == (TaskStatus.QUEUED, "Task queued")
 
     def test_shadow_master_pool_status(
         self: TestClusterCommon,
@@ -322,13 +333,17 @@ class TestClusterCommon:
         cluster: Union[ClusterSimulator, ClusterComponentManager],
     ) -> None:
         """
-        Test that when we submit a job, we get a job id for it.
+        Test for submit_job command.
 
-        Also, the status of the job is STAGING.
+        Test that when we call the submit_job method from the component manager, the job
+        is added to the queue.
+        Test that when we call the submit_job method from the simulator,
+        the JobStatus is STAGING.
 
         :param cluster: the simulated cluster
         """
         job_config = JobConfig()
+
         job_id = cluster.submit_job(job_config)
         assert cluster.get_job_status(job_id) == JobStatus.STAGING
 
@@ -341,16 +356,22 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
-        with pytest.raises(ValueError, match="No such job"):
-            cluster.start_job("no_such_job_id")
+        if isinstance(cluster, ClusterSimulator):
+            with pytest.raises(ValueError, match="No such job"):
+                cluster.start_job("no_such_job_id")
 
-        for job_id in ClusterSimulator.OPEN_JOBS:
-            if cluster.get_job_status(job_id) == JobStatus.STAGING:
-                cluster.start_job(job_id)
-                assert cluster.get_job_status(job_id) == JobStatus.RUNNING
-            else:
-                with pytest.raises(ValueError, match="Job cannot be started"):
+            for job_id in ClusterSimulator.OPEN_JOBS:
+                if cluster.get_job_status(job_id) == JobStatus.STAGING:
                     cluster.start_job(job_id)
+                    assert cluster.get_job_status(job_id) == JobStatus.RUNNING
+                else:
+                    with pytest.raises(ValueError, match="Job cannot be started"):
+                        cluster.start_job(job_id)
+
+        elif isinstance(cluster, ClusterComponentManager):
+            (result_code, message) = cluster.start_job("job_id")
+            assert result_code == TaskStatus.QUEUED
+            assert message == "Task queued"
 
     def test_stop_job(
         self: TestClusterCommon,
@@ -361,14 +382,20 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         """
-        with pytest.raises(ValueError, match="No such job"):
-            cluster.stop_job("no_such_job_id")
-
-        for job_id in list(ClusterSimulator.OPEN_JOBS):
-            cluster.stop_job(job_id)
-
+        if isinstance(cluster, ClusterSimulator):
             with pytest.raises(ValueError, match="No such job"):
+                cluster.stop_job("no_such_job_id")
+
+            for job_id in list(ClusterSimulator.OPEN_JOBS):
                 cluster.stop_job(job_id)
+
+                with pytest.raises(ValueError, match="No such job"):
+                    cluster.stop_job(job_id)
+
+        elif isinstance(cluster, ClusterComponentManager):
+            (result_code, message) = cluster.stop_job("job_id")
+            assert result_code == TaskStatus.QUEUED
+            assert message == "Task queued"
 
 
 class TestClusterSimulator:
@@ -421,15 +448,14 @@ class TestClusterComponentManager:
     def test_init_simulation_mode(
         self: TestClusterComponentManager,
         logger: logging.Logger,
-        lrc_result_changed_callback: MockChangeEventCallback,
+        max_workers: int,
     ) -> None:
         """
         Test that we can't create a cluster manager that's not in simulation mode.
 
         :param logger: a logger for the ClusterComponentManager instance
             that this test will try to initialise.
-        :param lrc_result_changed_callback: a callback to
-            be used to subscribe to device LRC result changes
+        :param max_workers: the maximum number of worker threads.
         """
         with pytest.raises(
             NotImplementedError,
@@ -437,10 +463,8 @@ class TestClusterComponentManager:
         ):
             _ = ClusterComponentManager(
                 logger,
-                lrc_result_changed_callback,
+                max_workers,
                 SimulationMode.FALSE,
-                None,
-                None,
                 None,
                 None,
             )
@@ -463,27 +487,36 @@ class TestClusterComponentManager:
     def test_component_shadow_master_pool_node_health_changed_callback(
         self: TestClusterComponentManager,
         cluster_component_manager: ClusterComponentManager,
-        component_shadow_master_pool_node_health_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
     ) -> None:
         """
         Test that the callback is called when a shadow master pool node changes health.
 
         :param cluster_component_manager: a manager for an external cluster
-        :param component_shadow_master_pool_node_health_changed_callback:
-            callback to be called when the health of a node in the
-            shadow pool changes
+        :param component_state_changed_callback:
+            callback to be called when the state (health of a node in the
+            shadow pool) changes
         """
         cluster_component_manager.start_communicating()
-        component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            [HealthState.OK, HealthState.OK, HealthState.OK, HealthState.OK]
+        component_state_changed_callback.assert_in_deque(
+            {
+                "shadow_master_pool_node_healths": [
+                    HealthState.OK,
+                    HealthState.OK,
+                    HealthState.OK,
+                    HealthState.OK,
+                ]
+            }
         )
 
         cluster_component_manager._component.simulate_node_failure(1, True)
-        component_shadow_master_pool_node_health_changed_callback.assert_next_call(
-            [
-                HealthState.FAILED,
-                HealthState.OK,
-                HealthState.OK,
-                HealthState.OK,
-            ]
+        component_state_changed_callback.assert_in_deque(
+            {
+                "shadow_master_pool_node_healths": [
+                    HealthState.FAILED,
+                    HealthState.OK,
+                    HealthState.OK,
+                    HealthState.OK,
+                ]
+            }
         )

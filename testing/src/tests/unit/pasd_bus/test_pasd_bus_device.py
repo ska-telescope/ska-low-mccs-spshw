@@ -18,7 +18,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDeviceProxy, MccsPasdBus
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs.testing.mock.mock_callable import MockChangeEventCallback
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
@@ -35,7 +35,7 @@ def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
 
 
 class TestMccsPasdBus:
-    """Tests of the MCCS transient buffer device."""
+    """Tests of the MCCS pasd bus device."""
 
     @pytest.fixture()
     def mock_component_manager(self: TestMccsPasdBus, mocker: pytest_mock.mocker) -> unittest.mock.Mock:  # type: ignore[valid-type]
@@ -46,7 +46,7 @@ class TestMccsPasdBus:
             module
 
         :return: a mock to be used as a component manager for the
-            transient buffer device.
+            pasd bus device.
         """
         return mocker.Mock()  # type: ignore[attr-defined]
 
@@ -75,6 +75,10 @@ class TestMccsPasdBus:
 
                 :return: a mock component manager
                 """
+                mock_component_manager._component_state_changed_callback = (
+                    self.component_state_changed_callback
+                )
+
                 return mock_component_manager
 
         return PatchedMccsPasdBus
@@ -102,6 +106,7 @@ class TestMccsPasdBus:
     def test_healthState(
         self: TestMccsPasdBus,
         device_under_test: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
         device_health_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
@@ -110,12 +115,23 @@ class TestMccsPasdBus:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_component_manager: a mock component manager that has
+            been patched into the device under test
         :param device_health_state_changed_callback: a callback that we
             can use to subscribe to health state changes on the device
         """
         device_under_test.add_change_event_callback(
             "healthState",
             device_health_state_changed_callback,
+        )
+
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
+        assert device_under_test.healthState == HealthState.UNKNOWN
+
+        mock_component_manager._component_state_changed_callback(
+            {"health_state": HealthState.OK}
         )
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK
@@ -224,7 +240,7 @@ class TestMccsPasdBus:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param mock_component_manager: the mock component manager being
-            used by the patched transient buffer device.
+            used by the patched pasd bus device.
         :param device_attribute: name of the device attribute under test.
         :param component_manager_property: name of the component manager
             property that is expected to be called when the device
@@ -248,151 +264,86 @@ class TestMccsPasdBus:
             "device_command",
             "component_manager_method",
             "device_command_argin",
-            "component_manager_method_argin",
             "component_manager_method_return",
-            "expected_device_command_return",
         ),
         [
             (
                 "ReloadDatabase",
                 "reload_database",
                 None,
-                None,
-                True,
-                [[ResultCode.OK], ["PaSD bus 'database reload' successful"]],
+                [True, True],
             ),
             (
                 "GetFndhInfo",
                 "get_fndh_info",
-                None,
-                None,
-                {"foo": "bah"},
-                '{"foo": "bah"}',
+                1,
+                [True, True],
             ),
             (
                 "TurnFndhServiceLedOn",
-                "set_fndh_service_led_on",
-                None,
-                True,
-                True,
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'FNDH service LED on' successful"],
-                ],
+                "turn_fndh_service_led_on",
+                1,
+                [True, True],
             ),
             (
                 "TurnFndhServiceLedOff",
-                "set_fndh_service_led_on",
-                None,
-                False,
-                True,
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'FNDH service LED off' successful"],
-                ],
+                "turn_fndh_service_led_off",
+                1,
+                [True, True],
             ),
             (
                 "GetSmartboxInfo",
                 "get_smartbox_info",
                 1,
-                1,
-                {"foo": "bah"},
-                '{"foo": "bah"}',
+                [True, True],
             ),
             (
                 "TurnSmartboxOn",
                 "turn_smartbox_on",
                 1,
-                1,
-                True,
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 on' successful"]],
+                [True, True],
             ),
             (
                 "TurnSmartboxOff",
                 "turn_smartbox_off",
                 1,
-                1,
-                True,
-                [[ResultCode.OK], ["PaSD bus 'smartbox 1 off' successful"]],
+                [True, True],
             ),
             (
                 "TurnSmartboxServiceLedOn",
                 "turn_smartbox_service_led_on",
                 1,
-                1,
-                True,
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'smartbox 1 service LED on' successful"],
-                ],
-            ),
-            (
-                "TurnSmartboxServiceLedOn",
-                "turn_smartbox_service_led_on",
-                1,
-                1,
-                False,
-                [
-                    [ResultCode.FAILED],
-                    ["PaSD bus 'smartbox 1 service LED on' failed"],
-                ],
-            ),
-            (
-                "TurnSmartboxServiceLedOn",
-                "turn_smartbox_service_led_on",
-                1,
-                1,
-                None,
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'smartbox 1 service LED on' is redundant"],
-                ],
+                [True, True],
             ),
             (
                 "TurnSmartboxServiceLedOff",
                 "turn_smartbox_service_led_off",
                 1,
-                1,
-                True,
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'smartbox 1 service LED off' successful"],
-                ],
+                [True, True],
             ),
             (
                 "GetAntennaInfo",
                 "get_antenna_info",
                 1,
-                1,
-                {"foo": "bah"},
-                '{"foo": "bah"}',
+                [True, True],
             ),
             (
                 "ResetAntennaBreaker",
                 "reset_antenna_breaker",
                 1,
-                1,
-                True,
-                [
-                    [ResultCode.OK],
-                    ["PaSD bus 'antenna 1 breaker reset' successful"],
-                ],
+                [True, True],
             ),
             (
                 "TurnAntennaOn",
                 "turn_antenna_on",
                 1,
-                1,
-                True,
-                [[ResultCode.OK], ["PaSD bus 'antenna 1 on' successful"]],
+                [True, True],
             ),
             (
                 "TurnAntennaOff",
                 "turn_antenna_off",
                 1,
-                1,
-                True,
-                [[ResultCode.OK], ["PaSD bus 'antenna 1 off' successful"]],
+                [True, True],
             ),
         ],
     )
@@ -404,9 +355,7 @@ class TestMccsPasdBus:
         device_command: str,
         component_manager_method: str,
         device_command_argin: Any,
-        component_manager_method_argin: Any,
         component_manager_method_return: Any,
-        expected_device_command_return: Any,
     ) -> None:
         """
         Test that device attribute writes result in component manager property writes.
@@ -417,18 +366,14 @@ class TestMccsPasdBus:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param mock_component_manager: the mock component manager being
-            used by the patched transient buffer device.
+            used by the patched pasd bus device.
         :param device_command: name of the device command under test.
-        :param device_command_argin: argument to the device command
         :param component_manager_method: name of the component manager
             method that is expected to be called when the device
             command is called.
-        :param component_manager_method_argin: argument to the component
-            manager method
+        :param device_command_argin: argument to the device command
         :param component_manager_method_return: return value of the
             component manager method
-        :param expected_device_command_return: the expected return value
-            of the device command
         """
         method_mock = mocker.Mock(return_value=component_manager_method_return)  # type: ignore[attr-defined]
         setattr(mock_component_manager, component_manager_method, method_mock)
@@ -440,9 +385,7 @@ class TestMccsPasdBus:
         else:
             command_return = command(device_command_argin)
 
-        if component_manager_method_argin is None:
-            method_mock.assert_called_once_with()
-        else:
-            method_mock.assert_called_once_with(component_manager_method_argin)
+        method_mock.assert_called()
 
-        assert command_return == expected_device_command_return
+        assert command_return[0] == ResultCode.QUEUED
+        assert command_return[1][0].split("_")[-1] == device_command

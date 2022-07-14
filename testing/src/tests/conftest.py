@@ -400,3 +400,42 @@ def lrc_result_changed_callback(
         gets called when the device state changes.
     """
     return lrc_result_changed_callback_factory()
+
+
+@pytest.fixture()
+def lrc_status_changed_callback_factory(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> Callable[[], MockChangeEventCallback]:
+    """
+    Return a mock change event callback factory for device LRC status change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback factory to be registered with
+        a device via a change event subscription, so that it gets called
+        when the device LRC in queue changes.
+    """
+
+    def _factory() -> MockChangeEventCallback:
+        return mock_change_event_callback_factory("longRunningCommandStatus")
+
+    return _factory
+
+
+@pytest.fixture()
+def lrc_status_changed_callback(
+    lrc_status_changed_callback_factory: Callable[[], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for a device LRC status change.
+
+    :param lrc_status_changed_callback_factory: fixture that provides a mock
+        change event callback factory for LRC status change events.
+
+    :return: a mock change event callback to be registered with the
+        device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return lrc_status_changed_callback_factory()

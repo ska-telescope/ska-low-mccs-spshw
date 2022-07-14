@@ -23,7 +23,7 @@ PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing pyt
     # E1121 (too-many-function-args), E1120 (no-value-for-parameter)
 PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R,E1101,E1136,E0611,E0603,E1121,E1120
 
-DOCS_SPHINXOPTS=-n -W --keep-going
+DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk
 include .make/k8s.mk
@@ -39,8 +39,10 @@ include .make/base.mk
 python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ testing/src/ 	
 
-python-post-lint:
-	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
+# removed temporarily
+#python-post-lint:
+#	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/
+#testing/src/
 
 python-do-build:
 	poetry build

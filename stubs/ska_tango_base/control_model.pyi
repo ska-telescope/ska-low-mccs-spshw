@@ -63,8 +63,14 @@ class LoggingLevel(enum.IntEnum):
     INFO = 4
     DEBUG = 5
 
+class CommunicationStatus(enum.IntEnum):
+    DISABLED = 1
+    NOT_ESTABLISHED = 2
+    ESTABLISHED = 3
+
 class PowerState(enum.IntEnum):
     UNKNOWN = 0
-    OFF = 1
-    STANDBY = 2
-    ON = 3
+    NO_SUPPLY = 1
+    OFF = 2
+    STANDBY = 3
+    ON = 4

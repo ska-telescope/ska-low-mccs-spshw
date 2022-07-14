@@ -9,13 +9,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
-from ska_low_mccs.component import (
-    CommunicationStatus,
-    ObjectComponentManager,
-    check_communicating,
-)
+from ska_tango_base.control_model import CommunicationStatus
+
+from ska_low_mccs.component import ObjectComponentManager, check_communicating
 from ska_low_mccs.tel_state import TelState
 
 __all__ = ["TelStateComponentManager"]
@@ -27,26 +25,28 @@ class TelStateComponentManager(ObjectComponentManager):
     def __init__(
         self: TelStateComponentManager,
         logger: logging.Logger,
-        push_change_event: Optional[Callable],
-        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
 
         :param logger: the logger to be used by this object.
-        :param push_change_event: method to call when the base classes
-            want to send an event
-        :param communication_status_changed_callback: callback to be
+        :param max_workers: the maximum workers available to this
+            component manager.
+        :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
-            the component manager and its component changes
+            the component manager and its component changes.
+        :param component_state_changed_callback: callback to be called when the
+            component state changes.
         """
         super().__init__(
             TelState(logger),
             logger,
-            push_change_event,
-            communication_status_changed_callback,
-            None,
-            None,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
         )
 
     __PASSTHROUGH = [

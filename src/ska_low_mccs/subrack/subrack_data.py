@@ -10,7 +10,9 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-__all__ = ["SubrackData"]
+import enum
+
+__all__ = ["SubrackData", "FanMode"]
 
 
 class SubrackData:
@@ -29,3 +31,13 @@ class SubrackData:
 
     MAX_SUBRACK_FAN_SPEED = 8000.0
     """The maximum fan speed for the subrack."""
+
+
+class FanMode(enum.IntEnum):
+    """Python enumerated type for ``FanMode`` attribute."""
+
+    MANUAL = 1
+    """
+    Tango Device accepts commands from all clients.
+    """
+    AUTO = 2

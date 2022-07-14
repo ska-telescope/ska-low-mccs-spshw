@@ -8,17 +8,15 @@
 """This module implements the MCCS station beam device."""
 from __future__ import annotations
 
-import json
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
-from ska_tango_base.commands import ResponseCommand, ResultCode
-from ska_tango_base.control_model import HealthState
+from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs import release
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.station_beam import (
     StationBeamComponentManager,
     StationBeamHealthModel,
@@ -48,12 +46,15 @@ class MccsStationBeam(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsStationBeam) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = StationBeamHealthModel(self.health_changed)
+        self._health_model = StationBeamHealthModel(
+            self._component_state_changed_callback
+        )
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -67,20 +68,30 @@ class MccsStationBeam(SKAObsDevice):
         return StationBeamComponentManager(
             self.BeamId,
             self.logger,
-            self.push_change_event,
-            self._communication_status_changed,
-            self._health_model.is_beam_locked_changed,
-            self._health_model.station_health_changed,
-            self._health_model.station_fault_changed,
+            self._max_workers,
+            self._communication_state_changed,
+            self._component_state_changed_callback,
         )
 
     def init_command_objects(self: MccsStationBeam) -> None:
         """Initialise the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        args = (self.component_manager, self.op_state_model, self.logger)
-        self.register_command_object("Configure", self.ConfigureCommand(*args))
-        self.register_command_object("ApplyPointing", self.ApplyPointingCommand(*args))
+        for (command_name, method_name) in [
+            ("Configure", "configure"),
+            ("ApplyPointing", "apply_pointing"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
+            )
 
     class InitCommand(SKAObsDevice.InitCommand):
         """
@@ -100,25 +111,54 @@ class MccsStationBeam(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            (result_code, message) = super().do()
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
-            device = self.target
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
+            super().do()
 
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
-
-            return (result_code, message)
+            return (ResultCode.OK, "Initialisation complete")
 
     # ----------
     # Callbacks
     # ----------
-    def _communication_status_changed(
+    def _component_state_changed_callback(
         self: MccsStationBeam,
-        communication_status: CommunicationStatus,
+        state_change: dict[str, Any],
+        fqdn: Optional[str] = None,
+    ) -> None:
+        """
+        Handle change in this device's state.
+
+        This is a callback hook, called whenever the state changes. It
+        is responsible for updating the tango side of things i.e. making
+        sure the attribute is up to date, and events are pushed.
+
+        :param state_change: A dictionary containing the name of the state that changed and its new value.
+        :param fqdn: The fqdn of the calling device or `None` if this device is the caller.
+        """
+        if "health_state" in state_change.keys():
+            health = cast(HealthState, state_change.get("health_state"))
+            if fqdn is None:
+                # Do regular health update. This device called the callback.
+                if self._health_state != health:
+                    self._health_state = health
+                    self.push_change_event("healthState", health)
+            else:
+                # Call station health changed.
+                self._health_model.station_health_changed(health)
+
+        # Probably more to do here with fault.
+        if "fault" in state_change.keys():
+            station_fault = cast(bool, state_change.get("fault"))
+            self._health_model.station_fault_changed(station_fault)
+
+        if "beam_locked" in state_change.keys():
+            beam_locked = cast(bool, state_change.get("beam_locked"))
+            self._health_model.is_beam_locked_changed(beam_locked)
+
+    def _communication_state_changed(
+        self: MccsStationBeam,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -127,7 +167,7 @@ class MccsStationBeam(SKAObsDevice):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -136,26 +176,10 @@ class MccsStationBeam(SKAObsDevice):
             CommunicationStatus.ESTABLISHED: "component_on",  # it's an always-on device
         }
 
-        self.op_state_model.perform_action(action_map[communication_status])
+        self.op_state_model.perform_action(action_map[communication_state])
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
-
-    def health_changed(self: MccsStationBeam, health: HealthState) -> None:
-        """
-        Handle change in this device's health state.
-
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
-
-        :param health: the new health value
-        """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
 
     # ----------
     # Attributes
@@ -368,52 +392,6 @@ class MccsStationBeam(SKAObsDevice):
     # --------
     # Commands
     # --------
-    class ConfigureCommand(ResponseCommand):
-        """Class for handling the Configure(argin) command."""
-
-        SUCCEEDED_MESSAGE = "Configure command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsStationBeam.ConfigureCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Do user-specified Configure functionality.
-
-            This is the do-hook for the
-            :py:meth:`.MccsStationBeam.Configure` command
-
-            :param argin: Configuration specification dict as a json
-                string
-                {
-                "beam_id": 1,
-                "station_ids": [1,2],
-                "update_rate": 0.0,
-                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
-                "antenna_weights": [1.0, 1.0, 1.0],
-                "phase_centre": [0.0, 0.0],
-                }
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            config_dict = json.loads(argin)
-            component_manager = self.target
-            result_code = component_manager.configure(
-                config_dict.get("beam_id"),
-                config_dict.get("station_ids", []),
-                config_dict.get("channels", []),
-                config_dict.get("update_rate"),
-                config_dict.get("sky_coordinates", []),
-                config_dict.get("antenna_weights", []),
-                config_dict.get("phase_centre", []),
-            )
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (result_code, "")
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Configure(self: MccsStationBeam, argin: str) -> DevVarLongStringArrayType:
         """
@@ -426,32 +404,8 @@ class MccsStationBeam(SKAObsDevice):
             information purpose only.
         """
         handler = self.get_command_object("Configure")
-        (result_code, status) = handler(argin)
-        return ([result_code], [status])
-
-    class ApplyPointingCommand(ResponseCommand):
-        """Class for handling the ApplyPointing(argin) command."""
-
-        SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
-        FAILED_MESSAGE = "ApplyPointing command failed"
-
-        def do(  # type: ignore[override]
-            self: MccsStationBeam.ApplyPointingCommand,
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement the :py:meth:`.MccsStationBeam.ApplyPointing` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            component_manager = self.target
-            result_code = component_manager.apply_pointing()
-
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (result_code, self.FAILED_MESSAGE)
+        (result_code, unique_id) = handler(argin)
+        return ([result_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
     def ApplyPointing(self: MccsStationBeam) -> DevVarLongStringArrayType:
@@ -463,8 +417,8 @@ class MccsStationBeam(SKAObsDevice):
             information purpose only.
         """
         handler = self.get_command_object("ApplyPointing")
-        (result_code, message) = handler()
-        return ([result_code], [message])
+        (result_code, unique_id) = handler()
+        return ([result_code], [unique_id])
 
 
 # ----------

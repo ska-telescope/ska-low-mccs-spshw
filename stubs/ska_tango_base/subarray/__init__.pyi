@@ -6,11 +6,12 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 import logging
-from typing import Any, Hashable, Optional
+from typing import Any, Callable, Hashable, List, Optional, Tuple
 
-from ska_tango_base.base import BaseComponentManager
+from ska_tango_base.base.component_manager import BaseComponentManager
+from ska_tango_base.base.base_device import CommandTracker # type: ignore[import]
 from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import CompletionCommand, ResultCode, ResponseCommand, ObservationCommand
+from ska_tango_base.commands import DeviceInitCommand, ResultCode, SlowCommand, FastCommand
 from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.subarray.subarray_obs_state_model import SubarrayObsStateModel
 
@@ -22,77 +23,32 @@ class SKASubarray(SKAObsDevice):
             self: SKASubarray.InitCommand
         ) -> tuple[ResultCode, str]: ...
 
+    class AbortCommand(SlowCommand):
+        def __init__(self: SKASubarray.AbortCommand, command_tracker: CommandTracker, 
+        component_manager: BaseComponentManager, callback: Callable, logger: Optional[logging.Logger]=None) -> None: ...
+        def do(self: SKASubarray.AbortCommand) -> tuple[ResultCode, str]: # type: ignore[override]
+            ...
 
-    class ScanCommand(ObservationCommand, ResponseCommand):
-        def __init__(
-            self: SKASubarray.ScanCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger]=None
-        ) -> None: ...
-        def do(  # type: ignore[override]
-            self: SKASubarray.ScanCommand, argin: str) -> tuple[ResultCode, str]: ...
-
-
-    class EndScanCommand(ObservationCommand, ResponseCommand):
-        def __init__(
-            self: SKASubarray.EndScanCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger]=None
-        ) -> None: ...
-        def do(  # type: ignore[override]
-            self: SKASubarray.EndScanCommand) -> tuple[ResultCode, str]: ...
-
-
-    class EndCommand(ObservationCommand, ResponseCommand):
-        def __init__(
-            self: SKASubarray.EndCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger]=None
-        ) -> None: ...
-        def do(  # type: ignore[override]
-            self: SKASubarray.EndCommand) -> tuple[ResultCode, str]: ...
-
-
-    class AbortCommand(ObservationCommand, ResponseCommand, CompletionCommand):
-        def __init__(
-            self: SKASubarray.AbortCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger]=None
-        ) -> None: ...
-        def do(  # type: ignore[override]
-            self: SKASubarray.AbortCommand) -> tuple[ResultCode, str]: ...
-
-
-    class ObsResetCommand(ObservationCommand, ResponseCommand, CompletionCommand):
-        def __init__(
-            self: SKASubarray.ObsResetCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger]=None
-        ) -> None: ...
-        def do(  # type: ignore[override]
-            self: SKASubarray.ObsResetCommand) -> tuple[ResultCode, str]: ...
-
-
-    class RestartCommand(ObservationCommand, ResponseCommand, CompletionCommand):
-        def __init__(
-            self: SKASubarray.RestartCommand,
-            target: Any,
-            op_state_model: OpStateModel,
-            obs_state_model: SubarrayObsStateModel,
-            logger: Optional[logging.Logger]=None
-        ) -> None: ...
-        def do(  # type: ignore[override]
-            self: SKASubarray.RestartCommand) -> tuple[ResultCode, str]: ...
+    def is_AssignResources_allowed(self: SKAObsDevice) -> bool: ...
+    def AssignResources(self: SKAObsDevice, argin: str) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_ReleaseResources_allowed(self: SKAObsDevice) -> bool: ...
+    def ReleaseResources(self: SKAObsDevice, argin: str) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_ReleaseAllResources_allowed(self: SKAObsDevice) -> bool: ...
+    def ReleaseAllResources(self: SKAObsDevice) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_Configure_allowed(self: SKAObsDevice) -> bool: ...
+    def Configure(self: SKAObsDevice, argin: str) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_Scan_allowed(self: SKAObsDevice) -> bool: ...
+    def Scan(self: SKAObsDevice, argin: str) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_EndScan_allowed(self: SKAObsDevice) -> bool: ...
+    def EndScan(self: SKAObsDevice) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_End_allowed(self: SKAObsDevice) -> bool: ...
+    def End(self: SKAObsDevice) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_Abort_allowed(self: SKAObsDevice) -> bool: ...
+    def Abort(self: SKAObsDevice) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_ObsReset_allowed(self: SKAObsDevice) -> bool: ...
+    def ObsReset(self: SKAObsDevice) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
+    def is_Restart_allowed(self: SKAObsDevice) -> bool: ...
+    def Restart(self: SKAObsDevice) -> Tuple[List[ResultCode], List[Optional[str]]]: ...
 
 
 class SubarrayComponentManager(BaseComponentManager):

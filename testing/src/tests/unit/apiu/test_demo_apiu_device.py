@@ -86,28 +86,37 @@ class TestDemoAPIU:
         assert_powered([False, False, False, False])
 
         device_under_test.PowerUpAntenna1()
+        time.sleep(0.1)
         assert_powered([True, False, False, False])
 
         device_under_test.PowerUpAntenna2()
+        time.sleep(0.1)
         assert_powered([True, True, False, False])
 
         device_under_test.PowerDownAntenna1()
+        time.sleep(0.1)
         assert_powered([False, True, False, False])
 
         device_under_test.PowerUpAntenna3()
+        time.sleep(0.1)
         assert_powered([False, True, True, False])
 
         device_under_test.PowerDownAntenna2()
+        time.sleep(0.1)
         assert_powered([False, False, True, False])
 
         device_under_test.PowerUpAntenna4()
+        time.sleep(0.1)
         assert_powered([False, False, True, True])
 
         device_under_test.PowerDownAntenna3()
+        time.sleep(0.1)
         assert_powered([False, False, False, True])
 
         device_under_test.PowerUpAntenna1()
+        time.sleep(0.1)
         assert_powered([True, False, False, True])
 
         device_under_test.PowerDownAntenna4()
+        time.sleep(0.1)
         assert_powered([True, False, False, False])

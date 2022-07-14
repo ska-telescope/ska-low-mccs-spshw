@@ -11,10 +11,9 @@ from __future__ import annotations
 import time
 
 import pytest
-from ska_tango_base.control_model import AdminMode
+from ska_tango_base.control_model import AdminMode, PowerState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import ExtendedPowerState
 from ska_low_mccs.subrack.demo_subrack_device import DemoSubrack
 from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
@@ -73,9 +72,9 @@ class TestDemoSubrack:
             for (i, is_on) in enumerate(expected):
                 assert (
                     device_under_test.read_attribute(f"tpm{i+1}PowerState").value
-                    == ExtendedPowerState.ON
+                    == PowerState.ON
                     if is_on
-                    else ExtendedPowerState.OFF
+                    else PowerState.OFF
                 )
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -86,8 +85,10 @@ class TestDemoSubrack:
         assert_powered([False, False, False, False])
 
         device_under_test.PowerOnTpm1()
-        time.sleep(0.1)
-        assert_powered([True, False, False, False])
+        time.sleep(0.2)
+        expected_tpm_power_states = [True, False, False, False]
+        time.sleep(0.2)
+        assert_powered(expected_tpm_power_states)
 
         device_under_test.PowerOnTpm2()
         time.sleep(0.1)

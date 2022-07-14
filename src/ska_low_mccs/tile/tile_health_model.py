@@ -11,7 +11,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Callable
+from typing import Any, Callable
 
 from ska_tango_base.control_model import HealthState, PowerState
 
@@ -30,7 +30,7 @@ class TileHealthModel(HealthModel):
 
     def __init__(
         self: TileHealthModel,
-        health_changed_callback: Callable[[HealthState], None],
+        health_changed_callback: Callable[[Any], None],
     ) -> None:
         """
         Initialise a new instance.

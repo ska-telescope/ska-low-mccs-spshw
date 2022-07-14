@@ -8,14 +8,15 @@
 """This module implements the MCCS tel state device."""
 from __future__ import annotations
 
+from typing import Any
+
 import tango
 from ska_tango_base import SKATelState
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState
+from ska_tango_base.control_model import CommunicationStatus, HealthState
 from tango.server import attribute
 
 import ska_low_mccs.release as release
-from ska_low_mccs.component import CommunicationStatus
 from ska_low_mccs.tel_state import TelStateComponentManager, TelStateHealthModel
 
 __all__ = ["MccsTelState", "main"]
@@ -35,12 +36,13 @@ class MccsTelState(SKATelState):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
+        self._max_workers = 1
         super().init_device()
 
     def _init_state_model(self: MccsTelState) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TelStateHealthModel(self.health_changed)
+        self._health_model = TelStateHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -53,8 +55,9 @@ class MccsTelState(SKATelState):
         """
         return TelStateComponentManager(
             self.logger,
-            self.push_change_event,
-            self._component_communication_status_changed,
+            self._max_workers,
+            self._component_communication_state_changed,
+            self.component_state_changed_callback,
         )
 
     class InitCommand(SKATelState.InitCommand):
@@ -74,23 +77,17 @@ class MccsTelState(SKATelState):
                 information purpose only.
             """
             super().do()
-            device = self.target
-            device._build_state = release.get_release_info()
-            device._version_id = release.version
-
-            # The health model updates our health, but then the base class super().do()
-            # overwrites it with OK, so we need to update this again.
-            # TODO: This needs to be fixed in the base classes.
-            device._health_state = device._health_model.health_state
+            self._device._build_state = release.get_release_info()
+            self._device._version_id = release.version
 
             return (ResultCode.OK, "Init command completed OK")
 
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_status_changed(
+    def _component_communication_state_changed(
         self: MccsTelState,
-        communication_status: CommunicationStatus,
+        communication_state: CommunicationStatus,
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -99,7 +96,7 @@ class MccsTelState(SKATelState):
         the communications status changes. It is implemented here to
         drive the op_state.
 
-        :param communication_status: the status of communications
+        :param communication_state: the status of communications
             between the component manager and its component.
         """
         action_map = {
@@ -108,29 +105,30 @@ class MccsTelState(SKATelState):
             CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
         }
 
-        action = action_map[communication_status]
+        action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
 
         self._health_model.is_communicating(
-            communication_status == CommunicationStatus.ESTABLISHED
+            communication_state == CommunicationStatus.ESTABLISHED
         )
 
-    def health_changed(self: MccsTelState, health: HealthState) -> None:
+    def component_state_changed_callback(
+        self: MccsTelState, state_change: dict[str, Any]
+    ) -> None:
         """
-        Handle change in this device's health state.
+        Handle change in the state of the component.
 
-        This is a callback hook, called whenever the HealthModel's
-        evaluated health state changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
+        This is a callback hook, called by the component manager when
+        the state of the component changes.
 
-        :param health: the new health value
+        :param state_change: dictionary of state change parameters.
         """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        if "health_state" in state_change.keys():
+            health = state_change.get("health_state")
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
     # ----------
     # Attributes

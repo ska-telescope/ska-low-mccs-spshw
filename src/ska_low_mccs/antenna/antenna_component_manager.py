@@ -558,7 +558,9 @@ class AntennaComponentManager(MccsComponentManager):
 
     # TODO should the decorator be uncommented
     # @check_communicating
-    def off(self: AntennaComponentManager, task_callback: Callable = None) -> tuple[TaskStatus,str]:
+    def off(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the off slow task.
 

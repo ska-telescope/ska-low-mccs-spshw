@@ -265,6 +265,7 @@ class TestTileComponentManager:
         result_code, message = tile_component_manager.on()
         assert result_code == TaskStatus.QUEUED
         assert message == "Task queued"
+        time.sleep(0.2)
 
         # no action taken initially because the subrack is switched off
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()

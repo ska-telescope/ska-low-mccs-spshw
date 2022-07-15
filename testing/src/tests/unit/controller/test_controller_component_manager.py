@@ -69,13 +69,14 @@ class TestControllerComponentManager:
                 fqdn,
                 CommunicationStatus.ESTABLISHED,
             )
+        time.sleep(0.3)
 
         assert (
             controller_component_manager._communication_state
             == CommunicationStatus.ESTABLISHED
         )
         controller_component_manager.stop_communicating()
-        time.sleep(0.2)
+        time.sleep(0.3)
         assert (
             controller_component_manager._communication_state
             == CommunicationStatus.DISABLED

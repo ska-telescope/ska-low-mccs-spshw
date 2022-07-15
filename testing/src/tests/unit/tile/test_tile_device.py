@@ -184,7 +184,7 @@ class TestMccsTile:
 
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert tile_device.adminMode == AdminMode.OFFLINE
-        device_state_changed_callback.assert_next_change_event(DevState.DISABLE)
+        device_state_changed_callback.assert_last_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
 
         tile_device.adminMode = AdminMode.ONLINE

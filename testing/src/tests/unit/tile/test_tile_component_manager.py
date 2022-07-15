@@ -252,6 +252,7 @@ class TestTileComponentManager:
 
         # mock an event from subrack announcing it to be turned off
         tile_component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
+        time.sleep(0.5)
 
         result_code, message = tile_component_manager.on()
         assert result_code == TaskStatus.QUEUED

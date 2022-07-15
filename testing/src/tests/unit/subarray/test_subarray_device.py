@@ -375,9 +375,6 @@ class TestMccsSubarray:
             device_state_changed_callback,
         )
 
-        device_state_changed_callback.assert_next_change_event(DevState.UNKNOWN)
-        device_state_changed_callback.assert_next_change_event(DevState.INIT)
-
         device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
         assert device_under_test.adminMode == AdminMode.OFFLINE
         device_state_changed_callback.assert_next_change_event(DevState.DISABLE)

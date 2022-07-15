@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsController"
         devices:
-        - name: "low_mccs/control/control"
+        - name: "low-mccs/control/control"
           properties:
           - name: "MccsSubarrays"
             values:

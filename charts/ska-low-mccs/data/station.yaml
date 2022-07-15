@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsStation"
         devices:
-        - name: "low_mccs/station/001"
+        - name: "low-mccs/station/001"
           properties:
           - name: "StationId"
             values:
@@ -37,7 +37,7 @@ server:
       classes:
       - name: "MccsStation"
         devices:
-        - name: "low_mccs/station/002"
+        - name: "low-mccs/station/002"
           properties:
           - name: "StationId"
             values:

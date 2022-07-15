@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsSubarray"
         devices:
-        - name: "low_mccs/subarray/01"
+        - name: "low-mccs/subarray/01"
           properties:
           - name: "CapabilityTypes"
             values:
@@ -25,7 +25,7 @@ server:
       classes:
       - name: "MccsSubarray"
         devices:
-        - name: "low_mccs/subarray/02"
+        - name: "low-mccs/subarray/02"
           properties:
           - name: "CapabilityTypes"
             values:

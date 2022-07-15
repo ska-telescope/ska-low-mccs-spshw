@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsTile"
         devices:
-        - name: "low_mccs/tile/0001"
+        - name: "low-mccs/tile/0001"
           properties:
           - name: "TileId"
             values:
@@ -48,7 +48,7 @@ server:
       classes:
       - name: "MccsTile"
         devices:
-        - name: "low_mccs/tile/0002"
+        - name: "low-mccs/tile/0002"
           properties:
           - name: "TileId"
             values:
@@ -84,7 +84,7 @@ server:
       classes:
       - name: "MccsTile"
         devices:
-        - name: "low_mccs/tile/0003"
+        - name: "low-mccs/tile/0003"
           properties:
           - name: "TileId"
             values:
@@ -120,7 +120,7 @@ server:
       classes:
       - name: "MccsTile"
         devices:
-        - name: "low_mccs/tile/0004"
+        - name: "low-mccs/tile/0004"
           properties:
           - name: "TileId"
             values:

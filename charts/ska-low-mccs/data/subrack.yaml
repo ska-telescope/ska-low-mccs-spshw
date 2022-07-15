@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: "low_mccs/subrack/01"
+        - name: "low-mccs/subrack/01"
           properties:
           - name: "TileFQDNs"
             values:

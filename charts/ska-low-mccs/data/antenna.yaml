@@ -13,7 +13,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000001"
+        - name: "low-mccs/antenna/000001"
           properties:
           - name: "ApiuId"
             values:
@@ -34,7 +34,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000002"
+        - name: "low-mccs/antenna/000002"
           properties:
           - name: "ApiuId"
             values:
@@ -55,7 +55,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000003"
+        - name: "low-mccs/antenna/000003"
           properties:
           - name: "ApiuId"
             values:
@@ -76,7 +76,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000004"
+        - name: "low-mccs/antenna/000004"
           properties:
           - name: "ApiuId"
             values:
@@ -97,7 +97,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000005"
+        - name: "low-mccs/antenna/000005"
           properties:
           - name: "ApiuId"
             values:
@@ -118,7 +118,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000006"
+        - name: "low-mccs/antenna/000006"
           properties:
           - name: "ApiuId"
             values:
@@ -139,7 +139,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000007"
+        - name: "low-mccs/antenna/000007"
           properties:
           - name: "ApiuId"
             values:
@@ -160,7 +160,7 @@ server:
       classes:
       - name: "MccsAntenna"
         devices:
-        - name: "low_mccs/antenna/000008"
+        - name: "low-mccs/antenna/000008"
           properties:
           - name: "ApiuId"
             values:

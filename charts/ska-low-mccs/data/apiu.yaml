@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsAPIU"
         devices:
-        - name: "low_mccs/apiu/001"
+        - name: "low-mccs/apiu/001"
           properties:
           - name: "AntennaFQDNs"
             values:
@@ -27,7 +27,7 @@ server:
       classes:
       - name: "MccsAPIU"
         devices:
-        - name: "low_mccs/apiu/002"
+        - name: "low-mccs/apiu/002"
           properties:
           - name: "AntennaFQDNs"
             values:

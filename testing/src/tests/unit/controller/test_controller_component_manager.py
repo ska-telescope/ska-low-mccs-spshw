@@ -75,7 +75,7 @@ class TestControllerComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
         controller_component_manager.stop_communicating()
-        time.sleep(0.1)
+        time.sleep(0.2)
         assert (
             controller_component_manager._communication_state
             == CommunicationStatus.DISABLED

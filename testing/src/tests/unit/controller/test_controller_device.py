@@ -81,9 +81,9 @@ class TestMccsController:
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.TEST
-        assert device_under_test.State() == tango.DevState.UNKNOWN
+        assert device_under_test.State() == tango.DevState.DISABLE
         assert device_under_test.adminMode == AdminMode.OFFLINE
-        assert device_under_test.Status() == "The device is in UNKNOWN state."
+        assert device_under_test.Status() == "The device is in DISABLE state."
 
     def test_adminMode(
         self: TestMccsController,
@@ -100,7 +100,7 @@ class TestMccsController:
             been patched into the device under test
         """
         assert device_under_test.adminMode == AdminMode.OFFLINE
-        assert device_under_test.state() == tango.DevState.UNKNOWN
+        assert device_under_test.state() == tango.DevState.DISABLE
         device_under_test.adminMode = AdminMode.ONLINE
 
         time.sleep(0.2)
@@ -142,11 +142,14 @@ class TestMccsController:
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.adminMode == AdminMode.ONLINE
         [[result_code], [uid]] = getattr(device_under_test, device_command)()
-        assert result_code == ResultCode.QUEUED
-        assert uid.split("_")[-1] == device_command
-        method = getattr(mock_component_manager, component_method)
-        method.assert_called_once()
-        assert len(method.call_args[0]) == 1
+        if result_code == ResultCode.REJECTED:
+            assert uid == f"Device is already in {device_command.upper()} state."
+        else:
+            assert result_code == ResultCode.QUEUED
+            assert uid.split("_")[-1] == device_command
+            method = getattr(mock_component_manager, component_method)
+            method.assert_called_once()
+            assert len(method.call_args[0]) == 1
 
     @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(

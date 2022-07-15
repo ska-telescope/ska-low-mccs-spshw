@@ -641,7 +641,7 @@ class ControllerComponentManager(MccsComponentManager):
         self: ControllerComponentManager,
         task_callback: Callable = None,
         task_abort_event: threading.Event = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Put the MCCS subsystem into low power standby mode.
 

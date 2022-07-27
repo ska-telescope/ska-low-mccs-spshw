@@ -47,7 +47,7 @@ class BaseSubrackSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -221,7 +221,7 @@ class SubrackSimulatorComponentManager(BaseSubrackSimulatorComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -254,7 +254,7 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         subrack_ip: str,
         subrack_port: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -342,7 +342,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         subrack_ip: str,
         subrack_port: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _initial_power_state: PowerState = PowerState.OFF,
     ) -> None:
         """

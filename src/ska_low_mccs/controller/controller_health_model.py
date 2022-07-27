@@ -8,7 +8,7 @@
 """An implementation of a health model for a controller."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel
@@ -25,7 +25,7 @@ class ControllerHealthModel(HealthModel):
         subrack_fqdns: Sequence[str],
         subarray_beam_fqdns: Sequence[str],
         station_beam_fqdns: Sequence[str],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.

@@ -42,7 +42,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -150,7 +150,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -186,7 +186,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         _initial_power_mode: PowerState = PowerState.OFF,
     ) -> None:
         """

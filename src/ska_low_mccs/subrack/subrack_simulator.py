@@ -98,7 +98,7 @@ class SubrackSimulator(ObjectComponent):
 
     def __init__(
         self: SubrackSimulator,
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURES,
         board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
         board_current: float = DEFAULT_BOARD_CURRENT,
@@ -187,7 +187,7 @@ class SubrackSimulator(ObjectComponent):
 
     def set_progress_changed_callback(
         self: SubrackSimulator,
-        component_state_changed_callback: Optional[Callable[[], None]],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Set the callback to be called when the progress value changes.

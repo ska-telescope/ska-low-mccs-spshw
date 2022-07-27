@@ -12,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -38,7 +38,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -115,7 +115,7 @@ class StationComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.

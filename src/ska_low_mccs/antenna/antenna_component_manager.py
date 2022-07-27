@@ -11,7 +11,7 @@ from __future__ import annotations
 import functools
 import logging
 import threading
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -26,7 +26,7 @@ from ska_low_mccs_common.component import (
 __all__ = ["AntennaComponentManager"]
 
 
-class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
+class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
     """A proxy to an antenna's APIU."""
 
     def __init__(
@@ -36,7 +36,7 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new APIU proxy instance.
@@ -221,7 +221,7 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
         #     # else PowerState.OFF
         #     power_state
         # )
-        self._component_state_changed_callback({"power_state": power_state})
+        self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
         self.update_supplied_power_state(power_state)
 
 
@@ -249,7 +249,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -377,7 +377,7 @@ class AntennaComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -606,7 +606,7 @@ class AntennaComponentManager(MccsComponentManager):
 
     def standby(
         self: AntennaComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Put the antenna into standby state; this is not implemented.
 

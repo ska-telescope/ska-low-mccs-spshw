@@ -120,7 +120,7 @@ class TpmDriver(MccsComponentManager):
         port: int,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new TPM driver instance trying to connect to the given IP and port.

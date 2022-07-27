@@ -26,7 +26,7 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 import threading
 import time
-from typing import Callable, List, Optional, cast
+from typing import Any, Callable, List, Optional, cast
 
 from ska_control_model import CommunicationStatus, PowerState, ResultCode
 from ska_low_mccs_common.component import MccsComponentManager, WebHardwareClient
@@ -69,7 +69,7 @@ class SubrackDriver(MccsComponentManager):
         ip: str,
         port: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
         tpm_present: Optional[List[bool]] = None,
     ) -> None:
         """

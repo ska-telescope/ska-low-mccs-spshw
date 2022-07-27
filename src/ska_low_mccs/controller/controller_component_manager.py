@@ -12,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Hashable, Iterable, Optional
+from typing import Any, Callable, Hashable, Iterable, Optional
 
 from ska_control_model import (
     CommunicationStatus,
@@ -44,7 +44,7 @@ class _StationProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -305,7 +305,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable,
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.

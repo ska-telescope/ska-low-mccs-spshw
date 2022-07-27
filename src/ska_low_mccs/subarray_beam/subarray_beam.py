@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from ska_control_model import CommunicationStatus, ResultCode
 from ska_low_mccs_common.component import ObjectComponent
@@ -25,7 +25,7 @@ class SubarrayBeam(ObjectComponent):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable] = None,
+        component_state_changed_callback: Callable[[dict[str, Any]], None] = None,
     ) -> None:
         """
         Initialise a new instance.

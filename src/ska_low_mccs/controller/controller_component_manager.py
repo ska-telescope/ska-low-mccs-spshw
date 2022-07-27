@@ -1001,7 +1001,7 @@ class ControllerComponentManager(MccsComponentManager):
         result_code = self._subarrays[subarray_fqdn].release_all_resources()
         # TODO wait for the respective LRC's to complete, whilst reporting progress
         if task_callback:
-            if ResultCode.FAILED == result:
+            if ResultCode.FAILED == result_code:
                 task_callback(
                     status=TaskStatus.FAILED, result="The release command has failed"
                 )

@@ -990,7 +990,7 @@ class MccsTile(SKABaseDevice):
 
             :return: a list of firmware & cpld registers
             """
-            return self._component_manager.register_list()
+            return self._component_manager.register_list
 
     @command(dtype_out="DevVarStringArray")
     def GetRegisterList(self: MccsTile) -> list[str]:
@@ -2783,7 +2783,7 @@ class MccsTile(SKABaseDevice):
 
             :returns: whether the command is allowed
             """
-            return self.adminMode == AdminMode.MAINTENANCE  # type: ignore[attr-defined]
+            return self.target.admin_mode_model.admin_mode == AdminMode.MAINTENANCE
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

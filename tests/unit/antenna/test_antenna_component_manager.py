@@ -87,8 +87,6 @@ class TestAntennaApiuProxy:
         antenna_apiu_proxy.start_communicating()
         time.sleep(0.1)
 
-        import pdb
-        pdb.set_trace()
         component_state_changed_callback.assert_next_call_with_keys(
             {"power_state": PowerState.OFF}
         )

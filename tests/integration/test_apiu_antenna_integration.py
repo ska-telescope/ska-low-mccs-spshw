@@ -102,6 +102,7 @@ class TestApiuAntennaIntegration:
         # adminMode is written.
         # We haven't provided a memorized value for adminMode, so these devices
         # initialise to DISABLE state...
+        time.sleep(2)
         state = antenna_device.state()
         assert state == DevState.DISABLE
         state = apiu_device.state()
@@ -159,7 +160,7 @@ class TestApiuAntennaIntegration:
         # antennas managed by the APIU. The APIU device knows that the antenna is off...
         assert not apiu_device.isAntennaOn(1)
         # ... and fires a change event...
-        time.sleep(0.2)
+        time.sleep(0.1)
         # ... which is received by the antenna. The antenna device now knows that its
         # antenna is powered off, so it stays in state OFF.
         assert antenna_device.state() == DevState.OFF

@@ -203,7 +203,7 @@ class MccsAPIU(SKABaseDevice):
             self._are_antennas_on: list[bool]  # typehint only
             are_antennas_on = state_change.get("are_antennas_on")
             if self._are_antennas_on != are_antennas_on:
-                self._are_antennas_on = cast(list[bool], are_antennas_on)
+                self._are_antennas_on = cast(List[bool], are_antennas_on)
                 self.push_change_event("areAntennasOn", self._are_antennas_on)
 
     # ----------

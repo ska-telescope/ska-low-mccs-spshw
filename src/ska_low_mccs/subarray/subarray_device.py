@@ -159,7 +159,7 @@ class MccsSubarray(SKASubarray):
         # resources should be passed in the dict's value as a list of sets
         # to be extracted here.
         if "resources_changed" in state_change.keys():
-            resources = cast(list[set], state_change.get("resources_changed"))
+            resources = cast(List[set], state_change.get("resources_changed"))
             station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
             station_beam_fqdns = resources[2]

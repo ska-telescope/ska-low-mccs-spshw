@@ -374,7 +374,8 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         """
         simulation_mode: SimulationMode  # typehint only
 
-        (simulation_mode, _) = cast(tuple[SimulationMode, TestMode], self.switcher_mode)
+        #        (simulation_mode, _) = cast(tuple[SimulationMode, TestMode], self.switcher_mode)
+        (simulation_mode, _) = self.switcher_mode
         return simulation_mode
 
     @simulation_mode.setter
@@ -389,9 +390,10 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         simulation_mode: SimulationMode  # typehints only
         test_mode: TestMode  # typehints only
 
-        (simulation_mode, test_mode) = cast(
-            tuple[SimulationMode, TestMode], self.switcher_mode
-        )
+        #         (simulation_mode, test_mode) = cast(
+        #             tuple[SimulationMode, TestMode], self.switcher_mode
+        #         )
+        (simulation_mode, test_mode) = self.switcher_mode
         if simulation_mode != value:
             communicating = self.is_communicating
             if communicating:
@@ -408,7 +410,8 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         :return: the test mode
         """
         test_mode: TestMode  # typehint only
-        (_, test_mode) = cast(tuple[SimulationMode, TestMode], self.switcher_mode)
+        #        (_, test_mode) = cast(tuple[SimulationMode, TestMode], self.switcher_mode)
+        (_, test_mode) = self.switcher_mode
         return cast(TestMode, test_mode)
 
     @test_mode.setter
@@ -421,9 +424,10 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         simulation_mode: SimulationMode  # typehint only
         test_mode: TestMode  # typehint only
 
-        (simulation_mode, test_mode) = cast(
-            tuple[SimulationMode, TestMode], self.switcher_mode
-        )
+        #         (simulation_mode, test_mode) = cast(
+        #             tuple[SimulationMode, TestMode], self.switcher_mode
+        #         )
+        (simulation_mode, test_mode) = self.switcher_mode
 
         if test_mode != value:
             communicating = self.is_communicating

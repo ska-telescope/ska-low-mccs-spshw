@@ -531,7 +531,7 @@ class ControllerComponentManager(MccsComponentManager):
         # subscribed to.
         self._resource_manager.set_ready(fqdn, health is not None)
 
-    def _station_health_changed_callback(
+    def _subrack_health_changed(
         self: ControllerComponentManager,
         fqdn: str,
         health: HealthState | None,
@@ -547,7 +547,7 @@ class ControllerComponentManager(MccsComponentManager):
             "subracks", fqdn, health in [HealthState.OK, HealthState.DEGRADED]
         )
 
-    def _subarray_beam_health_changed_callback(
+    def _subarray_beam_health_changed(
         self: ControllerComponentManager,
         fqdn: str,
         health: HealthState | None,
@@ -567,7 +567,7 @@ class ControllerComponentManager(MccsComponentManager):
             health in [HealthState.OK, HealthState.DEGRADED],
         )  # False for None
 
-    def _station_beam_health_changed_callback(
+    def _station_beam_health_changed(
         self: ControllerComponentManager,
         fqdn: str,
         health: HealthState | None,

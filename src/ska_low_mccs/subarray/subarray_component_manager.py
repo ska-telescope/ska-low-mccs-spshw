@@ -212,7 +212,7 @@ class SubarrayComponentManager(
     def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
         resource_spec: set[str],
-        task_callback: Optional[Callable[[], None]] = None,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `AssignResources` slow command.

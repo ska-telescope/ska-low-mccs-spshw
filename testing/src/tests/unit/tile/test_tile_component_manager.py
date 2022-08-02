@@ -208,14 +208,14 @@ class TestTileComponentManager:
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
         mock_task_callback: MockCallable,
-    ) -> None:
+    ) -> None:  # noqa: DAR401
         """
         Test that eventual consistency semantics of the on command.
 
         This test tells the tile component manager to turn on, in
         circumstances in which it cannot possibly do so (the subrack is
-        turned off). Instead of failing, it waits to the subrack to turn
-        on, and then executes the on command.
+        turned off). Instead of failing, it waits for the subrack to
+        turn on, and then executes the on command.
 
         :param tile_component_manager: the tile component manager
             under test
@@ -240,9 +240,11 @@ class TestTileComponentManager:
 
         _, kwargs = mock_task_callback.get_next_call()
         assert kwargs["status"] == TaskStatus.FAILED
-        exc = kwargs["exception"]
-        assert exc.args == ("TPM cannot be turned off / on when not online.",)
-        assert isinstance(exc, ConnectionError)
+
+        with pytest.raises(
+            ConnectionError, match="TPM cannot be turned off / on when not online."
+        ):
+            raise kwargs["exception"]
 
         tile_component_manager.start_communicating()
 
@@ -250,16 +252,18 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
 
+        communication_state_changed_callback.assert_not_called()
+
         # mock an event from subrack announcing it to be turned off
         tile_component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
-        time.sleep(0.5)
+
+        mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
         result_code, message = tile_component_manager.on()
         assert result_code == TaskStatus.QUEUED
         assert message == "Task queued"
-        time.sleep(0.1)
 
-        # no action taken initialially because the subrack is switched off
+        # no action taken initially because the subrack is switched off
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
         # mock an event from subrack announcing it to be turned on

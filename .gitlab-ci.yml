@@ -60,12 +60,6 @@ docs-build:
 docs-pages:
   image: readthedocs/build:latest
 
-python-test:
-  before_script:
-    - poetry install
-  script:
-    - poetry run make python-test
-
 python-build-for-development:
   image: $SKA_PYTHON_PYTANGO_BUILDER_IMAGE
 

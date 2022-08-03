@@ -74,13 +74,13 @@ class MccsDeviceProxy:
 
         :param fqdn: fqdn of the device to be proxied
         :param logger: a logger for this proxy to use
-        :param connection_factory: how we obtain a connection to the\
+        :param connection_factory: how we obtain a connection to the
             device we are proxying. By default this is
             :py:class:`tango.DeviceProxy`, but occasionally this needs
             to be changed. For example, when testing against a
-            :py:class:`tango.test_context.MultiDeviceTestContext`, we
-            obtain connections to the devices under test via
-            ``test_context.get_device(fqdn)``.
+            :py:class:`tango.test_context.MultiDeviceTestContext`,
+            :py:class:`tango.DeviceProxy` needs to be patched due to
+            https://gitlab.com/tango-controls/pytango/-/issues/459.
         :param connect: whether to connect immediately to the device. If
             False, then the device may be connected later by calling the
             :py:meth:`.connect` method.

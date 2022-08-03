@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import logging
-import socket
 import unittest.mock
 from collections import defaultdict
 from types import TracebackType
@@ -19,7 +18,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Type, cast
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.control_model import TestMode
-from tango.test_context import MultiDeviceTestContext, get_host_ip
+from tango.test_context import MultiDeviceTestContext
 from typing_extensions import TypedDict
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
@@ -478,34 +477,12 @@ class TestContextTangoHarness(BaseTangoHarness):
         :param args: additional positional arguments
         :param kwargs: additional keyword arguments
         """
-        self._host = get_host_ip()
-
-        def _get_open_port() -> int:
-            """
-            Return an available port on the local machine.
-
-            TODO: Note the possibility of a race condition here. By the
-            time the calling method tries to make use of this port, it
-            might already have been taken by another process.
-
-            :return: An open port
-            """
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("", 0))
-                s.listen(1)
-                port = s.getsockname()[1]
-            return port
-
-        self._port = _get_open_port()
-
         if device_info is None:
             self._test_context = None
         else:
             self._test_context = MultiDeviceTestContext(
                 device_info.as_mdtc_device_info(),
                 process=process,
-                host=self._host,
-                port=self._port,
                 timeout=10,  # because some devices do slow I/O during initialisation
                 # debug=5,
                 # uncomment this to get debug info, including cppTango debugging symbols
@@ -522,7 +499,9 @@ class TestContextTangoHarness(BaseTangoHarness):
 
         This class uses :py:class:`tango.DeviceProxy` but patches it to
         use the long-form FQDN, as a workaround to an issue with
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
+        :py:class:`tango.test_context.MultiDeviceTestContext`. For more
+        information see
+        https://gitlab.com/tango-controls/pytango/-/issues/459.
 
         :return: a DeviceProxy for use in establishing connections.
         """
@@ -535,9 +514,7 @@ class TestContextTangoHarness(BaseTangoHarness):
 
             :return: a connection to the device
             """
-            return tango.DeviceProxy(
-                f"tango://{self._host}:{self._port}/{fqdn}#dbase=no"
-            )
+            return tango.DeviceProxy(self._test_context.get_device_access(fqdn))
 
         return connect
 

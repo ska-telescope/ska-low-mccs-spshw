@@ -62,10 +62,10 @@ class MccsController(SKABaseDevice):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = ControllerHealthModel(
-            self.MccsStations,
-            self.MccsSubracks,
-            self.MccsSubarrayBeams,
-            self.MccsStationBeams,
+            [fqdn for fqdn in self.MccsStations if fqdn != ""],
+            [fqdn for fqdn in self.MccsSubracks if fqdn != ""],
+            [fqdn for fqdn in self.MccsSubarrayBeams if fqdn != ""],
+            [fqdn for fqdn in self.MccsStationBeams if fqdn != ""],
             self._component_state_changed_callback,
         )
         self.set_change_event("healthState", True, False)
@@ -79,11 +79,11 @@ class MccsController(SKABaseDevice):
         :return: a component manager for this device.
         """
         return ControllerComponentManager(
-            self.MccsSubarrays,
-            self.MccsSubracks,
-            self.MccsStations,
-            self.MccsSubarrayBeams,
-            self.MccsStationBeams,
+            [fqdn for fqdn in self.MccsSubarrays if fqdn != ""],
+            [fqdn for fqdn in self.MccsSubracks if fqdn != ""],
+            [fqdn for fqdn in self.MccsStations if fqdn != ""],
+            [fqdn for fqdn in self.MccsSubarrayBeams if fqdn != ""],
+            [fqdn for fqdn in self.MccsStationBeams if fqdn != ""],
             self.logger,
             self._max_workers,
             self._communication_state_changed_callback,
@@ -173,6 +173,8 @@ class MccsController(SKABaseDevice):
             self.op_state_model.perform_action("component_disconnected")
         elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
             self.op_state_model.perform_action("component_unknown")
+        elif communication_state == CommunicationStatus.ESTABLISHED:
+            self.op_state_model.perform_action("component_on")
         elif self._component_power_state == PowerState.OFF:
             self.op_state_model.perform_action("component_off")
         elif self._component_power_state == PowerState.STANDBY:
@@ -248,9 +250,10 @@ class MccsController(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_state]
-                )
+                if self.component_manager.power_state is not None:
+                    self.op_state_model.perform_action(
+                        action_map[self.component_manager.power_state]
+                    )
                 self._health_model.component_fault(False)
 
     # ----------

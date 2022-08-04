@@ -417,6 +417,7 @@ class ControllerComponentManager(MccsComponentManager):
         super().start_communicating()
 
         if not self._device_communication_states:
+            print("grm also made this change??????????????????????????????")
             self.update_communication_state(CommunicationStatus.ESTABLISHED)
         else:
             for subarray_proxy in self._subarrays.values():
@@ -728,7 +729,7 @@ class ControllerComponentManager(MccsComponentManager):
                 )
 
     @check_communicating
-    #    @check_on
+    #@check_on
     def allocate(
         self: ControllerComponentManager,
         argin: str,
@@ -760,6 +761,9 @@ class ControllerComponentManager(MccsComponentManager):
             == 0
         ):
             return (TaskStatus.REJECTED, "No subservient devices to allocate")
+
+        if self.power_state != PowerState.ON:
+            return (TaskStatus.FAILED, "Controller is not turned on.")
 
         kwargs = json.loads(argin)
         subarray_id = kwargs.get("subarray_id")
@@ -934,6 +938,8 @@ class ControllerComponentManager(MccsComponentManager):
         """
         if len(self._subarrays.values()) == 0:
             return (TaskStatus.REJECTED, "No subservient subarray devices to release")
+        if self.power_state != PowerState.ON:
+            return (TaskStatus.FAILED, "Controller is not turned on.")
 
         kwargs = json.loads(argin)
         if kwargs["release_all"]:
@@ -1014,6 +1020,8 @@ class ControllerComponentManager(MccsComponentManager):
         """
         if len(self._subarrays.values()) == 0:
             return (TaskStatus.REJECTED, "No subservient subarray devices to restart")
+        if self.power_state != PowerState.ON:
+            return (TaskStatus.FAILED, "Controller is not turned on.")
 
         return self.submit_task(
             self._restart_subarray,

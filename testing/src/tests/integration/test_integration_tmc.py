@@ -46,12 +46,14 @@ def patched_station_device_class() -> type[MccsStation]:
             self: PatchedStationDevice, power_state: int
         ) -> None:
             power_state = PowerState(power_state)
+            print(f"power_state in subserv {power_state}")
             with self.component_manager._power_state_lock:
                 self.component_manager._apiu_power_state = power_state
                 for fqdn in self.component_manager._tile_power_states:
                     self.component_manager._tile_power_states[fqdn] = power_state
                 for fqdn in self.component_manager._antenna_power_states:
                     self.component_manager._antenna_power_states[fqdn] = power_state
+            print(type(self.component_manager))
             self.component_manager._evaluate_power_state()
 
     return PatchedStationDevice
@@ -418,6 +420,7 @@ class TestMccsIntegrationTmc:
         controller.adminMode = AdminMode.ONLINE
 
         time.sleep(0.2)
+        print("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooh")
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
         )
@@ -426,12 +429,15 @@ class TestMccsIntegrationTmc:
         # tiles and antennas, telling it they are all OFF. This makes
         # the station transition to OFF, and this flows up to the
         # controller.
+        print(f"((((((((((((((((((((((((11 {controller.power_state} 11")
         station_1.FakeSubservientDevicesPowerState(PowerState.OFF)
         station_2.FakeSubservientDevicesPowerState(PowerState.OFF)
 
+        print("((((((((((((((((((((((((2")
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.OFF
         )
+        print("((((((((((((((((((((((((3")
 
         assert controller.state() == tango.DevState.OFF
         assert subarray_1.state() == tango.DevState.ON

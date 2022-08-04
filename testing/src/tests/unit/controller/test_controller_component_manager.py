@@ -16,6 +16,7 @@ import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager
@@ -273,13 +274,18 @@ class TestControllerComponentManager:
             HealthState.OK,
         )
 
-        with pytest.raises(ConnectionError, match="Component is not turned on"):
-            controller_component_manager.allocate(
-                99,
-                [["low-mccs/station/001"]],
-                ["low-mccs/subarraybeam/02"],
-                [3, 4],  # unknown subarray id
-            )
+        argin = json.dumps(
+            {
+                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
+                "subarray_id": 1,
+                "subarray_beam_ids": [2],
+                "station_ids": [[99]],
+                "channel_blocks": [3, 4],
+            }
+        )
+#        with pytest.raises(ConnectionError, match="Component is not turned on"):
+        result, msg = controller_component_manager.allocate(argin)
+        assert result == TaskStatus.FAILED
 
         # Callbacks are handled in the device, so need to tell the
         # component manager explicitly that each device is ON

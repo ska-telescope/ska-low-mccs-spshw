@@ -174,6 +174,7 @@ class MccsController(SKABaseDevice):
         elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
             self.op_state_model.perform_action("component_unknown")
         elif communication_state == CommunicationStatus.ESTABLISHED:
+            print("grm made this change,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
             self.op_state_model.perform_action("component_on")
         elif self._component_power_state == PowerState.OFF:
             self.op_state_model.perform_action("component_off")
@@ -204,6 +205,7 @@ class MccsController(SKABaseDevice):
         :param state_change: the state of the component.
         :param fqdn: The fqdn of the device.
         """
+        print(f"qqqqqqqq{state_change}")
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
@@ -212,10 +214,13 @@ class MccsController(SKABaseDevice):
         }
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
+            print(f"=============================================== {power_state}")
             if fqdn is None:
+                print("%%%%%%%%%%%%")
                 if self._communication_state == CommunicationStatus.ESTABLISHED:
                     self.op_state_model.perform_action(action_map[power_state])
             else:
+                print("£££££££££££££££££££££££££££££")
                 device_family = fqdn.split("/")[1]
                 if device_family in ["station", "subrack"]:
                     with self._power_state_lock:
@@ -250,6 +255,7 @@ class MccsController(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
+                print("power state is none.....................")
                 if self.component_manager.power_state is not None:
                     self.op_state_model.perform_action(
                         action_map[self.component_manager.power_state]

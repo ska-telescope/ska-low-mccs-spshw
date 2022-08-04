@@ -249,6 +249,7 @@ class MccsStation(SKAObsDevice):
             with self.component_manager.power_state_lock:
                 self.component_manager.set_power_state(power_state, fqdn=fqdn)
                 if power_state is not None:
+                    print(f"######################################## {power_state}")
                     power_state_changed_callback(power_state)
 
         if "health_state" in state_change.keys():

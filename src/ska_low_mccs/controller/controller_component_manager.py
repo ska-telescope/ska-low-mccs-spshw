@@ -417,7 +417,6 @@ class ControllerComponentManager(MccsComponentManager):
         super().start_communicating()
 
         if not self._device_communication_states:
-            print("grm also made this change??????????????????????????????")
             self.update_communication_state(CommunicationStatus.ESTABLISHED)
         else:
             for subarray_proxy in self._subarrays.values():
@@ -478,9 +477,6 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        print(
-            f"_evaluate_communication_state com_states={self._device_communication_states}"
-        )
         with self.__communication_state_lock:
             if (
                 CommunicationStatus.DISABLED
@@ -729,7 +725,7 @@ class ControllerComponentManager(MccsComponentManager):
                 )
 
     @check_communicating
-    #@check_on
+    # @check_on
     def allocate(
         self: ControllerComponentManager,
         argin: str,

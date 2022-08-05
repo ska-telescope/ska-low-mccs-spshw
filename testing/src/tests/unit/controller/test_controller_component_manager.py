@@ -12,7 +12,6 @@ import json
 import time
 import unittest.mock
 
-import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
@@ -283,7 +282,7 @@ class TestControllerComponentManager:
                 "channel_blocks": [3, 4],
             }
         )
-#        with pytest.raises(ConnectionError, match="Component is not turned on"):
+        #        with pytest.raises(ConnectionError, match="Component is not turned on"):
         result, msg = controller_component_manager.allocate(argin)
         assert result == TaskStatus.FAILED
 

@@ -420,7 +420,6 @@ class TestMccsIntegrationTmc:
         controller.adminMode = AdminMode.ONLINE
 
         time.sleep(0.2)
-        print("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooh")
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
         )
@@ -429,15 +428,12 @@ class TestMccsIntegrationTmc:
         # tiles and antennas, telling it they are all OFF. This makes
         # the station transition to OFF, and this flows up to the
         # controller.
-        print(f"((((((((((((((((((((((((11 {controller.power_state} 11")
         station_1.FakeSubservientDevicesPowerState(PowerState.OFF)
         station_2.FakeSubservientDevicesPowerState(PowerState.OFF)
 
-        print("((((((((((((((((((((((((2")
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.OFF
         )
-        print("((((((((((((((((((((((((3")
 
         assert controller.state() == tango.DevState.OFF
         assert subarray_1.state() == tango.DevState.ON

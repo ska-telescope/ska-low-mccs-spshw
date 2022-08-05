@@ -55,6 +55,7 @@ class MccsController(SKABaseDevice):
         self._component_power_state: Optional[PowerState] = None
         self._mccs_build_state = release.get_release_info()
         self._mccs_version_id = release.version
+        self._subservients = 0
         super().init_device()
 
     def _init_state_model(self: MccsController) -> None:
@@ -78,12 +79,20 @@ class MccsController(SKABaseDevice):
 
         :return: a component manager for this device.
         """
+        subarrays = [fqdn for fqdn in self.MccsSubarrays if fqdn != ""]
+        subracks = [fqdn for fqdn in self.MccsSubracks if fqdn != ""]
+        stations = [fqdn for fqdn in self.MccsStations if fqdn != ""]
+        subarraybeams = [fqdn for fqdn in self.MccsSubarrayBeams if fqdn != ""]
+        stationbeams = [fqdn for fqdn in self.MccsStationBeams if fqdn != ""]
+        self._subservients = len(
+            subarrays + subracks + stations + subarraybeams + stationbeams
+        )
         return ControllerComponentManager(
-            [fqdn for fqdn in self.MccsSubarrays if fqdn != ""],
-            [fqdn for fqdn in self.MccsSubracks if fqdn != ""],
-            [fqdn for fqdn in self.MccsStations if fqdn != ""],
-            [fqdn for fqdn in self.MccsSubarrayBeams if fqdn != ""],
-            [fqdn for fqdn in self.MccsStationBeams if fqdn != ""],
+            subarrays,
+            subracks,
+            stations,
+            subarraybeams,
+            stationbeams,
             self.logger,
             self._max_workers,
             self._communication_state_changed_callback,
@@ -173,8 +182,10 @@ class MccsController(SKABaseDevice):
             self.op_state_model.perform_action("component_disconnected")
         elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
             self.op_state_model.perform_action("component_unknown")
-        elif communication_state == CommunicationStatus.ESTABLISHED:
-            print("grm made this change,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
+        elif (
+            communication_state == CommunicationStatus.ESTABLISHED
+            and self._subservients == 0
+        ):
             self.op_state_model.perform_action("component_on")
         elif self._component_power_state == PowerState.OFF:
             self.op_state_model.perform_action("component_off")
@@ -205,7 +216,6 @@ class MccsController(SKABaseDevice):
         :param state_change: the state of the component.
         :param fqdn: The fqdn of the device.
         """
-        print(f"qqqqqqqq{state_change}")
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
@@ -214,13 +224,10 @@ class MccsController(SKABaseDevice):
         }
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
-            print(f"=============================================== {power_state}")
             if fqdn is None:
-                print("%%%%%%%%%%%%")
                 if self._communication_state == CommunicationStatus.ESTABLISHED:
                     self.op_state_model.perform_action(action_map[power_state])
             else:
-                print("£££££££££££££££££££££££££££££")
                 device_family = fqdn.split("/")[1]
                 if device_family in ["station", "subrack"]:
                     with self._power_state_lock:
@@ -255,7 +262,6 @@ class MccsController(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                print("power state is none.....................")
                 if self.component_manager.power_state is not None:
                     self.op_state_model.perform_action(
                         action_map[self.component_manager.power_state]

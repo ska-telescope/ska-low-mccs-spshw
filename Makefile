@@ -13,7 +13,6 @@ PROJECT = ska-low-mccs
 
 HELM_CHARTS_TO_PUBLISH = ska-low-mccs
 
-PYTHON_RUNNER = poetry run
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = testing/src/

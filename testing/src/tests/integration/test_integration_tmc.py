@@ -46,7 +46,6 @@ def patched_station_device_class() -> type[MccsStation]:
             self: PatchedStationDevice, power_state: int
         ) -> None:
             power_state = PowerState(power_state)
-            print(f"power_state in subserv {power_state}")
             with self.component_manager._power_state_lock:
                 self.component_manager._apiu_power_state = power_state
                 for fqdn in self.component_manager._tile_power_states:

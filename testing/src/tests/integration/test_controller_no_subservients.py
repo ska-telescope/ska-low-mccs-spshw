@@ -50,8 +50,8 @@ class TestMccsController:
         controller = tango_harness.get_device("low-mccs/control/control")
 
         assert controller.adminMode == AdminMode.OFFLINE
-        state = controller.State()
-        assert state == DevState.DISABLE
+        # state = controller.State()
+        assert controller.State() == DevState.DISABLE
         assert controller.healthState == HealthState.UNKNOWN
 
         for i in range(2):

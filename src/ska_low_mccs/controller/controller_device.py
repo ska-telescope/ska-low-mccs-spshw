@@ -55,7 +55,7 @@ class MccsController(SKABaseDevice):
         self._component_power_state: Optional[PowerState] = None
         self._mccs_build_state = release.get_release_info()
         self._mccs_version_id = release.version
-        self._subservients = 0
+        self._num_subservients = 0
         super().init_device()
 
     def _init_state_model(self: MccsController) -> None:
@@ -84,7 +84,7 @@ class MccsController(SKABaseDevice):
         stations = [fqdn for fqdn in self.MccsStations if fqdn != ""]
         subarraybeams = [fqdn for fqdn in self.MccsSubarrayBeams if fqdn != ""]
         stationbeams = [fqdn for fqdn in self.MccsStationBeams if fqdn != ""]
-        self._subservients = len(
+        self._num_subservients = len(
             subarrays + subracks + stations + subarraybeams + stationbeams
         )
         return ControllerComponentManager(
@@ -182,10 +182,7 @@ class MccsController(SKABaseDevice):
             self.op_state_model.perform_action("component_disconnected")
         elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
             self.op_state_model.perform_action("component_unknown")
-        elif (
-            communication_state == CommunicationStatus.ESTABLISHED
-            and self._subservients == 0
-        ):
+        elif self._num_subservients == 0:
             self.op_state_model.perform_action("component_on")
         elif self._component_power_state == PowerState.OFF:
             self.op_state_model.perform_action("component_off")

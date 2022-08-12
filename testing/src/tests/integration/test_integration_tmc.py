@@ -52,7 +52,6 @@ def patched_station_device_class() -> type[MccsStation]:
                     self.component_manager._tile_power_states[fqdn] = power_state
                 for fqdn in self.component_manager._antenna_power_states:
                     self.component_manager._antenna_power_states[fqdn] = power_state
-            print(type(self.component_manager))
             self.component_manager._evaluate_power_state()
 
     return PatchedStationDevice

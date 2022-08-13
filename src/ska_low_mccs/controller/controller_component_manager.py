@@ -416,16 +416,19 @@ class ControllerComponentManager(MccsComponentManager):
         """Establish communication with the station components."""
         super().start_communicating()
 
-        for subarray_proxy in self._subarrays.values():
-            subarray_proxy.start_communicating()
-        for subrack_proxy in self._subracks.values():
-            subrack_proxy.start_communicating()
-        for station_proxy in self._stations.values():
-            station_proxy.start_communicating()
-        for subarray_beam_proxy in self._subarray_beams.values():
-            subarray_beam_proxy.start_communicating()
-        for station_beam_proxy in self._station_beams.values():
-            station_beam_proxy.start_communicating()
+        if not self._device_communication_states:
+            self.update_communication_state(CommunicationStatus.ESTABLISHED)
+        else:
+            for subarray_proxy in self._subarrays.values():
+                subarray_proxy.start_communicating()
+            for subrack_proxy in self._subracks.values():
+                subrack_proxy.start_communicating()
+            for station_proxy in self._stations.values():
+                station_proxy.start_communicating()
+            for subarray_beam_proxy in self._subarray_beams.values():
+                subarray_beam_proxy.start_communicating()
+            for station_beam_proxy in self._station_beams.values():
+                station_beam_proxy.start_communicating()
 
     def stop_communicating(self: ControllerComponentManager) -> None:
         """Break off communication with the station components."""
@@ -474,9 +477,6 @@ class ControllerComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        print(
-            f"_evaluate_communication_state com_states={self._device_communication_states}"
-        )
         with self.__communication_state_lock:
             if (
                 CommunicationStatus.DISABLED
@@ -594,6 +594,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a TaskStatus and message
         """
+        if len(self._stations.values()) + len(self._subracks.values()) == 0:
+            return (TaskStatus.REJECTED, "No subservient devices to turn off")
         return self.submit_task(self._off, task_callback=task_callback)
 
     def _off(
@@ -607,7 +609,8 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         results = [station_proxy.off() for station_proxy in self._stations.values()] + [
             subrack_proxy.off() for subrack_proxy in self._subracks.values()
@@ -617,12 +620,15 @@ class ControllerComponentManager(MccsComponentManager):
             if result[0] == TaskStatus.FAILED:
                 completed = False
                 break
-        if completed:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The off command has completed"
-            )
-        else:
-            task_callback(status=TaskStatus.FAILED, result="The off command has failed")
+        if task_callback:
+            if completed:
+                task_callback(
+                    status=TaskStatus.COMPLETED, result="The off command has completed"
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The off command has failed"
+                )
 
     @check_communicating
     def standby(
@@ -635,6 +641,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         :returns: task status and message
         """
+        if len(self._stations.values()) + len(self._subracks.values()) == 0:
+            return (TaskStatus.REJECTED, "No subservient devices to put into standby")
         return self.submit_task(self._standby, task_callback=task_callback)
 
     def _standby(
@@ -680,6 +688,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         :returns: task status and message
         """
+        if len(self._stations.values()) + len(self._subracks.values()) == 0:
+            return (TaskStatus.REJECTED, "No subservient devices to turn on")
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
@@ -715,7 +725,7 @@ class ControllerComponentManager(MccsComponentManager):
                 )
 
     @check_communicating
-    @check_on
+    # @check_on
     def allocate(
         self: ControllerComponentManager,
         argin: str,
@@ -740,6 +750,17 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: A tuple containing a task status and a unique id string to identify the command
         """
+        if (
+            len(self._subarrays.values())
+            + len(self._stations.values())
+            + len(self._subarray_beams.values())
+            == 0
+        ):
+            return (TaskStatus.REJECTED, "No subservient devices to allocate")
+
+        if self.power_state != PowerState.ON:
+            return (TaskStatus.FAILED, "Controller is not turned on.")
+
         kwargs = json.loads(argin)
         subarray_id = kwargs.get("subarray_id")
 
@@ -896,7 +917,7 @@ class ControllerComponentManager(MccsComponentManager):
                 )
 
     @check_communicating
-    @check_on
+    #    @check_on
     def release(
         self: ControllerComponentManager,
         argin: str,
@@ -911,6 +932,11 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a TaskStatus and message
         """
+        if len(self._subarrays.values()) == 0:
+            return (TaskStatus.REJECTED, "No subservient subarray devices to release")
+        if self.power_state != PowerState.ON:
+            return (TaskStatus.FAILED, "Controller is not turned on.")
+
         kwargs = json.loads(argin)
         if kwargs["release_all"]:
             subarray_id = kwargs["subarray_id"]
@@ -974,7 +1000,7 @@ class ControllerComponentManager(MccsComponentManager):
                 )
 
     @check_communicating
-    @check_on
+    #    @check_on
     def restart_subarray(
         self: ControllerComponentManager,
         subarray_id: int,
@@ -988,6 +1014,11 @@ class ControllerComponentManager(MccsComponentManager):
 
         :return: a task status and a message
         """
+        if len(self._subarrays.values()) == 0:
+            return (TaskStatus.REJECTED, "No subservient subarray devices to restart")
+        if self.power_state != PowerState.ON:
+            return (TaskStatus.FAILED, "Controller is not turned on.")
+
         return self.submit_task(
             self._restart_subarray,
             [f"low-mcss/subarray/{subarray_id:02d}"],

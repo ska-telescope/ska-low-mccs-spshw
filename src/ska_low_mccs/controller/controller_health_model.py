@@ -147,8 +147,8 @@ class ControllerHealthModel(HealthModel):
 
         for health in [
             HealthState.FAILED,
-            HealthState.UNKNOWN,
             HealthState.DEGRADED,
+            HealthState.UNKNOWN,
         ]:
             if controller_health == health:
                 return health

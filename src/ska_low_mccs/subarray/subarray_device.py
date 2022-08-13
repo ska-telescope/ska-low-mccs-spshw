@@ -15,7 +15,6 @@ from typing import Any, Callable, List, Optional, Tuple
 import tango
 from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState
-from ska_tango_base.executor import TaskStatus
 from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
@@ -285,9 +284,9 @@ class MccsSubarray(SKASubarray):
     #     self._health_state = health
     #     self.push_change_event("healthState", health)
 
-    # ------------------
-    # Attribute methods
-    # ------------------
+    # ----------
+    # Attributes
+    # ----------
     @attribute(dtype="DevLong", format="%i")
     def scanId(self: MccsSubarray) -> int:
         """
@@ -343,11 +342,11 @@ class MccsSubarray(SKASubarray):
             }
         )
 
-    # ------------------
-    # Attribute methods
-    # ------------------
+    # --------
+    # Commands
+    # --------
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def AssignResources(self: MccsSubarray, argin: str) -> tuple[ResultCode, str]:
+    def AssignResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
         """
         Assign resources to this subarray.
 
@@ -362,7 +361,7 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ReleaseResources(self: MccsSubarray, argin: str) -> tuple[ResultCode, str]:
+    def ReleaseResources(self: MccsSubarray, argin: str) -> DevVarLongStringArrayType:
         """
         Release resources from this subarray.
 
@@ -377,7 +376,7 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
-    def ReleaseAllResources(self: MccsSubarray) -> tuple[ResultCode, str]:
+    def ReleaseAllResources(self: MccsSubarray) -> DevVarLongStringArrayType:
         """
         Release all resources from this subarray.
 
@@ -392,7 +391,7 @@ class MccsSubarray(SKASubarray):
     def Configure(
         self: MccsSubarray,
         argin: str,
-    ) -> tuple[ResultCode, str]:
+    ) -> DevVarLongStringArrayType:
         """
         Configure this subarray.
 
@@ -410,7 +409,7 @@ class MccsSubarray(SKASubarray):
     def Scan(
         self: MccsSubarray,
         argin: dict[str, Any],
-    ) -> tuple[ResultCode, str]:
+    ) -> DevVarLongStringArrayType:
         """
         Start scanning.
 
@@ -427,7 +426,7 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
-    def EndScan(self: MccsSubarray) -> tuple[ResultCode, str]:
+    def EndScan(self: MccsSubarray) -> DevVarLongStringArrayType:
         """
         Stop scanning.
 
@@ -439,7 +438,7 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
-    def End(self: MccsSubarray) -> tuple[ResultCode, str]:
+    def End(self: MccsSubarray) -> DevVarLongStringArrayType:
         """
         Deconfigure resources.
 
@@ -451,7 +450,7 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
-    def ObsReset(self: MccsSubarray) -> tuple[ResultCode, str]:
+    def ObsReset(self: MccsSubarray) -> DevVarLongStringArrayType:
         """
         Reset the observation by returning to unconfigured state.
 
@@ -463,7 +462,7 @@ class MccsSubarray(SKASubarray):
         return ([return_code], [unique_id])
 
     @command(dtype_out="DevVarLongStringArray")
-    def Restart(self: MccsSubarray) -> tuple[ResultCode, str]:
+    def Restart(self: MccsSubarray) -> DevVarLongStringArrayType:
         """
         Restart the subarray by returning to unresourced state.
 
@@ -477,7 +476,7 @@ class MccsSubarray(SKASubarray):
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SendTransientBuffer(
         self: MccsSubarray, argin: list[int]
-    ) -> tuple[TaskStatus, str]:
+    ) -> DevVarLongStringArrayType:
         """
         Cause the subarray to send the requested segment of the transient buffer to SDP.
 

@@ -1,0 +1,17 @@
+{
+    "servers": {
+        "MccsController": {
+            "controller": {
+                "MccsController": {
+                    "low-mccs/control/control": {
+                        "properties": {
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

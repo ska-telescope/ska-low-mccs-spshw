@@ -275,10 +275,6 @@ class TestMccsIntegration:
         station_1.adminMode = AdminMode.ONLINE
         station_2.adminMode = AdminMode.ONLINE
 
-        print(f"controller state: {controller.state()}")
-        print(f"controller power state: {controller.power_state}")
-        print(f"controller admin mode: {controller.adminMode}")
-
         # It seems that we need a fairly long sleep to allow time for all the relevant events
         # to be pushed by the polled PushChanges command
         time.sleep(0.2)

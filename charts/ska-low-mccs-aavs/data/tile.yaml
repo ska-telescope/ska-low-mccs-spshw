@@ -1,0 +1,600 @@
+name: "tile-{{.Release.Name}}"
+function: ska-low-mccs-tile
+domain: ska-low-mccs
+instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004", 
+            "tile-0005", "tile-0006", "tile-0007", "tile-0008", 
+            "tile-0009", "tile-0010", "tile-0011", "tile-0012", 
+            "tile-0013", "tile-0014", "tile-0015", "tile-0016"]
+entrypoints:
+  - name: "tile.MccsTile"
+    path: "/app/src/ska_low_mccs/tile/tile_device.py"
+server: 
+  name: "MccsTile"
+  instances:
+    - name: "tile-0001"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/001"
+          properties:
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "1"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.201"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0002"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/002"
+          properties:
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "2"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.202"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0003"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/003"
+          properties:
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "3"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.203"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0004"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/004"
+          properties:
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "4"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.204"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0005"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/005"
+          properties:
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "5"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.205"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0006"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/006"
+          properties:
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "6"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.206"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0007"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/007"
+          properties:
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "7"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.207"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0008"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/008"
+          properties:
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/01"
+          - name: "SubrackBay"
+            values:
+            - "8"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.208"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0009"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/009"
+          properties:
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "1"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.209"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0010"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/010"
+          properties:
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "2"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.210"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0011"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/011"
+          properties:
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "3"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.211"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0012"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/012"
+          properties:
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "4"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.212"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0013"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/013"
+          properties:
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "5"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.213"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0014"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/014"
+          properties:
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "6"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.214"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0015"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/015"
+          properties:
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "7"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.215"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+    - name: "tile-0016"
+      classes:
+      - name: "MccsTile"
+        devices:
+        - name: "low-mccs/tile/016"
+          properties:
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "SubrackFQDN"
+            values:
+            - "low-mccs/subrack/02"
+          - name: "SubrackBay"
+            values:
+            - "8"
+          - name: "AntennasPerTile"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "TpmIp"
+            values:
+            - "10.0.10.216"
+          - name: "TpmCpIdPort"
+            values:
+            - "10000"
+          - name: "TpmVersion"
+            values:
+            - "tpm_v1_6"
+          attribute_properties:
+          - attribute: "simulationMode"
+            properties:
+            - name: "_value"
+              values:
+              - "1"
+depends_on:
+  - device: sys/database/2
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

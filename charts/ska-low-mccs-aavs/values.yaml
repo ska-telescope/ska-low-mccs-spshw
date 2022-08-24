@@ -1,0 +1,150 @@
+# Default values for mccs (ska-low-mccs)
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+display: ":0"
+xauthority: "~/.Xauthority"
+
+enabled: true
+
+system: SW-infrastructure
+subsystem: low-mccs
+telescope: SKA-low
+
+labels:
+  app: ska-low-mccs-aavs
+annotations:
+  app.gitlab.com/app: CI_PROJECT_PATH_SLUG
+  app.gitlab.com/env: CI_ENVIRONMENT_SLUG
+
+global:
+  sub-system:
+    ska-tango-base:
+      enabled: false
+    taranta:
+      enabled: false
+    archiver:
+      enabled: false
+  annotations:
+    app.gitlab.com/app: taranta
+    app.gitlab.com/env: taranta
+  minikube: true
+  tango_host: databaseds-tango-base-test:10000
+
+livenessProbe:
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+readinessProbe:
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+
+dsconfig:
+  image:
+    registry: artefact.skao.int
+    image: ska-tango-images-tango-dsconfig
+    tag: 1.5.1
+    pullPolicy: IfNotPresent
+  itango:
+    image:
+      registry: artefact.skao.int
+      image: ska-tango-images-tango-itango
+      tag: 9.3.6
+      pullPolicy: IfNotPresent
+
+ska-tango-base:
+  enabled: true
+  vnc:
+    enabled: true
+  tangorest:
+    enabled: true
+
+resources:
+  limits:
+    cpu: 60m
+    memory: 150Mi
+  requests:
+    cpu: 20m
+    memory: 50Mi
+
+
+# Default docker image - used by all of MCCS
+low_mccs:
+  enabled: true
+  image:
+    registry: artefact.skao.int
+    image: ska-low-mccs
+    tag: 0.9.1 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    pullPolicy: IfNotPresent
+
+
+# Default ska-low-mccs device server instances
+deviceServers:
+  # controller has only one instance
+  controller:
+    instances: ["controller"]
+    file: "data/controller.yaml"
+  subarrays:
+    # subarray instances have to be 0-padded to two digits
+    instances: ["subarray-01", "subarray-02"]
+    file: "data/subarray.yaml"
+  stations:
+    # station instances have to be 0-padded to three digits
+    instances: ["station-001", "station-002"]
+    file: "data/station.yaml"
+  subracks:
+    # subrack instances have to be 0-padded to two digits
+    instances: ["subrack-01", "subrack-02"]
+    file: "data/subrack.yaml"
+  tiles:
+    # tile instances have to be 0-padded to four digits
+    instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004"]
+    file: "data/tile.yaml"
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 512Mi
+  apius:
+    # apiu instances have to be 0-padded to three digits
+    instances: ["apiu-001", "apiu-002", "apiu-003", "apiu-004"]
+    file: "data/apiu.yaml"
+  antennas:
+    # antenna instances have to be 0-padded to six digits
+    instances: ["antenna-000001", "antenna-000002", "antenna-000003", "antenna-000004"]
+    file: "data/antenna.yaml"
+  station-beams:
+    # beam instances have to be 0-padded to three digits
+    instances: ["beam-001", "beam-002", "beam-003", "beam-004"]
+    file: "data/beam.yaml"
+  subarray-beams:
+    # subarray beam instances have to be 0-padded to two digits
+    instances: ["subarraybeam-01", "subarraybeam-02", "subarraybeam-03", "subarraybeam-04"]
+    file: "data/subarray-beam.yaml"
+
+mccs_cli:
+  # use the MCCS unix cli tool
+  enabled: true
+  component: ska-low-mccs-cli
+  function: mccs-cli-tango-client
+  domain: interactive-testing
+  intent: enabling
+  resources:
+    requests:
+      cpu: 100m     # 00m = 0.1 CPU
+      memory: 512Mi # 128Mi = 0.125 GB mem
+      ephemeral-storage: 512Mi
+    limits:
+      cpu: 100m     # 00m = 0.1 CPU
+      memory: 512Mi # 128Mi = 0.125 GB mem
+      ephemeral-storage: 512Mi
+
+nodeSelector: {}
+
+affinity: {}

@@ -154,7 +154,7 @@ PyDAQ API example
 ^^^^^^^^^^^^^^^^^
 The code block below provides an example of how to programmatically interface with PyDAQ to acquire data from TPMs.
 
-.. code-block:: python
+.. code-block:: python3
    
    from pydaq.daq_receiver_interface import DaqModes, DaqReceiver
    from pydaq.persisters import ChannelFormatFileManager
@@ -239,7 +239,7 @@ A file format can be used for different SPEAD data types. For example, there are
 
 The HDF5 file layout and data packing format is abstracted by the persisters Python library, which provides an interface for each data type. Taking channelised data HDF5 as an example, the following provides examples of how to use this library.
 
-.. code-block:: python
+.. code-block:: python3
    
    # Import the ChannelFormatFile Manager, which interfaces with channelised data HDF5 files
    from pydaq.persisters import ChannelFormatFileManager

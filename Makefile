@@ -11,7 +11,7 @@
 #
 PROJECT = ska-low-mccs
 
-HELM_CHARTS_TO_PUBLISH = ska-low-mccs, ska-low-mccs-aavs
+HELM_CHARTS_TO_PUBLISH = [ska-low-mccs, ska-low-mccs-aavs]
 
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88

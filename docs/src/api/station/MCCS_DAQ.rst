@@ -36,7 +36,7 @@ This is a separate shared library that implements AAVS-specific consumers. There
 
 All consumers have internal buffering to cater for out of order packet arrival, and most have an N-buffer system to deal with late-arriving packets belonging to previous buffers. In general, there is 1 thread performing packet reception and another thread running the consumer. The correlator has an additional thread that interacts with xGPU. The consumers are parametrizable with a JSON string. An external callback can be provided to a callback that is called when a buffer is filled. The signature of this callback is:
 
-.. code-block:: python
+.. code-block:: cpp
 
    void * callback(void * data, double timestamp, unsigned arg_1, unsigned arg_2)
 
@@ -154,7 +154,7 @@ PyDAQ API example
 ^^^^^^^^^^^^^^^^^
 The code block below provides an example of how to programmatically interface with PyDAQ to acquire data from TPMs.
 
-.. code-block:: python3
+.. code-block::
    
    from pydaq.daq_receiver_interface import DaqModes, DaqReceiver
    from pydaq.persisters import ChannelFormatFileManager
@@ -239,7 +239,7 @@ A file format can be used for different SPEAD data types. For example, there are
 
 The HDF5 file layout and data packing format is abstracted by the persisters Python library, which provides an interface for each data type. Taking channelised data HDF5 as an example, the following provides examples of how to use this library.
 
-.. code-block:: python3
+.. code-block::
    
    # Import the ChannelFormatFile Manager, which interfaces with channelised data HDF5 files
    from pydaq.persisters import ChannelFormatFileManager
@@ -284,7 +284,7 @@ The HDF5 file layout and data packing format is abstracted by the persisters Pyt
    # Beam: [pols, channels, samples, beams]
    # Station: [pols, samples, channels]
    # Corr: [samples, baseline, stokes, channels]
-   
+
 --------
 Plotting
 --------

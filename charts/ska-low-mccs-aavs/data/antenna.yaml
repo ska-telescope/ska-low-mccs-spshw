@@ -1,0 +1,5460 @@
+name: "antenna-{{.Release.Name}}"
+function: ska-low-mccs-antenna
+domain: ska-low-mccs
+instances: ["antenna-000001", "antenna-000002", "antenna-000003", "antenna-000004", 
+            "antenna-000005", "antenna-000006", "antenna-000007", "antenna-000008", 
+            "antenna-000009", "antenna-000010", "antenna-000011", "antenna-000012", 
+            "antenna-000013", "antenna-000014", "antenna-000015", "antenna-000016", 
+            "antenna-000017", "antenna-000018", "antenna-000019", "antenna-000020", 
+            "antenna-000021", "antenna-000022", "antenna-000023", "antenna-000024", 
+            "antenna-000025", "antenna-000026", "antenna-000027", "antenna-000028", 
+            "antenna-000029", "antenna-000030", "antenna-000031", "antenna-000032", 
+            "antenna-000033", "antenna-000034", "antenna-000035", "antenna-000036", 
+            "antenna-000037", "antenna-000038", "antenna-000039", "antenna-000040", 
+            "antenna-000041", "antenna-000042", "antenna-000043", "antenna-000044", 
+            "antenna-000045", "antenna-000046", "antenna-000047", "antenna-000048", 
+            "antenna-000049", "antenna-000050", "antenna-000051", "antenna-000052", 
+            "antenna-000053", "antenna-000054", "antenna-000055", "antenna-000056", 
+            "antenna-000057", "antenna-000058", "antenna-000059", "antenna-000060", 
+            "antenna-000061", "antenna-000062", "antenna-000063", "antenna-000064", 
+            "antenna-000065", "antenna-000066", "antenna-000067", "antenna-000068", 
+            "antenna-000069", "antenna-000070", "antenna-000071", "antenna-000072", 
+            "antenna-000073", "antenna-000074", "antenna-000075", "antenna-000076", 
+            "antenna-000077", "antenna-000078", "antenna-000079", "antenna-000080", 
+            "antenna-000081", "antenna-000082", "antenna-000083", "antenna-000084", 
+            "antenna-000085", "antenna-000086", "antenna-000087", "antenna-000088", 
+            "antenna-000089", "antenna-000090", "antenna-000091", "antenna-000092", 
+            "antenna-000093", "antenna-000094", "antenna-000095", "antenna-000096", 
+            "antenna-000097", "antenna-000098", "antenna-000099", "antenna-000100", 
+            "antenna-000101", "antenna-000102", "antenna-000103", "antenna-000104", 
+            "antenna-000105", "antenna-000106", "antenna-000107", "antenna-000108", 
+            "antenna-000109", "antenna-000110", "antenna-000111", "antenna-000112", 
+            "antenna-000113", "antenna-000114", "antenna-000115", "antenna-000116", 
+            "antenna-000117", "antenna-000118", "antenna-000119", "antenna-000120", 
+            "antenna-000121", "antenna-000122", "antenna-000123", "antenna-000124", 
+            "antenna-000125", "antenna-000126", "antenna-000127", "antenna-000128", 
+            "antenna-000129", "antenna-000130", "antenna-000131", "antenna-000132", 
+            "antenna-000133", "antenna-000134", "antenna-000135", "antenna-000136", 
+            "antenna-000137", "antenna-000138", "antenna-000139", "antenna-000140", 
+            "antenna-000141", "antenna-000142", "antenna-000143", "antenna-000144", 
+            "antenna-000145", "antenna-000146", "antenna-000147", "antenna-000148", 
+            "antenna-000149", "antenna-000150", "antenna-000151", "antenna-000152", 
+            "antenna-000153", "antenna-000154", "antenna-000155", "antenna-000156", 
+            "antenna-000157", "antenna-000158", "antenna-000159", "antenna-000160", 
+            "antenna-000161", "antenna-000162", "antenna-000163", "antenna-000164", 
+            "antenna-000165", "antenna-000166", "antenna-000167", "antenna-000168", 
+            "antenna-000169", "antenna-000170", "antenna-000171", "antenna-000172", 
+            "antenna-000173", "antenna-000174", "antenna-000175", "antenna-000176", 
+            "antenna-000177", "antenna-000178", "antenna-000179", "antenna-000180", 
+            "antenna-000181", "antenna-000182", "antenna-000183", "antenna-000184", 
+            "antenna-000185", "antenna-000186", "antenna-000187", "antenna-000188", 
+            "antenna-000189", "antenna-000190", "antenna-000191", "antenna-000192", 
+            "antenna-000193", "antenna-000194", "antenna-000195", "antenna-000196", 
+            "antenna-000197", "antenna-000198", "antenna-000199", "antenna-000200", 
+            "antenna-000201", "antenna-000202", "antenna-000203", "antenna-000204", 
+            "antenna-000205", "antenna-000206", "antenna-000207", "antenna-000208", 
+            "antenna-000209", "antenna-000210", "antenna-000211", "antenna-000212", 
+            "antenna-000213", "antenna-000214", "antenna-000215", "antenna-000216", 
+            "antenna-000217", "antenna-000218", "antenna-000219", "antenna-000220", 
+            "antenna-000221", "antenna-000222", "antenna-000223", "antenna-000224", 
+            "antenna-000225", "antenna-000226", "antenna-000227", "antenna-000228", 
+            "antenna-000229", "antenna-000230", "antenna-000231", "antenna-000232", 
+            "antenna-000233", "antenna-000234", "antenna-000235", "antenna-000236", 
+            "antenna-000237", "antenna-000238", "antenna-000239", "antenna-000240", 
+            "antenna-000241", "antenna-000242", "antenna-000243", "antenna-000244", 
+            "antenna-000245", "antenna-000246", "antenna-000247", "antenna-000248", 
+            "antenna-000249", "antenna-000250", "antenna-000251", "antenna-000252", 
+            "antenna-000253", "antenna-000254", "antenna-000255", "antenna-000256"]
+entrypoints:
+  - name: "antenna.MccsAntenna"
+    path: "/app/src/ska_low_mccs/antenna/antenna_device.py"
+server: 
+  name: "MccsAntenna"
+  instances:
+    - name: "antenna-000001"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000001"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "1"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000002"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000002"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "2"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000003"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000003"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "3"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000004"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000004"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "4"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000005"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000005"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "5"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000006"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000006"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "6"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000007"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000007"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "7"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000008"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000008"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "8"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000009"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000009"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "9"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000010"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000010"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "10"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000011"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000011"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "11"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000012"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000012"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "12"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000013"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000013"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "13"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000014"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000014"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "14"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000015"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000015"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "15"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000016"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000016"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "16"
+          - name: "TileId"
+            values:
+            - "1"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000017"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000017"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "17"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000018"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000018"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "18"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000019"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000019"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "19"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000020"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000020"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "20"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000021"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000021"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "21"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000022"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000022"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "22"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000023"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000023"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "23"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000024"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000024"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "24"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000025"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000025"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "25"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000026"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000026"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "26"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000027"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000027"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "27"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000028"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000028"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "28"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000029"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000029"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "29"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000030"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000030"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "30"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000031"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000031"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "31"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000032"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000032"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "32"
+          - name: "TileId"
+            values:
+            - "2"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000033"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000033"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "33"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000034"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000034"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "34"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000035"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000035"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "35"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000036"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000036"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "36"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000037"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000037"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "37"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000038"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000038"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "38"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000039"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000039"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "39"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000040"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000040"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "40"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000041"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000041"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "41"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000042"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000042"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "42"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000043"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000043"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "43"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000044"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000044"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "44"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000045"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000045"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "45"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000046"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000046"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "46"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000047"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000047"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "47"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000048"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000048"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "48"
+          - name: "TileId"
+            values:
+            - "3"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000049"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000049"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "49"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000050"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000050"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "50"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000051"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000051"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "51"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000052"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000052"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "52"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000053"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000053"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "53"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000054"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000054"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "54"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000055"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000055"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "55"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000056"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000056"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "56"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000057"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000057"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "57"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000058"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000058"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "58"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000059"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000059"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "59"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000060"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000060"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "60"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000061"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000061"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "61"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000062"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000062"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "62"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000063"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000063"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "63"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000064"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000064"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "1"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "64"
+          - name: "TileId"
+            values:
+            - "4"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000065"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000065"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "1"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000066"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000066"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "2"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000067"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000067"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "3"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000068"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000068"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "4"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000069"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000069"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "5"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000070"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000070"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "6"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000071"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000071"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "7"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000072"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000072"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "8"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000073"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000073"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "9"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000074"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000074"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "10"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000075"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000075"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "11"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000076"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000076"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "12"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000077"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000077"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "13"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000078"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000078"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "14"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000079"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000079"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "15"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000080"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000080"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "16"
+          - name: "TileId"
+            values:
+            - "5"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000081"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000081"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "17"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000082"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000082"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "18"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000083"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000083"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "19"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000084"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000084"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "20"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000085"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000085"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "21"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000086"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000086"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "22"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000087"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000087"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "23"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000088"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000088"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "24"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000089"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000089"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "25"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000090"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000090"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "26"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000091"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000091"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "27"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000092"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000092"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "28"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000093"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000093"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "29"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000094"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000094"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "30"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000095"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000095"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "31"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000096"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000096"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "32"
+          - name: "TileId"
+            values:
+            - "6"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000097"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000097"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "33"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000098"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000098"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "34"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000099"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000099"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "35"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000100"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000100"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "36"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000101"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000101"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "37"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000102"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000102"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "38"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000103"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000103"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "39"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000104"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000104"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "40"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000105"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000105"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "41"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000106"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000106"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "42"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000107"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000107"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "43"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000108"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000108"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "44"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000109"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000109"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "45"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000110"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000110"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "46"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000111"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000111"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "47"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000112"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000112"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "48"
+          - name: "TileId"
+            values:
+            - "7"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000113"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000113"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "49"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000114"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000114"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "50"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000115"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000115"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "51"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000116"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000116"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "52"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000117"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000117"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "53"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000118"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000118"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "54"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000119"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000119"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "55"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000120"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000120"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "56"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000121"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000121"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "57"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000122"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000122"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "58"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000123"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000123"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "59"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000124"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000124"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "60"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000125"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000125"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "61"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000126"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000126"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "62"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000127"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000127"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "63"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000128"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000128"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "2"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "64"
+          - name: "TileId"
+            values:
+            - "8"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000129"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000129"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "1"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000130"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000130"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "2"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000131"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000131"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "3"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000132"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000132"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "4"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000133"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000133"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "5"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000134"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000134"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "6"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000135"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000135"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "7"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000136"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000136"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "8"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000137"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000137"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "9"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000138"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000138"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "10"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000139"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000139"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "11"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000140"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000140"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "12"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000141"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000141"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "13"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000142"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000142"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "14"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000143"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000143"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "15"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000144"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000144"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "16"
+          - name: "TileId"
+            values:
+            - "9"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000145"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000145"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "17"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000146"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000146"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "18"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000147"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000147"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "19"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000148"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000148"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "20"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000149"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000149"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "21"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000150"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000150"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "22"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000151"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000151"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "23"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000152"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000152"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "24"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000153"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000153"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "25"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000154"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000154"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "26"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000155"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000155"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "27"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000156"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000156"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "28"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000157"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000157"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "29"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000158"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000158"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "30"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000159"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000159"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "31"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000160"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000160"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "32"
+          - name: "TileId"
+            values:
+            - "10"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000161"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000161"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "33"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000162"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000162"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "34"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000163"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000163"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "35"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000164"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000164"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "36"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000165"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000165"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "37"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000166"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000166"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "38"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000167"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000167"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "39"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000168"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000168"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "40"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000169"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000169"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "41"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000170"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000170"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "42"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000171"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000171"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "43"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000172"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000172"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "44"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000173"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000173"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "45"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000174"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000174"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "46"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000175"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000175"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "47"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000176"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000176"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "48"
+          - name: "TileId"
+            values:
+            - "11"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000177"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000177"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "49"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000178"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000178"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "50"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000179"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000179"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "51"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000180"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000180"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "52"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000181"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000181"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "53"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000182"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000182"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "54"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000183"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000183"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "55"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000184"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000184"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "56"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000185"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000185"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "57"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000186"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000186"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "58"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000187"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000187"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "59"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000188"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000188"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "60"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000189"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000189"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "61"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000190"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000190"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "62"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000191"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000191"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "63"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000192"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000192"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "3"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "64"
+          - name: "TileId"
+            values:
+            - "12"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000193"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000193"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "1"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000194"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000194"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "2"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000195"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000195"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "3"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000196"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000196"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "4"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000197"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000197"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "5"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000198"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000198"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "6"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000199"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000199"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "7"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000200"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000200"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "8"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000201"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000201"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "9"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000202"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000202"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "10"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000203"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000203"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "11"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000204"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000204"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "12"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000205"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000205"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "13"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000206"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000206"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "14"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000207"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000207"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "15"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000208"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000208"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "16"
+          - name: "TileId"
+            values:
+            - "13"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000209"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000209"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "17"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000210"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000210"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "18"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000211"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000211"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "19"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000212"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000212"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "20"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000213"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000213"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "21"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000214"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000214"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "22"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000215"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000215"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "23"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000216"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000216"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "24"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000217"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000217"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "25"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000218"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000218"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "26"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000219"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000219"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "27"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000220"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000220"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "28"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000221"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000221"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "29"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000222"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000222"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "30"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000223"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000223"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "31"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000224"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000224"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "32"
+          - name: "TileId"
+            values:
+            - "14"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000225"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000225"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "33"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000226"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000226"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "34"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000227"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000227"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "35"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000228"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000228"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "36"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000229"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000229"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "37"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000230"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000230"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "38"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000231"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000231"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "39"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000232"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000232"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "40"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000233"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000233"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "41"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000234"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000234"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "42"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000235"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000235"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "43"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000236"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000236"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "44"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000237"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000237"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "45"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000238"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000238"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "46"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000239"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000239"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "47"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000240"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000240"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "48"
+          - name: "TileId"
+            values:
+            - "15"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000241"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000241"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "49"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000242"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000242"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "50"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000243"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000243"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "51"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000244"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000244"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "52"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000245"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000245"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "53"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "5"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000246"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000246"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "54"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "6"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000247"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000247"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "55"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "7"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000248"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000248"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "56"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "8"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000249"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000249"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "57"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "9"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000250"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000250"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "58"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "10"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000251"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000251"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "59"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "11"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000252"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000252"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "60"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "12"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000253"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000253"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "61"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "13"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000254"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000254"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "62"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "14"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000255"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000255"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "63"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "15"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+    - name: "antenna-000256"
+      classes:
+      - name: "MccsAntenna"
+        devices:
+        - name: "low-mccs/antenna/000256"
+          properties:
+          - name: "ApiuId"
+            values:
+            - "4"
+          - name: "LogicalApiuAntennaId"
+            values:
+            - "64"
+          - name: "TileId"
+            values:
+            - "16"
+          - name: "LogicalTileAntennaId"
+            values:
+            - "16"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+depends_on:
+  - device: sys/database/2
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

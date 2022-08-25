@@ -1,0 +1,69 @@
+name: "subarraybeam-{{.Release.Name}}"
+function: ska-low-mccs-subarraybeam
+domain: ska-low-mccs
+instances: ["subarraybeam-01", "subarraybeam-02", "subarraybeam-03", "subarraybeam-04"]
+entrypoints:
+  - name: "subarraybeam.MccsSubarrayBeam"
+    path: "/app/src/ska_low_mccs/subarray_beam/subarray_beam_device.py"
+server: 
+  name: "MccsSubarrayBeam"
+  instances:
+    - name: "subarraybeam-01"
+      classes:
+      - name: "MccsSubarrayBeam"
+        devices:
+        - name: "low-mccs/subarraybeam/01"
+          properties:
+          - name: "SubarrayBeamId"
+            values:
+            - "1"
+          - name: "LoggingLevelDefault"
+            values:
+            - "3"
+    - name: "subarraybeam-02"
+      classes:
+      - name: "MccsSubarrayBeam"
+        devices:
+        - name: "low-mccs/subarraybeam/02"
+          properties:
+          - name: "SubarrayBeamId"
+            values:
+            - "2"
+          - name: "LoggingLevelDefault"
+            values:
+            - "3"
+    - name: "subarraybeam-03"
+      classes:
+      - name: "MccsSubarrayBeam"
+        devices:
+        - name: "low-mccs/subarraybeam/03"
+          properties:
+          - name: "SubarrayBeamId"
+            values:
+            - "3"
+          - name: "LoggingLevelDefault"
+            values:
+            - "3"
+    - name: "subarraybeam-04"
+      classes:
+      - name: "MccsSubarrayBeam"
+        devices:
+        - name: "low-mccs/subarraybeam/04"
+          properties:
+          - name: "SubarrayBeamId"
+            values:
+            - "4"
+          - name: "LoggingLevelDefault"
+            values:
+            - "3"
+depends_on:
+  - device: sys/database/2
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

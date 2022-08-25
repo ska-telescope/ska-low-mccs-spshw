@@ -1,0 +1,71 @@
+name: "subrack-{{.Release.Name}}"
+function: ska-low-mccs-subrack
+domain: ska-low-mccs
+instances: ["subrack-01", "subrack-0002"]
+entrypoints:
+  - name: "subrack.MccsSubrack"
+    path: "/app/src/ska_low_mccs/subrack/subrack_device.py"
+server: 
+  name: "MccsSubrack"
+  instances:
+    - name: "subrack-01"
+      classes:
+      - name: "MccsSubrack"
+        devices:
+        - name: "low-mccs/subrack/01"
+          properties:
+          - name: "TileFQDNs"
+            values:
+            - "low-mccs/tile/0001"
+            - "low-mccs/tile/0002"
+            - "low-mccs/tile/0003"
+            - "low-mccs/tile/0004"
+            - "low-mccs/tile/0005"
+            - "low-mccs/tile/0006"
+            - "low-mccs/tile/0007"
+            - "low-mccs/tile/0008"
+          - name: "LoggingLevelDefault"
+            values:
+            - "3"
+          - name: "SubrackIp"
+            values:
+            - "10.0.10.64"
+          - name: "SubrackPort"
+            values:
+            - "8081"
+    - name: "subrack-02"
+      classes:
+      - name: "MccsSubrack"
+        devices:
+        - name: "low-mccs/subrack/02"
+          properties:
+          - name: "TileFQDNs"
+            values:
+            - "low-mccs/tile/0009"
+            - "low-mccs/tile/0010"
+            - "low-mccs/tile/0011"
+            - "low-mccs/tile/0012"
+            - "low-mccs/tile/0013"
+            - "low-mccs/tile/0014"
+            - "low-mccs/tile/0015"
+            - "low-mccs/tile/0016"
+          - name: "LoggingLevelDefault"
+            values:
+            - "3"
+          - name: "SubrackIp"
+            values:
+            - "10.0.10.64"
+          - name: "SubrackPort"
+            values:
+            - "8081"
+depends_on:
+  - device: sys/database/2
+image:
+  registry: "{{.Values.low_mccs.image.registry}}"
+  image: "{{.Values.low_mccs.image.image}}"
+  tag: "{{.Values.low_mccs.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

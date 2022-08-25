@@ -1,0 +1,216 @@
+# Default values for mccs (ska-low-mccs-aavs)
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+display: ":0"
+xauthority: "~/.Xauthority"
+
+enabled: true
+
+system: SW-infrastructure
+subsystem: low-mccs
+telescope: SKA-low
+
+labels:
+  app: ska-low-mccs-aavs
+annotations:
+  app.gitlab.com/app: CI_PROJECT_PATH_SLUG
+  app.gitlab.com/env: CI_ENVIRONMENT_SLUG
+
+global:
+  sub-system:
+    ska-tango-base:
+      enabled: false
+    taranta:
+      enabled: false
+    archiver:
+      enabled: false
+  annotations:
+    app.gitlab.com/app: taranta
+    app.gitlab.com/env: taranta
+  minikube: true
+  tango_host: databaseds-tango-base-test:10000
+
+livenessProbe:
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+readinessProbe:
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+
+dsconfig:
+  image:
+    registry: artefact.skao.int
+    image: ska-tango-images-tango-dsconfig
+    tag: 1.5.1
+    pullPolicy: IfNotPresent
+  itango:
+    image:
+      registry: artefact.skao.int
+      image: ska-tango-images-tango-itango
+      tag: 9.3.6
+      pullPolicy: IfNotPresent
+
+ska-tango-base:
+  enabled: true
+  vnc:
+    enabled: true
+  tangorest:
+    enabled: true
+
+resources:
+  limits:
+    cpu: 60m
+    memory: 150Mi
+  requests:
+    cpu: 20m
+    memory: 50Mi
+
+
+# Default docker image - used by all of MCCS
+low_mccs:
+  enabled: true
+  image:
+    registry: artefact.skao.int
+    image: ska-low-mccs
+    tag: 0.9.1 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    pullPolicy: IfNotPresent
+
+
+# Default ska-low-mccs device server instances
+deviceServers:
+  # controller has only one instance
+  controller:
+    instances: ["controller"]
+    file: "data/controller.yaml"
+  subarrays:
+    # subarray instances have to be 0-padded to two digits
+    instances: ["subarray-01", "subarray-02"]
+    file: "data/subarray.yaml"
+  stations:
+    # station instances have to be 0-padded to three digits
+    instances: ["station-001", "station-002"]
+    file: "data/station.yaml"
+  subracks:
+    # subrack instances have to be 0-padded to two digits
+    instances: ["subrack-01", "subrack-02"]
+    file: "data/subrack.yaml"
+  tiles:
+    # tile instances have to be 0-padded to four digits
+    instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004", 
+                "tile-0005", "tile-0006", "tile-0007", "tile-0008", 
+                "tile-0009", "tile-0010", "tile-0011", "tile-0012", 
+                "tile-0013", "tile-0014", "tile-0015", "tile-0016"]
+    file: "data/tile.yaml"
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 512Mi
+  apius:
+    # apiu instances have to be 0-padded to three digits
+    instances: ["apiu-001", "apiu-002", "apiu-003", "apiu-004"]
+    file: "data/apiu.yaml"
+  antennas:
+    # antenna instances have to be 0-padded to six digits
+    instances: ["antenna-000001", "antenna-000002", "antenna-000003", "antenna-000004", 
+                "antenna-000005", "antenna-000006", "antenna-000007", "antenna-000008", 
+                "antenna-000009", "antenna-000010", "antenna-000011", "antenna-000012", 
+                "antenna-000013", "antenna-000014", "antenna-000015", "antenna-000016", 
+                "antenna-000017", "antenna-000018", "antenna-000019", "antenna-000020", 
+                "antenna-000021", "antenna-000022", "antenna-000023", "antenna-000024", 
+                "antenna-000025", "antenna-000026", "antenna-000027", "antenna-000028", 
+                "antenna-000029", "antenna-000030", "antenna-000031", "antenna-000032", 
+                "antenna-000033", "antenna-000034", "antenna-000035", "antenna-000036", 
+                "antenna-000037", "antenna-000038", "antenna-000039", "antenna-000040", 
+                "antenna-000041", "antenna-000042", "antenna-000043", "antenna-000044", 
+                "antenna-000045", "antenna-000046", "antenna-000047", "antenna-000048", 
+                "antenna-000049", "antenna-000050", "antenna-000051", "antenna-000052", 
+                "antenna-000053", "antenna-000054", "antenna-000055", "antenna-000056", 
+                "antenna-000057", "antenna-000058", "antenna-000059", "antenna-000060", 
+                "antenna-000061", "antenna-000062", "antenna-000063", "antenna-000064", 
+                "antenna-000065", "antenna-000066", "antenna-000067", "antenna-000068", 
+                "antenna-000069", "antenna-000070", "antenna-000071", "antenna-000072", 
+                "antenna-000073", "antenna-000074", "antenna-000075", "antenna-000076", 
+                "antenna-000077", "antenna-000078", "antenna-000079", "antenna-000080", 
+                "antenna-000081", "antenna-000082", "antenna-000083", "antenna-000084", 
+                "antenna-000085", "antenna-000086", "antenna-000087", "antenna-000088", 
+                "antenna-000089", "antenna-000090", "antenna-000091", "antenna-000092", 
+                "antenna-000093", "antenna-000094", "antenna-000095", "antenna-000096", 
+                "antenna-000097", "antenna-000098", "antenna-000099", "antenna-000100", 
+                "antenna-000101", "antenna-000102", "antenna-000103", "antenna-000104", 
+                "antenna-000105", "antenna-000106", "antenna-000107", "antenna-000108", 
+                "antenna-000109", "antenna-000110", "antenna-000111", "antenna-000112", 
+                "antenna-000113", "antenna-000114", "antenna-000115", "antenna-000116", 
+                "antenna-000117", "antenna-000118", "antenna-000119", "antenna-000120", 
+                "antenna-000121", "antenna-000122", "antenna-000123", "antenna-000124", 
+                "antenna-000125", "antenna-000126", "antenna-000127", "antenna-000128", 
+                "antenna-000129", "antenna-000130", "antenna-000131", "antenna-000132", 
+                "antenna-000133", "antenna-000134", "antenna-000135", "antenna-000136", 
+                "antenna-000137", "antenna-000138", "antenna-000139", "antenna-000140", 
+                "antenna-000141", "antenna-000142", "antenna-000143", "antenna-000144", 
+                "antenna-000145", "antenna-000146", "antenna-000147", "antenna-000148", 
+                "antenna-000149", "antenna-000150", "antenna-000151", "antenna-000152", 
+                "antenna-000153", "antenna-000154", "antenna-000155", "antenna-000156", 
+                "antenna-000157", "antenna-000158", "antenna-000159", "antenna-000160", 
+                "antenna-000161", "antenna-000162", "antenna-000163", "antenna-000164", 
+                "antenna-000165", "antenna-000166", "antenna-000167", "antenna-000168", 
+                "antenna-000169", "antenna-000170", "antenna-000171", "antenna-000172", 
+                "antenna-000173", "antenna-000174", "antenna-000175", "antenna-000176", 
+                "antenna-000177", "antenna-000178", "antenna-000179", "antenna-000180", 
+                "antenna-000181", "antenna-000182", "antenna-000183", "antenna-000184", 
+                "antenna-000185", "antenna-000186", "antenna-000187", "antenna-000188", 
+                "antenna-000189", "antenna-000190", "antenna-000191", "antenna-000192", 
+                "antenna-000193", "antenna-000194", "antenna-000195", "antenna-000196", 
+                "antenna-000197", "antenna-000198", "antenna-000199", "antenna-000200", 
+                "antenna-000201", "antenna-000202", "antenna-000203", "antenna-000204", 
+                "antenna-000205", "antenna-000206", "antenna-000207", "antenna-000208", 
+                "antenna-000209", "antenna-000210", "antenna-000211", "antenna-000212", 
+                "antenna-000213", "antenna-000214", "antenna-000215", "antenna-000216", 
+                "antenna-000217", "antenna-000218", "antenna-000219", "antenna-000220", 
+                "antenna-000221", "antenna-000222", "antenna-000223", "antenna-000224", 
+                "antenna-000225", "antenna-000226", "antenna-000227", "antenna-000228", 
+                "antenna-000229", "antenna-000230", "antenna-000231", "antenna-000232", 
+                "antenna-000233", "antenna-000234", "antenna-000235", "antenna-000236", 
+                "antenna-000237", "antenna-000238", "antenna-000239", "antenna-000240", 
+                "antenna-000241", "antenna-000242", "antenna-000243", "antenna-000244", 
+                "antenna-000245", "antenna-000246", "antenna-000247", "antenna-000248", 
+                "antenna-000249", "antenna-000250", "antenna-000251", "antenna-000252", 
+                "antenna-000253", "antenna-000254", "antenna-000255", "antenna-000256"]
+    file: "data/antenna.yaml"
+  station-beams:
+    # beam instances have to be 0-padded to two digits
+    instances: ["beam-01", "beam-02", "beam-03", "beam-04"]
+    file: "data/station-beam.yaml"
+  subarray-beams:
+    # subarray beam instances have to be 0-padded to two digits
+    instances: ["subarraybeam-01", "subarraybeam-02", "subarraybeam-03", "subarraybeam-04"]
+    file: "data/subarray-beam.yaml"
+
+mccs_cli:
+  # use the MCCS unix cli tool
+  enabled: true
+  component: ska-low-mccs-cli
+  function: mccs-cli-tango-client
+  domain: interactive-testing
+  intent: enabling
+  resources:
+    requests:
+      cpu: 100m     # 00m = 0.1 CPU
+      memory: 512Mi # 128Mi = 0.125 GB mem
+      ephemeral-storage: 512Mi
+    limits:
+      cpu: 100m     # 00m = 0.1 CPU
+      memory: 512Mi # 128Mi = 0.125 GB mem
+      ephemeral-storage: 512Mi
+
+nodeSelector: {}
+
+affinity: {}

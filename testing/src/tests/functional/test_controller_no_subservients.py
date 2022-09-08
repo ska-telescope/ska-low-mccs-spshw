@@ -22,12 +22,12 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback
     "features/controller_no_subservients.feature",
     "MCCS Turn on and off low telescope",
 )
-def test_turn_on_and_off_low_telescope(
+def test_turn_on_low_telescope(
     controller: MccsDeviceProxy,
     controller_device_state_changed_callback: MockChangeEventCallback,
 ) -> None:
     """
-    Docstring.
+    This is run at the end of the scenario. Turn MCCS Controller Off.
 
     :param controller: a proxy to the controller device
     :param controller_device_state_changed_callback: a callback to be
@@ -47,15 +47,26 @@ def we_have_a_running_instance_of_mccs(
     """
     Assert the existence/availability of a subsystem.
 
+    :param subsystem_name: name of the subsystem
     :param controller: a proxy to the controller device
     :param controller_device_state_changed_callback: a callback to be
         used to subscribe to controller state change
     """
+    assert subsystem_name in ["mccs", "tmc"]
+
+    if subsystem_name == "tmc":
+        return
+
     controller.add_change_event_callback(
         "state", controller_device_state_changed_callback
     )
 
-    assert controller.adminMode == AdminMode.ONLINE
+    admin_mode_0_device_sequence = {
+        controller,
+    }
+
+    for device in admin_mode_0_device_sequence:
+        assert device.adminMode == AdminMode.ONLINE
 
     controller_device_state_changed_callback.assert_last_change_event(
         tango.DevState.OFF

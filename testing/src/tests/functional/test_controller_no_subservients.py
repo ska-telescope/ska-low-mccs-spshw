@@ -22,51 +22,40 @@ from ska_low_mccs.testing.mock import MockChangeEventCallback
     "features/controller_no_subservients.feature",
     "MCCS Turn on and off low telescope",
 )
-def test_turn_on_low_telescope(
+def test_turn_on_and_off_low_telescope(
     controller: MccsDeviceProxy,
     controller_device_state_changed_callback: MockChangeEventCallback,
 ) -> None:
     """
-    This is run at the end of the scenario. Turn MCCS Controller Off.
+    Docstring.
 
     :param controller: a proxy to the controller device
     :param controller_device_state_changed_callback: a callback to be
         used to subscribe to controller state change
     """
-    controller.Off()
-    controller_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
-    assert controller.state() == tango.DevState.OFF
+    print("when is this run")
+#     controller.Off()
+#     controller_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+#     assert controller.state() == tango.DevState.OFF
 
 
-@given(parsers.parse("we have mvplow running an instance of {subsystem_name}"))
-def we_have_mvplow_running_an_instance_of(
-    subsystem_name: str,
+@given(parsers.parse("we have a running instance of mccs"))
+def we_have_a_running_instance_of_mccs(
     controller: MccsDeviceProxy,
     controller_device_state_changed_callback: MockChangeEventCallback,
 ) -> None:
     """
     Assert the existence/availability of a subsystem.
 
-    :param subsystem_name: name of the subsystem
     :param controller: a proxy to the controller device
     :param controller_device_state_changed_callback: a callback to be
         used to subscribe to controller state change
     """
-    assert subsystem_name in ["mccs", "tmc"]
-
-    if subsystem_name == "tmc":
-        return
-
     controller.add_change_event_callback(
         "state", controller_device_state_changed_callback
     )
 
-    admin_mode_0_device_sequence = {
-        controller,
-    }
-
-    for device in admin_mode_0_device_sequence:
-        assert device.adminMode == AdminMode.ONLINE
+    assert controller.adminMode == AdminMode.ONLINE
 
     controller_device_state_changed_callback.assert_last_change_event(
         tango.DevState.OFF

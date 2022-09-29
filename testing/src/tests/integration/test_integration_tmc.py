@@ -8,6 +8,7 @@
 """This module contains integration tests of interactions between TMC and MCCS."""
 from __future__ import annotations
 
+import json
 import time
 import unittest
 from typing import Callable
@@ -16,9 +17,9 @@ import pytest
 import tango
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
-from tango.server import command
+from tango.server import attribute, command
 
-from ska_low_mccs import MccsDeviceProxy, MccsStation
+from ska_low_mccs import MccsController, MccsDeviceProxy, MccsStation
 from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 from ska_low_mccs.utils import call_with_json
@@ -58,13 +59,43 @@ def patched_station_device_class() -> type[MccsStation]:
 
 
 @pytest.fixture()
+def patched_controller_device_class() -> type[MccsController]:
+    """
+    Return a controller device class, patched with extra commands for testing.
+
+    :return: a controller device class, patched with extra commands for
+        testing
+    """
+
+    class PatchedControllerDevice(MccsController):
+        """MccsController patched to allow for testing of controller resource health."""
+
+        @attribute(dtype="str")
+        def resourcesHealthy(self: MccsController) -> str:
+            """
+            Read the healthyness of the controller's resources.
+
+            :return: a string representing a dictionary containing whether or not
+                each resource is healthy.
+            """
+            return json.dumps(
+                self.component_manager._resource_manager._resource_manager._healthy
+            )
+
+    return PatchedControllerDevice
+
+
+@pytest.fixture()
 def devices_to_load(
     patched_station_device_class: MccsStation,
+    patched_controller_device_class: MccsController,
 ) -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :param patched_station_device_class: a station device class that has
+        been patched with extra commands to support testing
+    :param patched_controller_device_class: a controller device class that has
         been patched with extra commands to support testing
     :return: specification of the devices to be loaded
     """
@@ -74,7 +105,11 @@ def devices_to_load(
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
-            {"name": "controller", "proxy": MccsDeviceProxy},
+            {
+                "name": "controller",
+                "proxy": MccsDeviceProxy,
+                "patch": patched_controller_device_class,
+            },
             {"name": "subarray_01", "proxy": MccsDeviceProxy},
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
             {
@@ -421,6 +456,12 @@ class TestMccsIntegrationTmc:
         controller_device_state_changed_callback.assert_next_change_event(
             tango.DevState.UNKNOWN
         )
+
+        # All resources should be healthy, so check that the controller
+        # resource manager's records reflect this
+        resources_healthy = json.loads(controller.resourcesHealthy)
+        for resource_group_healthy in resources_healthy.values():
+            assert all(resource_group_healthy.values())
 
         # Make the station think it has received events from its APIU,
         # tiles and antennas, telling it they are all OFF. This makes

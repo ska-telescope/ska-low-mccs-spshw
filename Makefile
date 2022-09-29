@@ -22,7 +22,7 @@ PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing pyt
     # E1121 (too-many-function-args), E1120 (no-value-for-parameter)
 PYTHON_SWITCHES_FOR_PYLINT = --disable=W,C,R,E1101,E1136,E0611,E0603,E1121,E1120
 
-DOCS_SPHINXOPTS = -n -W --keep-going
+DOCS_SPHINXOPTS = -W --keep-going
 
 include .make/oci.mk
 include .make/k8s.mk

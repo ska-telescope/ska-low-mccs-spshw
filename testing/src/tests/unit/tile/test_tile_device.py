@@ -373,7 +373,7 @@ class TestMccsTileCommands:
                 ),
             ),
             ("SwitchCalibrationBank", 19),
-            ("LoadPointingDelay", 0.5),
+            ("LoadPointingDelay", 1),
             ("StopDataTransmission", None),
             ("StopIntegratedData", None),
             ("ComputeCalibrationCoefficients", None),
@@ -1250,16 +1250,14 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        array: list[float] = (
-            [float(channels)] + [float(frequencies)] + [1.0] * (channels * frequencies)
-        )
+        array: list[int] = [channels] + [frequencies] + [1] * (channels * frequencies)
 
         with pytest.raises(DevFailed, match="NotImplementedError"):
             _ = tile_device.SetChanneliserTruncation(array)
         with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
             _ = tile_device.SetChanneliserTruncation(array[:-1])
         with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
-            _ = tile_device.SetChanneliserTruncation(array + [1.0])
+            _ = tile_device.SetChanneliserTruncation(array + [1])
 
     def test_LoadCalibrationCoefficients(
         self: TestMccsTileCommands,

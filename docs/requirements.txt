@@ -2,9 +2,10 @@
 # If the build complains that it can't find a package that is used by
 # the code, add it instead to autodoc_mock_imports in
 # docs/src/conf.py.
-docutils < 0.17
-Sphinx == 4.1.2
+--extra-index-url https://artefact.skao.int/repository/pypi-all/simple
+docutils<0.18
+sphinx == 5.1.1
+sphinx-autodoc-typehints == 1.19.1
 sphinx-rtd-theme
-sphinx-autodoc-typehints
 sphinxcontrib-plantuml
 typing_extensions

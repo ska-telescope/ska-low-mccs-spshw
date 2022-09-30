@@ -14,9 +14,8 @@ import logging
 import time
 from typing import Any, Optional
 
+from ska_low_mccs_common.component import ObjectComponent
 from typing_extensions import Final
-
-from ska_low_mccs.component import ObjectComponent
 
 from .tile_data import TileData
 from .tpm_status import TpmStatus

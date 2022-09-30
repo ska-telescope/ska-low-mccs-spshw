@@ -13,6 +13,7 @@ from typing import Callable, Union, cast
 
 import pytest
 from _pytest.fixtures import SubRequest
+from ska_low_mccs_common.testing.mock import MockCallableDeque
 from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs.apiu import (
@@ -21,7 +22,6 @@ from ska_low_mccs.apiu import (
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
 )
-from ska_low_mccs.testing.mock import MockCallableDeque
 
 
 class TestApiuCommon:

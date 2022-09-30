@@ -13,13 +13,13 @@ import unittest
 
 import pytest
 import tango
+from ska_low_mccs_common.testing.mock import MockCallable, MockCallableDeque
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
-from ska_low_mccs.testing.mock import MockCallable, MockCallableDeque
 
 
 class TestAntennaApiuProxy:

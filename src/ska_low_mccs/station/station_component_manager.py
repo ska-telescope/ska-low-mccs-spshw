@@ -15,17 +15,16 @@ import threading
 from typing import Callable, Optional, Sequence
 
 import tango
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
-
-from ska_low_mccs.component import (
+from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
     check_communicating,
     check_on,
 )
-from ska_low_mccs.utils import threadsafe
+from ska_low_mccs_common.utils import threadsafe
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
 
 __all__ = ["StationComponentManager"]
 

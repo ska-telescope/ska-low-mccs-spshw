@@ -11,16 +11,16 @@ from __future__ import annotations
 from typing import Any, Type
 
 import pytest
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_tango_base.control_model import HealthState
 from tango.server import command
 
-from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.station_beam.station_beam_component_manager import (
     StationBeamComponentManager,
 )
 from ska_low_mccs.station_beam.station_beam_device import MccsStationBeam
-from ska_low_mccs.testing.mock import MockChangeEventCallback
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()

@@ -12,13 +12,13 @@ from __future__ import annotations  # allow forward references in type hints
 import threading
 from typing import Any, List, Optional, Tuple, cast
 
+import ska_low_mccs_common.release as release
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from tango.server import attribute, command, device_property
 
-import ska_low_mccs.release as release
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
 
 __all__ = ["MccsController", "main"]

@@ -13,6 +13,7 @@ from typing import Union, cast
 
 import pytest
 from _pytest.fixtures import SubRequest  # for type hinting
+from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_base.control_model import HealthState, SimulationMode
 from ska_tango_base.executor import TaskStatus
 
@@ -22,7 +23,6 @@ from ska_low_mccs.cluster_manager import (
     ClusterSimulatorComponentManager,
 )
 from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
-from ska_low_mccs.testing.mock import MockCallable
 
 
 class TestClusterCommon:

@@ -12,11 +12,7 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
-from ska_tango_base.executor import TaskStatus
-
-from ska_low_mccs.apiu import ApiuSimulator
-from ska_low_mccs.component import (
+from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
@@ -24,6 +20,10 @@ from ska_low_mccs.component import (
     check_communicating,
     check_on,
 )
+from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
+from ska_tango_base.executor import TaskStatus
+
+from ska_low_mccs.apiu import ApiuSimulator
 
 __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 

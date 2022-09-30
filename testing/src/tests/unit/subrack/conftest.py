@@ -25,7 +25,7 @@ from ska_low_mccs.subrack import (
     SwitchingSubrackComponentManager,
 )
 
-# from ska_low_mccs.testing.mock import MockCallableDeque
+# from ska_low_mccs_common.testing.mock import MockCallableDeque
 
 
 @pytest.fixture()

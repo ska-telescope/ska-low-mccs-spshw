@@ -10,12 +10,11 @@ from __future__ import annotations
 
 import pytest
 import tango
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState
 from tango import DevState
-
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 @pytest.fixture()
@@ -75,12 +74,6 @@ class TestMccsController:
         ):
             _ = controller.On()
 
-        with pytest.raises(
-            tango.DevFailed,
-            match="Command Reset not allowed when the device is in DISABLE state",
-        ):
-            _ = controller.Reset()
-
         controller.adminMode = AdminMode.ONLINE
 
         ([result_code], [msg]) = controller.On()
@@ -114,9 +107,3 @@ class TestMccsController:
         ([result_code], [msg]) = controller.RestartSubarray(1)
         assert result_code == ResultCode.REJECTED
         assert msg == "No subservient subarray devices to restart"
-
-        with pytest.raises(
-            tango.DevFailed,
-            match="Command Reset not allowed when the device is in ON state",
-        ):
-            _ = controller.Reset()

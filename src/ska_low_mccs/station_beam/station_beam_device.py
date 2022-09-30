@@ -11,12 +11,12 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple, cast
 
 import tango
+from ska_low_mccs_common import release
 from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs import release
 from ska_low_mccs.station_beam import (
     StationBeamComponentManager,
     StationBeamHealthModel,

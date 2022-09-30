@@ -11,14 +11,14 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
-from ska_tango_base.control_model import CommunicationStatus, SimulationMode
-from ska_tango_base.executor import TaskStatus
-
-from ska_low_mccs.component import (
+from ska_low_mccs_common.component import (
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
     check_communicating,
 )
+from ska_tango_base.control_model import CommunicationStatus, SimulationMode
+from ska_tango_base.executor import TaskStatus
+
 from ska_low_mccs.pasd_bus.pasd_bus_simulator import PasdBusSimulator
 
 

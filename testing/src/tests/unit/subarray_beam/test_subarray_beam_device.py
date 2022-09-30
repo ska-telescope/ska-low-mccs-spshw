@@ -13,14 +13,15 @@ from typing import Any, Type
 
 import pytest
 import tango
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_tango_base.control_model import AdminMode, HealthState
 
-from ska_low_mccs import MccsDeviceProxy, MccsSubarrayBeam
+from ska_low_mccs import MccsSubarrayBeam
 from ska_low_mccs.subarray_beam.subarray_beam_component_manager import (
     SubarrayBeamComponentManager,
 )
-from ska_low_mccs.testing.mock import MockChangeEventCallback
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()

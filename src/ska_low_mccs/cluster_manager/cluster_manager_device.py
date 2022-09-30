@@ -18,6 +18,7 @@ import json
 import logging
 from typing import Any, List, Optional, Tuple
 
+import ska_low_mccs_common.release as release
 import tango
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import FastCommand, ResultCode, SubmittedSlowCommand
@@ -30,7 +31,6 @@ from ska_tango_base.control_model import (
 from tango import DevState
 from tango.server import attribute, command
 
-import ska_low_mccs.release as release
 from ska_low_mccs.cluster_manager import ClusterComponentManager, ClusterHealthModel
 from ska_low_mccs.cluster_manager.cluster_simulator import JobConfig, JobStatus
 

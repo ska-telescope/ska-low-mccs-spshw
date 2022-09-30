@@ -14,22 +14,22 @@ from typing import Callable, Iterable, Optional
 
 import pytest
 import pytest_mock
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
-
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.controller import (
-    ControllerComponentManager,
-    ControllerResourceManager,
-    MccsController,
-)
-from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (  # MockChangeEventCallback,
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing import TangoHarness
+from ska_low_mccs_common.testing.mock import (  # MockChangeEventCallback,
     MockCallable,
     MockCallableDeque,
     MockDeviceBuilder,
     MockSubarrayBuilder,
+)
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_tango_base.executor import TaskStatus
+
+from ska_low_mccs.controller import (
+    ControllerComponentManager,
+    ControllerResourceManager,
+    MccsController,
 )
 
 

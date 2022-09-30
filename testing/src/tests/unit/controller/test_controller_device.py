@@ -13,6 +13,9 @@ import unittest
 
 import pytest
 import tango
+from ska_low_mccs_common import MccsDeviceProxy, release
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
@@ -22,12 +25,10 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 
-from ska_low_mccs import MccsController, MccsDeviceProxy, release
+from ska_low_mccs import MccsController
 from ska_low_mccs.controller.controller_component_manager import (
     ControllerComponentManager,
 )
-from ska_low_mccs.testing.mock import MockChangeEventCallback
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()

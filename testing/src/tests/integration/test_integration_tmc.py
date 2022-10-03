@@ -23,7 +23,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, HealthState, ObsState, PowerState
 from tango.server import attribute, command
 
-from ska_low_mccs import MccsStation
+from ska_low_mccs import MccsController, MccsStation
 
 
 @pytest.fixture()

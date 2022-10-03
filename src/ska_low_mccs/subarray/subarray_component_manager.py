@@ -489,7 +489,7 @@ class SubarrayComponentManager(
             )
 
             self._evaluate_communication_state()
-        # self._component_state_changed_callback({"release_completed": None})
+        self._component_state_changed_callback({"release_completed": None})
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."
@@ -847,7 +847,7 @@ class SubarrayComponentManager(
         """
         return self.submit_task(
             self._send_transient_buffer,
-            args=argin,
+            args=[argin],
             task_callback=task_callback,
         )
 

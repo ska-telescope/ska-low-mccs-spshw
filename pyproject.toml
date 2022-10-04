@@ -30,7 +30,7 @@ scipy = "^1.9.1"
 ska-tango-base = "^0.13.6"
 ska-control-model = "0.1.1"
 ska-ser-logging = "^0.4.1"
-ska-low-mccs-common = "0.1.0"
+ska-low-mccs-common = "0.1.1"
 transitions = "^0.8.11"
 certifi = "^2022.6.15"
 

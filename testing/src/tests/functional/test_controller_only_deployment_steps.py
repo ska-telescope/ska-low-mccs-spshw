@@ -7,20 +7,19 @@
 # See LICENSE for more info.
 """This module contains BDD tests for a "Controller Only" deployment of MCCS."""
 from __future__ import annotations
-
 import pytest
 import tango
 from pytest_bdd import given, parsers, scenarios, then, when
 from ska_tango_base.control_model import HealthState
-
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType
-
 
 @pytest.fixture(scope="module")
 def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
+
+    Here we specify that we want a controller-only deployment and provide a custom chart.
 
     :return: specification of the devices to be loaded
     """
@@ -32,7 +31,6 @@ def devices_to_load() -> DevicesToLoadType:
         ],
     }
 
-
 # Map substitution variable name to its type.
 EXTRA_TYPES = {
     "initial": str,
@@ -40,10 +38,17 @@ EXTRA_TYPES = {
     "command": str,
 }
 
+# Specify the types of the parametrized args in the scenario outline.
+CONVERTERS = {
+    'initial': str,
+    'final' : str,
+    'command': str,
+}
+
 scenarios("features/controller_only_deployment.feature")
 
 
-# This uses the already existing fixture in conftest and just decorates it for use here.
+# This uses the already existing fixture in conftest and just decorates it for use.
 @given("MccsController is available", target_fixture="controller_bdd")
 def controller_bdd(controller: MccsDeviceProxy) -> MccsDeviceProxy:
     """
@@ -51,21 +56,17 @@ def controller_bdd(controller: MccsDeviceProxy) -> MccsDeviceProxy:
 
     :param controller: The controller fixture to use.
 
-    :return: A MccsDeviceProxy instance to MccsController.
+    :return: A MccsDeviceProxy instance to MccsController stored in the target_fixture `controller_bdd`.
     """
     return controller
 
 
-# Multiple types of step def decorators. They do the same thing.
-# This step def can likely be refactored to test for any state if needed.
 @given(
     parsers.cfparse("MccsController is in '{state:w}' state", extra_types=EXTRA_TYPES)
 )
 @then(
     parsers.cfparse("MccsController is in '{state:w}' state", extra_types=EXTRA_TYPES)
 )
-# @given("MccsController is in '<state:str>' state")
-# @then("MccsController is in '<state:str>' state")
 def controller_is_in_state(controller_bdd, state):
     """
     Make an assertion that MccsController is in the desired state.

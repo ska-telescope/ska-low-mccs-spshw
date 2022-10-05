@@ -7,12 +7,15 @@
 # See LICENSE for more info.
 """This module contains BDD tests for a "Controller Only" deployment of MCCS."""
 from __future__ import annotations
+
 import pytest
 import tango
 from pytest_bdd import given, parsers, scenarios, then, when
 from ska_tango_base.control_model import HealthState
+
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.testing.tango_harness import DevicesToLoadType
+
 
 @pytest.fixture(scope="module")
 def devices_to_load() -> DevicesToLoadType:
@@ -31,6 +34,7 @@ def devices_to_load() -> DevicesToLoadType:
         ],
     }
 
+
 # Map substitution variable name to its type.
 EXTRA_TYPES = {
     "initial": str,
@@ -40,9 +44,9 @@ EXTRA_TYPES = {
 
 # Specify the types of the parametrized args in the scenario outline.
 CONVERTERS = {
-    'initial': str,
-    'final' : str,
-    'command': str,
+    "initial": str,
+    "final": str,
+    "command": str,
 }
 
 scenarios("features/controller_only_deployment.feature")

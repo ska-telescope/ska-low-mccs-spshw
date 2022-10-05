@@ -84,7 +84,7 @@ def controller_is_in_state(controller_bdd, state):
     assert controller_bdd.state() == state_map[state]
 
 
-@when(parsers.cfparse("MccsController AdminMode is set to '{adminMode_value}'"))
+@when(parsers.cfparse("MccsController AdminMode is set to '{admin_mode_value}'"))
 def controller_ready_for_commands(controller_bdd, admin_mode_value):
     """
     Set the adminMode of MccsController to the desired value.

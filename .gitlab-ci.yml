@@ -2,7 +2,6 @@
 # Docker, when used with GitLab CI, runs each job in a separate and isolated container using the predefined image that is set up in .gitlab-ci.yml.
 # In this case we use the latest python docker image to build and test this project.
 
-#image: artefact.skao.int/ska-tango-images-pytango-builder:9.3.10
 image: $SKA_K8S_TOOLS_DOCKER_BUILDER_IMAGE
 
 variables:
@@ -55,10 +54,10 @@ include:
 
 
 docs-build:
-  image: readthedocs/build:latest
+  image: artefact.skao.int/ska-cicd-k8s-tools-build-deploy
 
 docs-pages:
-  image: readthedocs/build:latest
+  image: artefact.skao.int/ska-cicd-k8s-tools-build-deploy
 
 python-build-for-development:
   image: $SKA_PYTHON_PYTANGO_BUILDER_IMAGE

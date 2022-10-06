@@ -54,10 +54,10 @@ include:
 
 
 docs-build:
-  image: artefact.skao.int/ska-cicd-k8s-tools-build-deploy
+  image: readthedocs/build:latest
 
 docs-pages:
-  image: artefact.skao.int/ska-cicd-k8s-tools-build-deploy
+  image: readthedocs/build:latest
 
 python-build-for-development:
   image: $SKA_PYTHON_PYTANGO_BUILDER_IMAGE

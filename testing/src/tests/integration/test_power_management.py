@@ -165,6 +165,7 @@ class TestPowerManagement:
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
         apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
         apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
+        """
         antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
         antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
         antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
@@ -173,7 +174,7 @@ class TestPowerManagement:
         antenna_6 = tango_harness.get_device("low-mccs/antenna/000006")
         antenna_7 = tango_harness.get_device("low-mccs/antenna/000007")
         antenna_8 = tango_harness.get_device("low-mccs/antenna/000008")
-        """
+
         # sleep enough time for single polling cycle for each device to complete. This
         # is because (as of v0.13 of the base classes) state changes are only passed to
         # the Tango layer by the polled base class command PushChanges. Because polling
@@ -205,7 +206,7 @@ class TestPowerManagement:
         time.sleep(0.4)
         self._check_states(stations + [controller], tango.DevState.UNKNOWN)
 
-        """# putting an antenna online makes it transition to UNKNOWN because it needs its
+        # putting an antenna online makes it transition to UNKNOWN because it needs its
         # APIU and tile to be online in order to determine its state
         antennas = [
             antenna_1,
@@ -226,7 +227,7 @@ class TestPowerManagement:
         time.sleep(0.4)
         self._check_states(antennas + stations + [controller], tango.DevState.UNKNOWN)
 
-        # putting the APIU online makes it transition to OFF because it knows it is off.
+        """# putting the APIU online makes it transition to OFF because it knows it is off.
         # And the antennas transition to OFF too, because they infer from the APIU being
         # off that they must be off too.
         apius = [apiu_1, apiu_2]

@@ -250,12 +250,12 @@ class TestPowerManagement:
             assert tile.adminMode == AdminMode.OFFLINE
             assert tile.state() == tango.DevState.DISABLE
             tile.adminMode = AdminMode.ONLINE
-        # time.sleep(0.1)
+        """# time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)
         self._check_states(tiles + stations + [controller], tango.DevState.UNKNOWN)
 
-        """# putting the subrack online will make it transition to OFF (having detected
+        # putting the subrack online will make it transition to OFF (having detected
         # that the subrack hardware is turned off. Tile infers that its TPM is off, so
         # transitions to OFF. Station has all it neds to infer that it is OFF. Finally,
         # controller infers that it is OFF.

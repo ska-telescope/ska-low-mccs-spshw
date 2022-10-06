@@ -19,12 +19,12 @@ cache:
 # It is also specified that only the master branch will be subject of this job.
 
 stages:
-  - lint
-  - build
+#  - lint
+#  - build
   - test
-  - publish
-  - pages
-  - scan
+#  - publish
+#  - pages
+#  - scan
 
 
 include:

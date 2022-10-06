@@ -204,70 +204,70 @@ class TestPowerManagement:
         time.sleep(0.4)
         self._check_states(stations + [controller], tango.DevState.UNKNOWN)
 
-        # putting an antenna online makes it transition to UNKNOWN because it needs its
-        # APIU and tile to be online in order to determine its state
-        antennas = [
-            antenna_1,
-            antenna_2,
-            antenna_3,
-            antenna_4,
-            antenna_5,
-            antenna_6,
-            antenna_7,
-            antenna_8,
-        ]
-        for antenna in antennas:
-            assert antenna.adminMode == AdminMode.OFFLINE
-            assert antenna.state() == tango.DevState.DISABLE
-            antenna.adminMode = AdminMode.ONLINE
-        # time.sleep(0.1)
-        # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.4)
-        self._check_states(antennas + stations + [controller], tango.DevState.UNKNOWN)
-
-        # putting the APIU online makes it transition to OFF because it knows it is off.
-        # And the antennas transition to OFF too, because they infer from the APIU being
-        # off that they must be off too.
-        apius = [apiu_1, apiu_2]
-        for apiu in apius:
-            assert apiu.adminMode == AdminMode.OFFLINE
-            assert apiu.state() == tango.DevState.DISABLE
-            # PAC: I noticed that putting the APIU online makes it pass through ON before
-            # it transitions to OFF... is this intended?
-            apiu.adminMode = AdminMode.ONLINE
-        # time.sleep(0.1)
-        # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.4)
-        # self._check_states(apius + antennas, tango.DevState.OFF)
-        self._check_states(apius, tango.DevState.OFF)
-        self._check_states(antennas, tango.DevState.OFF)
-        self._check_states(stations + [controller], tango.DevState.UNKNOWN)
-
-        # putting a tile online makes it transition to UNKNOWN because it needs the
-        # subrack to be on in order to determine its state
-        tiles = [tile_1, tile_2, tile_3, tile_4]
-        for tile in tiles:
-            assert tile.adminMode == AdminMode.OFFLINE
-            assert tile.state() == tango.DevState.DISABLE
-            tile.adminMode = AdminMode.ONLINE
-        # time.sleep(0.1)
-        # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.4)
-        self._check_states(tiles + stations + [controller], tango.DevState.UNKNOWN)
-
-        # putting the subrack online will make it transition to OFF (having detected
-        # that the subrack hardware is turned off. Tile infers that its TPM is off, so
-        # transitions to OFF. Station has all it neds to infer that it is OFF. Finally,
-        # controller infers that it is OFF.
-        assert subrack.adminMode == AdminMode.OFFLINE
-        assert subrack.state() == tango.DevState.DISABLE
-        subrack.adminMode = AdminMode.ONLINE
-        # time.sleep(0.1)
-        # sleep enough time for one polling cycle of PushChanges to occur
-        time.sleep(0.4)
-        self._check_states(
-            tiles + stations + [controller] + [subrack], tango.DevState.OFF
-        )
+#         # putting an antenna online makes it transition to UNKNOWN because it needs its
+#         # APIU and tile to be online in order to determine its state
+#         antennas = [
+#             antenna_1,
+#             antenna_2,
+#             antenna_3,
+#             antenna_4,
+#             antenna_5,
+#             antenna_6,
+#             antenna_7,
+#             antenna_8,
+#         ]
+#         for antenna in antennas:
+#             assert antenna.adminMode == AdminMode.OFFLINE
+#             assert antenna.state() == tango.DevState.DISABLE
+#             antenna.adminMode = AdminMode.ONLINE
+#         # time.sleep(0.1)
+#         # sleep enough time for one polling cycle of PushChanges to occur
+#         time.sleep(0.4)
+#         self._check_states(antennas + stations + [controller], tango.DevState.UNKNOWN)
+# 
+#         # putting the APIU online makes it transition to OFF because it knows it is off.
+#         # And the antennas transition to OFF too, because they infer from the APIU being
+#         # off that they must be off too.
+#         apius = [apiu_1, apiu_2]
+#         for apiu in apius:
+#             assert apiu.adminMode == AdminMode.OFFLINE
+#             assert apiu.state() == tango.DevState.DISABLE
+#             # PAC: I noticed that putting the APIU online makes it pass through ON before
+#             # it transitions to OFF... is this intended?
+#             apiu.adminMode = AdminMode.ONLINE
+#         # time.sleep(0.1)
+#         # sleep enough time for one polling cycle of PushChanges to occur
+#         time.sleep(0.4)
+#         # self._check_states(apius + antennas, tango.DevState.OFF)
+#         self._check_states(apius, tango.DevState.OFF)
+#         self._check_states(antennas, tango.DevState.OFF)
+#         self._check_states(stations + [controller], tango.DevState.UNKNOWN)
+# 
+#         # putting a tile online makes it transition to UNKNOWN because it needs the
+#         # subrack to be on in order to determine its state
+#         tiles = [tile_1, tile_2, tile_3, tile_4]
+#         for tile in tiles:
+#             assert tile.adminMode == AdminMode.OFFLINE
+#             assert tile.state() == tango.DevState.DISABLE
+#             tile.adminMode = AdminMode.ONLINE
+#         # time.sleep(0.1)
+#         # sleep enough time for one polling cycle of PushChanges to occur
+#         time.sleep(0.4)
+#         self._check_states(tiles + stations + [controller], tango.DevState.UNKNOWN)
+# 
+#         # putting the subrack online will make it transition to OFF (having detected
+#         # that the subrack hardware is turned off. Tile infers that its TPM is off, so
+#         # transitions to OFF. Station has all it neds to infer that it is OFF. Finally,
+#         # controller infers that it is OFF.
+#         assert subrack.adminMode == AdminMode.OFFLINE
+#         assert subrack.state() == tango.DevState.DISABLE
+#         subrack.adminMode = AdminMode.ONLINE
+#         # time.sleep(0.1)
+#         # sleep enough time for one polling cycle of PushChanges to occur
+#         time.sleep(0.4)
+#         self._check_states(
+#             tiles + stations + [controller] + [subrack], tango.DevState.OFF
+#         )
 
     @pytest.mark.timeout(19)
     def test_power_on(

@@ -58,8 +58,8 @@ autodoc_mock_imports = [
     "tango",
     "uritools",
     "yaml",
-    "ska-control-model"
-    "ska-low-mccs-common"
+    "ska_control_model",
+    "ska_low_mccs_common",
 ]
 
 

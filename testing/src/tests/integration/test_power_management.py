@@ -163,9 +163,9 @@ class TestPowerManagement:
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        """
         apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
         apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
-        """
         antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
         antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
         antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
@@ -227,7 +227,7 @@ class TestPowerManagement:
         time.sleep(0.4)
         self._check_states(antennas + stations + [controller], tango.DevState.UNKNOWN)
 
-        """# putting the APIU online makes it transition to OFF because it knows it is off.
+        # putting the APIU online makes it transition to OFF because it knows it is off.
         # And the antennas transition to OFF too, because they infer from the APIU being
         # off that they must be off too.
         apius = [apiu_1, apiu_2]
@@ -245,7 +245,7 @@ class TestPowerManagement:
         self._check_states(antennas, tango.DevState.OFF)
         self._check_states(stations + [controller], tango.DevState.UNKNOWN)
 
-        # putting a tile online makes it transition to UNKNOWN because it needs the
+        """# putting a tile online makes it transition to UNKNOWN because it needs the
         # subrack to be on in order to determine its state
         tiles = [tile_1, tile_2, tile_3, tile_4]
         for tile in tiles:

@@ -59,7 +59,6 @@ autodoc_mock_imports = [
     "uritools",
     "yaml",
     "ska_control_model",
-    "ska_low_mccs_common",
 ]
 
 

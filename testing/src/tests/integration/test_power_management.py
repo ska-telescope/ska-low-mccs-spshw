@@ -249,7 +249,7 @@ class TestPowerManagement:
         for tile in tiles:
             assert tile.adminMode == AdminMode.OFFLINE
             assert tile.state() == tango.DevState.DISABLE
-            # tile.adminMode = AdminMode.ONLINE
+            tile.adminMode = AdminMode.ONLINE
         """# time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur
         time.sleep(0.4)

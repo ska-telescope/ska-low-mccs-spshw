@@ -159,9 +159,9 @@ class TestPowerManagement:
         station_2 = tango_harness.get_device("low-mccs/station/002")
         # subrack = tango_harness.get_device("low-mccs/subrack/01")
         tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        # tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+        # tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+        # tile_4 = tango_harness.get_device("low-mccs/tile/0004")
         apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
         apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
         antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
@@ -245,7 +245,7 @@ class TestPowerManagement:
 
         # putting a tile online makes it transition to UNKNOWN because it needs the
         # subrack to be on in order to determine its state
-        tiles = [tile_1, tile_2, tile_3, tile_4]
+        tiles = [tile_1] #, tile_2, tile_3, tile_4]
         for tile in tiles:
             assert tile.adminMode == AdminMode.OFFLINE
             assert tile.state() == tango.DevState.DISABLE

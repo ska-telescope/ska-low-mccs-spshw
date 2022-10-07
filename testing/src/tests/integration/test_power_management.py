@@ -245,7 +245,7 @@ class TestPowerManagement:
 
         # putting a tile online makes it transition to UNKNOWN because it needs the
         # subrack to be on in order to determine its state
-        tiles = [tile_1] #, tile_2, tile_3, tile_4]
+        tiles = [tile_1]  # , tile_2, tile_3, tile_4]
         for tile in tiles:
             assert tile.adminMode == AdminMode.OFFLINE
             assert tile.state() == tango.DevState.DISABLE

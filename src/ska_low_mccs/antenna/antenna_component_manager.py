@@ -26,7 +26,7 @@ from ska_low_mccs_common.component import (
 __all__ = ["AntennaComponentManager"]
 
 
-class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
+class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
     """A proxy to an antenna's APIU."""
 
     def __init__(
@@ -606,7 +606,7 @@ class AntennaComponentManager(MccsComponentManager):
 
     def standby(
         self: AntennaComponentManager, task_callback: Optional[Callable] = None
-    ) -> None:
+    )  -> tuple[TaskStatus, str]:
         """
         Put the antenna into standby state; this is not implemented.
 

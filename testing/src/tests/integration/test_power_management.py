@@ -157,7 +157,7 @@ class TestPowerManagement:
         controller = tango_harness.get_device("low-mccs/control/control")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        # subrack = tango_harness.get_device("low-mccs/subrack/01")
+        subrack = tango_harness.get_device("low-mccs/subrack/01")
         tile_1 = tango_harness.get_device("low-mccs/tile/0001")
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
@@ -255,7 +255,7 @@ class TestPowerManagement:
         time.sleep(0.4)
         self._check_states(tiles + stations + [controller], tango.DevState.UNKNOWN)
 
-        """# putting the subrack online will make it transition to OFF (having detected
+        # putting the subrack online will make it transition to OFF (having detected
         # that the subrack hardware is turned off. Tile infers that its TPM is off, so
         # transitions to OFF. Station has all it neds to infer that it is OFF. Finally,
         # controller infers that it is OFF.
@@ -267,7 +267,7 @@ class TestPowerManagement:
         time.sleep(0.4)
         self._check_states(
             tiles + stations + [controller] + [subrack], tango.DevState.OFF
-        )"""
+        )
 
     @pytest.mark.timeout(19)
     def test_power_on(

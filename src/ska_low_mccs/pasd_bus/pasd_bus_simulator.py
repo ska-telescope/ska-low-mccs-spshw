@@ -41,9 +41,8 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 import yaml
+from ska_low_mccs_common.component import ObjectComponent
 from typing_extensions import Final, TypedDict
-
-from ska_low_mccs.component import ObjectComponent
 
 _AntennaConfigType = TypedDict(
     "_AntennaConfigType",

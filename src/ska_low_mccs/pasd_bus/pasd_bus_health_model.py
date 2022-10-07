@@ -7,7 +7,7 @@
 # See LICENSE for more info.
 """An implementation of a health model for a PaSD bus."""
 
-from ska_low_mccs.health import HealthModel
+from ska_low_mccs_common.health import HealthModel
 
 
 class PasdBusHealthModel(HealthModel):

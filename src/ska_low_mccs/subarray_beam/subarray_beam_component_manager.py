@@ -13,10 +13,10 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_low_mccs_common.component import ObjectComponentManager, check_communicating
 from ska_tango_base.control_model import CommunicationStatus
 from ska_tango_base.executor import TaskStatus
 
-from ska_low_mccs.component import ObjectComponentManager, check_communicating
 from ska_low_mccs.subarray_beam import SubarrayBeam
 
 __all__ = ["SubarrayBeamComponentManager"]

@@ -14,6 +14,7 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
+from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.apiu import (
@@ -22,7 +23,6 @@ from ska_low_mccs.apiu import (
     ApiuSimulatorComponentManager,
     SwitchingApiuComponentManager,
 )
-from ska_low_mccs.testing.mock import MockCallable
 
 
 @pytest.fixture()

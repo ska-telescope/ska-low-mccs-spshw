@@ -14,6 +14,9 @@ import unittest
 from typing import Callable, Type
 
 import pytest
+from ska_low_mccs_common import MccsDeviceProxy, release
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
@@ -27,10 +30,8 @@ from ska_tango_base.control_model import (
 from tango import DevState
 from tango.server import command
 
-from ska_low_mccs import MccsDeviceProxy, MccsSubarray, release
+from ska_low_mccs import MccsSubarray
 from ska_low_mccs.subarray.subarray_component_manager import SubarrayComponentManager
-from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()
@@ -437,6 +438,7 @@ class TestMccsSubarray:
         ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
         assert result_code == ResultCode.QUEUED
         assert "ReleaseAllResources" in unique_id
+        time.sleep(0.5)
 
         lrc_result = (
             unique_id,

@@ -9,7 +9,6 @@ Unit tests
    Antenna subpackage<antenna>
    APIU subpackage<apiu>
    Cluster manager subpackage<cluster_manager>
-   Component subpackage<component>
    Controller subpackage<controller>
    PaSD bus subpackage<pasd_bus>
    Station subpackage<station>
@@ -20,9 +19,7 @@ Unit tests
    Telescope state subpackage<tel_state>
    Tile subpackage<tile>
    Transient buffer subpackage<transient_buffer>
-   Device proxy module<device_proxy>
    Package module<package>
-   Utils module<utils>
 
 
 conftest

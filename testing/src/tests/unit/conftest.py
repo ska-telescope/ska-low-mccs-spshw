@@ -10,13 +10,15 @@ import unittest
 from typing import Callable, Optional
 
 import pytest
-
-from ska_low_mccs.testing.mock import (
+from ska_low_mccs_common.testing.mock import (
     MockCallable,
     MockCallableDeque,
     MockChangeEventCallback,
 )
-from ska_low_mccs.testing.tango_harness import DevicesToLoadType, DeviceToLoadType
+from ska_low_mccs_common.testing.tango_harness import (
+    DevicesToLoadType,
+    DeviceToLoadType,
+)
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:

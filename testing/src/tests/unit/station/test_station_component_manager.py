@@ -12,13 +12,13 @@ import logging
 import time
 
 import tango
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockCallable
+from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 from ska_tango_base.executor import TaskStatus
 
-from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.station import StationComponentManager
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 class TestStationComponentManager:

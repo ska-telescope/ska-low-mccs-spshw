@@ -22,9 +22,8 @@ import _pytest
 import pytest
 import tango
 import yaml
-
-from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs.testing.tango_harness import (
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs_common.testing.tango_harness import (
     ClientProxyTangoHarness,
     DeploymentContextTangoHarness,
     DevicesToLoadType,
@@ -195,9 +194,9 @@ def tango_harness_factory(
         A Tango test harness.
 
         With the client proxy functionality of
-        :py:class:`~ska_low_mccs.testing.tango_harness.ClientProxyTangoHarness`
+        :py:class:`~ska_low_mccs_common.testing.tango_harness.ClientProxyTangoHarness`
         within the lightweight test context provided by
-        :py:class:`~ska_low_mccs.testing.tango_harness.TestContextTangoHarness`.
+        :py:class:`~ska_low_mccs_common.testing.tango_harness.TestContextTangoHarness`.
         """
 
         pass

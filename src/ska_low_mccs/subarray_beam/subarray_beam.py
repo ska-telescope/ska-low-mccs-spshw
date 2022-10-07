@@ -11,10 +11,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
+from ska_low_mccs_common.component import ObjectComponent
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus
-
-from ska_low_mccs.component import ObjectComponent
 
 __all__ = ["SubarrayBeam"]
 

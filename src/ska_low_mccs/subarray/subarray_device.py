@@ -12,6 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 from typing import Any, Callable, List, Optional, Tuple
 
+import ska_low_mccs_common.release as release
 import tango
 from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import CommunicationStatus, HealthState
@@ -19,7 +20,6 @@ from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
 
-import ska_low_mccs.release as release
 from ska_low_mccs.subarray import SubarrayComponentManager, SubarrayHealthModel
 
 __all__ = ["MccsSubarray", "main"]

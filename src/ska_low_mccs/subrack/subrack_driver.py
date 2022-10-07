@@ -28,10 +28,10 @@ import threading
 import time
 from typing import Any, Callable, List, Optional, cast
 
+from ska_low_mccs_common.component import MccsComponentManager, WebHardwareClient
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState
 
-from ska_low_mccs.component import MccsComponentManager, WebHardwareClient
 from ska_low_mccs.subrack.subrack_data import FanMode, SubrackData
 
 __all__ = ["SubrackDriver"]

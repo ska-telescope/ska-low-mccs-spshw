@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from typing import Hashable, Iterable, Mapping, cast
 
-from ska_low_mccs.resource_manager import HealthfulReadyResourceManager, ResourcePool
+from ska_low_mccs_common.resource_manager import (
+    HealthfulReadyResourceManager,
+    ResourcePool,
+)
 
 __all__ = ["ControllerResourceManager"]
 

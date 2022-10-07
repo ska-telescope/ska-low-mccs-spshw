@@ -12,6 +12,9 @@ import time
 
 import pytest
 import tango
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
@@ -21,9 +24,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
 )
 
-from ska_low_mccs import MccsAntenna, MccsDeviceProxy
-from ska_low_mccs.testing.mock import MockChangeEventCallback
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
+from ska_low_mccs import MccsAntenna
 
 
 @pytest.fixture()

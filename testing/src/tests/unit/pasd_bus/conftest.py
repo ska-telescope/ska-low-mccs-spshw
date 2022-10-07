@@ -17,6 +17,8 @@ from typing import Callable, Optional
 import pytest
 import pytest_mock
 import yaml
+from ska_low_mccs_common.testing.mock import MockCallable
+from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
 
@@ -26,8 +28,6 @@ from ska_low_mccs.pasd_bus import (
     PasdBusSimulator,
     PasdBusSimulatorComponentManager,
 )
-from ska_low_mccs.testing.mock import MockCallable
-from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 @pytest.fixture()

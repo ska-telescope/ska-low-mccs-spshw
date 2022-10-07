@@ -12,6 +12,9 @@ import json
 import unittest.mock
 
 import pytest
+from ska_low_mccs_common import MccsDeviceProxy, release
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_tango_base.control_model import (
     ControlMode,
     HealthState,
@@ -19,9 +22,7 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 
-from ska_low_mccs import MccsDeviceProxy, MccsStation, release
-from ska_low_mccs.testing.mock import MockChangeEventCallback
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
+from ska_low_mccs import MccsStation
 
 
 @pytest.fixture()

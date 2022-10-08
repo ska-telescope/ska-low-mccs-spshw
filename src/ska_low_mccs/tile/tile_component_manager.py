@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+import json
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
@@ -1227,13 +1228,17 @@ class TileComponentManager(MccsComponentManager):
         :param argin: JSON string
 
         :raises NotImplementedError: Command not implemented
-        """
+        """ 
+        params = json.loads(argin)
+        startTime = params.get("StartTime", None)
+        delay = params.get("Delay", 2)
+        success = False
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(
+            success = cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
-            ).start_acquisition(argin)
+            ).start_acquisition(startTime, delay)
         except NotImplementedError:
             raise NotImplementedError
         except Exception as ex:
@@ -1250,10 +1255,16 @@ class TileComponentManager(MccsComponentManager):
             return
 
         if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Start acquisition has completed",
-            )
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="Start acquisition has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, 
+                    result="Start acquisition task failed"
+                )
             return
 
     @check_communicating

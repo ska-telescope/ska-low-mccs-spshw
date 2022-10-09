@@ -56,18 +56,8 @@ class TpmDriver(MccsComponentManager):
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
-        1: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
+        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
     }
 
     def __init__(
@@ -140,10 +130,7 @@ class TpmDriver(MccsComponentManager):
         self.tile = cast(
             Tile12,
             HwTile(
-                ip=self._ip,
-                port=self._port,
-                logger=logger,
-                tpm_version=tpm_version,
+                ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
             ),
         )
 
@@ -159,9 +146,7 @@ class TpmDriver(MccsComponentManager):
         self._stop_polling_event = threading.Event()
 
         self._polling_thread = threading.Thread(
-            target=self._polling_loop,
-            name="tpm_polling_thread",
-            daemon=True,
+            target=self._polling_loop, name="tpm_polling_thread", daemon=True
         )
         self._polling_thread.start()  # doesn't start polling, only starts the thread
 
@@ -291,14 +276,13 @@ class TpmDriver(MccsComponentManager):
         self._tpm_status = TpmStatus.UNPROGRAMMED
         self._is_programmed = False
         status = self.tpm_status
-        if status == TpmStatus.UNPROGRAMMED or \
-           status == TpmStatus.PROGRAMMED:
-        #if self._check_programmed():
-        #    self._tpm_status = TpmStatus.PROGRAMMED
-        #    self._is_programmed = True
-        #if self._is_programmed:
+        if status == TpmStatus.UNPROGRAMMED or status == TpmStatus.PROGRAMMED:
+            # if self._check_programmed():
+            #    self._tpm_status = TpmStatus.PROGRAMMED
+            #    self._is_programmed = True
+            # if self._is_programmed:
             self.logger.debug("Tpm not initialised. Initialise it.")
-            #self._initialise()
+            # self._initialise()
         else:
             self.logger.debug("Tpm initialised. Initialisation skipped")
 
@@ -446,9 +430,7 @@ class TpmDriver(MccsComponentManager):
         return self._is_programmed
 
     def download_firmware(
-        self: TpmDriver,
-        bitfile: str,
-        task_callback: Optional[Callable] = None,
+        self: TpmDriver, bitfile: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Download firmware bitfile onto the TPM as a long runnning command.
@@ -566,10 +548,10 @@ class TpmDriver(MccsComponentManager):
             #
             # extra steps required to have it working
             #
-            self.initialise_beamformer(128, 8,True,True)
+            self.initialise_beamformer(128, 8, True, True)
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
-                #self.tile.post_synchronisation()
+                # self.tile.post_synchronisation()
                 self.tile.set_station_id(self._tile_id, self._station_id)
             self.logger.debug("Lock released")
             self._tpm_status = TpmStatus.INITIALISED
@@ -584,7 +566,8 @@ class TpmDriver(MccsComponentManager):
             self.logger.error("TpmDriver: Cannot initialise board")
             if task_callback is not None:
                 task_callback(
-                    status=TaskStatus.COMPLETED, result="The initialisation task has failed"
+                    status=TaskStatus.COMPLETED,
+                    result="The initialisation task has failed",
                 )
 
     def initialise(self: TpmDriver, task_callback: Optional[Callable] = None) -> None:
@@ -877,11 +860,7 @@ class TpmDriver(MccsComponentManager):
         return reglist
 
     def read_register(
-        self: TpmDriver,
-        register_name: str,
-        nb_read: int,
-        offset: int,
-        device: int,
+        self: TpmDriver, register_name: str, nb_read: int, offset: int, device: int
     ) -> list[int]:
         """
         Read the values in a named register.
@@ -917,11 +896,7 @@ class TpmDriver(MccsComponentManager):
         return lvalue[nmin:nmax]
 
     def write_register(
-        self: TpmDriver,
-        register_name: str,
-        values: list[Any],
-        offset: int,
-        device: int,
+        self: TpmDriver, register_name: str, values: list[Any], offset: int, device: int
     ) -> None:
         """
         Read the values in a register.
@@ -1226,10 +1201,7 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def load_calibration_curve(
-        self: TpmDriver,
-        antenna: int,
-        beam: int,
-        calibration_coefficients: list[int],
+        self: TpmDriver, antenna: int, beam: int, calibration_coefficients: list[int]
     ) -> None:
         """
         Load calibration curve.
@@ -1405,9 +1377,7 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.configure_integrated_channel_data(
-                    integration_time,
-                    first_channel,
-                    last_channel,
+                    integration_time, first_channel, last_channel
                 )
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1436,9 +1406,7 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.configure_integrated_beam_data(
-                    integration_time,
-                    first_channel,
-                    last_channel,
+                    integration_time, first_channel, last_channel
                 )
             except Exception:
                 self.logger.warning("TpmDriver: Tile access failed")
@@ -1581,17 +1549,20 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def start_acquisition(
-        self: TpmDriver, start_time: Optional[int] = None, delay: int = 2
+        self: TpmDriver, start_time: Optional[int] = None, delay: Optional[int] = 2
     ) -> bool:
         """
         Start data acquisition.
+
         This must be run as a long running command
-        :param start_time: the time at which to start data acquisition,
-            defaults to None
+        :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
+        :returns: if data acquisition started correctly
         """
         started = False
-        self.logger.debug(f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}")
+        self.logger.debug(
+            f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}"
+        )
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 # Check if ARP table is populated before starting
@@ -1608,14 +1579,19 @@ class TpmDriver(MccsComponentManager):
         if not started:
             return False
         self.logger.info("Waiting for start acquisition")
-        max_timeout = 30    # Maximum delay, in 0.1 seconds
+        max_timeout = 30  # Maximum delay, in 0.1 seconds
         started = False
-        for i in range (max_timeout):
+        for i in range(max_timeout):
             time.sleep(0.1)
             if self._hardware_lock.acquire(timeout=0.2):
-                try: 
-                    started = (self.tile['fpga1.dsp_regfile.stream_status.channelizer_vld']==1) and \
-                              (self.tile['fpga2.dsp_regfile.stream_status.channelizer_vld']==1)
+                try:
+                    started = (
+                        self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"]
+                        == 1
+                    ) and (
+                        self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"]
+                        == 1
+                    )
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
                 self._hardware_lock.release()
@@ -1870,7 +1846,7 @@ class TpmDriver(MccsComponentManager):
 
         TODO Private method or must be available externally?
         """
-        #with self._hardware_lock:
+        # with self._hardware_lock:
         #    self.tile.post_synchronisation()
 
     def sync_fpgas(self: TpmDriver) -> None:

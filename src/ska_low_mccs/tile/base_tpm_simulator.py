@@ -927,7 +927,7 @@ class BaseTpmSimulator(ObjectComponent):
     def start_acquisition(
         self: BaseTpmSimulator,
         start_time: Optional[int] = None,
-        delay: int = 2,
+        delay: Optional[int] = 2,
     ) -> None:
         """
         Start data acquisition.

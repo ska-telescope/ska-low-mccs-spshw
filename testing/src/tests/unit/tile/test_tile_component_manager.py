@@ -529,7 +529,7 @@ class TestStaticSimulatorCommon:
             ("send_beam_data", 0),
             ("stop_data_transmission", 0),
             ("compute_calibration_coefficients", 0),
-            ("start_acquisition", 1),
+            ("start_acquisition", 2),
             ("set_time_delays", 1),
             ("set_csp_rounding", 1),
             ("set_lmc_integrated_download", 3),

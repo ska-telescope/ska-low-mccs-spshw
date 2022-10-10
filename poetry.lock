@@ -1018,26 +1018,29 @@ version = "0.1.1"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 category = "main"
 optional = false
-python-versions = ">=3.10,<3.11"
+python-versions = "~3.10"
+develop = false
 
 [package.dependencies]
-backoff = ">=2.1.2,<3.0.0"
-enum34 = ">=1.1.10,<2.0.0"
-future = ">=0.18.2,<0.19.0"
-jsonschema = ">=4.9.0,<5.0.0"
+backoff = "^2.1.2"
+enum34 = "^1.1.10"
+future = "^0.18.2"
+jsonschema = "^4.9.0"
 numpy = "1.23.0"
 pytango = "9.3.3"
-PyYAML = ">=6.0,<7.0"
-requests = ">=2.28.1,<3.0.0"
-ska-control-model = ">=0.1.1,<0.2.0"
-ska-ser-logging = ">=0.4.1,<0.5.0"
-ska-tango-base = ">=0.13.6,<0.14.0"
-transitions = ">=0.8.11,<0.9.0"
+PyYAML = "^6.0"
+requests = "^2.28.1"
+ska-control-model = "^0.1.1"
+ska-ser-logging = "^0.4.1"
+ska-tango-base = "^0.13.6"
+ska-tango-testing = "^0.4.1"
+transitions = "^0.8.11"
 
 [package.source]
-type = "legacy"
-url = "https://artefact.skao.int/repository/pypi-internal/simple"
-reference = 'ska-nexus'
+type = "git"
+url = "https://gitlab.com/ska-telescope/ska-low-mccs-common.git"
+reference = "f21fe997b7239db0157fd71bbdc8396737f6a67e"
+resolved_reference = "f21fe997b7239db0157fd71bbdc8396737f6a67e"
 
 [[package]]
 name = "ska-ser-logging"
@@ -1070,6 +1073,22 @@ pytango = "9.3.3"
 ska-control-model = "0.1.1"
 ska-ser-logging = ">=0.4.1,<0.5.0"
 transitions = ">=0.8.11,<0.9.0"
+
+[package.source]
+type = "legacy"
+url = "https://artefact.skao.int/repository/pypi-internal/simple"
+reference = 'ska-nexus'
+
+[[package]]
+name = "ska-tango-testing"
+version = "0.4.1"
+description = "Test harness for testing SKA Tango devices"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[package.dependencies]
+pytango = ">=9.3,<10.0"
 
 [package.source]
 type = "legacy"
@@ -1173,7 +1192,7 @@ python-versions = "*"
 name = "typing-extensions"
 version = "4.3.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -1226,7 +1245,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "1e508a2a4c9f504937fe32881f004ec21688757467b7a9ecacb16926f30bb226"
+content-hash = "01ccd3bc76079298112859acde88a3d807efff9732e0d5d2ea7cda5a41a910e8"
 
 [metadata.files]
 aavs-system = [
@@ -1884,10 +1903,7 @@ ska-control-model = [
     {file = "ska-control-model-0.1.1.tar.gz", hash = "sha256:29d970f59ddaef95ffb4b5212183e97aab57f280dc5df11bb9e0a198e4e146e2"},
     {file = "ska_control_model-0.1.1-py3-none-any.whl", hash = "sha256:ab1327b7cbbc82da6f4b3c61735dd63e409a0cff995f063446287bf266d01562"},
 ]
-ska-low-mccs-common = [
-    {file = "ska-low-mccs-common-0.1.1.tar.gz", hash = "sha256:593e9137c02c6ae42da17b1bb038594a8179bd690c24bf850efbcc5da2c11e8a"},
-    {file = "ska_low_mccs_common-0.1.1-py3-none-any.whl", hash = "sha256:fe2c1c074877422fffa189d302ff5cc8385f29133c7e2d9dd05b95ad39170d58"},
-]
+ska-low-mccs-common = []
 ska-ser-logging = [
     {file = "ska_ser_logging-0.4.1+0a677a67-py3-none-any.whl", hash = "sha256:8b2bf14e9981966c22503b6b6477b6386dec1def1f71295579f0686d55b83841"},
     {file = "ska_ser_logging-0.4.1+0a677a67.tar.gz", hash = "sha256:558622000db39668d3a35b6986af9d70dac36635826636ef2c07f816a149a06d"},
@@ -1895,6 +1911,10 @@ ska-ser-logging = [
 ska-tango-base = [
     {file = "ska-tango-base-0.13.6.tar.gz", hash = "sha256:4f8f483bdbc85e8e2774dd704defe0ab0ebb6b5345f988b7aec4701ddab20cbd"},
     {file = "ska_tango_base-0.13.6-py3-none-any.whl", hash = "sha256:a5a73d2ffa2c29acace58ebef00ca7bd2a508746238e0598c285cf0d473bf626"},
+]
+ska-tango-testing = [
+    {file = "ska-tango-testing-0.4.1.tar.gz", hash = "sha256:c41c1d6593b59de15aa7a11e05a61b39f08e900e824d4325afb053327bc21e63"},
+    {file = "ska_tango_testing-0.4.1-py3-none-any.whl", hash = "sha256:58541c22e741387b119c63ad1f90265f7f5e7b76b21049fc266bb1133fc27bbf"},
 ]
 snowballstemmer = [
     {file = "snowballstemmer-2.2.0-py2.py3-none-any.whl", hash = "sha256:c8e1716e83cc398ae16824e5572ae04e0d9fc2c6b985fb0f900f5f0c96ecba1a"},

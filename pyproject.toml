@@ -30,7 +30,7 @@ scipy = "^1.9.1"
 ska-tango-base = "^0.13.6"
 ska-control-model = "0.1.1"
 ska-ser-logging = "^0.4.1"
-ska-low-mccs-common = "0.1.1"
+ska-low-mccs-common = {git = "https://gitlab.com/ska-telescope/ska-low-mccs-common.git", rev = "f21fe997b7239db0157fd71bbdc8396737f6a67e"}
 transitions = "^0.8.11"
 certifi = "^2022.6.15"
 typing_extensions = "^4.3.0"

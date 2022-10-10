@@ -52,7 +52,6 @@ class MccsAntenna(SKABaseDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         super().init_device()
-        self.PushChanges()
 
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()

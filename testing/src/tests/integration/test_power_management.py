@@ -139,6 +139,7 @@ class TestPowerManagement:
         for device in devices:
             assert device.state() == expected_state, f"device = {device.name}"
 
+    @pytest.mark.skip(reason="Constantly hangs in CI pipeline")
     def test_controller_state_rollup(
         self: TestPowerManagement, tango_harness: TangoHarness
     ) -> None:

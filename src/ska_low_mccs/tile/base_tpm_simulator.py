@@ -554,7 +554,6 @@ class BaseTpmSimulator(ObjectComponent):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        lmc_mac: Optional[str] = None,
     ) -> None:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -565,7 +564,6 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param lmc_mac: LMC MAC address, defaults to None
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -976,7 +974,6 @@ class BaseTpmSimulator(ObjectComponent):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        lmc_mac: Optional[str] = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -989,7 +986,6 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param lmc_mac: MAC address of destination, defaults to None
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

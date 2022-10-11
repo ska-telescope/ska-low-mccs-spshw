@@ -117,14 +117,8 @@ class MccsTile(SKABaseDevice):
             ("SetLmcDownload", self.SetLmcDownloadCommand),
             ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
-            (
-                "ConfigureStationBeamformer",
-                self.ConfigureStationBeamformerCommand,
-            ),
-            (
-                "LoadCalibrationCoefficients",
-                self.LoadCalibrationCoefficientsCommand,
-            ),
+            ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
+            ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
             ("LoadCalibrationCurve", self.LoadCalibrationCurveCommand),
             ("LoadBeamAngle", self.LoadBeamAngleCommand),
             ("SwitchCalibrationBank", self.SwitchCalibrationBankCommand),
@@ -135,10 +129,7 @@ class MccsTile(SKABaseDevice):
                 "ConfigureIntegratedChannelData",
                 self.ConfigureIntegratedChannelDataCommand,
             ),
-            (
-                "ConfigureIntegratedBeamData",
-                self.ConfigureIntegratedBeamDataCommand,
-            ),
+            ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
             ("StopIntegratedData", self.StopIntegratedDataCommand),
             ("SendRawData", self.SendRawDataCommand),
             ("SendChannelisedData", self.SendChannelisedDataCommand),
@@ -165,8 +156,7 @@ class MccsTile(SKABaseDevice):
             ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(self.component_manager, self.logger),
+                command_name, command_object(self.component_manager, self.logger)
             )
 
         for (command_name, method_name) in [
@@ -190,14 +180,9 @@ class MccsTile(SKABaseDevice):
                 ),
             )
 
-        antenna_args = (
-            self.component_manager,
-            self.logger,
-            self.AntennasPerTile,
-        )
+        antenna_args = (self.component_manager, self.logger, self.AntennasPerTile)
         self.register_command_object(
-            "LoadAntennaTapering",
-            self.LoadAntennaTaperingCommand(*antenna_args),
+            "LoadAntennaTapering", self.LoadAntennaTaperingCommand(*antenna_args)
         )
         self.register_command_object(
             "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
@@ -276,8 +261,7 @@ class MccsTile(SKABaseDevice):
     # Callbacks
     # ----------
     def _component_communication_state_changed(
-        self: MccsTile,
-        communication_state: CommunicationStatus,
+        self: MccsTile, communication_state: CommunicationStatus
     ) -> None:
         """
         Handle change in communications status between component manager and component.
@@ -374,11 +358,7 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    @attribute(
-        dtype=SimulationMode,
-        memorized=True,
-        hw_memorized=True,
-    )
+    @attribute(dtype=SimulationMode, memorized=True, hw_memorized=True)
     def simulationMode(self: MccsTile) -> int:
         """
         Report the simulation mode of the device.
@@ -396,11 +376,7 @@ class MccsTile(SKABaseDevice):
         """
         self.component_manager.simulation_mode = SimulationMode(value)
 
-    @attribute(
-        dtype=TestMode,
-        memorized=True,
-        hw_memorized=True,
-    )
+    @attribute(dtype=TestMode, memorized=True, hw_memorized=True)
     def testMode(self: MccsTile) -> int:
         """
         Report the test mode of the device.
@@ -1015,7 +991,9 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsTile.ReadRegisterCommand, argin: str) -> list[int]:  # type: ignore[override]
+        def do(
+            self: MccsTile.ReadRegisterCommand, argin: str
+        ) -> list[int]:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsTile.ReadRegister` command functionality.
 
@@ -1355,13 +1333,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError(message)
 
             self._component_manager.configure_40g_core(
-                core_id,
-                arp_table_entry,
-                src_mac,
-                src_ip,
-                src_port,
-                dst_ip,
-                dst_port,
+                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1415,7 +1387,9 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsTile.Get40GCoreConfigurationCommand, argin: str) -> str:  # type: ignore[override]
+        def do(
+            self: MccsTile.Get40GCoreConfigurationCommand, argin: str
+        ) -> str:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
 
@@ -1429,21 +1403,25 @@ class MccsTile(SKABaseDevice):
             core_id = params.get("CoreID", None)
             arp_table_entry = params.get("ArpTableEntry", 0)
 
-            item = self._component_manager.get_40g_configuration(
+            item_list = self._component_manager.get_40g_configuration(
                 core_id, arp_table_entry
             )
-            if item is not None:
-                item_new = {
-                    "CoreID": item.get("core_id", None),
-                    "ArpTableEntry": item.get("arp_table_entry", None),
-                    "SrcMac": item.get("src_mac", None),
-                    "SrcIP": item.get("src_ip", None),
-                    "SrcPort": item.get("src_port", None),
-                    "DstIp": item.get("dst_ip", None),
-                    "DstPort": item.get("dst_port", None),
-                }
-                return json.dumps(item_new)
-            raise ValueError("Invalid core id or arp table id specified")
+            item_new = []
+            for item in item_list:
+                item_new.append(
+                    {
+                        "CoreID": item.get("core_id", None),
+                        "ArpTableEntry": item.get("arp_table_entry", None),
+                        "SrcMac": item.get("src_mac", None),
+                        "SrcIP": item.get("src_ip", None),
+                        "SrcPort": item.get("src_port", None),
+                        "DstIp": item.get("dst_ip", None),
+                        "DstPort": item.get("dst_port", None),
+                    }
+                )
+            if len(item_new) == 0:
+                raise ValueError("Invalid core id or arp table id specified")
+            return json.dumps(item_new)
 
     @command(dtype_in="DevString", dtype_out="DevString")
     def Get40GCoreConfiguration(self: MccsTile, argin: str) -> str:
@@ -1516,10 +1494,9 @@ class MccsTile(SKABaseDevice):
             dst_ip = params.get("DstIP", None)
             src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
-            lmc_mac = params.get("LmcMac", None)
 
             self._component_manager.set_lmc_download(
-                mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
+                mode, payload_length, dst_ip, src_port, dst_port
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1535,7 +1512,6 @@ class MccsTile(SKABaseDevice):
         * DstIP - (string) Destination IP.
         * SrcPort - (int) Source port for integrated data streams
         * DstPort - (int) Destination port for integrated data streams
-        * LmcMac: - (int) LMC Mac address is required for 10G lane configuration
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1615,9 +1591,10 @@ class MccsTile(SKABaseDevice):
             nb_chan = argin[0]
             nb_freq = argin[1]
             arr = np.array(argin[2:])
-            np.reshape(arr, (nb_chan, nb_freq))
+            array2d = np.reshape(arr, (nb_chan, nb_freq))
 
-            return self._component_manager.set_channeliser_truncation(arr)
+            self._component_manager.set_channeliser_truncation(array2d)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SetChanneliserTruncation(
@@ -1684,23 +1661,23 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            if len(argin) < 5:
+            if len(argin) < 8:
                 self._component_manager.logger.error(
                     "Insufficient parameters specified"
                 )
                 raise ValueError("Insufficient parameters specified")
-            if len(argin) > (48 * 5):
+            if len(argin) > (48 * 8):
                 self._component_manager.logger.error("Too many regions specified")
                 raise ValueError("Too many regions specified")
-            if len(argin) % 5 != 0:
+            if len(argin) % 8 != 0:
                 self._component_manager.logger.error(
                     "Incomplete specification of region"
                 )
                 raise ValueError("Incomplete specification of region")
             regions = []
             total_chan = 0
-            for i in range(0, len(argin), 5):
-                region = argin[i : i + 5]  # noqa: E203
+            for i in range(0, len(argin), 8):
+                region = argin[i : i + 8]  # noqa: E203
                 start_channel = region[0]
                 if start_channel % 2 != 0:
                     self._component_manager.logger.error(
@@ -1745,8 +1722,11 @@ class MccsTile(SKABaseDevice):
         * start_channel - (int) region starting channel, must be even in range 0 to 510
         * num_channels - (int) size of the region, must be a multiple of 8
         * beam_index - (int) beam used for this region with range 0 to 47
-        * substation_id - (int) Substation
         * subarray_id - (int) Subarray
+        * subarray_logical_channel - (int) logical channel # in the subarray
+        * subarray_beam_id - (int) ID of the subarray beam
+        * substation_id - (int) Substation
+        * aperture_id:  ID of the aperture (station*100+substation?)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1754,7 +1734,7 @@ class MccsTile(SKABaseDevice):
 
         :example:
 
-        >>> regions = [[4, 24, 0, 0, 0], [26, 40, 1, 0, 0]]
+        >>> regions = [[4, 24, 0, 0, 0, 3, 1, 101], [26, 40, 1, 0, 24, 4, 2, 102]]
         >>> input = list(itertools.chain.from_iterable(regions))
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SetBeamFormerRegions", input)
@@ -1874,8 +1854,7 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.LoadCalibrationCoefficientsCommand,
-            argin: list[float],
+            self: MccsTile.LoadCalibrationCoefficientsCommand, argin: list[float]
         ) -> Tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.LoadCalibrationCoefficients` commands.
@@ -2565,9 +2544,7 @@ class MccsTile(SKABaseDevice):
             last_channel = params.get("LastChannel", 511)
 
             self._component_manager.configure_integrated_channel_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2638,9 +2615,7 @@ class MccsTile(SKABaseDevice):
             last_channel = params.get("LastChannel", 191)
 
             self._component_manager.configure_integrated_beam_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2822,11 +2797,7 @@ class MccsTile(SKABaseDevice):
             seconds = params.get("Seconds", 0.2)
 
             self._component_manager.send_channelised_data(
-                number_of_samples,
-                first_channel,
-                last_channel,
-                timestamp,
-                seconds,
+                number_of_samples, first_channel, last_channel, timestamp, seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -3294,12 +3265,11 @@ class MccsTile(SKABaseDevice):
             if mode is None:
                 self._component_manager.logger.error("Mode is a mandatory parameter")
                 raise ValueError("Mode is a mandatory parameter")
-            channel_payload_length = params.get("ChannelPayloadLength", 2)
-            beam_payload_length = params.get("BeamPayloadLength", 2)
+            channel_payload_length = params.get("ChannelPayloadLength", 1024)
+            beam_payload_length = params.get("BeamPayloadLength", 1024)
             dst_ip = params.get("DstIP", None)
             src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
-            lmc_mac = params.get("LmcMac", None)
 
             self._component_manager.set_lmc_integrated_download(
                 mode,
@@ -3308,7 +3278,6 @@ class MccsTile(SKABaseDevice):
                 dst_ip,
                 src_port,
                 dst_port,
-                lmc_mac,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -3327,7 +3296,6 @@ class MccsTile(SKABaseDevice):
         * DstIP - (string) Destination IP
         * SrcPort - (int) Source port for integrated data streams
         * DstPort - (int) Destination port for integrated data streams
-        * LmcMac: - (int) LMC Mac address is required for 10G lane configuration
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3337,7 +3305,7 @@ class MccsTile(SKABaseDevice):
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"Mode": "1G", "ChannelPayloadLength":4,
-                    "BeamPayloadLength": 6, DstIP="10.0.1.23"}
+                    "BeamPayloadLength": 1024, DstIP="10.0.1.23"}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """

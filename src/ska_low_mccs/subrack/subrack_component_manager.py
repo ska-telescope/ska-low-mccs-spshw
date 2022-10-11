@@ -12,6 +12,13 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_control_model import (
+    CommunicationStatus,
+    PowerState,
+    ResultCode,
+    SimulationMode,
+    TaskStatus,
+)
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
     MccsComponentManager,
@@ -21,9 +28,6 @@ from ska_low_mccs_common.component import (
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subrack import SubrackData, SubrackDriver, SubrackSimulator
 

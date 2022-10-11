@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 import pytest
 import tango
+from ska_control_model import CommunicationStatus, PowerState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import (
@@ -21,8 +22,6 @@ from ska_low_mccs_common.testing.mock import (
     MockCallableDeque,
     MockDeviceBuilder,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
 from tango.server import command
 
 from ska_low_mccs import MccsAntenna

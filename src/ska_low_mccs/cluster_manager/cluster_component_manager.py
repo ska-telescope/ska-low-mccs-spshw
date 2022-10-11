@@ -12,18 +12,18 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    ResultCode,
+    SimulationMode,
+    TaskStatus,
+)
 from ska_low_mccs_common.component import (
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
     check_communicating,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    HealthState,
-    SimulationMode,
-)
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
 

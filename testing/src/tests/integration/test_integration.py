@@ -14,12 +14,11 @@ from typing import Callable, Iterable, cast
 
 import pytest
 import tango
+from ska_control_model import AdminMode, HealthState, ObsState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
 from ska_low_mccs_common.utils import call_with_json
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, ObsState
 
 
 @pytest.fixture()

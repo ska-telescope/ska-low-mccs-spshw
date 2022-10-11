@@ -13,17 +13,17 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
+from ska_control_model import (
+    CommunicationStatus,
+    PowerState,
+    ResultCode,
+    SimulationMode,
+    TestMode,
+)
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallable
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    PowerState,
-    SimulationMode,
-    TestMode,
-)
 from tango.server import command
 
 from ska_low_mccs import MccsTile

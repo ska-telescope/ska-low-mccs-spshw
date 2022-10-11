@@ -16,14 +16,14 @@ from typing import Any, Callable, Union
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_low_mccs_common.testing.mock import MockCallable
-from ska_tango_base.control_model import (
+from ska_control_model import (
     CommunicationStatus,
     PowerState,
     SimulationMode,
+    TaskStatus,
     TestMode,
 )
-from ska_tango_base.executor import TaskStatus
+from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,

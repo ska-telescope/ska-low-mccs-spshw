@@ -14,13 +14,11 @@ from typing import Any, Callable, Iterable
 
 import pytest
 import pytest_mock
+from ska_control_model import HealthState, ResultCode, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import MockCallable, MockDeviceBuilder
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs import MccsStation
 from ska_low_mccs.station import StationComponentManager

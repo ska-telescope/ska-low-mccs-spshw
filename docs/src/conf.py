@@ -57,7 +57,7 @@ autodoc_mock_imports = [
     "strict_rfc3339",
     "tango",
     "uritools",
-    "yaml",
+    # "yaml",
     "ska_control_model",
     "ska_low_mccs_common",
 ]
@@ -91,15 +91,20 @@ copyright = "2020, SKA MCCS Team"
 
 # -- General configuration ------------------------------------------------
 nitpick_ignore = [
-    ("py:class", "callable"),
-    ("py:class", "optional"),
-    ("py:class", "Wrapped"),
-    ("py:exc", "BoardError"),
-    ("py:exc", "LibraryError"),
-    ("py:exc", "PluginError"),
+    # TODO: these all have to be ignored because we are exposing through
+    # our public interface, objects from external packages that we are
+    # mocking out when we build our docs. We should look at refactoring
+    # so that these external dependencies don't leak out through our
+    # public interface.
+    ("py:class", "Angle"),
+    ("py:class", "astropy.time.core.Time"),
+    ("py:class", "numpy.complex"),
     ("py:exc", "fire.core.FireError"),
-    ("py:exc", "Status"),
     ("py:exc", "yaml.YAMLError"),
+    # These last two come from ska-control-model so might be impossible
+    # to # factor out of the public interface.
+    ("py:class", "HealthState"),
+    ("py:class", "ResultCode"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -282,7 +287,9 @@ typing.TYPE_CHECKING = True
 
 
 intersphinx_mapping = {
-    "https://docs.python.org/3/": None,
+    "python": ("https://docs.python.org/3.10/", None),
+    "astropy": ("https://docs.astropy.org/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
     "ska-control-model": (
         "https://developer.skao.int/projects/ska-control-model/en/latest/",

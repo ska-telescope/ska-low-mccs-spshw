@@ -260,6 +260,15 @@ There is no harm in leaving minikube running all the time. But if you
    minikube-delete
 
 
+Install TANGO
+-------------
+
+To set up TANGO, pogo, jive and all the other tools you will need to develop and test the MCCS
+project you can either use the install_script.sh or install_ansible.yml files that will install
+those and their dependancies for you, alternativly you can follow the instructions here
+https://tango-controls.readthedocs.io/en/latest/installation/index.html
+
+
 Set up Grafana
 --------------
 

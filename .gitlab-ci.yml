@@ -51,17 +51,3 @@ include:
   # Helm chart
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/helm-chart.gitlab-ci.yml'
-
-
-docs-build:
-  image: artefact.skao.int/ska-cicd-k8s-tools-build-deploy:0.8.0
-
-docs-pages:
-  image: artefact.skao.int/ska-cicd-k8s-tools-build-deploy:0.8.0
-
-python-build-for-development:
-  image: $SKA_PYTHON_PYTANGO_BUILDER_IMAGE
-
-python-build-for-publication:
-  image: $SKA_PYTHON_PYTANGO_BUILDER_IMAGE
-

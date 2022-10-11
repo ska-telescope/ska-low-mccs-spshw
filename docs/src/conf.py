@@ -46,18 +46,12 @@ sys.path.insert(0, os.path.abspath("../../src"))
 # pylint: disable=invalid-name
 autodoc_mock_imports = [
     "astropy",
-    "backoff",
-    "fire",
-    "jsonschema",
     "numpy",
     "pyfabil",
     "pyaavs",
     "scipy",
     "ska_tango_base",
-    "strict_rfc3339",
     "tango",
-    "uritools",
-    # "yaml",
     "ska_control_model",
     "ska_low_mccs_common",
 ]

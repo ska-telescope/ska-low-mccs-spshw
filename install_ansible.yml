@@ -1,0 +1,86 @@
+# This ansible playbook sets up a machine with all the packages and tools
+# that a developer should need to get started with MCCS project
+# It takes two arguements, the user that will be developing, as they will 
+# need permissions to use docker, and a password for the sql server that will
+# be run.
+
+- name: Setup development enviroment
+  hosts: localhost
+  connection: local
+
+  tasks:
+# Check that arguments have been provided 
+  - name: 'Check mandatory variables are defined'
+    assert:
+      that:
+        - USER_RUNNING is defined
+        - SQL_PASSWORD is defined
+  - name: Docker install, precursors 
+    apt:
+      name:
+        - build-essential
+        - apt-transport-https 
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+    become: yes
+  - name: Fetch docker key
+    shell: 'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -'
+  - name: Fetch docker
+    shell: 'add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"'
+    become: yes
+  - name: Get docker cli
+    apt:
+      name: 
+        - docker-ce
+        - docker-ce-cli
+      update_cache: yes
+    become: yes
+  - name: Add user to docker 
+    user:
+      name: "{{ USER_RUNNING }}"
+      append: yes
+      groups: docker
+    become: true
+  - name: Tango install, precursors
+    apt:
+      name:
+        - g++ 
+        - openjdk-8-jdk
+        - mariadb-server
+        - libmariadb-dev
+        - zlib1g-dev
+        - libomniorb4-dev
+        - libcos4-dev
+        - omniidl
+        - libzmq3-dev
+        - make
+    become: yes
+  - name: Start sql server
+    shell: service mariadb start
+    become: yes
+  - name: Change password
+    shell: mysql -e  "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ SQL_PASSWORD }}';"
+    become: yes
+  - name: Unarchive tango
+    ansible.builtin.unarchive:
+      src: https://gitlab.com/api/v4/projects/24125890/packages/generic/TangoSourceDistribution/9.3.5/tango-9.3.5.tar.gz
+      dest: .
+      remote_src: yes
+  - name: Configure tango
+    shell: tango-9.3.5/configure --enable-java=yes --enable-mariadb=yes --enable-dbserver=yes --enable-dbcreate=yes --with-mysql-admin=root --with-mysql-admin-passwd={{ SQL_PASSWORD }} --prefix=/usr/local/tango
+  - name: Build the default target
+    make:
+      chdir: .
+  - name: Run 'install' target as root
+    make:
+      chdir: .
+      target: install
+    become: yes
+  - name: Add the sql password to tango allowing it to use the sql server
+    shell: sed "2 i export MYSQL_USER=root \nexport MYSQL_PASSWORD={{ SQL_PASSWORD }}" /usr/local/tango/bin/tango
+    become: yes
+  - name: Export TANGO_HOST
+    shell: echo 'export TANGO_HOST=localhost:10000' >> ~/.bashrc 
+    become: yes

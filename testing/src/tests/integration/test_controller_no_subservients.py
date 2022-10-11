@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import pytest
 import tango
+from ska_control_model import AdminMode, HealthState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState
 from tango import DevState
 
 

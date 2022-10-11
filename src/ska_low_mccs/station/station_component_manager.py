@@ -15,6 +15,7 @@ import threading
 from typing import Callable, Optional, Sequence
 
 import tango
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
@@ -22,9 +23,6 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 from ska_low_mccs_common.utils import threadsafe
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["StationComponentManager"]
 
@@ -365,7 +363,6 @@ class StationComponentManager(MccsComponentManager):
         `self._off` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
         :return: a result code and response message
         """
         return self.submit_task(self._off, task_callback=task_callback)
@@ -412,7 +409,6 @@ class StationComponentManager(MccsComponentManager):
         `self._on` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
 
         :return: a task staus and response message
         """
@@ -431,7 +427,6 @@ class StationComponentManager(MccsComponentManager):
         antennas.
 
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
         :param task_abort_event: Abort the task
         """
         if task_callback:

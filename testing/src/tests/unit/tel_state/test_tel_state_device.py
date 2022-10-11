@@ -12,10 +12,10 @@ from typing import Any
 
 import pytest
 import tango
+from ska_control_model import AdminMode, HealthState
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.control_model import AdminMode, HealthState
 
 
 @pytest.fixture()

@@ -15,23 +15,19 @@ from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import tango
-from ska_tango_base.base import SKABaseDevice
-
-# from ska_tango_base.base.op_state_model import OpStateModel
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    FastCommand,
-    ResultCode,
-    SubmittedSlowCommand,
-)
-from ska_tango_base.control_model import (
+from ska_control_model import (
     AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
+    ResultCode,
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.base import SKABaseDevice
+
+# from ska_tango_base.base.op_state_model import OpStateModel
+from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.tile import TileComponentManager, TileHealthModel

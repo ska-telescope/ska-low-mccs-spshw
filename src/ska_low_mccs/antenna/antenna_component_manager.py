@@ -14,6 +14,7 @@ import threading
 from typing import Any, Callable, Optional
 
 import tango
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
@@ -21,9 +22,6 @@ from ska_low_mccs_common.component import (
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["AntennaComponentManager"]
 

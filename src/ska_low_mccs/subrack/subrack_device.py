@@ -15,21 +15,17 @@ import threading
 from typing import Any, List, Optional, Tuple, cast
 
 import tango
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    FastCommand,
-    ResultCode,
-    SubmittedSlowCommand,
-)
-from ska_tango_base.control_model import (
+from ska_control_model import (
     AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
+    ResultCode,
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.subrack import (

@@ -14,6 +14,13 @@ import logging
 import threading
 from typing import Any, Callable, Hashable, Iterable, Optional
 
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
@@ -21,9 +28,6 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 from ska_low_mccs_common.resource_manager import ResourceManager, ResourcePool
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.controller import ControllerResourceManager
 

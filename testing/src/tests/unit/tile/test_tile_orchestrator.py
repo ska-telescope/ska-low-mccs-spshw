@@ -17,7 +17,7 @@ from typing import Any, ContextManager, Mapping, Optional, Tuple, Union, cast
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.tile.tile_orchestrator import (
     StateStimulusTupleType,

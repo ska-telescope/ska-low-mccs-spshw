@@ -14,11 +14,10 @@ from typing import Any
 
 import pytest
 import pytest_mock
+from ska_control_model import HealthState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock.mock_callable import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsPasdBus
 

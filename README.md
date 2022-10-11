@@ -65,24 +65,6 @@ For a basic environment in which devices may be tested:
 
        root@caa98e8e264d:/app# python3 -m pip install -r requirements-dev.txt -r testing/requirements.txt
 
-Testing and linting code, and building docs
--------------------------------------------
-
-This project uses ``tox`` to set up the various build stages. To execute
-in the development environment, simply run::
-
-    root@caa98e8e264d:/app# tox
-
-Three target environments are available:
-
-* ``py37`` for testing
-* ``docs`` for building documentation
-* ``lint`` for linting the code.
-
- These can be selected using the `-e` option.
-
-    root@caa98e8e264d:/app# tox -e py37
-
 To use with actual tile hardware 
 ---------------------------
 

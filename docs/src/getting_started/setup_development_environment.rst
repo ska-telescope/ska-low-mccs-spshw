@@ -50,7 +50,17 @@ Basic development setup
 The basic setup described here will allow you to edit code and
 documentation locally, and to launch basic testing, linting and
 documentation builds. For occasional dabblers in the MCCS code, this is
-the only setup required. For more serious developers, further steps are
+the only setup required. 
+We recommend for that new developers develop inside a docker container
+as it makes things a lot easier when working with multiple repos and
+codebases, however it should be noted that this is a choice for devs to
+make, should they want they're free to develop on the bare metal of their
+machine and set up the environment variables and dependencies themselves.
+Should you wish to go via the recommended route and install docker, you can
+follow the instructions below or alternativly use the install_script.sh or 
+install_ansible.yml files to install them for you.
+
+For more serious developers, further steps are
 described in subsequent sections.
 
 The basic steps are

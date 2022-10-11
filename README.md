@@ -12,6 +12,31 @@ The documentation for this project, including how to get started with it, can be
 
 * [MCCS LMC Prototype documentation](https://developer.skatelescope.org/projects/ska-low-mccs/en/latest/index.html "SKA Developer Portal: MCCS LMC Prototype documentation")
 
+Setting up development environment
+----------
+
+To develop in the MCCS repo there are a number of tools and programs that you will need
+such as docker, tango, mariadb and I'm sure many more to come.
+Provided with the repo is are two ways to install all of these tools easily
+without having the go through the fuss yourself (and mess up your PC by
+installing something in the wrong place like I've done twice now)
+
+You can use either the shell script install_script.sh or the ansible playbook
+install_ansible.yml depending on which you are more familiar with.
+To use the shell script simply call the install script script, passing it one argument
+which will be the password for your sql database. So something like
+
+       ./install_script mypassword
+
+You will be asked to provide your sudo password when this script runs as well as
+permission to install files, type yes to all of these.
+
+To install the tools via the ansible playbook you will need to call it with sudo
+and provide it with both the sql password as before, and also the user that will
+be developing on the PC (You can use $USER). For example
+
+       sudo ansiblie-playbook -e "USER_RUNNING=$USER SQL_PASSWORD=mypassword"
+
 How to use
 ----------
 

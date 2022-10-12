@@ -15,9 +15,7 @@ import threading
 from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
 
 import yaml
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 
 
 @enum.unique

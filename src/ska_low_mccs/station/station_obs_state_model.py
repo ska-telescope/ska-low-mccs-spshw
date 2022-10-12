@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, Optional
 
-from ska_tango_base.control_model import ObsState
+from ska_control_model import ObsState
 
 __all__ = ["StationObsStateModel"]
 

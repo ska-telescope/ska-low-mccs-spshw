@@ -13,7 +13,7 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
-from ska_tango_base.control_model import CommunicationStatus
+from ska_control_model import CommunicationStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 

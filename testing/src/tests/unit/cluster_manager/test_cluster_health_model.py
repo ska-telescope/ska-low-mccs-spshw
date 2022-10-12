@@ -12,8 +12,8 @@ import unittest.mock
 from typing import Callable
 
 import pytest
+from ska_control_model import HealthState
 from ska_low_mccs_common.testing.mock import MockCallable
-from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs.cluster_manager import ClusterHealthModel
 

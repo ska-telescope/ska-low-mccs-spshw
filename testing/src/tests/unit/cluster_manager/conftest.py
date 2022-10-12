@@ -13,7 +13,7 @@ import unittest
 from typing import Any, Callable
 
 import pytest
-from ska_tango_base.control_model import CommunicationStatus, SimulationMode
+from ska_control_model import CommunicationStatus, SimulationMode
 
 from ska_low_mccs.cluster_manager import (
     ClusterComponentManager,

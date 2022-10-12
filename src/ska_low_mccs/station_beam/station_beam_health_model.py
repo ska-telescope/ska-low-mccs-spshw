@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
+from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel
-from ska_tango_base.control_model import HealthState
 
 __all__ = ["StationBeamHealthModel"]
 

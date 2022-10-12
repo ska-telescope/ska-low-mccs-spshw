@@ -19,9 +19,8 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 from typing import Any, Callable, Optional, TypeVar, cast
 
+from ska_control_model import PowerState, ResultCode
 from ska_low_mccs_common.component import ObjectComponent
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import PowerState
 from typing_extensions import Final
 
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])

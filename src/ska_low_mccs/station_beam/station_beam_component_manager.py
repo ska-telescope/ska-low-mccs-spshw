@@ -14,15 +14,13 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["StationBeamComponentManager"]
 

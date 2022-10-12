@@ -14,7 +14,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 import requests
-from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
+from ska_control_model import CommunicationStatus, PowerState, SimulationMode
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,

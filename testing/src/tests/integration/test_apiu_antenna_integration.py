@@ -12,10 +12,10 @@ import time
 import unittest.mock
 
 import pytest
+from ska_control_model import AdminMode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
-from ska_tango_base.control_model import AdminMode
 from tango import DevState
 
 

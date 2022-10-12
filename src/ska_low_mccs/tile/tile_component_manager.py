@@ -15,6 +15,13 @@ import time
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
+from ska_control_model import (
+    CommunicationStatus,
+    PowerState,
+    SimulationMode,
+    TaskStatus,
+    TestMode,
+)
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.component import (
     MccsComponentManager,
@@ -25,13 +32,6 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    PowerState,
-    SimulationMode,
-    TestMode,
-)
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.tile import (
     BaseTpmSimulator,

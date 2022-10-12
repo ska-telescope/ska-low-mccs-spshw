@@ -14,8 +14,8 @@ from typing import Any, List, Optional, Tuple
 
 import ska_low_mccs_common.release as release
 import tango
-from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
+from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 

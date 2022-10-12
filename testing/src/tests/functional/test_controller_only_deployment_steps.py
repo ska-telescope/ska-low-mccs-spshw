@@ -11,9 +11,9 @@ from __future__ import annotations
 import pytest
 import tango
 from pytest_bdd import given, parsers, scenarios, then, when
+from ska_control_model import HealthState
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType
-from ska_tango_base.control_model import HealthState
 
 
 @pytest.fixture(scope="module")

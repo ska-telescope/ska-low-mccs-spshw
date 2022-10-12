@@ -14,19 +14,19 @@ import unittest
 from typing import Callable, Type
 
 import pytest
-from ska_low_mccs_common import MccsDeviceProxy, release
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
+from ska_control_model import (
     AdminMode,
     ControlMode,
     HealthState,
     ObsState,
     PowerState,
+    ResultCode,
     SimulationMode,
     TestMode,
 )
+from ska_low_mccs_common import MccsDeviceProxy, release
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from tango import DevState
 from tango.server import command
 

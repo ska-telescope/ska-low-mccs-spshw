@@ -1573,6 +1573,8 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
+        SUCCEEDED_MESSAGE = "SetChannelizerTruncation command completed OK"
+
         def do(  # type: ignore[override]
             self: MccsTile.SetChanneliserTruncationCommand, argin: list[int]
         ) -> Any:

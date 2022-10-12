@@ -312,29 +312,32 @@ class TpmDriver(MccsComponentManager):
             # try to determine the status. Successive tests until one fails
             # if self.power_state != PowerState.ON:
             #     self._tpm_status = TpmStatus.OFF
-            if self.communication_state != CommunicationStatus.ESTABLISHED:
-                self._tpm_status = TpmStatus.UNCONNECTED
-            else:
-                if self._hardware_lock.acquire(timeout=0.2):
-                    try:
-                        self._is_programmed = self.tile.is_programmed()
-                        if self._is_programmed is False:
-                            self._tpm_status = TpmStatus.UNPROGRAMMED
-                        elif self._tile_id != self.tile.get_tile_id():
-                            self._tpm_status = TpmStatus.PROGRAMMED
-                        elif self.tile.current_frame == 0:
-                            self._tpm_status = TpmStatus.INITIALISED
-                        else:
-                            self._tpm_status = TpmStatus.SYNCHRONISED
-                    except Exception as e:
-                        self.logger.warning(f"tpm_driver: tpm_status failed: {e}")
-                        # TODO This must be handled in the connection loop when implemented
-                        self._tpm_status = TpmStatus.UNCONNECTED
-                    self._hardware_lock.release()
-                else:
-                    self.logger.debug("tpm_driver: tpm_status uses current value")
-                    # raise ConnectionError("Cannot get hardware lock")
+            self._update_tpm_status()
         return self._tpm_status
+
+    def _update_tpm_status(self: TpmDriver) -> None:
+        """Update the value of _tpm_status according to hardware state."""
+        if self.communication_state != CommunicationStatus.ESTABLISHED:
+            self._tpm_status = TpmStatus.UNCONNECTED
+        else:
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    self._is_programmed = self.tile.is_programmed()
+                    if self._is_programmed is False:
+                        self._tpm_status = TpmStatus.UNPROGRAMMED
+                    elif self._tile_id != self.tile.get_tile_id():
+                        self._tpm_status = TpmStatus.PROGRAMMED
+                    elif self._check_channeliser_started() is False:
+                        self._tpm_status = TpmStatus.INITIALISED
+                    else:
+                        self._tpm_status = TpmStatus.SYNCHRONISED
+                except Exception as e:
+                    self.logger.warning(f"tpm_driver: tpm_status failed: {e}")
+                    # TODO This must be handled in the connection loop when implemented
+                    self._tpm_status = TpmStatus.UNCONNECTED
+                self._hardware_lock.release()
+            else:
+                self.logger.debug("tpm_driver: tpm_status uses current value")
 
     def get_tile_id(self: TpmDriver) -> int:
         """
@@ -1166,7 +1169,9 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: load_calibration_coefficients")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.load_calibration_coefficients(calibration_coefficients)
+                self.tile.load_calibration_coefficients(
+                    antenna, calibration_coefficients
+                )
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failedi: {e}")
             self._hardware_lock.release()
@@ -1271,12 +1276,16 @@ class TpmDriver(MccsComponentManager):
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :param beam_index: the beam to which the pointing delay should
             be applied
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_pointing_delay")
-        raise NotImplementedError
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.set_pointing_delay(delay_array, beam_index)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
 
     def load_pointing_delay(self: TpmDriver, load_time: int) -> None:
         """
@@ -1556,23 +1565,34 @@ class TpmDriver(MccsComponentManager):
         started = False
         for i in range(max_timeout):
             time.sleep(0.1)
-            if self._hardware_lock.acquire(timeout=0.2):
-                try:
-                    started = (
-                        self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"]
-                        == 1
-                    ) and (
-                        self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"]
-                        == 1
-                    )
-                except Exception as e:
-                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-                self._hardware_lock.release()
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            started = self._check_channelizer_started()
             if started:
                 self._tpm_status = TpmStatus.SYNCHRONISED
                 break
+        if not started:
+            self.logger.warning(
+                f"Acquisition not started after {max_timeout*0.1} seconds"
+            )
+        return started
+
+    def _check_channelizer_started(self: TpmDriver) -> bool:
+        """
+        Check whether acquisition has started correctly.
+
+        :return: true if data stream is valid, acquisitinon has started
+        """
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                started = (
+                    self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"] == 1
+                ) and (
+                    self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"] == 1
+                )
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
         return started
 
     def set_time_delays(self: TpmDriver, delays: list[int]) -> None:
@@ -1582,7 +1602,7 @@ class TpmDriver(MccsComponentManager):
         :param delays: the delay in input streams, specified in nanoseconds.
             A positive delay adds delay to the signal stream
         """
-        self.logger.debug("TpmDriver: set_time_delays")
+        self.logger.debug(f"TpmDriver: set_time_delays: {delays}")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_time_delays(delays)
@@ -1597,12 +1617,16 @@ class TpmDriver(MccsComponentManager):
         Set output rounding for CSP.
 
         :param rounding: the output rounding
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_csp_rounding")
-        raise NotImplementedError
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.set_csp_rounding(rounding)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
 
     def set_lmc_integrated_download(
         self: TpmDriver,

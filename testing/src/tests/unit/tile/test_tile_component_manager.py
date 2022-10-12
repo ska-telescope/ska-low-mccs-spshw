@@ -788,7 +788,7 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         """
         assert tile.get_40g_configuration(-1, 0) == []
-        assert tile.get_40g_configuration(9) is None
+        assert tile.get_40g_configuration(9) == []
 
         tile.configure_40g_core(
             2,
@@ -811,8 +811,8 @@ class TestStaticSimulatorCommon:
         }
 
         assert tile.get_40g_configuration(-1, 0) == [expected]
-        assert tile.get_40g_configuration(2) == expected
-        assert tile.get_40g_configuration(10) is None
+        assert tile.get_40g_configuration(2) == [expected]
+        assert tile.get_40g_configuration(10) == []
 
 
 class TestDynamicSimulatorCommon:

@@ -1421,6 +1421,8 @@ class MccsTile(SKABaseDevice):
                 )
             if len(item_new) == 0:
                 raise ValueError("Invalid core id or arp table id specified")
+            if len(item_new) == 1:
+                return json.dumps(item_new[0])
             return json.dumps(item_new)
 
     @command(dtype_in="DevString", dtype_out="DevString")
@@ -1435,7 +1437,8 @@ class MccsTile(SKABaseDevice):
         * CoreID - (int) core id
         * ArpTableEntry - (int) ARP table entry ID to use
 
-        :return: the configuration is a json string comprising:
+        :return: the configuration is a json string describilg a list (possibly empty)
+                 Each list entry comprising:
                  core_id, arp_table_entry, src_mac, src_ip, src_port, dest_ip, dest_port
 
         :example:

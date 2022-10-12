@@ -34,7 +34,6 @@ ska-low-mccs-common = "0.1.1"
 transitions = "^0.8.11"
 typing_extensions = "^4.3.0"
 certifi = "^2022.6.15"
-typing_extensions = "^4.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"

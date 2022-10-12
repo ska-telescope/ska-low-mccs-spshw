@@ -11,8 +11,7 @@ from __future__ import annotations
 from typing import Callable
 
 import pytest
-
-from ska_low_mccs.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:

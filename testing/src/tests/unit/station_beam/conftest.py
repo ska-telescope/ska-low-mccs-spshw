@@ -14,11 +14,11 @@ from typing import Any, Callable
 
 import pytest
 import tango
+from ska_low_mccs_common.testing import TangoHarness
+from ska_low_mccs_common.testing.mock import MockCallable, MockDeviceBuilder
+from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
-from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import MockCallable, MockDeviceBuilder
-from ska_low_mccs.testing.mock.mock_callable import MockCallableDeque
 
 
 @pytest.fixture()

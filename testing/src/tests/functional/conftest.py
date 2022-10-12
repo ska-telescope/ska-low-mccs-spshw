@@ -13,10 +13,9 @@ from typing import Any, Callable, Generator
 
 import _pytest
 import pytest
-
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs.testing.tango_harness import DevicesToLoadType, TangoHarness
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
 
 
 # TODO: pytest is partially typehinted but does not yet export Config

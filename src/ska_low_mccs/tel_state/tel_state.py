@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 
-from ska_low_mccs.component import ObjectComponent
+from ska_low_mccs_common.component import ObjectComponent
 
 __all__ = ["TelState"]
 

@@ -12,5 +12,5 @@ conftest
 
 test_controller_subarray_interactions
 =====================================
-.. automodule:: ska_low_mccs.tests.functional.test_controller_subarray_interactions
+.. automodule:: ska_low_mccs.tests.functional.test_controller_only_deployment_steps
    :members:

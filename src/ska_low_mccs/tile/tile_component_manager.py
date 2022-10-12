@@ -15,6 +15,15 @@ import time
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.component import (
+    MccsComponentManager,
+    MccsComponentManagerProtocol,
+    ObjectComponentManager,
+    SwitchingComponentManager,
+    check_communicating,
+    check_on,
+)
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     CommunicationStatus,
@@ -24,15 +33,6 @@ from ska_tango_base.control_model import (
 )
 from ska_tango_base.executor import TaskStatus
 
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.component import (
-    MccsComponentManager,
-    MccsComponentManagerProtocol,
-    ObjectComponentManager,
-    SwitchingComponentManager,
-    check_communicating,
-    check_on,
-)
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,

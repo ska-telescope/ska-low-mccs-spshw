@@ -13,11 +13,11 @@ import time
 import unittest.mock
 
 import tango
+from ska_low_mccs_common import MccsDeviceProxy
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.executor import TaskStatus
 
-from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.controller import ControllerComponentManager
 
 

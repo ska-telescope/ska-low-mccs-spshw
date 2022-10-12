@@ -14,15 +14,15 @@ from typing import Any, Callable
 
 import pytest
 import tango
-from ska_tango_base.commands import ResultCode
-
-from ska_low_mccs.subarray import SubarrayComponentManager
-from ska_low_mccs.testing import TangoHarness
-from ska_low_mccs.testing.mock import (  # MockChangeEventCallback,
+from ska_low_mccs_common.testing import TangoHarness
+from ska_low_mccs_common.testing.mock import (  # MockChangeEventCallback,
     MockCallable,
     MockCallableDeque,
     MockDeviceBuilder,
 )
+from ska_tango_base.commands import ResultCode
+
+from ska_low_mccs.subarray import SubarrayComponentManager
 
 
 @pytest.fixture()

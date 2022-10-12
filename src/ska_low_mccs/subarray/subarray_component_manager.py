@@ -15,16 +15,15 @@ import threading
 from typing import Any, Callable, Optional, Sequence
 
 import ska_tango_base.subarray
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, ObsState, PowerState
-from ska_tango_base.executor import TaskStatus
-
-from ska_low_mccs.component import (
+from ska_low_mccs_common.component import (
     MccsComponentManager,
     ObsDeviceComponentManager,
     check_communicating,
     check_on,
 )
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import CommunicationStatus, ObsState, PowerState
+from ska_tango_base.executor import TaskStatus
 
 __all__ = ["SubarrayComponentManager"]
 
@@ -848,7 +847,7 @@ class SubarrayComponentManager(
         """
         return self.submit_task(
             self._send_transient_buffer,
-            args=argin,
+            args=[argin],
             task_callback=task_callback,
         )
 

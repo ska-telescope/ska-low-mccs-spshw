@@ -27,8 +27,6 @@ __all__ = [
     "MccsTelState",
     "MccsTile",
     "MccsTransientBuffer",
-    # proxies
-    "MccsDeviceProxy",
     # device subpackages
     "antenna",
     "apiu",
@@ -43,16 +41,7 @@ __all__ = [
     "tel_state",
     "tile",
     "transient_buffer",
-    # non-device modules
-    "component",
-    "health",
-    "release",
-    "testing",
-    "utils",
-    "resource_manager",
 ]
-
-from .device_proxy import MccsDeviceProxy
 
 from .antenna import MccsAntenna
 from .apiu import MccsAPIU

@@ -11,9 +11,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
+from ska_low_mccs_common.component import ObjectComponentManager, check_communicating
 from ska_tango_base.control_model import CommunicationStatus
 
-from ska_low_mccs.component import ObjectComponentManager, check_communicating
 from ska_low_mccs.tel_state import TelState
 
 __all__ = ["TelStateComponentManager"]

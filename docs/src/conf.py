@@ -58,6 +58,8 @@ autodoc_mock_imports = [
     "tango",
     "uritools",
     "yaml",
+    "ska_control_model",
+    "ska_low_mccs_common",
 ]
 
 
@@ -75,16 +77,16 @@ def setup(app):
 
 
 # -- Project information -----------------------------------------------------
-release_filename = os.path.join("..", "..", "src", "ska_low_mccs", "release.py")
-version = None
-author = None
-for line in open(release_filename).readlines():
-    line = line.strip()
-    if line.startswith(("author", "version")):
-        exec(line)
+release_filename = os.path.join("..", "..", "src", "ska_low_mccs.py")
+#version = None
+author = "MCCS team"
+#for line in open(release_filename).readlines():
+#    line = line.strip()
+#    if line.startswith(("author", "version")):
+#        exec(line)
 
 project = "MCCS LMC Prototype"
-release = version
+#release = version
 copyright = "2020, SKA MCCS Team"
 
 # -- General configuration ------------------------------------------------
@@ -98,7 +100,6 @@ nitpick_ignore = [
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "Status"),
     ("py:exc", "yaml.YAMLError"),
-    ("py:class", "ska_tango_base.base.task_queue_manager.QueueManager")
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -283,8 +284,16 @@ typing.TYPE_CHECKING = True
 intersphinx_mapping = {
     "https://docs.python.org/3/": None,
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
+    "ska-control-model": (
+        "https://developer.skao.int/projects/ska-control-model/en/latest/",
+        None,
+    ),
     "ska-tango-base": (
         "https://developer.skatelescope.org/projects/ska-tango-base/en/latest/",
+        None,
+    ),
+    "ska-low-mccs-common": (
+        "https://developer.skao.int/projects/ska-low-mccs-common/en/latest/",
         None,
     ),
 }

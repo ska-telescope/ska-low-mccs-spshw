@@ -13,11 +13,11 @@ import time
 from typing import Any
 
 import pytest
+from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_base.control_model import CommunicationStatus
 from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.station_beam import StationBeamComponentManager
-from ska_low_mccs.testing.mock import MockCallable
 
 
 class TestStationBeamComponentManager:

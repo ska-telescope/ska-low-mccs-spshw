@@ -13,6 +13,7 @@ import threading
 from typing import Any, List, Optional, Tuple
 
 import tango
+from ska_low_mccs_common import release
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
 from ska_tango_base.control_model import (
@@ -23,7 +24,6 @@ from ska_tango_base.control_model import (
 )
 from tango.server import attribute, command
 
-from ska_low_mccs import release
 from ska_low_mccs.pasd_bus import PasdBusComponentManager, PasdBusHealthModel
 
 __all__ = ["MccsPasdBus", "main"]

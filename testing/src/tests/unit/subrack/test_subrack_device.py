@@ -9,6 +9,9 @@
 from __future__ import annotations
 
 import pytest
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
     AdminMode,
@@ -18,10 +21,7 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 
-from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.subrack import SubrackSimulator
-from ska_low_mccs.testing.mock import MockChangeEventCallback
-from ska_low_mccs.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 
 @pytest.fixture()

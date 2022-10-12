@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
+import ska_low_mccs_common.release as release
 import tango
 from ska_tango_base import SKATelState
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import CommunicationStatus, HealthState
 from tango.server import attribute
 
-import ska_low_mccs.release as release
 from ska_low_mccs.tel_state import TelStateComponentManager, TelStateHealthModel
 
 __all__ = ["MccsTelState", "main"]

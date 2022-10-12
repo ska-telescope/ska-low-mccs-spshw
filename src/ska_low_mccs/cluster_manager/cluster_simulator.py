@@ -12,9 +12,8 @@ from enum import IntEnum
 from itertools import count
 from typing import Any, Callable, Iterator, Optional, Tuple, cast
 
+from ska_low_mccs_common.component import ObjectComponent
 from ska_tango_base.control_model import HealthState
-
-from ska_low_mccs.component import ObjectComponent
 
 __all__ = ["ClusterSimulator", "JobConfig", "JobStatus"]
 

@@ -48,7 +48,7 @@ class AntennaInformation(object):
         self.nof_elements = 256
         self.xyz: Optional[np.ndarray] = None
         self.elementid: Optional[np.ndarray] = None
-        self.tpmid : Optional[np.ndarray] = None
+        self.tpmid: Optional[np.ndarray] = None
 
     def load_displacements(self: AntennaInformation, txtfile: str) -> None:
         """

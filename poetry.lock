@@ -1207,7 +1207,10 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
+<<<<<<< HEAD
 content-hash = "aa05f435346759a6dfd3a57f0967140705fe68962092ebbfb9cb6a2386e0f1b8"
+=======
+>>>>>>> 10e38316 (MCCS-1038 changes due base classes)
 
 [metadata.files]
 aavs-system = [

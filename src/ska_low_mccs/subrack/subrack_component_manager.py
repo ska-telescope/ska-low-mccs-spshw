@@ -387,7 +387,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self.component_power_state_changed,
         )
         super().__init__(
-            cast(MccsComponentManager, hardware_component_manager),
+            cast(MccsComponentManagerProtocol, hardware_component_manager),
             power_supply_component_manager,
             logger,
             max_workers,

@@ -606,7 +606,7 @@ class AntennaComponentManager(MccsComponentManager):
 
     def standby(
         self: AntennaComponentManager, task_callback: Optional[Callable] = None
-    )  -> tuple[TaskStatus, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Put the antenna into standby state; this is not implemented.
 

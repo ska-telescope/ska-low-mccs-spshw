@@ -18,6 +18,7 @@ import tango
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
+    ResultCode,
     SimulationMode,
     TaskStatus,
     TestMode,
@@ -31,7 +32,6 @@ from ska_low_mccs_common.component import (
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
@@ -1328,64 +1328,6 @@ class TileComponentManager(MccsComponentManager):
             return
 
     @check_communicating
-<<<<<<< HEAD
-=======
-    def get_arp_table(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the get arp_table slow task.
-
-        This method returns immediately after it is submitted for execution.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a task status and a unique id string to
-            identify the command
-        """
-        return self.submit_task(self._get_arp_table, task_callback=task_callback)
-
-    def _get_arp_table(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Get arp table using slow command.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-
-        :raises NotImplementedError: Command not implemented
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            # TODO This returns diddly squat let alone any data
-            cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).get_arp_table()
-        except NotImplementedError:
-            raise NotImplementedError
-        except Exception as ex:
-            self.logger.error(f"error {ex}")
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            return
-
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result="Arp table task aborted"
-                )
-            return
-
-        if task_callback:
-            task_callback(status=TaskStatus.COMPLETED, result="Arp table has completed")
-            return
-
-    @check_communicating
->>>>>>> 9ae67d5f (MCCS-1038 type hints and static type checking)
     def start_acquisition(
         self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:

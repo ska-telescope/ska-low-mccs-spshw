@@ -244,7 +244,7 @@ class SubarrayComponentManager(
         resource_spec: dict,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-   ) -> None:
+    ) -> None:
         """
         Assign resources to this subarray.
 

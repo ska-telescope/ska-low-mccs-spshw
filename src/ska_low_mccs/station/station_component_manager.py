@@ -12,9 +12,10 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 import tango
+from pydaq.daq_receiver_interface import DaqModes, DaqReceiver
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
@@ -184,6 +185,8 @@ class StationComponentManager(MccsComponentManager):
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         }
+
+        self._daq_instance = self.create_daq_instance(self._get_daq_config())
 
         super().__init__(
             logger,
@@ -611,3 +614,97 @@ class StationComponentManager(MccsComponentManager):
             task_callback(
                 status=TaskStatus.COMPLETED, result="Configure command has completed"
             )
+
+    def create_daq_instance(
+        self: StationComponentManager,
+        daq_config: Optional[dict[str, Any]] = None,
+    ) -> DaqReceiver:
+        """
+        Create, initialise and configure a DAQ instance.
+
+        This method creates a DAQ instance, configures it according
+         to the stored configuration and initialises it before returning.
+
+        :param daq_config: A dictionary containing configuration settings.
+        :return: A configured and initialised DaqReceiver instance.
+        """
+        # Create DAQ instance
+        daq_instance = DaqReceiver()
+        # If we were passed a configuration then apply it otherwise continue with defaults.
+        if daq_config is not None:
+            # Populate configuration
+            daq_instance.populate_configuration(daq_config)
+
+        # Initialise library and start receiver.
+        daq_instance.initialise_daq()
+
+        return daq_instance
+
+    def _get_daq_config(self: StationComponentManager) -> dict[str, Any] | None:
+        """
+        Retrieve and return a DAQ configuration.
+
+        :return: A DAQ configuration or None.
+        """
+        # Read config from wherever we'll keep it (yaml/json?) then return it.
+        # For now just return whatever config is useful for testing.
+        # Anything not specified here will be revert to default settings.
+        daq_config = {
+            "nof_tiles": 2,
+            "receiver_ports": "4660",
+            "receiver_interface": "eth0",
+            "directory": ".",
+            "acquisition_duration": -1,
+        }
+        return daq_config
+
+    def _get_daq_modes(self: StationComponentManager) -> list[DaqModes]:
+        """
+        Retrieve a list of DAQ consumers to start.
+
+        :return: a list of DAQ modes.
+        """
+        # Just return a single mode for testing atm.
+        # Later we can have a default list in a config or something.
+        modes_to_start = [DaqModes.INTEGRATED_CHANNEL_DATA]
+
+        return modes_to_start
+
+    @check_communicating
+    def start_daq(
+        self: StationComponentManager,
+        modes_to_start: Optional[list[DaqModes]] = [None],
+        callbacks: Optional[list[Callable]] = [None],
+    ) -> None:
+        """
+        Start data acquisition with the current configuration.
+
+        Extracts the required consumers from configuration and starts
+        them.
+
+        :param modes_to_start: The DAQ consumers to start.
+        :param callbacks: The callbacks to pass to DAQ to be called when a buffer is filled.
+            One callback per DAQ mode. Callbacks will be associated with the corresponding
+            mode_to_start. e.g. callbacks[i] will be called when modes_to_start[i] has a full buffer.
+        """
+        # Generate default list of modes to start if not provided.
+        if modes_to_start is None:
+            modes_to_start = self._get_daq_modes()
+        self.logger.info(
+            (
+                f"Starting DAQ. {self._daq_instance._config['receiver_ip']} "
+                f"Listening on interface: {self._daq_instance._config['receiver_interface']}:"
+                f"{self._daq_instance._config['receiver_ports']}"
+            )
+        )
+        # TODO: Reinstate the `start_daq` call with callbacks once the newer DAQ version is used.
+        # self._daq_instance.start_daq(modes_to_start, callbacks)
+        self._daq_instance.start_daq(modes_to_start)
+
+    def stop_daq(self: StationComponentManager) -> None:
+        """
+        Stop data acquisition.
+
+        Stops the DAQ receiver and all running consumers.
+        """
+        self._daq_instance.stop_daq()

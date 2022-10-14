@@ -10,7 +10,7 @@ RUN python3 -m pip install poetry
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./
-COPY ./pyfabil-1.0-py3-none-any.whl ./aavs_system-1.0-py3-none-any.whl ./
+COPY ./pyfabil-1.1-py3-none-any.whl ./aavs_system-1.1-py3-none-any.whl ./
 
 # Install DAQ pre-reqs
 COPY aavs-system/ ./aavs-system/

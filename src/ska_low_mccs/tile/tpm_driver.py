@@ -32,6 +32,23 @@ from ska_low_mccs_common.component import MccsComponentManager
 from .tpm_status import TpmStatus
 
 
+def _int2ip(addr: int) -> str:
+    """
+    Convert integer IPV4 into formatted dot address.
+
+    :param addr: Integer IPV4 address
+    :return: dot formatted IPV4 address
+    """
+    # If parameter is already a string, just return it. No checking
+    if type(addr) == str:
+        return addr
+    ip = [0, 0, 0, 0]
+    for i in range(4):
+        ip[i] = addr & 0xFF
+        addr = addr >> 8
+    return f"{ip[3]}.{ip[2]}.{ip[1]}.{ip[0]}"
+
+
 class TpmDriver(MccsComponentManager):
     """Hardware driver for a TPM."""
 
@@ -85,7 +102,7 @@ class TpmDriver(MccsComponentManager):
             component state changes.
         """
         self.logger = logger
-        self._hardware_lock = threading.RLock()
+        self._hardware_lock = threading.Lock()
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
@@ -193,21 +210,23 @@ class TpmDriver(MccsComponentManager):
         :return: None
         """
         if self.communication_state == CommunicationStatus.ESTABLISHED:
+            error_flag = False
             if self._hardware_lock.acquire(timeout=0.5):
                 try:
                     self.tile[int(0x30000000)]
-                except Exception:
+                except Exception as e:
                     # polling attempt was unsuccessful
-                    self.logger.warning("Connection to tpm lost!")
-                    self.tpm_disconnected()
-                    self.update_component_state({"fault": True})
-                    self._hardware_lock.release()
-                    return
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
+                    error_flag = True
                 # polling attempt succeeded
-                self.updating_attributes()
+                if not error_flag:
+                    self.updating_attributes()
                 self._hardware_lock.release()
             else:
                 self.logger.debug("Failed to acquire lock")
+            if error_flag:
+                self.tpm_disconnected()
+                self.update_component_state({"fault": True})
             # wait for a polling_period
             return
         else:
@@ -1019,25 +1038,31 @@ class TpmDriver(MccsComponentManager):
 
         :param core_id: id of the core for which a configuration is to
             be return. Defaults to -1, in which case all cores
-            configurations are returned, defaults to -1
+            configurations are returned
         :param arp_table_entry: ARP table entry to use
 
         :return: core configuration or list of core configurations
         """
-        self.logger.debug("TpmDriver: get_40g_configuration")
+        self.logger.debug(
+            f"TpmDriver: get_40g_configuration: core:{core_id} entry:{arp_table_entry}"
+        )
         self._forty_gb_core_list = []
         if core_id == -1:
-            for core in range(0, 1):
-                for arp_table_entry_id in range(0, 1):
+            for core in range(2):
+                for arp_table_entry_id in range(2):
                     dict_to_append = self.tile.get_40g_core_configuration(
                         core, arp_table_entry_id
                     )
-            if dict_to_append is not None:
-                self._forty_gb_core_list.append(dict_to_append)
+                    if dict_to_append is not None:
+                        self._forty_gb_core_list.append(dict_to_append)
         else:
             self._forty_gb_core_list = [
                 self.tile.get_40g_core_configuration(core_id, arp_table_entry)
             ]
+        # convert in more readable format
+        for core in self._forty_gb_core_list:
+            core["src_ip"] = _int2ip(core["src_ip"])
+            core["dst_ip"] = _int2ip(core["dst_ip"])
         return self._forty_gb_core_list
 
     @property
@@ -1172,7 +1197,7 @@ class TpmDriver(MccsComponentManager):
                     antenna, calibration_coefficients
                 )
             except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failedi: {e}")
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1264,7 +1289,7 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def set_pointing_delay(
-        self: TpmDriver, delay_array: list[float], beam_index: int
+        self: TpmDriver, delay_array: list[list[float]], beam_index: int
     ) -> None:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
@@ -1277,6 +1302,10 @@ class TpmDriver(MccsComponentManager):
             be applied
         """
         self.logger.debug("TpmDriver: set_pointing_delay")
+        nof_items = len(delay_array)
+        # 16 values required (16 antennas). Fill with zeros if less are specified
+        if nof_items < 16:
+            delay_array = delay_array + [[0.0, 0.0]] * (16 - nof_items)
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_pointing_delay(delay_array, beam_index)
@@ -1594,17 +1623,21 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
         return started
 
-    def set_time_delays(self: TpmDriver, delays: list[int]) -> None:
+    def set_time_delays(self: TpmDriver, delays: list[float]) -> None:
         """
         Set coarse zenith delay for input ADC streams.
 
         :param delays: the delay in input streams, specified in nanoseconds.
             A positive delay adds delay to the signal stream
         """
-        self.logger.debug(f"TpmDriver: set_time_delays: {delays}")
+        self.logger.debug("TpmDriver: set_time_delays")
+        # tile.set_time_delays is picky about type
+        delays_float = []
+        for d in delays:
+            delays_float.append(float(d))
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.set_time_delays(delays)
+                self.tile.set_time_delays(delays_float)
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
@@ -1620,7 +1653,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: set_csp_rounding")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.set_csp_rounding(rounding)
+                self.tile.set_csp_rounding(int(rounding))
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()

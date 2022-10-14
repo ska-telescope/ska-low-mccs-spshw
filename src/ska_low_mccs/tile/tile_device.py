@@ -1411,7 +1411,7 @@ class MccsTile(SKABaseDevice):
                         "SrcMac": item.get("src_mac", None),
                         "SrcIP": item.get("src_ip", None),
                         "SrcPort": item.get("src_port", None),
-                        "DstIp": item.get("dst_ip", None),
+                        "DstIP": item.get("dst_ip", None),
                         "DstPort": item.get("dst_port", None),
                     }
                 )

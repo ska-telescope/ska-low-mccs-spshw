@@ -1,6 +1,6 @@
 [[package]]
 name = "aavs-system"
-version = "1.0"
+version = "1.1"
 description = "AAVS Software"
 category = "main"
 optional = false
@@ -8,7 +8,7 @@ python-versions = "*"
 
 [package.source]
 type = "file"
-url = "aavs_system-1.0-py3-none-any.whl"
+url = "aavs_system-1.1-py3-none-any.whl"
 
 [[package]]
 name = "astroid"
@@ -656,7 +656,7 @@ test = ["pytest", "pytest-doctestplus (>=0.7)"]
 
 [[package]]
 name = "pyfabil"
-version = "1.0"
+version = "1.1"
 description = "A general Python package for interfacing with FPGA boards"
 category = "main"
 optional = false
@@ -667,7 +667,7 @@ enum34 = "*"
 
 [package.source]
 type = "file"
-url = "pyfabil-1.0-py3-none-any.whl"
+url = "pyfabil-1.1-py3-none-any.whl"
 
 [[package]]
 name = "pyflakes"
@@ -1219,11 +1219,11 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "52a2de6737dbe5f4fa74a224db04509bfbaafa98f74ffe557848cd120a659265"
+content-hash = "68241766060941ba7517d75b268c47fb0ef1b3bf7119b40b05c3ccd8b8fb2ef3"
 
 [metadata.files]
 aavs-system = [
-    {file = "aavs_system-1.0-py3-none-any.whl", hash = "sha256:02789a6185f0a3d68c3fef874190d62caf100be2ab1f811f01b22fddb8ad2f98"},
+    {file = "aavs_system-1.1-py3-none-any.whl", hash = "sha256:97a09c465505b150d68c381e42f590280b605f0f03aee621eb68896357d0dfe9"},
 ]
 astroid = [
     {file = "astroid-2.12.11-py3-none-any.whl", hash = "sha256:867a756bbf35b7bc07b35bfa6522acd01f91ad9919df675e8428072869792dce"},
@@ -1688,7 +1688,7 @@ pyerfa = [
     {file = "pyerfa-2.0.0.1.tar.gz", hash = "sha256:2fd4637ffe2c1e6ede7482c13f583ba7c73119d78bef90175448ce506a0ede30"},
 ]
 pyfabil = [
-    {file = "pyfabil-1.0-py3-none-any.whl", hash = "sha256:1af60b36928a8b364603c3d58abbe573afce3a35ede01b97a87e51d64d151699"},
+    {file = "pyfabil-1.1-py3-none-any.whl", hash = "sha256:bf107fb12519ea183d23b1f2565144ee91a2823cbbb6ea8b0b7e2cf54e9c3e3e"},
 ]
 pyflakes = [
     {file = "pyflakes-2.5.0-py2.py3-none-any.whl", hash = "sha256:4579f67d887f804e67edb544428f264b7b24f435b263c4614f384135cea553d2"},

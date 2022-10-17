@@ -30,8 +30,8 @@ legacy solution that is not recommended for MCCS development. Instead,
 we recommend a container development approach.
 
 The advantages of this approach are:
-   
- * SKA Software already has container images that contain all of the 
+
+ * SKA Software already has container images that contain all of the
    dependencies that you need to develop. These images are kept up to
    date, so you won't need to worry about maintaining your system.
 
@@ -50,15 +50,29 @@ Basic development setup
 The basic setup described here will allow you to edit code and
 documentation locally, and to launch basic testing, linting and
 documentation builds. For occasional dabblers in the MCCS code, this is
-the only setup required. 
+the only setup required.
 We recommend for that new developers develop inside a docker container
 as it makes things a lot easier when working with multiple repos and
 codebases, however it should be noted that this is a choice for devs to
 make, should they want they're free to develop on the bare metal of their
 machine and set up the environment variables and dependencies themselves.
 Should you wish to go via the recommended route and install docker, you can
-follow the instructions below or alternativly use the install_script.sh or 
+follow the instructions below or alternativly use the install_script.sh or
 install_ansible.yml files to install them for you.
+
+To use the shell script call
+
+.. code-block:: shell-session
+
+   ./install_script.sh <your sql password>
+
+Because some tasks in the ansible playbook require sudo privileges you must call the
+ansible playbook with the --ask-become-pass, like this
+
+.. code-block:: shell-session
+
+   ansible-playbook install_ansible.yml -e "SQL_PASSWORD=<your sql password>" --ask-become-pass
+
 
 For more serious developers, further steps are
 described in subsequent sections.
@@ -129,7 +143,7 @@ other versions / Linux variants.
      me@local:~$ sudo docker run hello-world
      Unable to find image 'hello-world:latest' locally
      latest: Pulling from library/hello-world
-     0e03bdcc26d7: Pull complete 
+     0e03bdcc26d7: Pull complete
      Digest: sha256:6a65f928fb91fcfbc963f7aa6d57c8eeb426ad9a20c7ee045538ef34847f44f1
      Status: Downloaded newer image for hello-world:latest
 
@@ -230,7 +244,7 @@ You now have a basic development setup. The following Make targets are
 available to you:
 
 * **poetry run make python-test** - run the tests in a SKA docker container
-     
+
 * **poetry run make python-lint** - run linting in a SKA docker container
 
 Try it out:
@@ -271,13 +285,13 @@ Try it out:
 									------------ JSON report ----------------
 									report saved to: build/reports/report.json
 
------------ coverage: platform linux, python 3.7.3-final-0 -----------								
+----------- coverage: platform linux, python 3.7.3-final-0 -----------
 	38 files skipped due to complete coverage.
 	Coverage HTML written to dir build/htmlcov
 	Coverage XML written to file build/reports/code-coverage.xml
 
 ================================================================== 1403 passed, 125 skipped, 1 xfailed, 8 warnings in 1347.75s (0:22:27) ==================================================================
-   
+
 (The first time you run these commands, they may take a very long time.
 This is because the Docker image has to be downloaded. Once downloaded,
 the image is cached, so the command will run much faster in future.)
@@ -287,12 +301,12 @@ Advanced development setup
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 The approach described above provides a few basic tools, but serious
 developers will want more than this. For example, ``make python-test`` runs
-all the tests, but serious developers will want fine-grained control of 
+all the tests, but serious developers will want fine-grained control of
 what tests to run.
 
 To run tests in a specific file or directory change the ``PYTHON_TEST_FILE``
-variable in the Makefile. This can also be done from the command line, for example: 
-``make PYTHON_TEST_FILE=testing/src/tests/unit/tile python-test`` will run all tests 
+variable in the Makefile. This can also be done from the command line, for example:
+``make PYTHON_TEST_FILE=testing/src/tests/unit/tile python-test`` will run all tests
 found in the tile directory.
 
 Since the repository is read-write mounted in the container, it is

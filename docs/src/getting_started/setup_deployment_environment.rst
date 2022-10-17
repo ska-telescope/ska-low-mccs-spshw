@@ -102,7 +102,7 @@ clusters of Docker containers.
 #. Clone the SKA ``ska-cicd-deploy-minikube`` project. (But first, if you have
    run minikube before, remove any old copies and their configuration
    files.)
-   
+
    .. code-block:: bash
 
       find / -name minikube 2>/dev/null
@@ -206,12 +206,12 @@ The basic steps to deploying MCCS are:
 
       make RELEASE_NAME=mccs-psi VALUES_FILE=values-demo.yaml k8s-install-chart
 
-#. Monitor the cluster to make sure it comes up okay. 
+#. Monitor the cluster to make sure it comes up okay.
 
    * To monitor the cluster yourself:
-   
+
      .. code-block:: bash
-   
+
         k9s
 
      After the image has been deployed to the cluster, you should see
@@ -220,16 +220,16 @@ The basic steps to deploying MCCS are:
      automatically restarted. After several minutes, the cluster should
      stabilise and you will see that all devices are `Running` (except
      for the configuration pod, which will be `Completed`).
-   
+
       .. code-block:: shell-session
 
          $ make k8s-install-chart; k9s
-      
+
      .. code-block:: shell-session
 
         $ make k8s-install-chart
         $ k9s # watch the cluster yourself using the k9s GUI application and exit when it is ready
-        
+
 Using the MCCS Deployment
 -------------------------
 Now that the cluster is running, what can you do with it? See the
@@ -265,7 +265,21 @@ Install TANGO
 
 To set up TANGO, pogo, jive and all the other tools you will need to develop and test the MCCS
 project you can either use the install_script.sh or install_ansible.yml files that will install
-those and their dependancies for you, alternativly you can follow the instructions here
+those and their dependancies for you.
+To use the shell script call
+
+.. code-block:: shell-session
+
+   ./install_script.sh <your sql password>
+
+Because some tasks in the ansible playbook require sudo privileges you must call the
+ansible playbook with the --ask-become-pass, like this
+
+.. code-block:: shell-session
+
+   ansible-playbook install_ansible.yml -e "SQL_PASSWORD=<your sql password>" --ask-become-pass
+
+ alternativly you can follow the manual instructions here
 https://tango-controls.readthedocs.io/en/latest/installation/index.html
 
 

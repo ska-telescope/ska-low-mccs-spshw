@@ -17,6 +17,7 @@ Setting up development environment
 
 To develop in the MCCS repo there are a number of tools and programs that you will need
 such as docker, tango, mariadb and I'm sure many more to come.
+
 Provided with the repo is are two ways to install all of these tools easily
 without having the go through the fuss yourself (and mess up your PC by
 installing something in the wrong place like I've done twice now)
@@ -26,16 +27,16 @@ install_ansible.yml depending on which you are more familiar with.
 To use the shell script simply call the install script script, passing it one argument
 which will be the password for your sql database. So something like
 
-       ./install_script mypassword
+       ./install_script <mypassword>
 
 You will be asked to provide your sudo password when this script runs as well as
 permission to install files, type yes to all of these.
 
-To install the tools via the ansible playbook you will need to call it with sudo
-and provide it with both the sql password as before, and also the user that will
-be developing on the PC (You can use $USER). For example
+Because severel of the tasks in the ansible playbook
+require root privilege you will need to call it with
+the flag --ask-become-pass and provide it with both the sql password as before.
 
-       sudo ansiblie-playbook -e "USER_RUNNING=$USER SQL_PASSWORD=mypassword"
+       ansiblie-playbook -e "SQL_PASSWORD=<mypassword>" --ask-become-pass
 
 How to use
 ----------
@@ -65,14 +66,14 @@ For a basic environment in which devices may be tested:
 
        root@caa98e8e264d:/app# python3 -m pip install -r requirements-dev.txt -r testing/requirements.txt
 
-To use with actual tile hardware 
+To use with actual tile hardware
 ---------------------------
 
 A bitfile for the FPGA (TPM 1.2) is required. It must be renamed "tpm_test.bit"
 in the base directory.
 
-The board(s) to be connected must be accessible from the host. Their IP 
-address is specified in the jive configuration file: 
+The board(s) to be connected must be accessible from the host. Their IP
+address is specified in the jive configuration file:
 License
 -------
 

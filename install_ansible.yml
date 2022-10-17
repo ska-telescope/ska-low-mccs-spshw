@@ -4,6 +4,10 @@
 # need permissions to use docker, and a password for the sql server that will
 # be run.
 
+# Several of the tasks in this playbook require sudo privileges, so the user
+# must run it with the flag --ask-become-pass.
+# For example ansible-playbook install_ansible.yml -e "mypassword" --ask-become-pass
+
 - name: Setup development enviroment
   hosts: localhost
   connection: local

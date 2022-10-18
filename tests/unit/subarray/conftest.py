@@ -14,13 +14,13 @@ from typing import Any, Callable
 
 import pytest
 import tango
+from ska_control_model import ResultCode
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import (
     MockCallable,
     MockCallableDeque,
     MockDeviceBuilder,
 )
-from ska_control_model import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
 

@@ -14,8 +14,8 @@ from typing import Any, Callable, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
-from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
 from ska_control_model import TaskStatus
+from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 

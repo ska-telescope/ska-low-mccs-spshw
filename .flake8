@@ -1,13 +1,17 @@
 [flake8]
-# We have some long sphinx cross-refs that can't be broken. Black will still wrap at 88.
-max-line-length = 135
+max-line-length = 88
 
-rst-directives = literalinclude
-rst-roles = py:attr, py:class, py:const, py:exc, py:func, py:meth, py:mod
-docstring-style = sphinx
+extend-ignore = BLK,T
 enable = DAR104
-max-complexivity = 10
-ignore = E203,FS003,W503,T101  # E203 and W503 conflict with black
+# E203 and W503 conflict with black
+ignore = E203, W503
+max-complexity = 10
+
+docstring-style = sphinx
+rst-roles = py:attr, py:class, py:const, py:exc, py:func, py:meth, py:mod
+rst-directives = uml, literalinclude
+
+#ignore = FS003,T101
 per-file-ignores =
     # N802 = PEP8 lowercase function name -- conflicts with Tango conventions
     src/ska_low_mccs/antenna/antenna_device.py: N802

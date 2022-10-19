@@ -243,8 +243,8 @@ class TestMccsIntegration:
             "obsState", subarray_1_obs_state_changed_callback
         )
 
-        # It seems that we need a fairly long sleep to allow time for all the relevant events
-        # to be pushed by the polled PushChanges command
+        # It seems that we need a fairly long sleep to allow time for all the
+        # relevant events to be pushed by the polled PushChanges command
         time.sleep(0.2)
 
         # TODO: This occansionally segfaults with warnings from Tango stating that

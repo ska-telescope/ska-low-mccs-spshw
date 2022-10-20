@@ -1,0 +1,24 @@
+@startuml
+participant "Jupyter" as jupyter
+participant "Subrack" as subrack
+participant "Tile\nProcessing\nModule" as tpm
+participant "Station" as station
+participant "DAQ" as daq
+
+jupyter -> subrack: on()
+jupyter -> tpm: on()
+jupyter -> station: on()
+jupyter -> daq: on()
+subrack -> tpm: power_on_tpm()
+tpm -> tpm: initilise()
+tpm -> tpm: wait_for_initilised()
+jupyter -> tpm: start_acquisition()
+tpm -> tpm: wait_for_acquired()
+
+tpm -> daq: start_daq_reciever()
+daq -> station: daq_job_id
+
+jupyter -> tpm: send_data()
+tpm -> daq: send_data()
+
+@enduml

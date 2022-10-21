@@ -12,7 +12,6 @@ import logging
 import time
 
 import tango
-from pydaq.daq_receiver_interface import DaqModes
 from ska_control_model import CommunicationStatus, PowerState, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockCallable
@@ -216,65 +215,3 @@ class TestStationComponentManager:
             {"is_configured": True}
         )
         assert station_component_manager.is_configured
-
-    def test_instantiate_daq(
-        self: TestStationComponentManager,
-        station_component_manager: StationComponentManager,
-        communication_state_changed_callback: MockCallable,
-    ) -> None:
-        """
-        Test basic DAQ functionality.
-
-        This test merely instantiates DAQ as a member of station_component_manager, starts a consumer,
-        waits for a time and then stops the consumer. Data can also be logged if available.
-
-        :param station_component_manager: the station component manager
-            under test.
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        """
-        # Override the default config.
-        # The duration should be long enough to actually receive data.
-        # This defaults to around 20-30 sec after delays are accounted for.
-        modes_to_start = [DaqModes.INTEGRATED_CHANNEL_DATA]
-        # data_received_callback isn't currently used as we don't yet have a
-        # reliable way of making data available in a test context.
-        # data_received_callback = MockCallable()
-        daq_config = {
-            "nof_tiles": 2,
-            "receiver_ports": "4660",
-            "receiver_interface": "eth0",
-            "receiver_ip": "172.17.0.2",
-            "directory": ".",
-            "acquisition_duration": 5,
-        }
-        station_component_manager._daq_instance.populate_configuration(daq_config)
-
-        station_component_manager.start_communicating()
-        communication_state_changed_callback.assert_last_call(
-            CommunicationStatus.ESTABLISHED
-        )
-
-        mock_task_callback = MockCallable()
-        result_code, message = station_component_manager.on(
-            task_callback=mock_task_callback
-        )
-        assert result_code == TaskStatus.QUEUED
-        assert message == "Task queued"
-
-        # Start DAQ and check our consumer is running.
-        # station_component_manager.start_daq(modes_to_start, data_received_callback)
-        station_component_manager.start_daq(modes_to_start)
-        for mode in modes_to_start:
-            assert station_component_manager._daq_instance._running_consumers[mode]
-
-        # Wait for data etc
-        time.sleep(
-            station_component_manager._daq_instance._config["acquisition_duration"]
-        )
-
-        # Stop DAQ and check our consumer is not running.
-        station_component_manager.stop_daq()
-        for mode in modes_to_start:
-            assert not station_component_manager._daq_instance._running_consumers[mode]

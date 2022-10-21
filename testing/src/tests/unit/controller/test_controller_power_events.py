@@ -29,8 +29,9 @@ def patched_controller_device_class(
     """
     Return a station device class, patched with extra methods for testing.
 
-    :param mock_controller_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+    :param mock_controller_component_manager: A fixture that provides a
+        partially mocked component manager which has access to the
+        component_state_changed_callback.
 
     :return: a patched station device class, patched with extra methods
         for testing

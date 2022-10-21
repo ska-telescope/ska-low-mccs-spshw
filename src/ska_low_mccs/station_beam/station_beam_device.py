@@ -133,8 +133,10 @@ class MccsStationBeam(SKAObsDevice):
         is responsible for updating the tango side of things i.e. making
         sure the attribute is up to date, and events are pushed.
 
-        :param state_change: A dictionary containing the name of the state that changed and its new value.
-        :param fqdn: The fqdn of the calling device or `None` if this device is the caller.
+        :param state_change: A dictionary containing the name of the state
+            that changed and its new value.
+        :param fqdn: The fqdn of the calling device or `None` if this device
+            is the caller.
         """
         if "health_state" in state_change.keys():
             health = cast(HealthState, state_change.get("health_state"))
@@ -324,7 +326,8 @@ class MccsStationBeam(SKAObsDevice):
         """
         Return the desired pointing of this beam.
 
-        :return: the desired point of this beam, conforming to the Sky Coordinate Set definition
+        :return: the desired point of this beam, conforming to the
+            Sky Coordinate Set definition
         """
         return self.component_manager.desired_pointing
 

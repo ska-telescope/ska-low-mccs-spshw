@@ -134,7 +134,8 @@ class TestSubarrayComponentManager:
         :param station_beam_on_fqdn: the FQDN of a station beam that is powered
             on.
         :param channel_blocks: a list of channel blocks.
-        :param component_state_changed_callback: Callback to call when the component's state changes.
+        :param component_state_changed_callback: Callback to call when the
+            component's state changes.
         """
         subarray_component_manager.start_communicating()
         component_state_changed_callback.assert_next_call(
@@ -255,7 +256,8 @@ class TestSubarrayComponentManager:
             manager under test.
         :param station_off_fqdn: the FQDN of a station that is powered
             off.
-        :param component_state_changed_callback: Callback to call when the component's state changes.
+        :param component_state_changed_callback: Callback to call when
+            the component's state changes.
         """
         subarray_component_manager.start_communicating()
         component_state_changed_callback.assert_next_call(
@@ -322,11 +324,13 @@ class TestSubarrayComponentManager:
         :param station_beam_off_fqdn: the FQDN of a station beam that is powered
             off.
         :param channel_blocks: a list of channel blocks.
-        :param component_state_changed_callback: Callback to call when the component's state changes.
+        :param component_state_changed_callback: Callback to call when the
+            component's state changes.
         """
-        # The sleeps littering this test are to allow the code time to execute the queued commands
-        # and make the calls to the callback so we can make the assertions.
-        # Without them the callbacks end up having not been called (yet!) by the time we get to them.
+        # The sleeps littering this test are to allow the code time to execute the
+        # queued commands and make the calls to the callback so we can make the
+        # assertions. Without them the callbacks end up having not been called
+        # (yet!) by the time we get to them.
         subarray_component_manager.start_communicating()
 
         assert (
@@ -337,7 +341,8 @@ class TestSubarrayComponentManager:
         time.sleep(0.1)
         component_state_changed_callback.assert_next_call_with_keys(expected_arguments)
         # There are a few (unavoidable) nasty hacks like the following line
-        # scattered around as a result of the changes to the callbacks during the update to v0.13.
+        # scattered around as a result of the changes to the callbacks during the
+        # update to v0.13.
         subarray_component_manager.power_state = PowerState.ON
 
         # can't configure when resources are OFF
@@ -385,7 +390,8 @@ class TestSubarrayComponentManager:
         assert task_status == TaskStatus.QUEUED
         assert response == "Task queued"
 
-        # Check that component_state_changed_callback has been called with the arguments expected.
+        # Check that component_state_changed_callback has been called with the
+        # arguments expected.
         expected_arguments = [
             {"resources_changed": [set(), set(), set()]},
             {"release_completed": None},
@@ -471,7 +477,8 @@ class TestSubarrayComponentManager:
             station_on_fqdn, PowerState.ON
         )
 
-        # Check that component_state_changed_callback has been called with the arguments expected.
+        # Check that component_state_changed_callback has been called with the
+        # arguments expected.
         expected_arguments = [
             {"assign_completed": None},
             {
@@ -570,7 +577,8 @@ class TestSubarrayComponentManager:
         subarray_component_manager._stations[station_on_fqdn]._obs_state_changed(
             "obsState", ObsState.READY, tango.AttrQuality.ATTR_VALID
         )
-        # TODO: Reinstate these obsstate assertions once the callback can handle it. (They're there but we haven't formally checked.)
+        # TODO: Reinstate these obsstate assertions once the callback can handle it.
+        # (They're there but we haven't formally checked.)
         # component_state_changed_callback.assert_next_call(
         #     {"obsstate_changed": ObsState.READY}, fqdn="low-mccs/station/002"
         # )
@@ -624,7 +632,7 @@ class TestSubarrayComponentManager:
         :param subarray_component_manager: the subarray component
             manager under test.
         :param station_on_id: the id number of a station that is
-            powered on.
+            powered on.        #
         :param station_on_fqdn: the FQDN of a station that is powered
             on.
         :param subarray_beam_on_id: the id number of a subarray beam that is
@@ -639,15 +647,17 @@ class TestSubarrayComponentManager:
         :param channel_blocks: a list of channel blocks.
         :param scan_id: a scan id for use in testing
         :param start_time: a scan start time for use in testing
-        :param component_state_changed_callback: Callback to call when the component's state changes.
+        :param component_state_changed_callback: Callback to call when the
+            component's state changes.
         """
         subarray_component_manager.start_communicating()
         component_state_changed_callback.assert_next_call(
             {"power_state": PowerState.ON}
         )
         # The following is a hacky solution but appears to be the only one available.
-        # The issue is that the component_state_changed_callback is responsible for actually changing the power state
-        # but the mock we're using can't do it so the best we can do is to assert that the call comes through which
+        # The issue is that the component_state_changed_callback is responsible for
+        # actually changing the power state but the mock we're using can't do it so
+        # the best we can do is to assert that the call comes through which
         # would have done this and then do it manually ourselves for the test.
         subarray_component_manager.power_state = PowerState.ON
         assert subarray_component_manager.power_state == PowerState.ON

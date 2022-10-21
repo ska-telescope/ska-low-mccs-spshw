@@ -357,7 +357,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
 
     #     if task_callback:
     #         task_callback(
-    #             status=TaskStatus.COMPLETED, result="The submit job task has completed"
+    #             status=TaskStatus.COMPLETED,
+    #             result="The submit job task has completed"
     #         )
 
     # def get_job_status(
@@ -404,7 +405,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
     #     if task_abort_event and task_abort_event.is_set():
     #         if task_callback:
     #             task_callback(
-    #                 status=TaskStatus.ABORTED, result="The get job status task aborted"
+    #                 status=TaskStatus.ABORTED,
+    #                 result="The get job status task aborted"
     #             )
     #         return
 

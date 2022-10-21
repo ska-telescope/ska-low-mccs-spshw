@@ -340,7 +340,8 @@ class StationComponentManager(MccsComponentManager):
                 self._apiu_proxy.power_state = power_state
             else:
                 raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, "
+                    "tile or apiu"
                 )
 
     @property
@@ -384,10 +385,11 @@ class StationComponentManager(MccsComponentManager):
         results = [proxy.off() for proxy in self._tile_proxies.values()] + [
             self._apiu_proxy.off()
         ]  # Never mind antennas, turning off APIU suffices
-        # TODO: Here we need to monitor the APIU and Tiles. This will eventually use the
-        # mechanism described in MCCS-945, but until that is implemented we might instead just poll
-        # these devices' longRunngCommandAttribute. For the moment, however, we just submit the
-        # subservient devices' commands for execution and forget about them.
+        # TODO: Here we need to monitor the APIU and Tiles. This will eventually
+        # use the mechanism described in MCCS-945, but until that is implemented
+        # we might instead just poll these devices' longRunngCommandAttribute.
+        # For the moment, however, we just submit the subservient devices' commands
+        # for execution and forget about them.
         if all(
             result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
             for (result, _) in results
@@ -433,8 +435,8 @@ class StationComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         if self._apiu_power_state == PowerState.ON:
             result_code = self._turn_on_tiles_and_antennas()
-            # TODO: Monitor the Tiles' & antennas' On command statuses and update the Station On command
-            # status accordingly.
+            # TODO: Monitor the Tiles' & antennas' On command statuses and update
+            # the Station On command status accordingly.
             if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
                 task_status = TaskStatus.COMPLETED
             else:
@@ -444,7 +446,8 @@ class StationComponentManager(MccsComponentManager):
             return
         self._on_called = True
         result_code, _ = self._apiu_proxy.on()
-        # TODO: Monitor the APIU On command status and update the Station On command status accordingly.
+        # TODO: Monitor the APIU On command status and update the Station On command
+        # status accordingly.
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             task_status = TaskStatus.COMPLETED
         else:
@@ -524,7 +527,8 @@ class StationComponentManager(MccsComponentManager):
             tile_proxy.set_pointing_delay(delays)
             for tile_proxy in self._tile_proxies.values()
         ]
-        # TODO: Monitor the Tiles' SetPointingDelay command status and update the Station command status accordingly.
+        # TODO: Monitor the Tiles' SetPointingDelay command status and update
+        # the Station command status accordingly.
         if all(
             result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
             for result in results

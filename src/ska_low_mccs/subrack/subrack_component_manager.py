@@ -773,7 +773,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._turn_on_tpms, task_callback=task_callback)
 

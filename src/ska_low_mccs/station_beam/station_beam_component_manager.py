@@ -64,7 +64,8 @@ class StationBeamComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: a callback to be called
             whenever the state of the station beam changes.
-        :param max_workers: Maximum number of workers in the worker pool. Defaults to None.
+        :param max_workers: Maximum number of workers in the worker pool.
+            Defaults to None.
         """
         self._subarray_id = 0
         self._beam_id = beam_id

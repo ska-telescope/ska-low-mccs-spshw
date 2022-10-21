@@ -541,8 +541,8 @@ class TpmDriver(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         #
         # If not programmed, program it.
-        # TODO: there is no way to check whether the TPM is already correctly initialised.
-        # If it is, re-initialising it is bad.
+        # TODO: there is no way to check whether the TPM is already correctly
+        # initialised. If it is, re-initialising it is bad.
         #
         prog_status = False
         with self._hardware_lock:

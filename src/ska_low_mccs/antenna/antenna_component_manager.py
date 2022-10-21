@@ -207,7 +207,10 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             if event_value[self._logical_antenna_id - 1]
             else PowerState.OFF
         )
-        # self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
+        # self._component_state_changed_callback(
+        #    {"power_state": power_state},
+        #    fqdn=None
+        # )
         # self.update_supplied_power_state(
         #     # PowerState.ON
         #     # if event_value[self._logical_antenna_id - 1]

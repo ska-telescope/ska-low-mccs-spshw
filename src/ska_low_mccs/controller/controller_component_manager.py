@@ -744,7 +744,8 @@ class ControllerComponentManager(MccsComponentManager):
 
         :param argin: JSON-formatted string
             {
-            "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
+            "interface": \
+            "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
             "subarray_id": int,
             "subarray_beam_ids": list[int],
             "station_ids": list[list[int]],
@@ -752,7 +753,8 @@ class ControllerComponentManager(MccsComponentManager):
             }
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id
+            string to identify the command
         """
         if (
             len(self._subarrays.values())
@@ -812,7 +814,8 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
 
-        :raises ValueError: if trying to assign a station not in the controller's Stations
+        :raises ValueError: if trying to assign a station not in the
+            controller's Stations
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -829,8 +832,8 @@ class ControllerComponentManager(MccsComponentManager):
         for group_index, station_group in enumerate(station_fqdns):
             station_groups.append(list(station_group))
             for station_fqdn in station_group:
-                # stations are not managed by the resource manager, so we have to explicitely check if
-                # they're valid FQDNs here
+                # stations are not managed by the resource manager, so we have
+                # to explicitely check if they're valid FQDNs here
                 if station_fqdn not in self._stations.keys():
                     raise ValueError(f"Unsupported resources: {station_fqdn}.")
                 if (
@@ -908,7 +911,10 @@ class ControllerComponentManager(MccsComponentManager):
             if allocate_result_code == ResultCode.FAILED:
                 task_callback(
                     status=TaskStatus.FAILED,
-                    result=f"The allocate command has failed. Exception message: {allocate_exc}",
+                    result=(
+                        "The allocate command has failed. Exception message: "
+                        f"{allocate_exc}"
+                    ),
                 )
             elif assign_result_code == ResultCode.FAILED:
                 task_callback(
@@ -950,7 +956,10 @@ class ControllerComponentManager(MccsComponentManager):
         else:
             return (
                 ResultCode.FAILED,
-                "Currently Release can only be used to release all resources from a subarray.",
+                (
+                    "Currently Release can only be used to release all "
+                    "resources from a subarray."
+                ),
             )
 
     def _release_all(

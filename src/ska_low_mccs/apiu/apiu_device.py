@@ -107,7 +107,9 @@ class MccsAPIU(SKABaseDevice):
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS APIU device."""
 
-        def do(self: MccsAPIU.InitCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
+        def do(  # type: ignore[override]
+            self: MccsAPIU.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
 
@@ -371,7 +373,9 @@ class MccsAPIU(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
+        def do(  # type: ignore[override]
+            self: MccsAPIU.IsAntennaOnCommand, argin: int
+        ) -> bool:
             """
             Stateless hook for device IsAntennaOn() command.
 

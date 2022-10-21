@@ -7,18 +7,23 @@ participant "DAQ" as daq
 
 jupyter -> subrack: on()
 jupyter -> tpm: on()
-jupyter -> station: on()
-jupyter -> daq: on()
-subrack -> tpm: power_on_tpm()
-tpm -> tpm: initilise()
-tpm -> tpm: wait_for_initilised()
+tpm -> subrack: power_on_tpm()
+subrack --> tpm: change_attribute_event(tpm_power)
+tpm -> tpm: initialise()
+loop wait for Initialised 
+jupyter -> tpm: 
+jupyter <- tpm: tileProgrammingState
+end
 jupyter -> tpm: start_acquisition()
-tpm -> tpm: wait_for_acquired()
+loop wait for synchronised
+jupyter -> tpm: 
+jupyter <- tpm: tileProgrammingState
+end
 
-tpm -> daq: start_daq_reciever()
-daq -> station: daq_job_id
+jupyter -> station: start_daq()
+station-> daq: start_daq()
 
 jupyter -> tpm: send_data()
-tpm -> daq: send_data()
+tpm --> daq: SPEAD packet
 
 @enduml

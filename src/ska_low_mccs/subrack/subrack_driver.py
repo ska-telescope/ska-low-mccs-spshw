@@ -178,7 +178,8 @@ class SubrackDriver(MccsComponentManager):
         This is a helper method that calls the callback if it exists. As
         a side effect, it reads and updates the hardware power mode.
         """
-        self.logger.debug(f"TPM power changed: {self.tpm_power_states}")
+        tpm_power_states = self.tpm_power_states
+        self.logger.debug("TPM power changed: " + str(tpm_power_states))
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(
                 {"tpm_power_states": self.tpm_power_states}

@@ -12,31 +12,7 @@ RUN poetry config virtualenvs.create false
 COPY pyproject.toml poetry.lock* ./
 COPY ./pyfabil-1.1-py3-none-any.whl ./aavs_system-1.1-py3-none-any.whl ./
 
-# Install DAQ pre-reqs
-COPY aavs-system/ ./aavs-system/
-WORKDIR ./aavs-system
-RUN apt-get install -y libcap2-bin
-#RUN setcap cap_net_raw,cap_ipc_lock,cap_sys_nice,cap_sys_admin,cap_kill+ep /usr/bin/python3.7
-RUN ["/bin/bash", "-c", "source cmake -DCMAKE_INSTALL_PREFIX=."]
-RUN ["/bin/bash", "-c", "source make install"]
-
-WORKDIR .
-
-# Setup DAQ Core.
-#WORKDIR /workspaces/ska-low-mccs/aavs-daq/src/
-#RUN mkdir build && cmake -DCMAKE_INSTALL_PREFIX=/ && make install
-
-# Setup AAVS DAQ
-#WORKDIR /workspaces/ska-low-mccs/aavs-system/src/
-#RUN mkdir build && cmake -DCMAKE_INSTALL_PREFIX=/ -DDAQ_DIRECTORY=/ -DWITH_CORRELATOR=OFF
-
-# Install PyDaq library.
-#WORKDIR /workspaces/ska-low-mccs/aacs-system/python/
-#RUN ["python3", "setup.py", "install"]
-
-#WORKDIR .
-
-RUN poetry install -vvv
+RUN poetry install --only main
 
 ARG UID
 ARG GID

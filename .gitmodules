@@ -1,9 +1,3 @@
 [submodule ".make"]
 	path = .make
 	url = https://gitlab.com/ska-telescope/sdi/ska-cicd-makefile.git
-[submodule "aavs-daq"]
-	path = aavs-daq
-	url = https://gitlab.com/ska-telescope/aavs-daq.git
-[submodule "aavs-system"]
-	path = aavs-system
-	url = https://gitlab.com/ska-telescope/aavs-system.git

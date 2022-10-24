@@ -273,8 +273,8 @@ class TestMccsIntegration:
         station_1.adminMode = AdminMode.ONLINE
         station_2.adminMode = AdminMode.ONLINE
 
-        # It seems that we need a fairly long sleep to allow time for all the relevant events
-        # to be pushed by the polled PushChanges command
+        # It seems that we need a fairly long sleep to allow time for all the
+        # relevant events to be pushed by the polled PushChanges command
         time.sleep(0.2)
 
         # Subracks are mocked ON. APIUs, Antennas and Tiles are mocked ON, so stations
@@ -351,7 +351,8 @@ class TestMccsIntegration:
 
         # A subarray/station beam cannot be allocated to multiple subarrays.
         assert (
-            "The allocate command has failed with the exception: Cannot allocate resources:"
+            "The allocate command has failed with the exception: Cannot allocate"
+            "resources:"
             and "subarraybeam"
             or "beam" in controller.longRunningCommandResult[1]
         )

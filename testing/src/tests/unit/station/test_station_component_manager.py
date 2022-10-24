@@ -73,7 +73,8 @@ class TestStationComponentManager:
             == CommunicationStatus.DISABLED
         )
 
-    # Note: test_power_commands has been moved to TestStationComponentStateChangedCallback::test_power_commands
+    # Note: test_power_commands has been moved to
+    # TestStationComponentStateChangedCallback::test_power_commands
 
     def test_power_events_received(
         self: TestStationComponentManager,
@@ -152,7 +153,8 @@ class TestStationComponentManager:
             assert tile_device_proxy.stationId == station_id
             assert tile_device_proxy.logicalTileId == logical_tile_id
 
-    # Note: test_apply_pointing has been moved to TestStationComponentStateChangedCallback::test_appy_pointing
+    # Note: test_apply_pointing has been moved to
+    # TestStationComponentStateChangedCallback::test_appy_pointing
 
     def test_configure(
         self: TestStationComponentManager,

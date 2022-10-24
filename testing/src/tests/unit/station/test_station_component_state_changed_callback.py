@@ -31,8 +31,9 @@ def patched_station_device_class(
     """
     Return a station device class, patched with extra methods for testing.
 
-    :param mock_station_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+    :param mock_station_component_manager: A fixture that provides a partially
+        mocked component manager which has access to the
+        component_state_changed_callback.
 
     :return: a patched station device class, patched with extra methods
         for testing
@@ -57,7 +58,8 @@ def patched_station_device_class(
             mock_station_component_manager._component_state_changed_callback = (
                 self.component_state_changed_callback
             )
-            mock_station_component_manager._apiu_proxy._component_state_changed_callback = functools.partial(
+            apiu_proxy = mock_station_component_manager._apiu_proxy
+            apiu_proxy._component_state_changed_callback = functools.partial(
                 mock_station_component_manager._component_state_changed_callback,
                 fqdn=mock_station_component_manager._apiu_fqdn,
             )
@@ -142,9 +144,9 @@ class TestStationComponentStateChangedCallback:
         mock_station_component_manager.start_communicating()
         time.sleep(0.1)  # wait for events to come through
 
-        # TODO: implement a way to check that the tango device's _component_power_state_changed
-        # callback is called
-        # i.e. component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
+        # TODO: implement a way to check that the tango device's
+        # _component_power_state_changed callback is called i.e.
+        # component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
         assert mock_station_component_manager.power_state == PowerState.UNKNOWN
 
         for antenna_proxy in mock_station_component_manager._antenna_proxies.values():
@@ -152,23 +154,23 @@ class TestStationComponentStateChangedCallback:
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
             assert mock_station_component_manager.power_state == PowerState.UNKNOWN
-            # TODO: implement a way to check that the tango device's _component_power_state_changed
-            # callback is NOT called
-            # i.e. component_power_state_changed_callback.assert_not_called()
+            # TODO: implement a way to check that the tango device's
+            # _component_power_state_changed callback is NOT called i.e.
+            # component_power_state_changed_callback.assert_not_called()
         for tile_proxy in mock_station_component_manager._tile_proxies.values():
             tile_proxy._device_state_changed(
                 "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
             )
             assert mock_station_component_manager.power_state == PowerState.UNKNOWN
-            # TODO: implement a way to check that the tango device's _component_power_state_changed
-            # callback is NOT called
-            # i.e. component_power_state_changed_callback.assert_not_called()
+            # TODO: implement a way to check that the tango device's
+            # _component_power_state_changed callback is NOT called i.e.
+            # component_power_state_changed_callback.assert_not_called()
         mock_station_component_manager._apiu_proxy._device_state_changed(
             "state", tango.DevState.OFF, tango.AttrQuality.ATTR_VALID
         )
-        # TODO: implement a way to check that the tango device's _component_power_state_changed
-        # callback is called
-        # i.e. component_power_state_changed_callback.assert_next_call(PowerState.OFF)
+        # TODO: implement a way to check that the tango device's
+        # _component_power_state_changed callback is called i.e.
+        # component_power_state_changed_callback.assert_next_call(PowerState.OFF)
         assert mock_station_component_manager.power_state == PowerState.OFF
 
     def test_apply_pointing(
@@ -214,14 +216,14 @@ class TestStationComponentStateChangedCallback:
             CommunicationStatus.ESTABLISHED
         )
 
-        # TODO < 0.13: Using "last" instead of "next" here is a sneaky way of forcing a delay
-        # so that we don't start faking receipt of events below until the real events
-        # have all been received.
+        # TODO < 0.13: Using "last" instead of "next" here is a sneaky way of
+        # forcing a delay so that we don't start faking receipt of events below
+        # until the real events have all been received.
         # component_power_state_changed_callback.assert_last_call(PowerState.UNKNOWN)
 
-        # TODO: implement a way to check that the tango device's _component_power_state_changed
-        # callback is called
-        # i.e. component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
+        # TODO: implement a way to check that the tango device's
+        # _component_power_state_changed callback is called i.e.
+        # component_power_state_changed_callback.assert_next_call(PowerState.UNKNOWN)
         assert mock_station_component_manager.power_state == PowerState.UNKNOWN
 
         # Tell this station each of its components is on, so that it thinks it is on
@@ -239,8 +241,8 @@ class TestStationComponentStateChangedCallback:
 
         # component_power_state_changed_callback.assert_last_call(PowerState.ON)
 
-        # TODO: implement a way to check that the tango device's _component_power_state_changed
-        # callback is called
+        # TODO: implement a way to check that the tango device's
+        # _component_power_state_changed callback is called
         # i.e. component_power_state_changed_callback.assert_next_call(PowerState.ON)
         assert mock_station_component_manager.power_state == PowerState.ON
 
@@ -250,7 +252,8 @@ class TestStationComponentStateChangedCallback:
             tile_device_proxy = MccsDeviceProxy(tile_fqdn, logger)
             tile_device_proxy.SetPointingDelay.assert_next_call(pointing_delays)
 
-        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and then COMPLETED
+        # Check task status has gone through cycle of QUEUED, IN_PROGRESS,
+        # and then COMPLETED
         # This will likely change once we start monitoring the tile command progress
         for status in [TaskStatus.QUEUED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]:
             _, kwargs = task_callback.get_next_call()
@@ -300,8 +303,10 @@ class TestStationComponentStateChangedCallback:
         task_callback_on = MockCallable()
         mock_station_component_manager.on(task_callback=task_callback_on)
         apiu_proxy.On.assert_next_call()
-        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and then COMPLETED
-        # This will likely change once we start monitoring the subservient device command progress
+        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and
+        # then COMPLETED
+        # This will likely change once we start monitoring the subservient device
+        # command progress
         for status in [TaskStatus.QUEUED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]:
             _, kwargs = task_callback_on.get_next_call()
             assert kwargs["status"] == status
@@ -330,8 +335,10 @@ class TestStationComponentStateChangedCallback:
         mock_station_component_manager.off(task_callback=task_callback_off)
         for proxy in [apiu_proxy] + tile_proxies:
             proxy.Off.assert_next_call()
-        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and then COMPLETED
-        # This will likely change once we start monitoring the subservient device command progress
+        # Check task status has gone through cycle of QUEUED, IN_PROGRESS, and
+        # then COMPLETED
+        # This will likely change once we start monitoring the subservient device
+        # command progress
         for status in [TaskStatus.QUEUED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]:
             _, kwargs = task_callback_off.get_next_call()
             assert kwargs["status"] == status

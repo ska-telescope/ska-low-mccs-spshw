@@ -451,9 +451,10 @@ class TestMccsSubarray:
         )
 
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
+        interface = "https://schema.skao.int/ska-low-mccs-assignedresources/1.0"
         assert device_under_test.assignedResources == json.dumps(
             {
-                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "interface": interface,
                 "subarray_beam_ids": [],
                 "station_ids": [],
                 "channel_blocks": [],
@@ -791,7 +792,8 @@ class TestMccsSubarray:
         """
         Test `component_state_changed` properly handles release_completed updates.
 
-        Test that the obs state model is properly updated when resource release completes.
+        Test that the obs state model is properly updated when resource release
+        completes.
 
         :param mock_subarray_component_manager: A fixture that provides a partially
             mocked component manager which has access to the

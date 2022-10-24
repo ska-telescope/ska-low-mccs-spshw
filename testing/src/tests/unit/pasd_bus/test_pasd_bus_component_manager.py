@@ -184,7 +184,8 @@ class TestPasdBusComponentManager:
         _ = getattr(pasd_bus_component_manager, command_name)(*args, **kwargs)
         if (
             _ is None
-        ):  # if method is not defined in component manager class then command is called by simulator class
+        ):  # if method is not defined in component manager class then command is
+            # called by simulator class
             getattr(mock_pasd_bus_simulator, command_name).assert_called_once_with(
                 *args, **kwargs
             )

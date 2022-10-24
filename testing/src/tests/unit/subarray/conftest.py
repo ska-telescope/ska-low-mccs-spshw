@@ -89,7 +89,7 @@ def mock_subarray_component_manager(
     Return a subarray component manager.
 
     This fixture is identical to the `subarray_component_manager` fixture except
-    for the `tango_harness`which is omitted here to avoid a circular reference.
+    for the `tango_harness` which is omitted here to avoid a circular reference.
     This fixture is used to test subarray_device.
 
     :param logger: the logger to be used by this object.

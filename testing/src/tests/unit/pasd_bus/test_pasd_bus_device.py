@@ -38,7 +38,9 @@ class TestMccsPasdBus:
     """Tests of the MCCS pasd bus device."""
 
     @pytest.fixture()
-    def mock_component_manager(self: TestMccsPasdBus, mocker: pytest_mock.mocker) -> unittest.mock.Mock:  # type: ignore[valid-type]
+    def mock_component_manager(
+        self: TestMccsPasdBus, mocker: pytest_mock.mocker
+    ) -> unittest.mock.Mock:  # type: ignore[valid-type]
         """
         Return a mock to be used as a component manager for the PaSD bus device.
 
@@ -248,7 +250,9 @@ class TestMccsPasdBus:
         :param example_value: any value of the correct type for the
             device attribute.
         """
-        property_mock = mocker.PropertyMock(return_value=example_value)  # type: ignore[attr-defined]
+        property_mock = mocker.PropertyMock(
+            return_value=example_value
+        )  # type: ignore[attr-defined]
         setattr(
             type(mock_component_manager),
             component_manager_property,
@@ -375,7 +379,9 @@ class TestMccsPasdBus:
         :param component_manager_method_return: return value of the
             component manager method
         """
-        method_mock = mocker.Mock(return_value=component_manager_method_return)  # type: ignore[attr-defined]
+        method_mock = mocker.Mock(
+            return_value=component_manager_method_return
+        )  # type: ignore[attr-defined]
         setattr(mock_component_manager, component_manager_method, method_mock)
         method_mock.assert_not_called()
 

@@ -233,8 +233,8 @@ class TestPowerManagement:
         for apiu in apius:
             assert apiu.adminMode == AdminMode.OFFLINE
             assert apiu.state() == tango.DevState.DISABLE
-            # PAC: I noticed that putting the APIU online makes it pass through ON before
-            # it transitions to OFF... is this intended?
+            # PAC: I noticed that putting the APIU online makes it pass through ON
+            # before it transitions to OFF... is this intended?
             apiu.adminMode = AdminMode.ONLINE
         # time.sleep(0.1)
         # sleep enough time for one polling cycle of PushChanges to occur

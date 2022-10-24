@@ -2,11 +2,11 @@
 participant "Jupyter" as jupyter
 participant "Subrack" as subrack
 participant "Tile\nProcessing\nModule" as tpm
-participant "Station" as station
 participant "DAQ" as daq
 
 jupyter -> subrack: on()
 jupyter -> tpm: on()
+jupyter -> daq: on()
 tpm -> subrack: power_on_tpm()
 subrack --> tpm: change_attribute_event(tpm_power)
 tpm -> tpm: initialise()
@@ -19,9 +19,6 @@ loop wait for synchronised
 jupyter -> tpm: 
 jupyter <- tpm: tileProgrammingState
 end
-
-jupyter -> station: start_daq()
-station-> daq: start_daq()
 
 jupyter -> tpm: send_data()
 tpm --> daq: SPEAD packet

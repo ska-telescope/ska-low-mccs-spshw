@@ -325,11 +325,12 @@ class TestSubrackDriverCallback:
         By calling check_tpm_power_states on the subrack_driver we
         execute a command on the mocked client "tpm_on_off", this has
         been mocked to return a dictionary via {"tpm_on_off": [False,
-        False, False]}, this is then transformed to a list of PowerState.OFF for false or PowerState.ON for true. This then
-        calls the callback with a list of 3 PowerStates[PowerState.OFF]*3}, therefore all we need to do is
-        assert_last_call.
+        False, False]}, this is then transformed to a list of PowerState.OFF for false
+        or PowerState.ON for true. This then calls the callback with a list of 3
+        PowerStates[PowerState.OFF]*3}, therefore all we need to do is assert_last_call.
         """
-        # This call is performed to check the tpm power states and call the mocked callback function.
+        # This call is performed to check the tpm power states and call the mocked
+        # callback function.
         getattr(subrack_driver, "check_tpm_power_states")()
 
         # check that the mocked callback is called with expected values.

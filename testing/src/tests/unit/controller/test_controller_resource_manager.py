@@ -46,8 +46,8 @@ class TestControllerResourceManager:
         dodgy_subarray_beam = "low-mccs/subarraybeam/dodgy"
         with pytest.raises(
             ValueError,
-            match=r"Unsupported resources: "
-            f"{{'subarray_beams': \['{dodgy_subarray_beam}'\]}}.",
+            match="Unsupported resources: "
+            rf"{{'subarray_beams': \['{dodgy_subarray_beam}'\]}}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
@@ -85,8 +85,8 @@ class TestControllerResourceManager:
         with pytest.raises(
             ValueError,
             match="Cannot allocate unhealthy resources: "
-            r"{'subarray_beams': \['low-mccs/subarraybeam/01',"
-            " 'low-mccs/subarraybeam/02'\]}.",
+            r"{'subarray_beams': \['low-mccs/subarraybeam/01', "
+            r"'low-mccs/subarraybeam/02'\]}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
@@ -102,8 +102,8 @@ class TestControllerResourceManager:
 
         with pytest.raises(
             ValueError,
-            match=r"Cannot allocate unhealthy resources: "
-            "{'subarray_beams': \['low-mccs/subarraybeam/02'\]}.",
+            match="Cannot allocate unhealthy resources: "
+            r"{'subarray_beams': \['low-mccs/subarraybeam/02'\]}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",
@@ -157,8 +157,8 @@ class TestControllerResourceManager:
 
         with pytest.raises(
             ValueError,
-            match=r"Cannot allocate resources: "
-            "{'subarray_beams': ['low-mccs/subarraybeam/01']} "
+            match="Cannot allocate resources: "
+            r"{'subarray_beams': \['low-mccs/subarraybeam/01'\]} "
             "to allocatee low-mccs/subarray/02",
         ):
             controller_resource_manager.allocate(
@@ -209,8 +209,8 @@ class TestControllerResourceManager:
 
         with pytest.raises(
             ValueError,
-            match=r"Cannot allocate resources: "
-            "{'subracks': ['low-mccs/subrack/01']} "
+            match="Cannot allocate resources: "
+            r"{'subracks': \['low-mccs/subrack/01'\]} "
             "to allocatee low-mccs/subarray/02",
         ):
             controller_resource_manager.allocate(
@@ -273,8 +273,8 @@ class TestControllerResourceManager:
 
         with pytest.raises(
             ValueError,
-            match=r"Cannot allocate unhealthy resources: "
-            "{'subarray_beams': ['low-mccs/subarraybeam/01']}.",
+            match="Cannot allocate unhealthy resources: "
+            r"{'subarray_beams': \['low-mccs/subarraybeam/01'\]}.",
         ):
             controller_resource_manager.allocate(
                 "low-mccs/subarray/01",

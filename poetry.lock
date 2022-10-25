@@ -1,6 +1,6 @@
 [[package]]
 name = "aavs-system"
-version = "1.0"
+version = "1.1"
 description = "AAVS Software"
 category = "main"
 optional = false
@@ -8,7 +8,7 @@ python-versions = "*"
 
 [package.source]
 type = "file"
-url = "aavs_system-1.0-py3-none-any.whl"
+url = "aavs_system-1.1-py3-none-any.whl"
 
 [[package]]
 name = "astroid"
@@ -41,7 +41,7 @@ all = ["asdf (>=2.10.0)", "beautifulsoup4", "bleach", "bottleneck", "certifi", "
 docs = ["Jinja2 (<3.1)", "matplotlib (>=3.1,!=3.4.0,!=3.5.2)", "pytest (>=7.0)", "scipy (>=1.3)", "sphinx (<4)", "sphinx-astropy (>=1.6)", "sphinx-changelog (>=1.1.0)"]
 recommended = ["matplotlib (>=3.1,!=3.4.0,!=3.5.2)", "scipy (>=1.3)"]
 test = ["pytest (>=7.0)", "pytest-astropy (>=0.10)", "pytest-astropy-header (>=0.2.1)", "pytest-doctestplus (>=0.12)", "pytest-xdist"]
-test-all = ["coverage", "ipython (>=4.2)", "objgraph", "pytest (>=7.0)", "pytest-astropy (>=0.9)", "pytest-astropy-header (>=0.2.1)", "pytest-doctestplus (>=0.12)", "pytest-xdist", "sgp4 (>=2.3)", "skyfield (>=1.20)"]
+test_all = ["coverage", "ipython (>=4.2)", "objgraph", "pytest (>=7.0)", "pytest-astropy (>=0.9)", "pytest-astropy-header (>=0.2.1)", "pytest-doctestplus (>=0.12)", "pytest-xdist", "sgp4 (>=2.3)", "skyfield (>=1.20)"]
 
 [[package]]
 name = "atomicwrites"
@@ -63,7 +63,7 @@ python-versions = ">=3.5"
 dev = ["cloudpickle", "coverage[toml] (>=5.0.2)", "furo", "hypothesis", "mypy (>=0.900,!=0.940)", "pre-commit", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "sphinx", "sphinx-notfound-page", "zope.interface"]
 docs = ["furo", "sphinx", "sphinx-notfound-page", "zope.interface"]
 tests = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy (>=0.900,!=0.940)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "zope.interface"]
-tests-no-zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy (>=0.900,!=0.940)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins"]
+tests_no_zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy (>=0.900,!=0.940)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "backoff"
@@ -119,7 +119,7 @@ optional = false
 python-versions = ">=3.6.0"
 
 [package.extras]
-unicode-backport = ["unicodedata2"]
+unicode_backport = ["unicodedata2"]
 
 [[package]]
 name = "click"
@@ -388,9 +388,9 @@ python-versions = ">=3.6.1,<4.0"
 
 [package.extras]
 colors = ["colorama (>=0.4.3,<0.5.0)"]
-pipfile-deprecated-finder = ["pipreqs", "requirementslib"]
+pipfile_deprecated_finder = ["pipreqs", "requirementslib"]
 plugins = ["setuptools"]
-requirements-deprecated-finder = ["pip-api", "pipreqs"]
+requirements_deprecated_finder = ["pip-api", "pipreqs"]
 
 [[package]]
 name = "jsonschema"
@@ -656,7 +656,7 @@ test = ["pytest", "pytest-doctestplus (>=0.7)"]
 
 [[package]]
 name = "pyfabil"
-version = "1.0"
+version = "1.1"
 description = "A general Python package for interfacing with FPGA boards"
 category = "main"
 optional = false
@@ -667,7 +667,7 @@ enum34 = "*"
 
 [package.source]
 type = "file"
-url = "pyfabil-1.0-py3-none-any.whl"
+url = "pyfabil-1.1-py3-none-any.whl"
 
 [[package]]
 name = "pyflakes"
@@ -921,7 +921,7 @@ urllib3 = ">=1.21.1,<1.27"
 
 [package.extras]
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
-use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
+use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "restructuredtext-lint"
@@ -1025,7 +1025,7 @@ optional = false
 python-versions = ">=3.5"
 
 [package.extras]
-dev = ["black", "isort", "prospector[with-pyroma]"]
+dev = ["black", "isort", "prospector[with_pyroma]"]
 
 [package.source]
 type = "legacy"
@@ -1223,7 +1223,7 @@ content-hash = "52a2de6737dbe5f4fa74a224db04509bfbaafa98f74ffe557848cd120a659265
 
 [metadata.files]
 aavs-system = [
-    {file = "aavs_system-1.0-py3-none-any.whl", hash = "sha256:02789a6185f0a3d68c3fef874190d62caf100be2ab1f811f01b22fddb8ad2f98"},
+    {file = "aavs_system-1.1-py3-none-any.whl", hash = "sha256:97a09c465505b150d68c381e42f590280b605f0f03aee621eb68896357d0dfe9"},
 ]
 astroid = [
     {file = "astroid-2.12.12-py3-none-any.whl", hash = "sha256:72702205200b2a638358369d90c222d74ebc376787af8fb2f7f2a86f7b5cc85f"},
@@ -1688,7 +1688,7 @@ pyerfa = [
     {file = "pyerfa-2.0.0.1.tar.gz", hash = "sha256:2fd4637ffe2c1e6ede7482c13f583ba7c73119d78bef90175448ce506a0ede30"},
 ]
 pyfabil = [
-    {file = "pyfabil-1.0-py3-none-any.whl", hash = "sha256:1af60b36928a8b364603c3d58abbe573afce3a35ede01b97a87e51d64d151699"},
+    {file = "pyfabil-1.1-py3-none-any.whl", hash = "sha256:bf107fb12519ea183d23b1f2565144ee91a2823cbbb6ea8b0b7e2cf54e9c3e3e"},
 ]
 pyflakes = [
     {file = "pyflakes-2.5.0-py2.py3-none-any.whl", hash = "sha256:4579f67d887f804e67edb544428f264b7b24f435b263c4614f384135cea553d2"},

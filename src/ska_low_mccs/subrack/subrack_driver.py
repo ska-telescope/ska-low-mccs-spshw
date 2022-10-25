@@ -182,7 +182,7 @@ class SubrackDriver(MccsComponentManager):
         self.logger.debug("TPM power changed: " + str(tpm_power_states))
         if self._component_state_changed_callback is not None:
             self._component_state_changed_callback(
-                {"tpm_power_states": tpm_power_states}
+                {"tpm_power_states": self.tpm_power_states}
             )
 
     @property

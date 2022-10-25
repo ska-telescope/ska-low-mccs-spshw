@@ -275,7 +275,7 @@ class TestMccsTileCommands:
                 "SetLmcDownload",
                 json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),
             ),
-            ("SetBeamFormerRegions", (2, 8, 5, 0, 0)),
+            ("SetBeamFormerRegions", (2, 8, 5, 0, 0, 1, 1, 101)),
             (
                 "ConfigureStationBeamformer",
                 json.dumps(

@@ -1,0 +1,27 @@
+@startuml
+participant "Jupyter" as jupyter
+participant "Subrack" as subrack
+participant "Tile\nProcessing\nModule" as tpm
+participant "DAQ" as daq
+
+jupyter -> subrack: On()
+jupyter -> tpm: On()
+jupyter -> daq: On()
+tpm -> subrack: PowerOnTpm()
+subrack --> tpm: ChangeAttributeEvent(tpm_power)
+tpm -> tpm: Initialise()
+loop wait for Initialised 
+jupyter -> tpm: 
+jupyter <- tpm: tileProgrammingState
+end
+jupyter -> tpm: StartAcquisition()
+loop wait for synchronised
+jupyter -> tpm: 
+jupyter <- tpm: tileProgrammingState
+end
+
+jupyter -> daq: Configure()
+jupyter -> tpm: SendData()
+tpm --> daq: SPEAD packet
+
+@enduml

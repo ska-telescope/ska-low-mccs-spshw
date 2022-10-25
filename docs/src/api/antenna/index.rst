@@ -1,12 +1,12 @@
-==============
-DAQ subpackage
-==============
+==================
+Antenna subpackage
+==================
 
-.. automodule:: ska_low_mccs-daq.daq
+.. automodule:: ska_low_mccs.antenna
 
 
 .. toctree::
 
-  DAQ component manager<daq_component_manager>
-  DAQ device<daq_device>
-  DAQ health model<daq_health_model>
+  Antenna component manager<antenna_component_manager>
+  Antenna device<antenna_device>
+  Antenna health model<antenna_health_model>

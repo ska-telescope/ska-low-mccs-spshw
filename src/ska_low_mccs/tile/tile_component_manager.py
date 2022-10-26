@@ -730,7 +730,8 @@ class TileComponentManager(MccsComponentManager):
         """
         self.set_power_state(power_state)
         self.logger.debug(
-            f"power state: {self.power_state}, communication status: {self.communication_state}"
+            f"power state: {self.power_state}, communication status: "
+            f"{self.communication_state}"
         )
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             if power_state == PowerState.ON:
@@ -998,7 +999,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         try:
             return self.submit_task(self._initialise, task_callback=task_callback)
@@ -1053,7 +1055,8 @@ class TileComponentManager(MccsComponentManager):
             file
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(
             self._download_firmware, args=[argin], task_callback=task_callback
@@ -1114,7 +1117,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._get_arp_table, task_callback=task_callback)
 
@@ -1169,7 +1173,9 @@ class TileComponentManager(MccsComponentManager):
         * Delay - (int) delay start
 
         :param task_callback: Update task state, defaults to None
-        :return: A tuple containing a task status and a unique id string to identify the command
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         params = json.loads(argin)
         start_time = params.get("StartTime", None)
@@ -1242,7 +1248,8 @@ class TileComponentManager(MccsComponentManager):
         :param argin: is the path to a file containing the required CPLD firmware
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(
             self._cpld_flash_write, args=[argin], task_callback=task_callback
@@ -1301,7 +1308,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._post_synchronisation, task_callback=task_callback)
 
@@ -1357,7 +1365,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._sync_fpgas, task_callback=task_callback)
 

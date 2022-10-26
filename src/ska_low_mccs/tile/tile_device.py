@@ -290,7 +290,8 @@ class MccsTile(SKABaseDevice):
         admin_mode = self.admin_mode_model.admin_mode
         power_state = self.component_manager.power_state
         self.logger.debug(
-            f"communication_state: {communication_state}, adminMode: {admin_mode}, powerMode: {power_state}"
+            f"communication_state: {communication_state}, adminMode: {admin_mode}, "
+            f"powerMode: {power_state}"
         )
         # admin mode stuff here
         action = action_map[communication_state]
@@ -882,8 +883,8 @@ class MccsTile(SKABaseDevice):
         """
         Download the firmware contained in bitfile to all FPGAs on the board.
 
-        This should also update the internal register mapping, such that registers become
-        available for use.
+        This should also update the internal register mapping, such that registers
+        become available for use.
 
         :param argin: can either be the design name returned from
             :py:meth:`.GetFirmwareAvailable` command, or a path to a
@@ -1383,9 +1384,9 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(
+        def do(  # type: ignore[override]
             self: MccsTile.Get40GCoreConfigurationCommand, argin: str
-        ) -> str:  # type: ignore[override]
+        ) -> str:
             """
             Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
 
@@ -1532,9 +1533,9 @@ class MccsTile(SKABaseDevice):
         """
         Return a dictionary with populated ARP table for all used cores.
 
-        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC.
-        10G interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
-        LMC with only one ARP.
+        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer,
+        1 for LMC.10G interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for
+        beamforming, and 2, 6 for LMC with only one ARP.
 
         :return: a JSON-encoded dictionary of coreId and populated arpID table
 

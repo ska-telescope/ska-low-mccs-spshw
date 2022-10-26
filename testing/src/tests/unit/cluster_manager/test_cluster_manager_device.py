@@ -420,9 +420,9 @@ class TestMccsClusterManagerDevice:
 
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (
-            "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
-Communication with component is not established.\""
-            in lrc_result[0][1]
+            '"Exception: Cannot execute '
+            "'ClusterSimulatorComponentManager._get_from_component'. "
+            'Communication with component is not established."' in lrc_result[0][1]
         )
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -542,9 +542,9 @@ Communication with component is not established.\""
 
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (
-            lrc_result[0][1][1]
-            == "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
-Communication with component is not established.\""
+            lrc_result[0][1][1] == '"Exception: Cannot execute '
+            "'ClusterSimulatorComponentManager._get_from_component'. "
+            'Communication with component is not established."'
         )
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -613,9 +613,9 @@ Communication with component is not established.\""
         # But we expect it to have failed when a worker thread picks it up.
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (
-            lrc_result[0][1][1]
-            == "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
-Communication with component is not established.\""
+            lrc_result[0][1][1] == '"Exception: Cannot execute '
+            "'ClusterSimulatorComponentManager._get_from_component'. "
+            'Communication with component is not established."'
         )
 
         lrc_id, lrc_status = device_under_test.longRunningCommandStatus

@@ -31,8 +31,8 @@ def component_state_changed_callback(
     To be called when the subarray's state changes.
 
     :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory which uses a double-ended queue (i.e. an object that returns mock callbacks when
-        called).
+        factory which uses a double-ended queue (i.e. an object that returns
+        mock callbacks when called).
 
     :return: a mock callback to be called when the subarray's state changes.
     """
@@ -113,8 +113,8 @@ def mock_station_beam_component_manager(
     """
     Return a subarray component manager.
 
-    This fixture is identical to the `station_beam_component_manager` fixture except for the `tango_harness`
-    which is omitted here to avoid a circular reference.
+    This fixture is identical to the `station_beam_component_manager` fixture
+    except for the `tango_harness` which is omitted here to avoid a circular reference.
     This fixture is used to test station_beam_device.
 
     :param beam_id: a beam id for the station beam under test.
@@ -155,7 +155,8 @@ def station_beam_component_manager(
     :param communication_state_changed_callback: callback to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_state_changed_callback: Callback to call when the component's state changes.
+    :param component_state_changed_callback: Callback to call when the
+        component's state changes.
     :param max_workers: Maximum number of workers in the thread pool.
 
     :return: a station beam component manager

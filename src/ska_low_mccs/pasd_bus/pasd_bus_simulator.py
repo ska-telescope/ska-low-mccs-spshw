@@ -716,8 +716,9 @@ class FndhSimulator(PasdHardwareSimulator):
             controller.
         """
         # TODO: We're currently returning canned results.
+        revision = self.MODBUS_REGISTER_MAP_REVISION_NUMBER
         return {
-            "modbus_register_map_revision_number": self.MODBUS_REGISTER_MAP_REVISION_NUMBER,
+            "modbus_register_map_revision_number": revision,
             "pcb_revision_number": self.PCB_REVISION_NUMBER,
             "cpu_id": self.CPU_ID,
             "chip_id": self.CHIP_ID,
@@ -852,8 +853,9 @@ class SmartboxSimulator(PasdHardwareSimulator):
         :return: a dictionary containing information about the smartbox.
         """
         # TODO: We're currently returning canned results.
+        revision = self.MODBUS_REGISTER_MAP_REVISION_NUMBER
         return {
-            "modbus_register_map_revision_number": self.MODBUS_REGISTER_MAP_REVISION_NUMBER,
+            "modbus_register_map_revision_number": revision,
             "pcb_revision_number": self.PCB_REVISION_NUMBER,
             "cpu_id": self.CPU_ID,
             "chip_id": self.CHIP_ID,

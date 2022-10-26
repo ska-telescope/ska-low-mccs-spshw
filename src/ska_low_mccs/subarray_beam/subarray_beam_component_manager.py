@@ -177,7 +177,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         :param argin: Json string containing args
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string
+            to identify the command
         """
         config_dict = json.loads(argin)
 
@@ -243,7 +244,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._scan, task_callback=task_callback)
 

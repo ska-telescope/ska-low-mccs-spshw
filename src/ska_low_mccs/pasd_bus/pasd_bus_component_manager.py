@@ -205,7 +205,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._reload_database, args=[], task_callback=task_callback
@@ -225,7 +226,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param fndh: the fndh to get info from
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._get_fndh_info, args=[fndh], task_callback=task_callback
@@ -245,7 +247,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param fndh: the fndh service led to turn on
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_fndh_service_led_on, args=[fndh], task_callback=task_callback
@@ -265,7 +268,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param fndh: the fndh service led to turn off
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_fndh_service_led_off, args=[fndh], task_callback=task_callback
@@ -285,7 +289,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param smartbox: the smartbox to get info from
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._get_smartbox_info, args=[smartbox], task_callback=task_callback
@@ -305,7 +310,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param smartbox: the smartbox to turn on
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_smartbox_on, args=[smartbox], task_callback=task_callback
@@ -325,7 +331,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param smartbox: the smartbox to turn off
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_smartbox__off, args=[smartbox], task_callback=task_callback
@@ -345,7 +352,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param smartbox: the smartbox service led to turn on
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_smartbox_service_led_on,
@@ -367,7 +375,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param smartbox: the smartbox service led to turn off
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_smartbox_service_led_off,
@@ -389,7 +398,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param antenna: the antenna to get info from
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._get_antenna_info, args=[antenna], task_callback=task_callback
@@ -409,7 +419,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param antenna: the antenna breaker to reset
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._reset_antenna_breaker, args=[antenna], task_callback=task_callback
@@ -429,7 +440,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param antenna: the antenna to turn on
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_antenna_on, args=[antenna], task_callback=task_callback
@@ -449,7 +461,8 @@ class PasdBusComponentManager(DriverSimulatorSwitchingComponentManager):
         :param antenna: the antenna to turn off
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         task_status, unique_id = self.submit_task(
             self._turn_antenna_off, args=[antenna], task_callback=task_callback

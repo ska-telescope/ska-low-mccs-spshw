@@ -316,7 +316,8 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         Return the desired pointing of this beam.
 
-        :return: the desired point of this beam, conforming to the Sky Coordinate Set definition
+        :return: the desired point of this beam, conforming to the
+            Sky Coordinate Set definition
         """
         return self.component_manager.desired_pointing
 

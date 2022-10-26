@@ -49,7 +49,9 @@ with open("testing/testbeds.yaml", "r") as stream:
 
 
 # TODO: pytest is partially typehinted but does not yet export Config
-def pytest_configure(config: _pytest.config.Config) -> None:  # type: ignore[name-defined]
+def pytest_configure(
+    config: _pytest.config.Config,  # type: ignore[name-defined]
+) -> None:
     """
     Register custom markers to avoid pytest warnings.
 
@@ -83,7 +85,8 @@ def pytest_addoption(
 
 # TODO: pytest is partially typehinted but does not yet export Config
 def pytest_collection_modifyitems(
-    config: _pytest.config.Config, items: list[pytest.Item]  # type: ignore[name-defined]
+    config: _pytest.config.Config,  # type: ignore[name-defined]
+    items: list[pytest.Item],
 ) -> None:
     """
     Modify the list of tests to be run, after pytest has collected them.
@@ -165,8 +168,8 @@ def tango_harness_factory(
     """
     Return a factory for creating a test harness for testing Tango devices.
 
-    The Tango context used depends upon the context in which the tests are being run, as specified
-    by the `--testbed` option.
+    The Tango context used depends upon the context in which the tests are being
+    run, as specified by the `--testbed` option.
 
     If the context is "test", then this harness deploys the specified
     devices into a

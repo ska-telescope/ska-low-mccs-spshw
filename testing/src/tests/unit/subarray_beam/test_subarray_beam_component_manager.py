@@ -168,7 +168,8 @@ class TestSubarrayBeam:
 
             # TODO: assert that callback is called
 
-            # component_state_changed_callback.assert_in_deque({"configured_changed": False})
+            # component_state_changed_callback.assert_in_deque(
+            # {"configured_changed": False})
 
             subarray_beam.configure(
                 subarray_beam_id,
@@ -180,7 +181,8 @@ class TestSubarrayBeam:
                 phase_centre,
             )
 
-            # component_state_changed_callback.assert_in_deque({"configured_changed": True})
+            # component_state_changed_callback.assert_in_deque(
+            # {"configured_changed": True})
 
             assert subarray_beam.subarray_beam_id == subarray_beam_id
             assert subarray_beam.station_ids == station_ids

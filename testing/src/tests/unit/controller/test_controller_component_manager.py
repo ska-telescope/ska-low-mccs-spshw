@@ -286,7 +286,7 @@ class TestControllerComponentManager:
                 "channel_blocks": [3, 4],
             }
         )
-        #        with pytest.raises(ConnectionError, match="Component is not turned on"):
+        # with pytest.raises(ConnectionError, match="Component is not turned on"):
         result, msg = controller_component_manager.allocate(argin)
         assert result == TaskStatus.FAILED
 
@@ -300,10 +300,10 @@ class TestControllerComponentManager:
 
         assert controller_component_manager._power_state == PowerState.ON
 
-        # TODO: These tests have been suspended until a refactor of the allocate/_allocate
-        # methods has been preformed. All the error checking is performed after the
-        # _antenna task has been submitted. Should the checking be moved into the antenna
-        # method?
+        # TODO: These tests have been suspended until a refactor of the
+        # allocate/_allocate methods has been preformed. All the error checking is
+        # performed after the _antenna task has been submitted. Should the checking
+        # be moved into the antenna method?
 
         argin = json.dumps(
             {

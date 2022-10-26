@@ -563,7 +563,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
             """
             Initialise a new SubmitJobCommand instance.
 
-            :param component_manager: The component manager to which this command belongs.
+            :param component_manager: The component manager to which
+                this command belongs.
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
@@ -610,7 +611,8 @@ class MccsClusterManagerDevice(SKABaseDevice):
             """
             Initialise a new GetJobStatusCommand instance.
 
-            :param component_manager: The component manager to which this command belongs.
+            :param component_manager: The component manager to
+                which this command belongs.
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager

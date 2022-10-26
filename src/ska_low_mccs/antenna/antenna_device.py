@@ -177,7 +177,8 @@ class MccsAntenna(SKABaseDevice):
 
         :param state_change: a dict containing the state change(s)
             of the component.
-        :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is an antenna.
+        :param fqdn: fully qualified domain name of the device whos state
+            has changed. None if the device is an antenna.
 
         :raises ValueError: unknown fqdn
         """
@@ -202,7 +203,8 @@ class MccsAntenna(SKABaseDevice):
                 pass
             else:
                 raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, "
+                    "tile or apiu"
                 )
 
         if "fault" in state_change.keys():

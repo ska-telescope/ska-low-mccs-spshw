@@ -91,7 +91,8 @@ class TestSubrackSimulatorCommon:
             to return (in simulation mode and powered on)
         :param request: A pytest object giving access to the requesting
             test context.
-        :param component_state_changed_callback: Callback to call when the component's state changes.
+        :param component_state_changed_callback: Callback to call when the
+            component's state changes.
 
         :raises ValueError: if parametrized with an unrecognised option
 
@@ -388,7 +389,8 @@ class TestSubrackDriverCommon:
             to return (in driver mode and powered on)
         :param request: A pytest object giving access to the requesting
             test context.
-        :param component_state_changed_callback: Callback to call when the component's state changes.
+        :param component_state_changed_callback: Callback to call when the
+            component's state changes.
 
         :raises ValueError: if parametrized with an unrecognised option
 
@@ -445,7 +447,8 @@ class TestSubrackDriverCommon:
         time.sleep(0.1)
         web_hardware_client_mock.connect.assert_called_once()
         # assert "_ConnectToSubrack" in subrack_driver._queue_manager._task_result[0]
-        # assert subrack_driver._queue_manager._task_result[1] == str(ResultCode.OK.value)
+        # assert subrack_driver._queue_manager._task_result[1] ==
+        # str(ResultCode.OK.value)
         # assert "Connected to " in subrack_driver._queue_manager._task_result[2]
         assert subrack_driver.communication_state == CommunicationStatus.ESTABLISHED
 
@@ -476,7 +479,8 @@ class TestSubrackDriverCommon:
         # assert subrack_driver._queue_manager._task_result[1] == str(
         #    ResultCode.FAILED.value
         # )
-        # assert "Failed to connect to " in subrack_driver._queue_manager._task_result[2]
+        # assert "Failed to connect to " in
+        # subrack_driver._queue_manager._task_result[2]
         assert subrack_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
 
     @pytest.mark.parametrize(

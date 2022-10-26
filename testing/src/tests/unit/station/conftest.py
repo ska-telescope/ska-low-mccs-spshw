@@ -280,7 +280,8 @@ def component_state_changed_callback(
     :param mock_callback_deque_factory: fixture that provides a mock callback deque
         factory.
 
-    :return: a mock callback deque holding a sequence of calls to component_state_changed_callback.
+    :return: a mock callback deque holding a sequence of calls to
+        component_state_changed_callback.
     """
     return mock_callback_deque_factory()
 

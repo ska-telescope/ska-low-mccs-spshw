@@ -121,7 +121,8 @@ class TestAntennaApiuProxy:
         assert antenna_apiu_proxy.power_on() == ResultCode.OK
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
-        # The antenna power mode won't update until an event confirms that the antenna is on.
+        # The antenna power mode won't update until an event confirms that
+        # the antenna is on.
         assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
         # Fake an event that tells this proxy that the antenna is now on as requested

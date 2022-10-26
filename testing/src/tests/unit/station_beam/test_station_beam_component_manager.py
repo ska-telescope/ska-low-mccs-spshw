@@ -150,8 +150,8 @@ class TestStationBeamComponentManager:
         This is a weak test that simply tests that the beam id is what
         it was initialised with.
 
-        :param station_beam_component_manager: the station beam component class object under
-            test.
+        :param station_beam_component_manager: the station beam component
+            class object under test.
         :param beam_id: the beam id of the station beam
         """
         assert station_beam_component_manager.beam_id == beam_id
@@ -167,8 +167,8 @@ class TestStationBeamComponentManager:
         initial value is as expected, and that we can write a new value
         to it.
 
-        :param station_beam_component_manager: the station beam component class object under
-            test.
+        :param station_beam_component_manager: the station beam component
+            class object under test.
         """
         assert station_beam_component_manager.desired_pointing == []
 
@@ -185,8 +185,8 @@ class TestStationBeamComponentManager:
         """
         Test the configure method.
 
-        :param station_beam_component_manager: the station beam component class object under
-            test.
+        :param station_beam_component_manager: the station beam component class
+            object under test.
         """
         beam_id = 2
         station_id = 1

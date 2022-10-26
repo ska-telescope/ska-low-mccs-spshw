@@ -36,8 +36,8 @@ def component_state_changed_callback(
     A side effect function is passed in to update the DUT's state
 
     :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory which uses a double-ended queue (i.e. an object that returns mock callbacks when
-        called).
+        factory which uses a double-ended queue (i.e. an object that returns
+        mock callbacks when called).
 
     :return: a mock callback to be called when the subarray's state changes.
     """
@@ -55,9 +55,9 @@ def subarray_component_manager(
     """
     Return a subarray component manager.
 
-    This fixture is identical to `mock_subarray_component_manager` except for the inclusion of `tango_harness`.
-    Without `tango_harness` the component manager tests experience errors.
-    This fixture is used to test subarray_component_manager.
+    This fixture is identical to `mock_subarray_component_manager` except for
+    the inclusion of `tango_harness`. Without `tango_harness` the component manager
+    tests experience errors.This fixture is used to test subarray_component_manager.
 
     :param tango_harness: a test harness for MCCS tango devices
     :param logger: the logger to be used by this object.
@@ -88,8 +88,8 @@ def mock_subarray_component_manager(
     """
     Return a subarray component manager.
 
-    This fixture is identical to the `subarray_component_manager` fixture except for the `tango_harness`
-    which is omitted here to avoid a circular reference.
+    This fixture is identical to the `subarray_component_manager` fixture except
+    for the `tango_harness` which is omitted here to avoid a circular reference.
     This fixture is used to test subarray_device.
 
     :param logger: the logger to be used by this object.

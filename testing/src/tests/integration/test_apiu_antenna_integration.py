@@ -173,8 +173,9 @@ class TestApiuAntennaIntegration:
         time.sleep(0.1)
 
         assert apiu_device.IsAntennaOn(1)
-        # It fires a change event which is received by the antenna device. The antenna device now knows that
-        # its antenna is powered on, so it transitions to state ON.
+        # It fires a change event which is received by the antenna device. The antenna
+        # device now knows that its antenna is powered on, so it transitions to
+        # state ON.
         time.sleep(0.1)
         assert antenna_device.state() == DevState.ON
 

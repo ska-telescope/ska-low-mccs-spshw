@@ -548,10 +548,11 @@ def patched_tile_device_class(
             mock_tile_component_manager._component_state_changed_callback = (
                 self.component_state_changed_callback
             )
-            mock_tile_component_manager._tile_orchestrator._component_state_changed_callback = (
+            orchestrator = mock_tile_component_manager._tile_orchestrator
+            orchestrator._component_state_changed_callback = (
                 self.component_state_changed_callback
             )
-            mock_tile_component_manager._tile_orchestrator._communication_state_changed_callback = (
+            orchestrator._communication_state_changed_callback = (
                 self._component_communication_state_changed
             )
             return mock_tile_component_manager

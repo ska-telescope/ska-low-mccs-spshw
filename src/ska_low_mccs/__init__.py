@@ -18,7 +18,6 @@ __all__ = [
     "MccsAPIU",
     "MccsClusterManagerDevice",
     "MccsController",
-    "MccsPasdBus",
     "MccsStation",
     "MccsStationBeam",
     "MccsSubarray",
@@ -32,7 +31,6 @@ __all__ = [
     "apiu",
     "cluster_manager",
     "controller",
-    "pasd_bus",
     "station",
     "station_beam",
     "subrack",
@@ -48,7 +46,6 @@ from .apiu import MccsAPIU
 
 from .cluster_manager import MccsClusterManagerDevice
 from .controller import MccsController
-from .pasd_bus import MccsPasdBus
 from .station import MccsStation
 
 from .station_beam import MccsStationBeam

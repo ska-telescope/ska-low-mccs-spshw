@@ -30,7 +30,7 @@ python-post-format:
 
 # Add this for typehints & static type checking
 # removed temporarily
-#python-post-lint:
-#	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
+python-post-lint:
+	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
 
 .PHONY: python-post-format python-post-lint

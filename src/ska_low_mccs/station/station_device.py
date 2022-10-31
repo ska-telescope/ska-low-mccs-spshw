@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -19,11 +19,10 @@ from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.station import (
-    StationComponentManager,
-    StationHealthModel,
-    StationObsStateModel,
-)
+from ska_low_mccs.station.station_component_manager import StationComponentManager
+from ska_low_mccs.station.station_health_model import StationHealthModel
+from ska_low_mccs.station.station_obs_state_model import StationObsStateModel
+
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
@@ -218,13 +217,16 @@ class MccsStation(SKAObsDevice):
 
         :raises ValueError: fqdn not found
         """
+        self.component_manager: StationComponentManager  # for the type-checker
         if fqdn is None:
             health_state_changed_callback = self.health_changed
             power_state_changed_callback = self._component_power_state_changed
         else:
             device_family = fqdn.split("/")[1]
             if device_family == "apiu":
-                health_state_changed_callback = self._health_model.apiu_health_changed  # type: ignore[assignment]
+                health_state_changed_callback = functools.partial(
+                    self._health_model.apiu_health_changed, fqdn
+                )
                 power_state_changed_callback = (
                     self.component_manager._apiu_power_state_changed
                 )
@@ -251,7 +253,7 @@ class MccsStation(SKAObsDevice):
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
             with self.component_manager.power_state_lock:
-                self.component_manager.set_power_state(power_state, fqdn=fqdn)
+                self.component_manager.set_power_state(cast(PowerState, power_state), fqdn=fqdn)
                 if power_state is not None:
                     power_state_changed_callback(power_state)
 
@@ -302,7 +304,7 @@ class MccsStation(SKAObsDevice):
         self.push_change_event("healthState", health)
 
     # Reimplementation for debugging purposes
-    def _update_state(self: MccsStation, state: tango.DevState) -> None:
+    def _update_state(self: MccsStation, state: tango.DevState, status: Optional[str] = None) -> None:
         """
         Update the device state.
 
@@ -315,6 +317,7 @@ class MccsStation(SKAObsDevice):
         understanding of this issue.
 
         :param state: the new state of the device
+        :param status: tne new status
 
         :raises Exception: for unknown reasons. This is a to-do.
         """

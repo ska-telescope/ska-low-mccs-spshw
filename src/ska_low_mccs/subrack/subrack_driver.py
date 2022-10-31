@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -28,7 +29,7 @@ import threading
 import time
 from typing import Any, Callable, List, Optional, cast
 
-from ska_control_model import CommunicationStatus, PowerState, ResultCode
+from ska_control_model import CommunicationStatus, PowerState, TaskStatus
 from ska_low_mccs_common.component import MccsComponentManager, WebHardwareClient
 
 from ska_low_mccs.subrack.subrack_data import FanMode, SubrackData

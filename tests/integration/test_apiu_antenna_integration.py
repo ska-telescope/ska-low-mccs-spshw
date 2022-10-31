@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -173,7 +174,8 @@ class TestApiuAntennaIntegration:
         time.sleep(0.1)
 
         assert apiu_device.IsAntennaOn(1)
-        # It fires a change event which is received by the antenna device. The antenna device now knows that
+        # It fires a change event which is received by the antenna device.
+        # The antenna device now knows that
         # its antenna is powered on, so it transitions to state ON.
         time.sleep(0.2)
         assert antenna_device.state() == DevState.ON

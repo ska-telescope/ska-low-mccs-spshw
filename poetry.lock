@@ -345,7 +345,11 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "identify"
+<<<<<<< HEAD
 version = "2.5.9"
+=======
+version = "2.5.8"
+>>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 description = "File identification library for Python"
 category = "dev"
 optional = false
@@ -432,7 +436,11 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "Mako"
+<<<<<<< HEAD
 version = "1.2.4"
+=======
+version = "1.2.3"
+>>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
 category = "dev"
 optional = false
@@ -978,7 +986,7 @@ reference = 'ska-nexus'
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "0.1.2"
+version = "0.1.3"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 category = "main"
 optional = false
@@ -1125,7 +1133,11 @@ python-versions = "*"
 
 [[package]]
 name = "types-PyYAML"
+<<<<<<< HEAD
 version = "6.0.12.2"
+=======
+version = "6.0.12.1"
+>>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 description = "Typing stubs for PyYAML"
 category = "dev"
 optional = false
@@ -1208,9 +1220,13 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 lock-version = "1.1"
 python-versions = "~3.10"
 <<<<<<< HEAD
+<<<<<<< HEAD
 content-hash = "aa05f435346759a6dfd3a57f0967140705fe68962092ebbfb9cb6a2386e0f1b8"
 =======
 >>>>>>> 10e38316 (MCCS-1038 changes due base classes)
+=======
+content-hash = "e1cd10d92571cba36306ec580bc5fdef9249ad9f5fef4dc1e47fa45679977937"
+>>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 
 [metadata.files]
 aavs-system = [
@@ -1442,8 +1458,13 @@ future = [
     {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
 ]
 identify = [
+<<<<<<< HEAD
     {file = "identify-2.5.9-py2.py3-none-any.whl", hash = "sha256:a390fb696e164dbddb047a0db26e57972ae52fbd037ae68797e5ae2f4492485d"},
     {file = "identify-2.5.9.tar.gz", hash = "sha256:906036344ca769539610436e40a684e170c3648b552194980bb7b617a8daeb9f"},
+=======
+    {file = "identify-2.5.8-py2.py3-none-any.whl", hash = "sha256:48b7925fe122720088aeb7a6c34f17b27e706b72c61070f27fe3789094233440"},
+    {file = "identify-2.5.8.tar.gz", hash = "sha256:7a214a10313b9489a0d61467db2856ae8d0b8306fc923e03a9effa53d8aedc58"},
+>>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 ]
 idna = [
     {file = "idna-3.4-py3-none-any.whl", hash = "sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2"},
@@ -1490,8 +1511,13 @@ lazy-object-proxy = [
     {file = "lazy_object_proxy-1.8.0-pp39-pypy39_pp73-any.whl", hash = "sha256:ce58b2b3734c73e68f0e30e4e725264d4d6be95818ec0a0be4bb6bf9a7e79aa8"},
 ]
 Mako = [
+<<<<<<< HEAD
     {file = "Mako-1.2.4-py3-none-any.whl", hash = "sha256:c97c79c018b9165ac9922ae4f32da095ffd3c4e6872b45eded42926deea46818"},
     {file = "Mako-1.2.4.tar.gz", hash = "sha256:d60a3903dc3bb01a18ad6a89cdbe2e4eadc69c0bc8ef1e3773ba53d44c3f7a34"},
+=======
+    {file = "Mako-1.2.3-py3-none-any.whl", hash = "sha256:c413a086e38cd885088d5e165305ee8eed04e8b3f8f62df343480da0a385735f"},
+    {file = "Mako-1.2.3.tar.gz", hash = "sha256:7fde96466fcfeedb0eed94f187f20b23d85e4cb41444be0e542e2c8c65c396cd"},
+>>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 ]
 MarkupSafe = [
     {file = "MarkupSafe-2.1.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:86b1f75c4e7c2ac2ccdaec2b9022845dbb81880ca318bb7a0a01fbf7813e3812"},
@@ -1853,8 +1879,8 @@ ska-control-model = [
     {file = "ska_control_model-0.1.2-py3-none-any.whl", hash = "sha256:aa5d57e579109d3e22487d73a3ee6059c0306e4daa960d3636c43027b376b1dd"},
 ]
 ska-low-mccs-common = [
-    {file = "ska_low_mccs_common-0.1.2-py3-none-any.whl", hash = "sha256:d1a30e5667167556e84bed14874a0c8d5f0f987c18b37430ab93014efbc24eec"},
-    {file = "ska_low_mccs_common-0.1.2.tar.gz", hash = "sha256:d96cb772a1df57801b4a665b527caff6b874bae8a8aaebe777b4464ad26c4d83"},
+    {file = "ska_low_mccs_common-0.1.3-py3-none-any.whl", hash = "sha256:1e5da53e4da00eefd4a78eba6094fc6b30656c1b5a921228733300bf43709ee2"},
+    {file = "ska_low_mccs_common-0.1.3.tar.gz", hash = "sha256:729148d87b1832fe47fd9df17709c999a9db97682bae28084f190a9051df1bd7"},
 ]
 ska-ser-logging = [
     {file = "ska_ser_logging-0.4.1+0a677a67-py3-none-any.whl", hash = "sha256:8b2bf14e9981966c22503b6b6477b6386dec1def1f71295579f0686d55b83841"},
@@ -1897,8 +1923,13 @@ types-pkg-resources = [
     {file = "types_pkg_resources-0.1.3-py2.py3-none-any.whl", hash = "sha256:0cb9972cee992249f93fff1a491bf2dc3ce674e5a1926e27d4f0866f7d9b6d9c"},
 ]
 types-PyYAML = [
+<<<<<<< HEAD
     {file = "types-PyYAML-6.0.12.2.tar.gz", hash = "sha256:6840819871c92deebe6a2067fb800c11b8a063632eb4e3e755914e7ab3604e83"},
     {file = "types_PyYAML-6.0.12.2-py3-none-any.whl", hash = "sha256:1e94e80aafee07a7e798addb2a320e32956a373f376655128ae20637adb2655b"},
+=======
+    {file = "types-PyYAML-6.0.12.1.tar.gz", hash = "sha256:70ccaafcf3fb404d57bffc1529fdd86a13e8b4f2cf9fc3ee81a6408ce0ad59d2"},
+    {file = "types_PyYAML-6.0.12.1-py3-none-any.whl", hash = "sha256:aaf5e51444c13bd34104695a89ad9c48412599a4f615d65a60e649109714f608"},
+>>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 ]
 types-requests = [
     {file = "types-requests-2.28.11.5.tar.gz", hash = "sha256:a7df37cc6fb6187a84097da951f8e21d335448aa2501a6b0a39cbd1d7ca9ee2a"},

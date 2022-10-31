@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -15,13 +16,12 @@ from typing import Any, Callable, Hashable, Optional, cast
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
-    ResultCode,
     SimulationMode,
     TaskStatus,
 )
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
-    MccsComponentManager,
+    MccsComponentManagerProtocol,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
     SwitchingComponentManager,

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -448,7 +448,8 @@ class StationComponentManager(MccsComponentManager):
         self._on_called = True
         # result_code, _ = self._apiu_proxy.on()
         task_status, _ = self._apiu_proxy.on()
-        # TODO: Monitor the APIU On command status and update the Station On command status accordingly.
+        # TODO: Monitor the APIU On command status and update the Station
+        # On command status accordingly.
         # check return codes!!!!!!!!!!!
         if task_status == TaskStatus.QUEUED:
             # if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:

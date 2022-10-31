@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -56,9 +57,7 @@ class MccsAntenna(SKABaseDevice):
 
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
-        self._health_state: Optional[
-            HealthState
-        ] = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = AntennaHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
@@ -77,7 +76,7 @@ class MccsAntenna(SKABaseDevice):
             self.LogicalTileAntennaId,
             self.logger,
             self._max_workers,
-            self._component_communication_state_changed,
+            self._communication_state_changed_callback,
             self.component_state_changed_callback,
         )
 
@@ -136,7 +135,7 @@ class MccsAntenna(SKABaseDevice):
     # --------------
     # Callback hooks
     # --------------
-    def _component_communication_state_changed(
+    def _communication_state_changed_callback(
         self: MccsAntenna,
         communication_state: CommunicationStatus,
     ) -> None:
@@ -182,6 +181,7 @@ class MccsAntenna(SKABaseDevice):
 
         :raises ValueError: unknown fqdn
         """
+        self.component_manager: AntennaComponentManager  # for the type checker
         #        if fqdn is None:
         health_state_changed_callback = self._health_changed
         power_state_changed_callback = self._component_power_state_changed
@@ -213,7 +213,9 @@ class MccsAntenna(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                power_state_changed_callback(self.component_manager.power_state)
+                power_state_changed_callback(
+                    self.component_manager.power_state
+                )
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():

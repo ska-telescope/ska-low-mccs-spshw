@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -134,7 +135,7 @@ class TileOrchestrator:
 
     The specific actions are defined in a YAML file as follows:
 
-    .. literalinclude:: ../../../../src/ska_low_mccs/tile/orchestration_rules.yaml
+        literalinclude:: ../../../../src/ska_low_mccs/tile/orchestration_rules.yaml
         :language: yaml
     """
 

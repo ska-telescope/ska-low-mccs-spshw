@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -15,7 +15,7 @@ from typing import Any, List, Optional, Tuple, cast
 import ska_low_mccs_common.release as release
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
-from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.base import SKABaseDevice, BaseComponentManager
 from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
@@ -113,7 +113,7 @@ class MccsController(SKABaseDevice):
                 SubmittedSlowCommand(
                     command_name,
                     self._command_tracker,
-                    self.component_manager,
+                    cast(BaseComponentManager, self.component_manager),
                     method_name,
                     callback=None,
                     logger=self.logger,
@@ -213,6 +213,7 @@ class MccsController(SKABaseDevice):
         :param state_change: the state of the component.
         :param fqdn: The fqdn of the device.
         """
+        self.component_manager: ControllerComponentManager  # for the type-checker
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",

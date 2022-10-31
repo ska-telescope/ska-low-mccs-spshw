@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -281,7 +281,7 @@ class Pointing(object):
 
     def get_pointing_coefficients(
         self: Pointing, start_channel: int, nof_channels: int
-    ) -> Optional[tuple[np.complex]]:  # type: ignore[name-defined]
+    ) -> Optional[tuple[np.cfloat]]:
         """
         Get complex pointing coefficients from generated delays.
 
@@ -297,8 +297,8 @@ class Pointing(object):
         # If below horizon flat is set, return 0s
         if self._below_horizon:
             return np.zeros(
-                (self._nof_antennas, nof_channels), dtype=np.complex
-            )  # type: ignore[return-value, attr-defined]
+                (self._nof_antennas, nof_channels), dtype=np.cfloat
+            )  # type: ignore[return-value]
 
         # Compute frequency range
         channel_bandwidth = 400e6 / 512.0
@@ -311,8 +311,8 @@ class Pointing(object):
 
         # Generate coefficients
         coefficients = np.zeros(
-            (self._nof_antennas, nof_channels), dtype=np.complex
-        )  # type: ignore[attr-defined]
+            (self._nof_antennas, nof_channels), dtype=np.cfloat
+        )
         for i in range(nof_channels):
             delays = 2.0 * np.pi * frequencies[i] * self._delays
             coefficients[:, i] = np.cos(delays) + 1j * np.sin(delays)
@@ -622,10 +622,8 @@ class PointingDriver:  # pragma: no cover
             print("nproc must be >= 1")
             return None
 
-        # job_queue: queue.Queue[Time] = multiprocessing.Queue()
-        # results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
-        job_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
-        results_queue: queue.Queue() = multiprocessing.Queue()
+        job_queue: queue.Queue[Time] = multiprocessing.Queue()
+        results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
 
         processes = [
             multiprocessing.Process(

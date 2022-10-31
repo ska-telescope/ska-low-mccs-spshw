@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -959,7 +959,8 @@ class ControllerComponentManager(MccsComponentManager):
         else:
             return (
                 TaskStatus.FAILED,
-                "Currently Release can only be used to release all resources from a subarray.",
+                "Currently Release can only be used to release all "
+                "resources from a subarray.",
             )
 
     def _release_all(

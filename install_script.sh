@@ -31,13 +31,28 @@ sudo usermod -aG docker $USER
 
 
 # Install background requirements for tango
-sudo apt-get install g++ openjdk-8-jdk mariadb-server libmariadb-dev zlib1g-dev libomniorb4-dev libcos4-dev omniidl libzmq3-dev make
+sudo apt-get install g++ openjdk-8-jdk zlib1g-dev libomniorb4-dev libcos4-dev omniidl libzmq3-dev make
 
-# Start the sql server
-sudo service mariadb start
-
-# Change the password to the one provided by the user
-sudo mysql -e  "ALTER USER 'root'@'localhost' IDENTIFIED BY $sqlPassword;"
+dpkg -s mysql &> /dev/null
+if [ $? -eq 0 ]
+then
+    echo "mysql installed, using that"
+    is_mariadb="no"
+else
+    dpkg -s mariadb-server &> /dev/null
+    if [ $? -eq 0 ]
+    then
+        echo "mariadb-server installed, using that"
+    else
+        echo "no database installed, installing mariadb-server"
+        sudo apt-get install mariadb-server libmariadb-dev
+        # Start the sql server
+        sudo service mariadb start
+        # Change the password to the one provided by the user
+        sudo mysql -e  "ALTER USER 'root'@'localhost' IDENTIFIED BY $sqlPassword;"
+    fi
+    is_mariadb="yes"
+fi
 
 # Fetch and unpack the tango repo
 cd ~
@@ -48,7 +63,8 @@ tar xzvf tango-9.3.5.tar.gz
 cd tango-9.3.5
 
 # Configure, make and install tango
-./configure --enable-java=yes --enable-mariadb=yes --enable-dbserver=yes --enable-dbcreate=yes --with-mysql-admin=root --with-mysql-admin-passwd=$sqlPassword --prefix=/usr/local/tango
+./configure --enable-java=yes --enable-mariadb=$is_mariadb --enable-dbserver=yes --enable-dbcreate=yes --with-mysql-admin=root --with-mysql-admin-passwd=$sqlPassword --prefix=/usr/local/tango
+
 make
 sudo make install
 

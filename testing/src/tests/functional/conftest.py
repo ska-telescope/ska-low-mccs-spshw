@@ -19,7 +19,9 @@ from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHa
 
 
 # TODO: pytest is partially typehinted but does not yet export Config
-def pytest_configure(config: _pytest.config.Config) -> None:  # type: ignore[name-defined]
+def pytest_configure(
+    config: _pytest.config.Config,
+) -> None:  # type: ignore[name-defined]
     """
     Register custom markers to avoid pytest warnings.
 

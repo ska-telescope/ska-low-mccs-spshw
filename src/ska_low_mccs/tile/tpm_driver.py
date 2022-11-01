@@ -26,11 +26,27 @@ import numpy as np
 from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
+from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsComponentManager
-from ska_tango_base.control_model import CommunicationStatus
-from ska_tango_base.executor import TaskStatus
 
 from .tpm_status import TpmStatus
+
+
+def _int2ip(addr: int) -> str:
+    """
+    Convert integer IPV4 into formatted dot address.
+
+    :param addr: Integer IPV4 address
+    :return: dot formatted IPV4 address
+    """
+    # If parameter is already a string, just return it. No checking
+    if type(addr) == str:
+        return addr
+    ip = [0, 0, 0, 0]
+    for i in range(4):
+        ip[i] = addr & 0xFF
+        addr = addr >> 8
+    return f"{ip[3]}.{ip[2]}.{ip[1]}.{ip[0]}"
 
 
 class TpmDriver(MccsComponentManager):
@@ -55,18 +71,8 @@ class TpmDriver(MccsComponentManager):
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
-        1: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
+        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
     }
 
     def __init__(
@@ -96,7 +102,7 @@ class TpmDriver(MccsComponentManager):
             component state changes.
         """
         self.logger = logger
-        self._hardware_lock = threading.RLock()
+        self._hardware_lock = threading.Lock()
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
@@ -139,10 +145,7 @@ class TpmDriver(MccsComponentManager):
         self.tile = cast(
             Tile12,
             HwTile(
-                ip=self._ip,
-                port=self._port,
-                logger=logger,
-                tpm_version=tpm_version,
+                ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
             ),
         )
 
@@ -158,9 +161,7 @@ class TpmDriver(MccsComponentManager):
         self._stop_polling_event = threading.Event()
 
         self._polling_thread = threading.Thread(
-            target=self._polling_loop,
-            name="alveo_polling_thread",
-            daemon=True,
+            target=self._polling_loop, name="tpm_polling_thread", daemon=True
         )
         self._polling_thread.start()  # doesn't start polling, only starts the thread
 
@@ -209,21 +210,23 @@ class TpmDriver(MccsComponentManager):
         :return: None
         """
         if self.communication_state == CommunicationStatus.ESTABLISHED:
+            error_flag = False
             if self._hardware_lock.acquire(timeout=0.5):
                 try:
                     self.tile[int(0x30000000)]
-                except Exception:
+                except Exception as e:
                     # polling attempt was unsuccessful
-                    self.logger.warning("Connection to tpm lost!")
-                    self.tpm_disconnected()
-                    self.update_component_state({"fault": True})
-                    self._hardware_lock.release()
-                    return
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
+                    error_flag = True
                 # polling attempt succeeded
-                self.updating_attributes()
+                if not error_flag:
+                    self.updating_attributes()
                 self._hardware_lock.release()
             else:
                 self.logger.debug("Failed to acquire lock")
+            if error_flag:
+                self.tpm_disconnected()
+                self.update_component_state({"fault": True})
             # wait for a polling_period
             return
         else:
@@ -279,8 +282,8 @@ class TpmDriver(MccsComponentManager):
                 self._fpga2_temperature = self.tile.get_fpga1_temperature()
                 self._board_temperature = self.tile.get_temperature()
                 self._voltage = self.tile.get_voltage()
-        except Exception:
-            self.logger.debug("Failed to update key hardware attributes...")
+        except Exception as e:
+            self.logger.debug(f"Failed to update key hardware attributes: {e}")
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
@@ -289,11 +292,16 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("Tpm connected to tile.")
         self._tpm_status = TpmStatus.UNPROGRAMMED
         self._is_programmed = False
-        if self._check_programmed():
-            self._tpm_status = TpmStatus.PROGRAMMED
-            self._is_programmed = True
-        if self._is_programmed:
-            self.logger.debug("Tpm programmed.")
+        status = self.tpm_status
+        if status == TpmStatus.UNPROGRAMMED or status == TpmStatus.PROGRAMMED:
+            # if self._check_programmed():
+            #    self._tpm_status = TpmStatus.PROGRAMMED
+            #    self._is_programmed = True
+            # if self._is_programmed:
+            self.logger.debug("Tpm not initialised. Initialise it.")
+            # self._initialise()
+        else:
+            self.logger.debug("Tpm initialised. Initialisation skipped")
 
     def tpm_disconnected(self: TpmDriver) -> None:
         """Tile disconnected to tpm."""
@@ -301,10 +309,7 @@ class TpmDriver(MccsComponentManager):
         self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         while True:
             if self._hardware_lock.acquire(timeout=0.2):
-                try:
-                    self.tile.tpm = None
-                except Exception:
-                    self.logger.warning("TpmDriver: Tile access failed")
+                self.tile.tpm = None
                 self._hardware_lock.release()
                 break
             else:
@@ -325,29 +330,32 @@ class TpmDriver(MccsComponentManager):
             # try to determine the status. Successive tests until one fails
             # if self.power_state != PowerState.ON:
             #     self._tpm_status = TpmStatus.OFF
-            if self.communication_state != CommunicationStatus.ESTABLISHED:
-                self._tpm_status = TpmStatus.UNCONNECTED
-            else:
-                if self._hardware_lock.acquire(timeout=0.2):
-                    try:
-                        self._is_programmed = self.tile.is_programmed()
-                        if self._is_programmed is False:
-                            self._tpm_status = TpmStatus.UNPROGRAMMED
-                        elif self._tile_id != self.tile.get_tile_id():
-                            self._tpm_status = TpmStatus.PROGRAMMED
-                        elif self.tile.current_frame == 0:
-                            self._tpm_status = TpmStatus.INITIALISED
-                        else:
-                            self._tpm_status = TpmStatus.SYNCHRONISED
-                    except Exception:
-                        self.logger.warning("tpm_driver: tpm_status failed")
-                        # TODO This must be handled in the connection loop when implemented
-                        self._tpm_status = TpmStatus.UNCONNECTED
-                    self._hardware_lock.release()
-                else:
-                    self.logger.debug("tpm_driver: tpm_status uses current value")
-                    # raise ConnectionError("Cannot get hardware lock")
+            self._update_tpm_status()
         return self._tpm_status
+
+    def _update_tpm_status(self: TpmDriver) -> None:
+        """Update the value of _tpm_status according to hardware state."""
+        if self.communication_state != CommunicationStatus.ESTABLISHED:
+            self._tpm_status = TpmStatus.UNCONNECTED
+        else:
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    self._is_programmed = self.tile.is_programmed()
+                    if self._is_programmed is False:
+                        self._tpm_status = TpmStatus.UNPROGRAMMED
+                    elif self._tile_id != self.tile.get_tile_id():
+                        self._tpm_status = TpmStatus.PROGRAMMED
+                    elif self._check_channeliser_started() is False:
+                        self._tpm_status = TpmStatus.INITIALISED
+                    else:
+                        self._tpm_status = TpmStatus.SYNCHRONISED
+                except Exception as e:
+                    self.logger.warning(f"tpm_driver: tpm_status failed: {e}")
+                    # TODO This must be handled in the connection loop when implemented
+                    self._tpm_status = TpmStatus.UNCONNECTED
+                self._hardware_lock.release()
+            else:
+                self.logger.debug("tpm_driver: tpm_status uses current value")
 
     def get_tile_id(self: TpmDriver) -> int:
         """
@@ -379,8 +387,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._firmware_list = self.tile.get_firmware_list()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -442,9 +450,7 @@ class TpmDriver(MccsComponentManager):
         return self._is_programmed
 
     def download_firmware(
-        self: TpmDriver,
-        bitfile: str,
-        task_callback: Optional[Callable] = None,
+        self: TpmDriver, bitfile: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Download firmware bitfile onto the TPM as a long runnning command.
@@ -502,8 +508,8 @@ class TpmDriver(MccsComponentManager):
                 self.tile.erase_fpga()
                 self._is_programmed = False
                 self._tpm_status = TpmStatus.UNPROGRAMMED
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -531,11 +537,12 @@ class TpmDriver(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         #
         # If not programmed, program it.
-        # TODO: there is no way to check whether the TPM is already correctly initialised.
-        # If it is, re-initialising it is bad.
+        # TODO: there is no way to check whether the TPM is already correctly
+        # initialised. If it is, re-initialising it is bad.
         #
         prog_status = False
         with self._hardware_lock:
@@ -561,27 +568,27 @@ class TpmDriver(MccsComponentManager):
             #
             # extra steps required to have it working
             #
+            self.initialise_beamformer(128, 8, True, True)
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
-                self.initialise_beamformer(128, 8, True, True)
-            self.logger.debug("Lock released")
-            with self._hardware_lock:
-                self.logger.debug("Lock acquired")
-                self.tile.post_synchronisation()
+                # self.tile.post_synchronisation()
                 self.tile.set_station_id(self._tile_id, self._station_id)
             self.logger.debug("Lock released")
             self._tpm_status = TpmStatus.INITIALISED
             self.logger.debug("TpmDriver: initialisation completed")
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result="The initialisation task has completed",
-            )
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="The initialisation task has completed",
+                )
         else:
             self._tpm_status = TpmStatus.UNPROGRAMMED
             self.logger.error("TpmDriver: Cannot initialise board")
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The initialisation task has failed"
-            )
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="The initialisation task has failed",
+                )
 
     def initialise(self: TpmDriver, task_callback: Optional[Callable] = None) -> None:
         """
@@ -613,8 +620,8 @@ class TpmDriver(MccsComponentManager):
             try:
                 self._tile_id = value
                 self.tile.set_station_id(self._station_id, self._tile_id)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -639,8 +646,8 @@ class TpmDriver(MccsComponentManager):
             try:
                 self._station_id = value
                 self.tile.set_station_id(self._station_id, self._tile_id)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -657,8 +664,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._board_temperature = self.tile.get_temperature()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -675,8 +682,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._voltage = self.tile.get_voltage()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -707,8 +714,8 @@ class TpmDriver(MccsComponentManager):
         if res:
             try:
                 self._fpga1_temperature = self.tile.get_fpga0_temperature()
-            except Exception:
-                self.logger.warning("TpmDriver: fpga1_temperature failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware locked")
@@ -728,8 +735,8 @@ class TpmDriver(MccsComponentManager):
         if res:
             try:
                 self._fpga2_temperature = self.tile.get_fpga1_temperature()
-            except Exception:
-                self.logger.warning("TpmDriver: fpga2_temperature failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware locked")
@@ -748,8 +755,8 @@ class TpmDriver(MccsComponentManager):
         if res:
             try:
                 self._adc_rms = self.tile.get_adc_rms()
-            except Exception:
-                self.logger.warning("TpmDriver: adc_rms failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Hardware locked")
@@ -774,8 +781,8 @@ class TpmDriver(MccsComponentManager):
                     self.tile.get_fpga_time(Device.FPGA_1),
                     self.tile.get_fpga_time(Device.FPGA_2),
                 ]
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
                 failed = True
             self._hardware_lock.release()
         else:
@@ -799,8 +806,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._fpga_sync_time = self.tile["fpga1.pps_manager.sync_time_val"]
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -821,8 +828,8 @@ class TpmDriver(MccsComponentManager):
                 self._fpga_current_frame = self.tile[
                     "fpga1.pps_manager.timestamp_read_val"
                 ]
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
                 failed = True
             self._hardware_lock.release()
         else:
@@ -843,8 +850,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._pps_delay = self.tile.get_pps_delay()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -865,19 +872,15 @@ class TpmDriver(MccsComponentManager):
                 regmap = self.tile.tpm.find_register("")
                 for reg in regmap:
                     reglist.append(reg.name)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
         return reglist
 
     def read_register(
-        self: TpmDriver,
-        register_name: str,
-        nb_read: int,
-        offset: int,
-        device: int,
+        self: TpmDriver, register_name: str, nb_read: int, offset: int, device: int
     ) -> list[int]:
         """
         Read the values in a named register.
@@ -913,11 +916,7 @@ class TpmDriver(MccsComponentManager):
         return lvalue[nmin:nmax]
 
     def write_register(
-        self: TpmDriver,
-        register_name: str,
-        values: list[Any],
-        offset: int,
-        device: int,
+        self: TpmDriver, register_name: str, values: list[Any], offset: int, device: int
     ) -> None:
         """
         Read the values in a register.
@@ -1025,36 +1024,11 @@ class TpmDriver(MccsComponentManager):
                     dst_ip,
                     dst_port,
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
-
-    def _get_40g_configuration(
-        self: TpmDriver, core_id: int, arp_table_entry: int
-    ) -> dict | None:
-        """
-        Return a 40G configuration.
-
-        :param core_id: id of the core for which a configuration is to
-            be return.
-        :param arp_table_entry: ARP table entry to use
-
-        :return: core configuration
-        """
-        return_dict = None
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                return_dict = self.tile.get_40g_core_configuration(
-                    core_id, arp_table_entry
-                )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
-        return return_dict
 
     def get_40g_configuration(
         self: TpmDriver, core_id: Optional[int] = -1, arp_table_entry: int = 0
@@ -1064,24 +1038,31 @@ class TpmDriver(MccsComponentManager):
 
         :param core_id: id of the core for which a configuration is to
             be return. Defaults to -1, in which case all cores
-            configurations are returned, defaults to -1
+            configurations are returned
         :param arp_table_entry: ARP table entry to use
 
         :return: core configuration or list of core configurations
         """
-        self.logger.debug("TpmDriver: get_40g_configuration")
+        self.logger.debug(
+            f"TpmDriver: get_40g_configuration: core:{core_id} entry:{arp_table_entry}"
+        )
         self._forty_gb_core_list = []
         if core_id == -1:
-            for core in range(0, 8):
-                dict_to_append = self.tile._get_40g_core_configuration(
-                    core, arp_table_entry
-                )
-            if dict_to_append is not None:
-                self._forty_gb_core_list.append(dict_to_append)
+            for core in range(2):
+                for arp_table_entry_id in range(2):
+                    dict_to_append = self.tile.get_40g_core_configuration(
+                        core, arp_table_entry_id
+                    )
+                    if dict_to_append is not None:
+                        self._forty_gb_core_list.append(dict_to_append)
         else:
             self._forty_gb_core_list = [
-                self.tile._get_40g_core_configuration(core_id, arp_table_entry)
+                self.tile.get_40g_core_configuration(core_id, arp_table_entry)
             ]
+        # convert in more readable format
+        for core in self._forty_gb_core_list:
+            core["src_ip"] = _int2ip(core["src_ip"])
+            core["dst_ip"] = _int2ip(core["dst_ip"])
         return self._forty_gb_core_list
 
     @property
@@ -1107,7 +1088,6 @@ class TpmDriver(MccsComponentManager):
         dst_ip: Optional[str] = None,
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
-        lmc_mac: Optional[str] = None,
     ) -> None:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -1118,16 +1098,15 @@ class TpmDriver(MccsComponentManager):
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param lmc_mac: LMC MAC address, defaults to None
         """
         self.logger.debug("TpmDriver: set_lmc_download")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_lmc_download(
-                    mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
+                    mode, payload_length, dst_ip, src_port, dst_port
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1147,8 +1126,8 @@ class TpmDriver(MccsComponentManager):
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
                     self.tile.set_channeliser_truncation(trunc, chan)
-                except Exception:
-                    self.logger.warning("TpmDriver: Tile access failed")
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
                 self._hardware_lock.release()
             else:
                 self.logger.warning("Failed to acquire hardware lock")
@@ -1166,8 +1145,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_beamformer_regions(regions)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1190,17 +1169,16 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: initialise_beamformer")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.initialise_beamformer(
-                    start_channel, nof_channels, is_first, is_last
-                )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+                self.tile.initialise_beamformer(start_channel, nof_channels)
+                self.tile.set_first_last_tile(is_first, is_last)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
     def load_calibration_coefficients(
-        self: TpmDriver, antenna: int, calibration_coefficients: list[int]
+        self: TpmDriver, antenna: int, calibration_coefficients: list[complex]
     ) -> None:
         """
         Load calibration coefficients.
@@ -1215,18 +1193,17 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: load_calibration_coefficients")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.load_calibration_coefficients(calibration_coefficients)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+                self.tile.load_calibration_coefficients(
+                    antenna, calibration_coefficients
+                )
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
     def load_calibration_curve(
-        self: TpmDriver,
-        antenna: int,
-        beam: int,
-        calibration_coefficients: list[int],
+        self: TpmDriver, antenna: int, beam: int, calibration_coefficients: list[int]
     ) -> None:
         """
         Load calibration curve.
@@ -1287,8 +1264,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.switch_calibration_bank(switch_time=0)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1312,7 +1289,7 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def set_pointing_delay(
-        self: TpmDriver, delay_array: list[float], beam_index: int
+        self: TpmDriver, delay_array: list[list[float]], beam_index: int
     ) -> None:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
@@ -1323,12 +1300,20 @@ class TpmDriver(MccsComponentManager):
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :param beam_index: the beam to which the pointing delay should
             be applied
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_pointing_delay")
-        raise NotImplementedError
+        nof_items = len(delay_array)
+        # 16 values required (16 antennas). Fill with zeros if less are specified
+        if nof_items < 16:
+            delay_array = delay_array + [[0.0, 0.0]] * (16 - nof_items)
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.set_pointing_delay(delay_array, beam_index)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
 
     def load_pointing_delay(self: TpmDriver, load_time: int) -> None:
         """
@@ -1340,8 +1325,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.load_pointing_delay(load_time)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1362,8 +1347,8 @@ class TpmDriver(MccsComponentManager):
             try:
                 if self.tile.start_beamformer(start_time, duration):
                     self._is_beamformer_running = True
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1375,8 +1360,8 @@ class TpmDriver(MccsComponentManager):
             try:
                 self.tile.stop_beamformer()
                 self._is_beamformer_running = False
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1402,12 +1387,10 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.configure_integrated_channel_data(
-                    integration_time,
-                    first_channel,
-                    last_channel,
+                    integration_time, first_channel, last_channel
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1433,12 +1416,10 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.configure_integrated_beam_data(
-                    integration_time,
-                    first_channel,
-                    last_channel,
+                    integration_time, first_channel, last_channel
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1449,8 +1430,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.stop_integrated_data()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1472,8 +1453,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.send_raw_data(sync=sync, timestamp=timestamp, seconds=seconds)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1505,8 +1486,8 @@ class TpmDriver(MccsComponentManager):
                     timestamp=timestamp,
                     seconds=seconds,
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1540,8 +1521,8 @@ class TpmDriver(MccsComponentManager):
                     timestamp=timestamp,
                     seconds=seconds,
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1559,8 +1540,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1571,34 +1552,78 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.stop_data_transmission()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
     def start_acquisition(
-        self: TpmDriver, start_time: Optional[int] = None, delay: int = 2
-    ) -> None:
+        self: TpmDriver, start_time: Optional[int] = None, delay: Optional[int] = 2
+    ) -> bool:
         """
         Start data acquisition.
 
-        :param start_time: the time at which to start data acquisition,
-            defaults to None
+        This must be run as a long running command
+        :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
+        :returns: if data acquisition started correctly
         """
-        self.logger.debug("TpmDriver:Start acquisition")
+        started = False
+        self.logger.debug(
+            f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}"
+        )
         if self._hardware_lock.acquire(timeout=0.2):
             try:
+                # Check if ARP table is populated before starting
+                self.tile.reset_eth_errors()
+                self.tile.check_arp_table()
+                # Start data acquisition on board
                 self.tile.start_acquisition(start_time, delay)
-                self._tpm_status = TpmStatus.SYNCHRONISED
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+                started = True
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
+        if not started:
+            return False
+        self.logger.info("Waiting for start acquisition")
+        max_timeout = 30  # Maximum delay, in 0.1 seconds
+        started = False
+        for i in range(max_timeout):
+            time.sleep(0.1)
+            started = self._check_channelizer_started()
+            if started:
+                self._tpm_status = TpmStatus.SYNCHRONISED
+                break
+        if not started:
+            self.logger.warning(
+                f"Acquisition not started after {max_timeout*0.1} seconds"
+            )
+        return started
 
-    def set_time_delays(self: TpmDriver, delays: list[int]) -> None:
+    def _check_channelizer_started(self: TpmDriver) -> bool:
+        """
+        Check whether acquisition has started correctly.
+
+        :return: true if data stream is valid, acquisitinon has started
+        """
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                started = (
+                    self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"] == 1
+                ) and (
+                    self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"] == 1
+                )
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+        return started
+
+    def set_time_delays(self: TpmDriver, delays: list[float]) -> None:
         """
         Set coarse zenith delay for input ADC streams.
 
@@ -1606,11 +1631,15 @@ class TpmDriver(MccsComponentManager):
             A positive delay adds delay to the signal stream
         """
         self.logger.debug("TpmDriver: set_time_delays")
+        # tile.set_time_delays is picky about type
+        delays_float = []
+        for d in delays:
+            delays_float.append(float(d))
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.set_time_delays(delays)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+                self.tile.set_time_delays(delays_float)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1620,12 +1649,16 @@ class TpmDriver(MccsComponentManager):
         Set output rounding for CSP.
 
         :param rounding: the output rounding
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_csp_rounding")
-        raise NotImplementedError
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.set_csp_rounding(int(rounding))
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
 
     def set_lmc_integrated_download(
         self: TpmDriver,
@@ -1635,7 +1668,6 @@ class TpmDriver(MccsComponentManager):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        lmc_mac: Optional[str] = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -1648,7 +1680,6 @@ class TpmDriver(MccsComponentManager):
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param lmc_mac: MAC address of destination, defaults to None
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
         if self._hardware_lock.acquire(timeout=0.2):
@@ -1660,10 +1691,9 @@ class TpmDriver(MccsComponentManager):
                     dst_ip,
                     src_port,
                     dst_port,
-                    lmc_mac,
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1681,8 +1711,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.send_raw_data(timestamp, seconds, sync=True)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1698,8 +1728,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._current_tile_frame = self.tile.current_tile_beamformer_frame()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1718,8 +1748,8 @@ class TpmDriver(MccsComponentManager):
                 self._current_tile_beamformer_frame = (
                     self.tile.current_tile_beamformer_frame()
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1736,8 +1766,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._is_beamformer_running = self.tile.beamformer_is_running()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1753,8 +1783,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 request = self.tile.check_pending_data_requests()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1792,8 +1822,8 @@ class TpmDriver(MccsComponentManager):
                     timestamp,
                     seconds,
                 )
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1842,8 +1872,8 @@ class TpmDriver(MccsComponentManager):
 
         TODO Private method or must be available externally?
         """
-        with self._hardware_lock:
-            self.tile.post_synchronisation()
+        # with self._hardware_lock:
+        #    self.tile.post_synchronisation()
 
     def sync_fpgas(self: TpmDriver) -> None:
         """
@@ -1925,8 +1955,8 @@ class TpmDriver(MccsComponentManager):
                 self.tile.set_test_generator_noise(amplitude_noise, load_time)
                 self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
                 end_time = self.tile.get_fpga_timestamp()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
@@ -1945,8 +1975,8 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.test_generator_input_select(inputs)
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")

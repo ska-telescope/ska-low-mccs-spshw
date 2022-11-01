@@ -11,10 +11,10 @@ from __future__ import annotations
 from typing import Any, Type
 
 import pytest
+from ska_control_model import HealthState
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.control_model import HealthState
 from tango.server import command
 
 from ska_low_mccs.station_beam.station_beam_component_manager import (
@@ -30,8 +30,9 @@ def patched_station_beam_device_class(
     """
     Return a station beam device class, patched with extra methods for testing.
 
-    :param mock_station_beam_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+    :param mock_station_beam_component_manager: A fixture that provides a partially
+        mocked component manager which has access to the
+        component_state_changed_callback.
 
     :return: a patched station beam device class, patched with extra methods
         for testing
@@ -68,8 +69,12 @@ def patched_station_beam_device_class(
             """
             Return the health state of the station beam or station.
 
-            Returns the health state of the station beam or the station for use in tests.
-            :param get_station_health: Whether to return the station health instead of station beam.
+            Returns the health state of the station beam or the station for use
+            in tests.
+
+            :param get_station_health: Whether to return the station health instead
+                of station beam.
+
             :return: The HealthState of the device.
             """
             if get_station_health:
@@ -85,6 +90,7 @@ def patched_station_beam_device_class(
             Return the station fault state.
 
             Returns the fault state of the station for use in tests.
+
             :return: The HealthState of the device.
             """
             return self._health_model._station_fault
@@ -97,6 +103,7 @@ def patched_station_beam_device_class(
             Return the station fault state.
 
             Returns the fault state of the station for use in tests.
+
             :return: The HealthState of the device.
             """
             return self._health_model._beam_health
@@ -109,7 +116,7 @@ def patched_station_beam_device_class(
 
             :return: a mock component manager
             """
-            mock_station_beam_component_manager._communication_state_changed_callback = (
+            mock_station_beam_component_manager._communication_state_changed_callback = (  # noqa E501
                 self._communication_state_changed
             )
             mock_station_beam_component_manager._component_state_changed_callback = (
@@ -322,13 +329,15 @@ class TestMccsStationBeam(object):
         """
         Test `component_state_changed` properly handles health updates.
 
-        Here we test that the change event is pushed and that we receive it and that the health state is correctly updated.
+        Here we test that the change event is pushed and that we receive it and
+        that the health state is correctly updated.
 
-        :param mock_station_beam_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_station_beam_component_manager: A fixture that provides a
+            partially mocked component manager which has access to the
+            component_state_changed_callback.
         :param target_health_state: The HealthState that the device should end up in.
-        :param device_health_state_changed_callback: A mock callback to be called when the device's health
-            state changes.
+        :param device_health_state_changed_callback: A mock callback to be called when
+            the device's health state changes.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -370,8 +379,9 @@ class TestMccsStationBeam(object):
 
         Test that the station health attribute is correctly updated.
 
-        :param mock_station_beam_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_station_beam_component_manager: A fixture that provides a
+            partially mocked component manager which has access to the
+            component_state_changed_callback.
         :param target_health_state: The HealthState that the device should end up in.
         :param mock_station_on_fqdn: The FQDN of a powered on station.
         :param device_under_test: fixture that provides a
@@ -404,8 +414,9 @@ class TestMccsStationBeam(object):
 
         Test that the station_fault attribute updated correctly.
 
-        :param mock_station_beam_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_station_beam_component_manager: A fixture that provides a
+            partially mocked component manager which has access to the
+            component_state_changed_callback.
         :param station_fault: Whether the station is faulting or coming out of fault.
         :param mock_station_on_fqdn: The FQDN of a powered on station.
         :param device_under_test: fixture that provides a
@@ -433,8 +444,9 @@ class TestMccsStationBeam(object):
         Here we only test that the change event is pushed and that we receive it.
         HealthState.UNKNOWN is omitted due to it being the initial state.
 
-        :param mock_station_beam_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_station_beam_component_manager: A fixture that provides a
+            partially mocked component manager which has access to the
+            component_state_changed_callback.
         :param beam_locked: Whether the beam is locked or not.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

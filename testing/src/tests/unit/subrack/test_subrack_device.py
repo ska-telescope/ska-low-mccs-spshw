@@ -9,19 +9,20 @@
 from __future__ import annotations
 
 import pytest
-from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback
-from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
+from ska_control_model import (
     AdminMode,
     ControlMode,
     HealthState,
+    PowerState,
+    ResultCode,
     SimulationMode,
     TestMode,
 )
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 
-from ska_low_mccs.subrack import SubrackSimulator
+from ska_low_mccs.subrack import SubrackDriver, SubrackSimulator
 
 
 @pytest.fixture()
@@ -307,3 +308,32 @@ class TestMccsSubrack:
             message,
         )
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
+
+
+class TestSubrackDriverCallback:
+    """Test class for subrack driver callback."""
+
+    def test_SubrackDriver_tpm_power_change_callback(
+        self: TestSubrackDriverCallback,
+        subrack_driver: SubrackDriver,
+    ) -> None:
+        """
+        Tests the subrack_driver tpm_power_states callback.
+
+        :param subrack_driver: fixture that provides a monkey-patched HTTP connection.
+
+        By calling check_tpm_power_states on the subrack_driver we
+        execute a command on the mocked client "tpm_on_off", this has
+        been mocked to return a dictionary via {"tpm_on_off": [False,
+        False, False]}, this is then transformed to a list of PowerState.OFF for false
+        or PowerState.ON for true. This then calls the callback with a list of 3
+        PowerStates[PowerState.OFF]*3}, therefore all we need to do is assert_last_call.
+        """
+        # This call is performed to check the tpm power states and call the mocked
+        # callback function.
+        getattr(subrack_driver, "check_tpm_power_states")()
+
+        # check that the mocked callback is called with expected values.
+        subrack_driver._component_state_changed_callback.assert_last_call(
+            {"tpm_power_states": [PowerState.OFF] * 3}
+        )

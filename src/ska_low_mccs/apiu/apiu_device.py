@@ -14,19 +14,15 @@ import threading
 from typing import Any, List, Optional, Tuple, cast
 
 import tango
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    FastCommand,
-    ResultCode,
-    SubmittedSlowCommand,
-)
-from ska_tango_base.control_model import (
+from ska_control_model import (
     CommunicationStatus,
     HealthState,
     PowerState,
+    ResultCode,
     SimulationMode,
 )
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.apiu import ApiuComponentManager, ApiuHealthModel
@@ -111,7 +107,9 @@ class MccsAPIU(SKABaseDevice):
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS APIU device."""
 
-        def do(self: MccsAPIU.InitCommand) -> tuple[ResultCode, str]:  # type: ignore[override]
+        def do(  # type: ignore[override]
+            self: MccsAPIU.InitCommand,
+        ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
 
@@ -375,7 +373,9 @@ class MccsAPIU(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsAPIU.IsAntennaOnCommand, argin: int) -> bool:  # type: ignore[override]
+        def do(  # type: ignore[override]
+            self: MccsAPIU.IsAntennaOnCommand, argin: int
+        ) -> bool:
             """
             Stateless hook for device IsAntennaOn() command.
 

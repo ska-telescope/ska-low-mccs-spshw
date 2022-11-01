@@ -13,17 +13,17 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
+from ska_control_model import (
+    CommunicationStatus,
+    PowerState,
+    ResultCode,
+    SimulationMode,
+    TestMode,
+)
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallable
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    PowerState,
-    SimulationMode,
-    TestMode,
-)
 from tango.server import command
 
 from ska_low_mccs import MccsTile
@@ -548,10 +548,11 @@ def patched_tile_device_class(
             mock_tile_component_manager._component_state_changed_callback = (
                 self.component_state_changed_callback
             )
-            mock_tile_component_manager._tile_orchestrator._component_state_changed_callback = (
+            orchestrator = mock_tile_component_manager._tile_orchestrator
+            orchestrator._component_state_changed_callback = (
                 self.component_state_changed_callback
             )
-            mock_tile_component_manager._tile_orchestrator._communication_state_changed_callback = (
+            orchestrator._communication_state_changed_callback = (
                 self._component_communication_state_changed
             )
             return mock_tile_component_manager

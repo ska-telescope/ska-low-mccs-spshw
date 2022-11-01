@@ -14,9 +14,9 @@ from typing import Any, List, Optional, Tuple, cast
 
 import ska_low_mccs_common.release as release
 import tango
+from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, ResultCode, SubmittedSlowCommand
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
@@ -346,7 +346,8 @@ class MccsController(SKABaseDevice):
         >>> proxy.Allocate(
                 json.dumps(
                 {
-                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
+                    "interface":
+                        "https://schema.skao.int/ska-low-mccs-assignresources/1.0",
                     "subarray_id": 1,
                     "subarray_beam_ids": [1],
                     "station_ids": [[1,2]],

@@ -14,19 +14,19 @@ import unittest
 from typing import Callable, Type
 
 import pytest
-from ska_low_mccs_common import MccsDeviceProxy, release
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
+from ska_control_model import (
     AdminMode,
     ControlMode,
     HealthState,
     ObsState,
     PowerState,
+    ResultCode,
     SimulationMode,
     TestMode,
 )
+from ska_low_mccs_common import MccsDeviceProxy, release
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 from tango import DevState
 from tango.server import command
 
@@ -43,8 +43,9 @@ def patched_subarray_device_class(
     """
     Return a subarray device class, patched with extra methods for testing.
 
-    :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+    :param mock_subarray_component_manager: A fixture that provides a partially
+        mocked component manager which has access to the
+        component_state_changed_callback.
     :param station_on_fqdn: The FQDN of a mock station that is powered on.
     :param subarray_beam_on_fqdn: The FQDN of a mock subarray beam that is powered on.
 
@@ -238,7 +239,8 @@ class TestMccsSubarray:
         assert device_under_test.healthState == HealthState.UNKNOWN
 
     @pytest.mark.skip(
-        "GetVersionInfo is no longer a long running command and merely returns a string. Should this test be removed?"
+        "GetVersionInfo is no longer a long running command and merely returns"
+        " a string. Should this test be removed?"
     )
     def test_GetVersionInfo(
         self: TestMccsSubarray,
@@ -254,7 +256,9 @@ class TestMccsSubarray:
         :param lrc_result_changed_callback: a callback to
             be used to subscribe to device LRC result changes
         """
-        pass  # To please the linter and to show this test is skipped explicitly in test reports.
+        # To please the linter and to show this test is skipped explicitly
+        # in test reports.
+        pass
 
     #     # TODO: Is this test pointless now? GetVersionInfo isn't a LRC anymore
     #     # Subscribe to controller's LRC result attribute
@@ -367,8 +371,8 @@ class TestMccsSubarray:
         :param station_beam_on_fqdn: the FQDN of a station beam that is powered
             on.
         :param channel_blocks: a list of channel blocks.
-        :param device_state_changed_callback: A mock callback to be called when the device's state
-            is changed.
+        :param device_state_changed_callback: A mock callback to be called when
+            the device's state is changed.
         """
         device_under_test.add_change_event_callback(
             "adminMode",
@@ -426,9 +430,10 @@ class TestMccsSubarray:
 
         time.sleep(0.5)  # Needs time to actually resource or
         # we release before we've finished assigning.
+        interface = "https://schema.skao.int/ska-low-mccs-assignedresources/1.0"
         assert device_under_test.assignedResources == json.dumps(
             {
-                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "interface": interface,
                 "subarray_beam_ids": [subarray_beam_on_fqdn.split("/")[-1].lstrip("0")],
                 "station_ids": [[station_on_fqdn.split("/")[-1].lstrip("0")]],
                 "channel_blocks": channel_blocks,
@@ -446,9 +451,10 @@ class TestMccsSubarray:
         )
 
         lrc_result_changed_callback.assert_last_change_event(lrc_result)
+        interface = "https://schema.skao.int/ska-low-mccs-assignedresources/1.0"
         assert device_under_test.assignedResources == json.dumps(
             {
-                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "interface": interface,
                 "subarray_beam_ids": [],
                 "station_ids": [],
                 "channel_blocks": [],
@@ -517,7 +523,8 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.obsState == ObsState.IDLE
 
-        # Need to force station and subarray beam proxies into PowerState.ON for configure to complete.
+        # Need to force station and subarray beam proxies into PowerState.ON for
+        # configure to complete.
         device_under_test.TurnOnProxies()
 
         ([result_code], _) = device_under_test.Configure(
@@ -560,8 +567,9 @@ class TestMccsSubarray:
         assert device_under_test.adminMode == AdminMode.OFFLINE
 
         # Seems to be a bit of an adminMode wobble here.
-        # The first event to come through is another OFFLINE (possibly just a dupe of the first)
-        # but is followed by ONLINE so assertion has been changed from `assert_next_change_event` to `assert_last_change_event`
+        # The first event to come through is another OFFLINE (possibly just a dupe
+        # of the first) but is followed by ONLINE so assertion has been changed from
+        # `assert_next_change_event` to `assert_last_change_event`
         device_under_test.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert device_under_test.adminMode == AdminMode.ONLINE
@@ -584,8 +592,9 @@ class TestMccsSubarray:
         """
         Test `component_state_changed properly` handles power updates.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param target_power_state: The PowerState that the device should end up in.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -614,11 +623,12 @@ class TestMccsSubarray:
         Here we only test that the change event is pushed and that we receive it.
         HealthState.UNKNOWN is omitted due to it being the initial state.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param target_health_state: The HealthState that the device should end up in.
-        :param device_health_state_changed_callback: A mock callback to be called when the device's health
-            state changes.
+        :param device_health_state_changed_callback: A mock callback to be called when
+            the device's health state changes.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -652,10 +662,12 @@ class TestMccsSubarray:
         """
         Test `component_state_changed` properly handles configured_changed updates.
 
-        Test that the obs state model is properly updated when the component is configured or unconfigured.
+        Test that the obs state model is properly updated when the component is
+        configured or unconfigured.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param configured_changed: Whether the component is configured.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -694,10 +706,12 @@ class TestMccsSubarray:
         """
         Test `component_state_changed` properly handles scanning_changed updates.
 
-        Test that the obs state model is properly updated when the component starts or stops scanning.
+        Test that the obs state model is properly updated when the component starts
+        or stops scanning.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param scanning_changed: Whether the subarray is scanning.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -735,10 +749,12 @@ class TestMccsSubarray:
         """
         Test `component_state_changed` properly handles assign_completed updates.
 
-        Test that the obs state model is properly updated when resource assignment completes.
+        Test that the obs state model is properly updated when resource assignment
+        completes.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param resourcing: Whether the subarray is resourcing or emptying.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -776,10 +792,12 @@ class TestMccsSubarray:
         """
         Test `component_state_changed` properly handles release_completed updates.
 
-        Test that the obs state model is properly updated when resource release completes.
+        Test that the obs state model is properly updated when resource release
+        completes.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param to_empty: Whether the subarray is transitioning to EMPTY or not.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -819,8 +837,9 @@ class TestMccsSubarray:
 
         Test that the obs state model is properly updated when configuring completes.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param to_ready: Whether the subarray is transitioning to READY or not.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -858,8 +877,9 @@ class TestMccsSubarray:
 
         Test that the obs state model is properly updated when abort completes.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -890,8 +910,9 @@ class TestMccsSubarray:
 
         Test that the obs state model is properly updated when obsreset completes.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -922,8 +943,9 @@ class TestMccsSubarray:
 
         Test that the obs state model is properly updated when restart completes.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -956,9 +978,11 @@ class TestMccsSubarray:
 
         Test that the obs state model is properly updated when restart completes.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
-        :param initial_obs_state: The obsState that the subarray should start the test in.
+        :param mock_subarray_component_manager: A fixture that provides a partially
+            mocked component manager which has access to the
+            component_state_changed_callback.
+        :param initial_obs_state: The obsState that the subarray should start
+            the test in.
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -968,7 +992,8 @@ class TestMccsSubarray:
         # Set initial obsState.
         # obsState change: * -> FAULT
         initial_obs_state_name = initial_obs_state.name
-        # Handle special cases of RESOURCING and CONFIGURING with their transitional states.
+        # Handle special cases of RESOURCING and CONFIGURING with their
+        # transitional states.
         special_cases = ["RESOURCING", "CONFIGURING"]
         if initial_obs_state_name in special_cases:
             initial_obs_state_name = initial_obs_state_name + "_IDLE"
@@ -1002,8 +1027,9 @@ class TestMccsSubarray:
         the fqdn of a device and a new healthState the record of it's health
         state in the health model is properly updated.
 
-        :param mock_subarray_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+        :param mock_subarray_component_manager: A fixture that provides a partiall
+            mocked component manager which has access to the
+            component_state_changed_callback.
         :param target_health_state: The HealthState that the device should end up in.
         :param fqdn: The fqdn of a subservient device.
         :param request: A PyTest object giving access to the requesting test.
@@ -1011,7 +1037,8 @@ class TestMccsSubarray:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        # Get the fixture from the parametrized fixture that's not a fixture. (But is really.)
+        # Get the fixture from the parametrized fixture that's not a fixture.
+        # (But is really.)
         fqdn = request.getfixturevalue(fqdn)
 
         key = "health_state"

@@ -147,7 +147,8 @@ class BaseTpmSimulator(ObjectComponent):
         """
         Set firmware name.
 
-        :param value: assigned default firmware name. Can be overriden by parameter of download_firmware
+        :param value: assigned default firmware name. Can be overriden by
+            parameter of download_firmware
         """
         self._firmware_name = value
 
@@ -165,7 +166,7 @@ class BaseTpmSimulator(ObjectComponent):
     @property
     def is_programmed(self: BaseTpmSimulator) -> bool:
         """
-        Return whether this TPM is programmed (i.e. firmware has been downloaded to it).
+        Return whether this TPM is programmed (ie. firmware has been downloaded to it).
 
         :return: whether this TPM is programmed
         """
@@ -508,17 +509,17 @@ class BaseTpmSimulator(ObjectComponent):
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
             if item.get("core_id") == core_id:
-                return item
-        return None
+                return [item]
+        return []
 
     @property
     def arp_table(self: BaseTpmSimulator) -> dict[int, list[int]]:
         """
         Check that ARP table has been populated in for all used cores.
 
-        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC. 10G
-        interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
-        LMC with only one ARP.
+        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer,
+        1 for LMC. 10G interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for
+        beamforming, and 2, 6 for LMC with only one ARP.
 
         :return: dictionary containing coreID and populated arpID
         """
@@ -553,7 +554,6 @@ class BaseTpmSimulator(ObjectComponent):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        lmc_mac: Optional[str] = None,
     ) -> None:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -564,7 +564,6 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param lmc_mac: LMC MAC address, defaults to None
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -721,8 +720,8 @@ class BaseTpmSimulator(ObjectComponent):
         """
         Compute the calibration coefficients.
 
-        Calculate from previously specified gain curves, tapering weights and beam angles,
-        load them in the hardware. It must be followed
+        Calculate from previously specified gain curves, tapering weights
+        and beam angles, load them in the hardware. It must be followed
         by switch_calibration_bank() to make these active.
 
         :raises NotImplementedError: because this method is not yet
@@ -737,8 +736,8 @@ class BaseTpmSimulator(ObjectComponent):
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
-        The delay_array specifies the delay and delay rate for each antenna. beam_index
-        specifies which beam is desired (range 0-7)
+        The delay_array specifies the delay and delay rate for each antenna.
+        beam_index specifies which beam is desired (range 0-7)
 
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :param beam_index: the beam to which the pointing delay should
@@ -926,7 +925,7 @@ class BaseTpmSimulator(ObjectComponent):
     def start_acquisition(
         self: BaseTpmSimulator,
         start_time: Optional[int] = None,
-        delay: int = 2,
+        delay: Optional[int] = 2,
     ) -> None:
         """
         Start data acquisition.
@@ -975,7 +974,6 @@ class BaseTpmSimulator(ObjectComponent):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        lmc_mac: Optional[str] = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -988,7 +986,6 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param lmc_mac: MAC address of destination, defaults to None
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

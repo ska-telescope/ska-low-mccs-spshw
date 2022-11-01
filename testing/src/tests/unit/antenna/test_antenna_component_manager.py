@@ -13,10 +13,8 @@ import unittest
 
 import pytest
 import tango
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.testing.mock import MockCallable, MockCallableDeque
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
@@ -123,7 +121,8 @@ class TestAntennaApiuProxy:
         assert antenna_apiu_proxy.power_on() == ResultCode.OK
         mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
 
-        # The antenna power mode won't update until an event confirms that the antenna is on.
+        # The antenna power mode won't update until an event confirms that
+        # the antenna is on.
         assert antenna_apiu_proxy.supplied_power_state == PowerState.OFF
 
         # Fake an event that tells this proxy that the antenna is now on as requested

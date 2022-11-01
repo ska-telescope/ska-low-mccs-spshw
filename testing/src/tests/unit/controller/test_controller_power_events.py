@@ -14,9 +14,9 @@ from typing import Type
 
 import pytest
 import tango
+from ska_control_model import CommunicationStatus, PowerState
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs import MccsController
 from ska_low_mccs.controller import ControllerComponentManager
@@ -29,8 +29,9 @@ def patched_controller_device_class(
     """
     Return a station device class, patched with extra methods for testing.
 
-    :param mock_controller_component_manager: A fixture that provides a partially mocked component manager
-            which has access to the component_state_changed_callback.
+    :param mock_controller_component_manager: A fixture that provides a
+        partially mocked component manager which has access to the
+        component_state_changed_callback.
 
     :return: a patched station device class, patched with extra methods
         for testing

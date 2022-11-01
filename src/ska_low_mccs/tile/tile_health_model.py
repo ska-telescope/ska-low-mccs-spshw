@@ -13,8 +13,8 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import Any, Callable
 
+from ska_control_model import HealthState, PowerState
 from ska_low_mccs_common.health import HealthModel
-from ska_tango_base.control_model import HealthState, PowerState
 
 __all__ = ["TileHealthModel"]
 

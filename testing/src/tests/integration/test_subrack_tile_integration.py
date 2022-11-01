@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import pytest
 import tango
+from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, PowerState
 
 
 @pytest.fixture()
@@ -203,7 +202,8 @@ class TestSubrackTileIntegration:
         assert tile_device.state() == tango.DevState.ON
         assert subrack_device.tpm1PowerState == PowerState.ON
 
-        # TurnOnTpm isn't directly called here so we have to get at it a bit differently.
+        # TurnOnTpm isn't directly called here so we have to get at it a bit
+        # differently.
         args = lrc_result_changed_callback.get_next_call()
         assert "_PowerOnTpm" in args[0][1][0]
         assert args[0][1][1] == f'"Subrack TPM {tpm_id} turn on tpm task has completed"'

@@ -12,17 +12,17 @@ import time
 
 import pytest
 import tango
-from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback
-from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
+from ska_control_model import (
     AdminMode,
     ControlMode,
     HealthState,
     LoggingLevel,
+    ResultCode,
     SimulationMode,
 )
+from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 
 from ska_low_mccs import MccsAntenna
 
@@ -176,8 +176,10 @@ class TestMccsAntenna:
         device_under_test.MockApiuOn()
 
         time.sleep(0.1)
-        # TODO How do we check that the component_manager decorators are satisfied here?
-        # Decorators "check_communicating" & "check_on" need to be verified in this test first.
+        # TODO How do we check that the component_manager decorators are
+        # satisfied here?
+        # Decorators "check_communicating" & "check_on" need to be verified in
+        # this test first.
 
         assert device_under_test.voltage == voltage
         assert mock_apiu.get_antenna_voltage.called_once_with(1)
@@ -237,8 +239,10 @@ class TestMccsAntenna:
         device_under_test.MockApiuOn()
 
         time.sleep(0.1)
-        # TODO How do we check that the component_manager decorators are satisfied here?
-        # Decorators "check_communicating" & "check_on" need to be verified in this test first.
+        # TODO How do we check that the component_manager decorators are
+        # satisfied here?
+        # Decorators "check_communicating" & "check_on" need to be verified
+        # in this test first.
 
         assert device_under_test.current == current
         assert mock_apiu.get_antenna_current.called_once_with(1)
@@ -296,8 +300,10 @@ class TestMccsAntenna:
         device_under_test.MockApiuOn()
 
         time.sleep(0.1)
-        # TODO How do we check that the component_manager decorators are satisfied here?
-        # Decorators "check_communicating" & "check_on" need to be verified in this test first.
+        # TODO How do we check that the component_manager decorators are
+        # satisfied here?
+        # Decorators "check_communicating" & "check_on" need to be verified
+        # in this test first.
 
         assert device_under_test.temperature == temperature
         assert mock_apiu.get_antenna_temperature.called_once_with(1)

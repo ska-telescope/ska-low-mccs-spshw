@@ -12,18 +12,18 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    ResultCode,
+    SimulationMode,
+    TaskStatus,
+)
 from ska_low_mccs_common.component import (
     DriverSimulatorSwitchingComponentManager,
     ObjectComponentManager,
     check_communicating,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    HealthState,
-    SimulationMode,
-)
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.cluster_manager import ClusterSimulator
 
@@ -357,7 +357,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
 
     #     if task_callback:
     #         task_callback(
-    #             status=TaskStatus.COMPLETED, result="The submit job task has completed"
+    #             status=TaskStatus.COMPLETED,
+    #             result="The submit job task has completed"
     #         )
 
     # def get_job_status(
@@ -404,7 +405,8 @@ class ClusterComponentManager(DriverSimulatorSwitchingComponentManager):
     #     if task_abort_event and task_abort_event.is_set():
     #         if task_callback:
     #             task_callback(
-    #                 status=TaskStatus.ABORTED, result="The get job status task aborted"
+    #                 status=TaskStatus.ABORTED,
+    #                 result="The get job status task aborted"
     #             )
     #         return
 

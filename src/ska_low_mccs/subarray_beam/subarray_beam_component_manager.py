@@ -13,9 +13,8 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import ObjectComponentManager, check_communicating
-from ska_tango_base.control_model import CommunicationStatus
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam
 
@@ -178,7 +177,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         :param argin: Json string containing args
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string
+            to identify the command
         """
         config_dict = json.loads(argin)
 
@@ -244,7 +244,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._scan, task_callback=task_callback)
 

@@ -12,10 +12,10 @@ import time
 import unittest.mock
 
 import pytest
+from ska_control_model import AdminMode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
-from ska_tango_base.control_model import AdminMode
 from tango import DevState
 
 
@@ -173,8 +173,9 @@ class TestApiuAntennaIntegration:
         time.sleep(0.1)
 
         assert apiu_device.IsAntennaOn(1)
-        # It fires a change event which is received by the antenna device. The antenna device now knows that
-        # its antenna is powered on, so it transitions to state ON.
+        # It fires a change event which is received by the antenna device. The antenna
+        # device now knows that its antenna is powered on, so it transitions to
+        # state ON.
         time.sleep(0.1)
         assert antenna_device.state() == DevState.ON
 

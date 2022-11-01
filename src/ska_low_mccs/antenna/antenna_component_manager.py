@@ -14,6 +14,7 @@ import threading
 from typing import Any, Callable, Optional
 
 import tango
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
@@ -21,9 +22,6 @@ from ska_low_mccs_common.component import (
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["AntennaComponentManager"]
 
@@ -209,7 +207,10 @@ class _ApiuProxy(PowerSupplyProxyComponentManager, DeviceComponentManager):
             if event_value[self._logical_antenna_id - 1]
             else PowerState.OFF
         )
-        # self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
+        # self._component_state_changed_callback(
+        #    {"power_state": power_state},
+        #    fqdn=None
+        # )
         # self.update_supplied_power_state(
         #     # PowerState.ON
         #     # if event_value[self._logical_antenna_id - 1]

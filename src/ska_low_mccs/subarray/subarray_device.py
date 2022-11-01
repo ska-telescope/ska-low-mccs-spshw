@@ -14,8 +14,8 @@ from typing import Any, Callable, List, Optional, Tuple
 
 import ska_low_mccs_common.release as release
 import tango
-from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
-from ska_tango_base.control_model import CommunicationStatus, HealthState
+from ska_control_model import CommunicationStatus, HealthState, ResultCode
+from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
@@ -127,7 +127,8 @@ class MccsSubarray(SKASubarray):
         is responsible for updating the tango side of things i.e. making
         sure the attribute is up to date, and events are pushed.
 
-        :param state_change: A dictionary containing the name of the state that changed and its new value.
+        :param state_change: A dictionary containing the name of the state
+            that changed and its new value.
         :param fqdn: The fqdn of the device.
         """
         if "health_state" in state_change.keys():
@@ -148,13 +149,15 @@ class MccsSubarray(SKASubarray):
                 if device_type in valid_device_types.keys():
                     valid_device_types[device_type](fqdn, health)
                 else:
-                    # We've somehow got a health update for a device type we don't manage.
+                    # We've somehow got a health update for a device type
+                    # we don't manage.
                     self.logger.warning(
                         f"Received a health state changed event for device {fqdn} "
                         "which is not managed by this subarray."
                     )
 
-        # resources should be passed in the dict's value as a list of sets to be extracted here.
+        # resources should be passed in the dict's value as a list of sets
+        # to be extracted here.
         if "resources_changed" in state_change.keys():
             resources = state_change.get("resources_changed")
             station_fqdns = resources[0]
@@ -207,7 +210,8 @@ class MccsSubarray(SKASubarray):
             station_power = state_change.get("station_power_state")
             self.component_manager._station_power_state_changed(fqdn, station_power)
 
-        # This might need changing. Seems that "power_state" changes could come from any subservient device too.
+        # This might need changing. Seems that "power_state" changes could come
+        # from any subservient device too.
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
             with self.component_manager._power_state_lock:
@@ -274,8 +278,8 @@ class MccsSubarray(SKASubarray):
     #     """
     #     Handle the HealthModel's health state changes.
 
-    #     Responsible for updating the tango side of things i.e. making sure the attribute
-    #     is up to date, and events are pushed.
+    #     Responsible for updating the tango side of things
+    #     i.e. making sure the attribute is up to date, and events are pushed.
 
     #     :param health: the new health value
     #     """
@@ -333,9 +337,10 @@ class MccsSubarray(SKASubarray):
             for subarray_beam in resource_dict["subarray_beams"]
         ]
         channel_blocks = resource_dict["channel_blocks"]
+        interface = "https://schema.skao.int/ska-low-mccs-assignedresources/1.0"
         return json.dumps(
             {
-                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
+                "interface": interface,
                 "subarray_beam_ids": subarray_beams,
                 "station_ids": stations,
                 "channel_blocks": channel_blocks,

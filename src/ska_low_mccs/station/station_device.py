@@ -14,8 +14,8 @@ from typing import Any, List, Optional, Tuple
 
 import ska_low_mccs_common.release as release
 import tango
-from ska_tango_base.commands import ResultCode, SubmittedSlowCommand
-from ska_tango_base.control_model import CommunicationStatus, HealthState, PowerState
+from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
+from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
@@ -208,10 +208,13 @@ class MccsStation(SKAObsDevice):
         the state of the component changes.
         For the power_state parameter it is implemented here to drive the op_state.
         For the health parameter it is implemented to update the health attribute
-        and push change events whenever the HealthModel's evaluated health state changes.
+        and push change events whenever the HealthModel's evaluated health state
+        changes.
 
-        :param state_change: a dict containing the state parameters to be set, and new values.
-        :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is a station.
+        :param state_change: a dict containing the state parameters to be set,
+            and new values.
+        :param fqdn: fully qualified domain name of the device whos state has changed.
+            None if the device is a station.
 
         :raises ValueError: fqdn not found
         """
@@ -241,7 +244,8 @@ class MccsStation(SKAObsDevice):
                 )
             else:
                 raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna,"
+                    " tile or apiu"
                 )
 
         if "power_state" in state_change.keys():

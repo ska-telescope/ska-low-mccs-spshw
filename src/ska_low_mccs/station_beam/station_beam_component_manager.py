@@ -14,15 +14,13 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["StationBeamComponentManager"]
 
@@ -66,7 +64,8 @@ class StationBeamComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: a callback to be called
             whenever the state of the station beam changes.
-        :param max_workers: Maximum number of workers in the worker pool. Defaults to None.
+        :param max_workers: Maximum number of workers in the worker pool.
+            Defaults to None.
         """
         self._subarray_id = 0
         self._beam_id = beam_id

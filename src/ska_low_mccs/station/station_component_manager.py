@@ -12,9 +12,10 @@ import functools
 import json
 import logging
 import threading
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 import tango
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsComponentManager,
@@ -22,9 +23,6 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 from ska_low_mccs_common.utils import threadsafe
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["StationComponentManager"]
 
@@ -40,7 +38,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[PowerState], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -117,7 +115,7 @@ class StationComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -342,7 +340,8 @@ class StationComponentManager(MccsComponentManager):
                 self._apiu_proxy.power_state = power_state
             else:
                 raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, "
+                    "tile or apiu"
                 )
 
     @property
@@ -365,7 +364,6 @@ class StationComponentManager(MccsComponentManager):
         `self._off` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
         :return: a result code and response message
         """
         return self.submit_task(self._off, task_callback=task_callback)
@@ -387,10 +385,11 @@ class StationComponentManager(MccsComponentManager):
         results = [proxy.off() for proxy in self._tile_proxies.values()] + [
             self._apiu_proxy.off()
         ]  # Never mind antennas, turning off APIU suffices
-        # TODO: Here we need to monitor the APIU and Tiles. This will eventually use the
-        # mechanism described in MCCS-945, but until that is implemented we might instead just poll
-        # these devices' longRunngCommandAttribute. For the moment, however, we just submit the
-        # subservient devices' commands for execution and forget about them.
+        # TODO: Here we need to monitor the APIU and Tiles. This will eventually
+        # use the mechanism described in MCCS-945, but until that is implemented
+        # we might instead just poll these devices' longRunngCommandAttribute.
+        # For the moment, however, we just submit the subservient devices' commands
+        # for execution and forget about them.
         if all(
             result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
             for (result, _) in results
@@ -412,7 +411,6 @@ class StationComponentManager(MccsComponentManager):
         `self._on` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
 
         :return: a task staus and response message
         """
@@ -431,15 +429,14 @@ class StationComponentManager(MccsComponentManager):
         antennas.
 
         :param task_callback: Update task state, defaults to None
-        :type task_callback: Callable, optional
         :param task_abort_event: Abort the task
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         if self._apiu_power_state == PowerState.ON:
             result_code = self._turn_on_tiles_and_antennas()
-            # TODO: Monitor the Tiles' & antennas' On command statuses and update the Station On command
-            # status accordingly.
+            # TODO: Monitor the Tiles' & antennas' On command statuses and update
+            # the Station On command status accordingly.
             if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
                 task_status = TaskStatus.COMPLETED
             else:
@@ -449,7 +446,8 @@ class StationComponentManager(MccsComponentManager):
             return
         self._on_called = True
         result_code, _ = self._apiu_proxy.on()
-        # TODO: Monitor the APIU On command status and update the Station On command status accordingly.
+        # TODO: Monitor the APIU On command status and update the Station On command
+        # status accordingly.
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             task_status = TaskStatus.COMPLETED
         else:
@@ -529,7 +527,8 @@ class StationComponentManager(MccsComponentManager):
             tile_proxy.set_pointing_delay(delays)
             for tile_proxy in self._tile_proxies.values()
         ]
-        # TODO: Monitor the Tiles' SetPointingDelay command status and update the Station command status accordingly.
+        # TODO: Monitor the Tiles' SetPointingDelay command status and update
+        # the Station command status accordingly.
         if all(
             result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
             for result in results

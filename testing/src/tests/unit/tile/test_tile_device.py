@@ -15,11 +15,10 @@ import unittest
 from typing import Any, Optional
 
 import pytest
+from ska_control_model import AdminMode, HealthState, ResultCode, TestMode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, TestMode
 from tango import DevFailed, DevState
 
 from ska_low_mccs import MccsTile
@@ -276,7 +275,7 @@ class TestMccsTileCommands:
                 "SetLmcDownload",
                 json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),
             ),
-            ("SetBeamFormerRegions", (2, 8, 5, 0, 0)),
+            ("SetBeamFormerRegions", (2, 8, 5, 0, 0, 1, 1, 101)),
             (
                 "ConfigureStationBeamformer",
                 json.dumps(

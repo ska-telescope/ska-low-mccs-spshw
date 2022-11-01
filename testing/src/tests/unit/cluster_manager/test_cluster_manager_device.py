@@ -14,11 +14,10 @@ from typing import Any
 
 import pytest
 import tango
+from ska_control_model import AdminMode, HealthState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState
 from tango import DevFailed
 
 from ska_low_mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
@@ -421,9 +420,9 @@ class TestMccsClusterManagerDevice:
 
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (
-            "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
-Communication with component is not established.\""
-            in lrc_result[0][1]
+            '"Exception: Cannot execute '
+            "'ClusterSimulatorComponentManager._get_from_component'. "
+            'Communication with component is not established."' in lrc_result[0][1]
         )
         device_under_test.adminMode = AdminMode.ONLINE
 
@@ -543,9 +542,9 @@ Communication with component is not established.\""
 
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (
-            lrc_result[0][1][1]
-            == "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
-Communication with component is not established.\""
+            lrc_result[0][1][1] == '"Exception: Cannot execute '
+            "'ClusterSimulatorComponentManager._get_from_component'. "
+            'Communication with component is not established."'
         )
 
         device_under_test.adminMode = AdminMode.ONLINE
@@ -614,9 +613,9 @@ Communication with component is not established.\""
         # But we expect it to have failed when a worker thread picks it up.
         lrc_result = lrc_result_changed_callback.get_next_call()
         assert (
-            lrc_result[0][1][1]
-            == "\"Exception: Cannot execute 'ClusterSimulatorComponentManager._get_from_component'. \
-Communication with component is not established.\""
+            lrc_result[0][1][1] == '"Exception: Cannot execute '
+            "'ClusterSimulatorComponentManager._get_from_component'. "
+            'Communication with component is not established."'
         )
 
         lrc_id, lrc_status = device_under_test.longRunningCommandStatus

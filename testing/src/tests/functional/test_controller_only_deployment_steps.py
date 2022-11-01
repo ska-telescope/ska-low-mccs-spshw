@@ -11,9 +11,9 @@ from __future__ import annotations
 import pytest
 import tango
 from pytest_bdd import given, parsers, scenarios, then, when
+from ska_control_model import HealthState
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType
-from ska_tango_base.control_model import HealthState
 
 
 @pytest.fixture(scope="module")
@@ -21,7 +21,8 @@ def devices_to_load() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
-    Here we specify that we want a controller-only deployment and provide a custom chart.
+    Here we specify that we want a controller-only deployment and provide
+    a custom chart.
 
     :return: specification of the devices to be loaded
     """
@@ -59,7 +60,8 @@ def controller_bdd(controller: MccsDeviceProxy) -> MccsDeviceProxy:
 
     :param controller: The controller fixture to use.
 
-    :return: A MccsDeviceProxy instance to MccsController stored in the target_fixture `controller_bdd`.
+    :return: A MccsDeviceProxy instance to MccsController stored in the
+        target_fixture `controller_bdd`.
     """
     return controller
 
@@ -82,7 +84,8 @@ def controller_is_in_state(controller_bdd, state):
     state_map = {"on": tango.DevState.ON, "disable": tango.DevState.DISABLE}
     if state not in state_map.keys():
         raise KeyError(
-            f"State = {state} | Controller state must be one of {list[state_map.keys()]}!"
+            f"State = {state} | Controller state must be one of "
+            f"{list[state_map.keys()]}!"
         )
 
     assert controller_bdd.state() == state_map[state]
@@ -126,7 +129,8 @@ def controller_has_health(controller_bdd, health):
     }
     if health not in health_map.keys():
         raise KeyError(
-            f"Health = {health} | Controller health must be one of {list[health_map.keys()]}!"
+            f"Health = {health} | Controller health must be one of "
+            f"{list[health_map.keys()]}!"
         )
 
     assert controller_bdd.HealthState == health_map[health]

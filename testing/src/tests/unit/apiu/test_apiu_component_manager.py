@@ -13,8 +13,8 @@ from typing import Callable, Union, cast
 
 import pytest
 from _pytest.fixtures import SubRequest
+from ska_control_model import PowerState
 from ska_low_mccs_common.testing.mock import MockCallableDeque
-from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs.apiu import (
     ApiuComponentManager,
@@ -99,7 +99,8 @@ class TestApiuCommon:
             return (in simulation mode and powered on)
         :param request: A pytest object giving access to the requesting
             test context.
-        :param component_state_changed_callback: Callback to call when the component's state changes.
+        :param component_state_changed_callback: Callback to call when the
+            component's state changes.
 
         :raises ValueError: if parametrized with an unrecognised option
 

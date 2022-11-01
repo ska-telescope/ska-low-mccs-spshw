@@ -11,9 +11,9 @@ from __future__ import annotations
 import time
 
 import pytest
+from ska_control_model import AdminMode, PowerState
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_tango_base.control_model import AdminMode, PowerState
 
 from ska_low_mccs.subrack.demo_subrack_device import DemoSubrack
 

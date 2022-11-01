@@ -12,6 +12,13 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
+from ska_control_model import (
+    CommunicationStatus,
+    PowerState,
+    ResultCode,
+    SimulationMode,
+    TaskStatus,
+)
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
     MccsComponentManager,
@@ -21,9 +28,6 @@ from ska_low_mccs_common.component import (
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, PowerState, SimulationMode
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subrack import SubrackData, SubrackDriver, SubrackSimulator
 
@@ -769,7 +773,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._turn_on_tpms, task_callback=task_callback)
 

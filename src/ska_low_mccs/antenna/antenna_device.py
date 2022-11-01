@@ -11,14 +11,15 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple
 
 import tango
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, ResultCode
-from ska_tango_base.control_model import (
+from ska_control_model import (
     CommunicationStatus,
     HealthState,
     PowerState,
+    ResultCode,
     SimulationMode,
 )
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import DeviceInitCommand
 from tango.server import attribute, device_property
 
 from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
@@ -52,7 +53,6 @@ class MccsAntenna(SKABaseDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         super().init_device()
-        self.PushChanges()
 
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
@@ -177,7 +177,8 @@ class MccsAntenna(SKABaseDevice):
 
         :param state_change: a dict containing the state change(s)
             of the component.
-        :param fqdn: fully qualified domain name of the device whos state has changed. None if the device is an antenna.
+        :param fqdn: fully qualified domain name of the device whos state
+            has changed. None if the device is an antenna.
 
         :raises ValueError: unknown fqdn
         """
@@ -202,7 +203,8 @@ class MccsAntenna(SKABaseDevice):
                 pass
             else:
                 raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, tile or apiu"
+                    f"unknown fqdn '{fqdn}', should be None or belong to antenna, "
+                    "tile or apiu"
                 )
 
         if "fault" in state_change.keys():

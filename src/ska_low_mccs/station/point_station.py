@@ -122,7 +122,8 @@ class Pointing(object):
         """
         Pointing class, generates delay and delay rates to be downloaded to TPMs.
 
-        :param station_info: Basic information for station location and antenna displacements
+        :param station_info: Basic information for station location and antenna
+            displacements
         """
         # Store arguments
         self.station = station_info
@@ -152,7 +153,7 @@ class Pointing(object):
         self._delays: np.ndarray = None  # type: ignore[assignment]
         self._delay_rates: np.ndarray = None  # type: ignore[assignment]
 
-    # -------------------------------- POINTING FUNCTIONS -------------------------------------
+    # -------------------------------- POINTING FUNCTIONS --------------------------
     def point_to_sun(self: Pointing, pointing_time: Optional[float] = None) -> None:
         """
         Generate delays to point towards the sun for the given time.
@@ -163,7 +164,8 @@ class Pointing(object):
         if pointing_time is None:
             pointing_time = Time(datetime.utcnow(), scale="utc")
 
-        # Get sun position in RA, DEC and convert to Alz, Az in telescope reference frame
+        # Get sun position in RA, DEC and convert to Alz, Az in telescope
+        # reference frame
         sun_position = get_sun(pointing_time)
         alt, az = self._ra_dec_to_alt_az(
             sun_position.ra,
@@ -204,7 +206,9 @@ class Pointing(object):
             self._below_horizon = False
 
         # Compute the delays
-        self._delays = self._delays_from_altitude_azimuth(altitude_angle.rad, azimuth_angle.rad)  # type: ignore[assignment]
+        self._delays = self._delays_from_altitude_azimuth(  # type: ignore[assignment]
+            altitude_angle.rad, azimuth_angle.rad
+        )
         self._delay_rates = self._delays * 0
 
     def point_array(
@@ -218,10 +222,13 @@ class Pointing(object):
         Calculate the phase shift between two antennas.
 
         Which is given by the phase constant (2 * pi / wavelength)
-        multiplied by the projection of the baseline vector onto the plane wave arrival vector
+        multiplied by the projection of the baseline vector onto the
+        plane wave arrival vector
 
-        :param right_ascension: Right ascension of source - astropy Angle / string convertable to Angle
-        :param declination: Declination of source - astropy Angle / string convertable to Angle
+        :param right_ascension: Right ascension of source - stropy Angle / string
+            convertable to Angle
+        :param declination: Declination of source - astropy Angle / string
+            convertable to Angle
         :param pointing_time: Time of observation (in format astropy time)
         :param delta_time: Delta timing for calculating delay rate
 
@@ -289,7 +296,9 @@ class Pointing(object):
 
         # If below horizon flat is set, return 0s
         if self._below_horizon:
-            return np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)  # type: ignore[return-value, attr-defined]
+            return np.zeros(
+                (self._nof_antennas, nof_channels), dtype=np.complex
+            )  # type: ignore[return-value, attr-defined]
 
         # Compute frequency range
         channel_bandwidth = 400e6 / 512.0
@@ -301,7 +310,9 @@ class Pointing(object):
         )
 
         # Generate coefficients
-        coefficients = np.zeros((self._nof_antennas, nof_channels), dtype=np.complex)  # type: ignore[attr-defined]
+        coefficients = np.zeros(
+            (self._nof_antennas, nof_channels), dtype=np.complex
+        )  # type: ignore[attr-defined]
         for i in range(nof_channels):
             delays = 2.0 * np.pi * frequencies[i] * self._delays
             coefficients[:, i] = np.cos(delays) + 1j * np.sin(delays)
@@ -348,15 +359,17 @@ class Pointing(object):
 
         From right ascension and declination and time.
 
-        :param right_ascension: Right ascension of source - astropy Angle / string convertable to Angle
-        :param declination: Declination of source - astropy Angle / string convertable to Angle
+        :param right_ascension: Right ascension of source -
+            astropy Angle / string convertable to Angle
+        :param declination: Declination of source - astropy Angle / string
+            convertable to Angle
         :param time: Time of observation (as astropy Time")
         :param location: astropy EarthLocation
 
         :return: List containing altitude and azimuth of source as astropy angle
         """
-        # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
-        # coordinates (altitude/azimuth) from the antenna's perspective.
+        # Initialise SkyCoord object using the default frame (ICRS) and convert to
+        # horizontal coordinates (altitude/azimuth) from the antenna's perspective.
         sky_coordinates = SkyCoord(ra=right_ascension, dec=declination, unit="deg")
         altaz = sky_coordinates.transform_to(AltAz(obstime=time, location=location))
 
@@ -388,7 +401,8 @@ class Pointing(object):
         :param declination: The declination of the target as an astropy angle.
         :param pointing_time: The observation time as an astropy Time.
 
-        :return: True if the target coordinates are above the horizon at the specified time, false otherwise.
+        :return: True if the target coordinates are above the horizon at the specified
+            time, false otherwise.
         """
         alt, _ = self._ra_dec_to_alt_az(
             Angle(right_ascension),
@@ -611,7 +625,7 @@ class PointingDriver:  # pragma: no cover
         # job_queue: queue.Queue[Time] = multiprocessing.Queue()
         # results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
         job_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
-        results_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
+        results_queue: queue.Queue() = multiprocessing.Queue()
 
         processes = [
             multiprocessing.Process(

@@ -8,12 +8,20 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
 from typing import Any, Callable, Optional, Tuple, cast
 
 import tango
+from ska_control_model import (
+    CommunicationStatus,
+    PowerState,
+    SimulationMode,
+    TaskStatus,
+    TestMode,
+)
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.component import (
     MccsComponentManager,
@@ -24,13 +32,6 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import (
-    CommunicationStatus,
-    PowerState,
-    SimulationMode,
-    TestMode,
-)
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.tile import (
     BaseTpmSimulator,
@@ -161,9 +162,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
     ]
 
     def __getattr__(
-        self: _TpmSimulatorComponentManager,
-        name: str,
-        default_value: Any = None,
+        self: _TpmSimulatorComponentManager, name: str, default_value: Any = None
     ) -> Any:
         """
         Get value for an attribute not found in the usual way.
@@ -186,10 +185,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         return default_value
 
     @check_communicating
-    def _get_from_component(
-        self: _TpmSimulatorComponentManager,
-        name: str,
-    ) -> Any:
+    def _get_from_component(self: _TpmSimulatorComponentManager, name: str) -> Any:
         """
         Get an attribute from the component (if we are communicating with it).
 
@@ -200,11 +196,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._component, name)
 
-    def __setattr__(
-        self: _TpmSimulatorComponentManager,
-        name: str,
-        value: Any,
-    ) -> Any:
+    def __setattr__(self: _TpmSimulatorComponentManager, name: str, value: Any) -> Any:
         """
         Set an attribute on this TPM simulator component manager.
 
@@ -256,9 +248,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            StaticTpmSimulator(
-                logger,
-            ),
+            StaticTpmSimulator(logger),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -290,9 +280,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            DynamicTpmSimulator(
-                logger,
-            ),
+            DynamicTpmSimulator(logger),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -397,8 +385,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
 
     @simulation_mode.setter
     def simulation_mode(
-        self: SwitchingTpmComponentManager,
-        value: SimulationMode,
+        self: SwitchingTpmComponentManager, value: SimulationMode
     ) -> None:
         """
         Set the simulation mode.
@@ -431,10 +418,7 @@ class SwitchingTpmComponentManager(SwitchingComponentManager):
         return cast(TestMode, test_mode)
 
     @test_mode.setter
-    def test_mode(
-        self: SwitchingTpmComponentManager,
-        value: TestMode,
-    ) -> None:
+    def test_mode(self: SwitchingTpmComponentManager, value: TestMode) -> None:
         """
         Set the test mode.
 
@@ -602,8 +586,7 @@ class TileComponentManager(MccsComponentManager):
     #         self._component_progress_changed_callback(progress)
 
     def _subrack_communication_state_changed(
-        self: TileComponentManager,
-        communication_state: CommunicationStatus,
+        self: TileComponentManager, communication_state: CommunicationStatus
     ) -> None:
         """
         Handle a change in status of communication with the antenna via the APIU.
@@ -716,14 +699,12 @@ class TileComponentManager(MccsComponentManager):
         return result_code
 
     def _tpm_power_state_changed(
-        self: TileComponentManager,
-        power_state: PowerState,
+        self: TileComponentManager, power_state: PowerState
     ) -> None:
         self._tile_orchestrator.update_tpm_power_state(power_state)
 
     def _tpm_communication_state_changed(
-        self: TileComponentManager,
-        communication_state: CommunicationStatus,
+        self: TileComponentManager, communication_state: CommunicationStatus
     ) -> None:
         """
         Handle a change in status of communication with the tpm.
@@ -749,7 +730,8 @@ class TileComponentManager(MccsComponentManager):
         """
         self.set_power_state(power_state)
         self.logger.debug(
-            f"power state: {self.power_state}, communication status: {self.communication_state}"
+            f"power state: {self.power_state}, communication status: "
+            f"{self.communication_state}"
         )
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             if power_state == PowerState.ON:
@@ -794,10 +776,7 @@ class TileComponentManager(MccsComponentManager):
         return cast(SwitchingTpmComponentManager, self._tpm_component_manager).test_mode
 
     @test_mode.setter
-    def test_mode(
-        self: TileComponentManager,
-        value: TestMode,
-    ) -> None:
+    def test_mode(self: TileComponentManager, value: TestMode) -> None:
         """
         Set the test mode.
 
@@ -946,9 +925,7 @@ class TileComponentManager(MccsComponentManager):
     ]
 
     def __getattr__(
-        self: TileComponentManager,
-        name: str,
-        default_value: Any = None,
+        self: TileComponentManager, name: str, default_value: Any = None
     ) -> Any:
         """
         Get value for an attribute not found in the usual way.
@@ -983,11 +960,7 @@ class TileComponentManager(MccsComponentManager):
         # This one-liner is only a method so that we can decorate it.
         return getattr(self._tpm_component_manager, name)
 
-    def __setattr__(
-        self: TileComponentManager,
-        name: str,
-        value: Any,
-    ) -> None:
+    def __setattr__(self: TileComponentManager, name: str, value: Any) -> None:
         """
         Set an attribute on this tile component manager.
 
@@ -1017,8 +990,7 @@ class TileComponentManager(MccsComponentManager):
 
     @check_communicating
     def initialise(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
+        self: TileComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the initialise slow task.
@@ -1027,7 +999,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         try:
             return self.submit_task(self._initialise, task_callback=task_callback)
@@ -1064,16 +1037,13 @@ class TileComponentManager(MccsComponentManager):
 
         if task_callback:
             task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Initialise tpm task has completed",
+                status=TaskStatus.COMPLETED, result="Initialise tpm task has completed"
             )
             return
 
     @check_communicating
     def download_firmware(
-        self: TileComponentManager,
-        argin: str,
-        task_callback: Optional[Callable] = None,
+        self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the download_firmware slow task.
@@ -1085,7 +1055,8 @@ class TileComponentManager(MccsComponentManager):
             file
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(
             self._download_firmware, args=[argin], task_callback=task_callback
@@ -1137,8 +1108,7 @@ class TileComponentManager(MccsComponentManager):
 
     @check_communicating
     def get_arp_table(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
+        self: TileComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the get arp_table slow task.
@@ -1147,7 +1117,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._get_arp_table, task_callback=task_callback)
 
@@ -1186,17 +1157,12 @@ class TileComponentManager(MccsComponentManager):
             return
 
         if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Arp table has completed",
-            )
+            task_callback(status=TaskStatus.COMPLETED, result="Arp table has completed")
             return
 
     @check_communicating
     def start_acquisition(
-        self: TileComponentManager,
-        argin: str,
-        task_callback: Optional[Callable] = None,
+        self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the start_acquisition slow task.
@@ -1207,33 +1173,42 @@ class TileComponentManager(MccsComponentManager):
         * Delay - (int) delay start
 
         :param task_callback: Update task state, defaults to None
-        :return: A tuple containing a task status and a unique id string to identify the command
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
+        params = json.loads(argin)
+        start_time = params.get("StartTime", None)
+        delay = params.get("Delay", 2)
         return self.submit_task(
-            self._start_acquisition, args=[argin], task_callback=task_callback
+            self._start_acquisition,
+            args=[start_time, delay],
+            task_callback=task_callback,
         )
 
     def _start_acquisition(
         self: TileComponentManager,
-        argin: str,
+        start_time: Optional[int] = None,
+        delay: Optional[int] = 2,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Start acquisition using slow command.
 
+        :param start_time: the time at which to start data acquisition, defaults to None
+        :param delay: delay start, defaults to 2
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-        :param argin: JSON string
-
         :raises NotImplementedError: Command not implemented
         """
+        success = False
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(
+            success = cast(
                 SwitchingTpmComponentManager, self._tpm_component_manager
-            ).start_acquisition(argin)
+            ).start_acquisition(start_time, delay)
         except NotImplementedError:
             raise NotImplementedError
         except Exception as ex:
@@ -1250,17 +1225,20 @@ class TileComponentManager(MccsComponentManager):
             return
 
         if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Start acquisition has completed",
-            )
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="Start acquisition has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="Start acquisition task failed"
+                )
             return
 
     @check_communicating
     def cpld_flash_write(
-        self: TileComponentManager,
-        argin: str,
-        task_callback: Optional[Callable] = None,
+        self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the cpld_flash_write slow task.
@@ -1270,7 +1248,8 @@ class TileComponentManager(MccsComponentManager):
         :param argin: is the path to a file containing the required CPLD firmware
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(
             self._cpld_flash_write, args=[argin], task_callback=task_callback
@@ -1314,15 +1293,13 @@ class TileComponentManager(MccsComponentManager):
 
         if task_callback:
             task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Cpld flash write has completed",
+                status=TaskStatus.COMPLETED, result="Cpld flash write has completed"
             )
             return
 
     @check_communicating
     def post_synchronisation(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
+        self: TileComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the post_synchronisation slow task.
@@ -1331,7 +1308,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._post_synchronisation, task_callback=task_callback)
 
@@ -1372,15 +1350,13 @@ class TileComponentManager(MccsComponentManager):
 
         if task_callback:
             task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Post synchronisation has completed",
+                status=TaskStatus.COMPLETED, result="Post synchronisation has completed"
             )
             return
 
     @check_communicating
     def sync_fpgas(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
+        self: TileComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the sync_fpgas slow task.
@@ -1389,7 +1365,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to identify the command
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
         """
         return self.submit_task(self._sync_fpgas, task_callback=task_callback)
 

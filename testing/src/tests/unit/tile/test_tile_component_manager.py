@@ -16,14 +16,14 @@ from typing import Any, Callable, Union
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_low_mccs_common.testing.mock import MockCallable
-from ska_tango_base.control_model import (
+from ska_control_model import (
     CommunicationStatus,
     PowerState,
     SimulationMode,
+    TaskStatus,
     TestMode,
 )
-from ska_tango_base.executor import TaskStatus
+from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
@@ -230,10 +230,12 @@ class TestTileComponentManager:
         tile_component_manager.on(task_callback=mock_task_callback)
         mock_task_callback.assert_next_call(status=TaskStatus.QUEUED)
 
-        # For some reason we cannot compare the equality of the Exception objects directly.
+        # For some reason we cannot compare the equality of the Exception
+        # objects directly.
         # mock_task_callback.assert_next_call(
         #    status=TaskStatus.FAILED,
-        #    exception=ConnectionError("TPM cannot be turned off / on when not online."))
+        #    exception=ConnectionError("TPM cannot be turned off / on "
+        #    "when not online."))
         time.sleep(0.1)
         _, kwargs = mock_task_callback.get_next_call()
         assert kwargs["status"] == TaskStatus.IN_PROGRESS
@@ -378,14 +380,15 @@ class TestStaticSimulatorCommon:
                 CommunicationStatus.NOT_ESTABLISHED
             )
             time.sleep(0.1)
-            # With the update to v0.13 of the base classes the logic to change the power_state
-            # of a device has been moved from the component manager to the device itself.
-            # This means that during component manager tests we cannot change the power state
-            # or other attributes "naturally" and thus this workaround is used where
-            # we assert the callback was called as we would expect and then manually set the attribute.
-            tile_component_manager._component_state_changed_callback.assert_next_call_with_keys(
-                {"power_state": PowerState.ON}
-            )
+            # With the update to v0.13 of the base classes the logic to change the
+            # power_state of a device has been moved from the component manager to
+            # the device itself.
+            # This means that during component manager tests we cannot change the
+            # power state or other attributes "naturally" and thus this workaround
+            # is used where we assert the callback was called as we would expect
+            # and then manually set the attribute.
+            callback = tile_component_manager._component_state_changed_callback
+            callback.assert_next_call_with_keys({"power_state": PowerState.ON})
             tile_component_manager.power_state = PowerState.ON
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
@@ -432,11 +435,13 @@ class TestStaticSimulatorCommon:
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
-        # With the update to v0.13 of the base classes the logic to change the power_state
-        # of a device has been moved from the component manager to the device itself.
-        # This means that during component manager tests we cannot change the power state
-        # or other attributes "naturally" and thus this workaround is used where
-        # we assert the callback was called as we would expect and then manually set the attribute.
+        # With the update to v0.13 of the base classes the logic to change the
+        # power_state of a device has been moved from the component manager to
+        # the device itself.
+        # This means that during component manager tests we cannot change the
+        # power state or other attributes "naturally" and thus this workaround
+        # is used where we assert the callback was called as we would expect and
+        # then manually set the attribute.
         # We exclude the StaticTpmSimulator as it does not have this callback.
         if not isinstance(tile, StaticTpmSimulator):
             tile._component_state_changed_callback.assert_next_call_with_keys(
@@ -486,11 +491,13 @@ class TestStaticSimulatorCommon:
             any type, but the test of the attribute is a simple "=="
             equality test.
         """
-        # With the update to v0.13 of the base classes the logic to change the power_state
-        # of a device has been moved from the component manager to the device itself.
-        # This means that during component manager tests we cannot change the power state
-        # or other attributes "naturally" and thus this workaround is used where
-        # we assert the callback was called as we would expect and then manually set the attribute.
+        # With the update to v0.13 of the base classes the logic to change the
+        # power_state of a device has been moved from the component manager to
+        # the device itself.
+        # This means that during component manager tests we cannot change the
+        # power state or other attributes "naturally" and thus this workaround
+        # is used where we assert the callback was called as we would expect and
+        # then manually set the attribute.
         # We exclude the StaticTpmSimulator as it does not have this callback.
         if not isinstance(tile, StaticTpmSimulator):
             tile._component_state_changed_callback.assert_next_call_with_keys(
@@ -529,7 +536,7 @@ class TestStaticSimulatorCommon:
             ("send_beam_data", 0),
             ("stop_data_transmission", 0),
             ("compute_calibration_coefficients", 0),
-            ("start_acquisition", 1),
+            ("start_acquisition", 2),
             ("set_time_delays", 1),
             ("set_csp_rounding", 1),
             ("set_lmc_integrated_download", 3),
@@ -573,12 +580,14 @@ class TestStaticSimulatorCommon:
         args = [mocker.Mock()] * num_args
         if command_name in lrc_list and self.tile_name == "tile_component_manager":
             command_name = "_" + command_name
-        # With the update to v0.13 of the base classes the logic to change the power_state
-        # of a device has been moved from the component manager to the device itself.
-        # This means that during component manager tests we cannot change the power state
-        # or other attributes "naturally" and thus this workaround is used where
-        # we assert the callback was called as we would expect and then manually set the attribute.
-        # We exclude the StaticTpmSimulator as it does not have this callback.
+        # With the update to v0.13 of the base classes the logic to change
+        # the power_state of a device has been moved from the component manager
+        # to the device itself.
+        # This means that during component manager tests we cannot change the
+        # power state or other attributes "naturally" and thus this workaround
+        # is used where we assert the callback was called as we would expect and
+        # then manually set the attribute. We exclude the StaticTpmSimulator as
+        # it does not have this callback.
         if not isinstance(tile, StaticTpmSimulator):
             tile._component_state_changed_callback.assert_next_call_with_keys(
                 {"power_state": PowerState.ON}
@@ -788,7 +797,7 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         """
         assert tile.get_40g_configuration(-1, 0) == []
-        assert tile.get_40g_configuration(9) is None
+        assert tile.get_40g_configuration(9) == []
 
         tile.configure_40g_core(
             2,
@@ -811,8 +820,8 @@ class TestStaticSimulatorCommon:
         }
 
         assert tile.get_40g_configuration(-1, 0) == [expected]
-        assert tile.get_40g_configuration(2) == expected
-        assert tile.get_40g_configuration(10) is None
+        assert tile.get_40g_configuration(2) == [expected]
+        assert tile.get_40g_configuration(10) == []
 
 
 class TestDynamicSimulatorCommon:
@@ -913,14 +922,15 @@ class TestDynamicSimulatorCommon:
         elif request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
             time.sleep(0.1)
-            # With the update to v0.13 of the base classes the logic to change the power_state
-            # of a device has been moved from the component manager to the device itself.
-            # This means that during component manager tests we cannot change the power state
-            # or other attributes "naturally" and thus this workaround is used where
-            # we assert the callback was called as we would expect and then manually set the attribute.
-            tile_component_manager._component_state_changed_callback.assert_next_call_with_keys(
-                {"power_state": PowerState.ON}
-            )
+            # With the update to v0.13 of the base classes the logic to change
+            # the power_state of a device has been moved from the component manager
+            # to the device itself.
+            # This means that during component manager tests we cannot change the
+            # power state or other attributes "naturally" and thus this workaround
+            # is used where we assert the callback was called as we would expect and
+            # then manually set the attribute.
+            callback = tile_component_manager._component_state_changed_callback
+            callback.assert_next_call_with_keys({"power_state": PowerState.ON})
             tile_component_manager.power_state = PowerState.ON
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
@@ -998,12 +1008,15 @@ class TestDynamicSimulatorCommon:
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
-        # With the update to v0.13 of the base classes the logic to change the power_state
-        # of a device has been moved from the component manager to the device itself.
-        # This means that during component manager tests we cannot change the power state
-        # or other attributes "naturally" and thus this workaround is used where
-        # we assert the callback was called as we would expect and then manually set the attribute.
-        # tile._component_state_changed_callback.assert_next_call_with_keys({"power_state": PowerState.ON})
+        # With the update to v0.13 of the base classes the logic to change the
+        # power_state of a device has been moved from the component manager to
+        # the device itself.
+        # This means that during component manager tests we cannot change the
+        # power state or other attributes "naturally" and thus this workaround
+        # is used where we assert the callback was called as we would expect and
+        # then manually set the attribute.
+        # tile._component_state_changed_callback.assert_next_call_with_keys(
+        # {"power_state": PowerState.ON})
         # tile.power_state = PowerState.ON
         assert getattr(tile, attribute_name) == expected_value
 
@@ -1194,5 +1207,6 @@ class TestDriverCommon:
         #    ResultCode.OK.value
         # )
 
-        # assert patched_tpm_driver._queue_manager._task_result[2] == "Connected to Tile"
+        # assert patched_tpm_driver._queue_manager._task_result[2] ==
+        # "Connected to Tile"
         assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED

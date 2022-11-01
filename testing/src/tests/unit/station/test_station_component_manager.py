@@ -12,11 +12,10 @@ import logging
 import time
 
 import tango
+from ska_control_model import CommunicationStatus, PowerState, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockCallable
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
-from ska_tango_base.control_model import CommunicationStatus, PowerState
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.station import StationComponentManager
 
@@ -74,7 +73,8 @@ class TestStationComponentManager:
             == CommunicationStatus.DISABLED
         )
 
-    # Note: test_power_commands has been moved to TestStationComponentStateChangedCallback::test_power_commands
+    # Note: test_power_commands has been moved to
+    # TestStationComponentStateChangedCallback::test_power_commands
 
     def test_power_events_received(
         self: TestStationComponentManager,
@@ -153,7 +153,8 @@ class TestStationComponentManager:
             assert tile_device_proxy.stationId == station_id
             assert tile_device_proxy.logicalTileId == logical_tile_id
 
-    # Note: test_apply_pointing has been moved to TestStationComponentStateChangedCallback::test_appy_pointing
+    # Note: test_apply_pointing has been moved to
+    # TestStationComponentStateChangedCallback::test_appy_pointing
 
     def test_configure(
         self: TestStationComponentManager,

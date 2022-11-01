@@ -17,7 +17,7 @@ from typing import Any, ContextManager, Mapping, Optional, Tuple, Union, cast
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_tango_base.control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, PowerState
 
 from ska_low_mccs.tile.tile_orchestrator import (
     StateStimulusTupleType,
@@ -632,16 +632,16 @@ class TestTileOrchestrator:
                 Stimulus.DESIRE_OFFLINE: lambda tc: tc.desire_offline(),
                 Stimulus.DESIRE_ON: lambda tc: tc.desire_on(),
                 Stimulus.DESIRE_OFF: lambda tc: tc.desire_off(),
-                Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_subrack_communication_state(
+                Stimulus.SUBRACK_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_subrack_communication_state(  # noqa E501
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
-                Stimulus.SUBRACK_COMMS_ESTABLISHED: lambda tc: tc.update_subrack_communication_state(
+                Stimulus.SUBRACK_COMMS_ESTABLISHED: lambda tc: tc.update_subrack_communication_state(  # noqa E501
                     CommunicationStatus.ESTABLISHED
                 ),
-                Stimulus.SUBRACK_SAYS_TPM_UNKNOWN: lambda tc: tc.update_tpm_power_state(
+                Stimulus.SUBRACK_SAYS_TPM_UNKNOWN: lambda tc: tc.update_tpm_power_state(  # noqa E501
                     PowerState.UNKNOWN
                 ),
-                Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY: lambda tc: tc.update_tpm_power_state(
+                Stimulus.SUBRACK_SAYS_TPM_NO_SUPPLY: lambda tc: tc.update_tpm_power_state(  # noqa E501
                     PowerState.NO_SUPPLY
                 ),
                 Stimulus.SUBRACK_SAYS_TPM_OFF: lambda tc: tc.update_tpm_power_state(
@@ -650,10 +650,10 @@ class TestTileOrchestrator:
                 Stimulus.SUBRACK_SAYS_TPM_ON: lambda tc: tc.update_tpm_power_state(
                     PowerState.ON
                 ),
-                Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_state(
+                Stimulus.TPM_COMMS_NOT_ESTABLISHED: lambda tc: tc.update_tpm_communication_state(  # noqa E501
                     CommunicationStatus.NOT_ESTABLISHED
                 ),
-                Stimulus.TPM_COMMS_ESTABLISHED: lambda tc: tc.update_tpm_communication_state(
+                Stimulus.TPM_COMMS_ESTABLISHED: lambda tc: tc.update_tpm_communication_state(  # noqa E501
                     CommunicationStatus.ESTABLISHED
                 ),
             }[stimulus](tile_orchestrator)

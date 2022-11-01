@@ -13,7 +13,7 @@ PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = testing/src/
 PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
 
-DOCS_SPHINXOPTS = --keep-going
+DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk
 include .make/k8s.mk
@@ -30,7 +30,7 @@ python-post-format:
 
 # Add this for typehints & static type checking
 # removed temporarily
-#python-post-lint:
+# python-post-lint:
 #	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
 
 .PHONY: python-post-format python-post-lint

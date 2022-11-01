@@ -14,12 +14,11 @@ from typing import Callable, Iterable, cast
 
 import pytest
 import tango
+from ska_control_model import AdminMode, HealthState, ObsState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
 from ska_low_mccs_common.utils import call_with_json
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, HealthState, ObsState
 
 
 @pytest.fixture()
@@ -244,8 +243,8 @@ class TestMccsIntegration:
             "obsState", subarray_1_obs_state_changed_callback
         )
 
-        # It seems that we need a fairly long sleep to allow time for all the relevant events
-        # to be pushed by the polled PushChanges command
+        # It seems that we need a fairly long sleep to allow time for all the
+        # relevant events to be pushed by the polled PushChanges command
         time.sleep(0.2)
 
         # TODO: This occansionally segfaults with warnings from Tango stating that
@@ -274,8 +273,8 @@ class TestMccsIntegration:
         station_1.adminMode = AdminMode.ONLINE
         station_2.adminMode = AdminMode.ONLINE
 
-        # It seems that we need a fairly long sleep to allow time for all the relevant events
-        # to be pushed by the polled PushChanges command
+        # It seems that we need a fairly long sleep to allow time for all the
+        # relevant events to be pushed by the polled PushChanges command
         time.sleep(0.2)
 
         # Subracks are mocked ON. APIUs, Antennas and Tiles are mocked ON, so stations
@@ -352,7 +351,8 @@ class TestMccsIntegration:
 
         # A subarray/station beam cannot be allocated to multiple subarrays.
         assert (
-            "The allocate command has failed with the exception: Cannot allocate resources:"
+            "The allocate command has failed with the exception: Cannot allocate"
+            "resources:"
             and "subarraybeam"
             or "beam" in controller.longRunningCommandResult[1]
         )

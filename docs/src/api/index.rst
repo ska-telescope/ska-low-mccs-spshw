@@ -10,7 +10,6 @@ API
   APIU<apiu/index>
   Cluster manager<cluster_manager/index>
   Controller<controller/index>
-  PaSD bus<pasd_bus/index>
   Station<station/index>
   Station beam<station_beam/index>
   Subarray<subarray/index>

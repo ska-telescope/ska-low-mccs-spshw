@@ -15,21 +15,17 @@ import threading
 from typing import Any, List, Optional, Tuple, cast
 
 import tango
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    FastCommand,
-    ResultCode,
-    SubmittedSlowCommand,
-)
-from ska_tango_base.control_model import (
+from ska_control_model import (
     AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
+    ResultCode,
     SimulationMode,
     TestMode,
 )
+from ska_tango_base.base import SKABaseDevice
+from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs.subrack import (
@@ -189,9 +185,8 @@ class MccsSubrack(SKABaseDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
         else:
-            power_supply_status = (
-                self.component_manager._power_supply_component_manager.supplied_power_state
-            )
+            pscm = self.component_manager._power_supply_component_manager
+            power_supply_status = pscm.supplied_power_state
             if (
                 self.admin_mode_model.admin_mode
                 in [
@@ -215,7 +210,8 @@ class MccsSubrack(SKABaseDevice):
         )
         power_status = self.component_manager.power_state
         self.logger.debug(
-            f"Power mode: {power_status}, Communicating: {self._health_model._communicating}"
+            f"Power mode: {power_status}, Communicating: "
+            f"{self._health_model._communicating}"
         )
         if (power_status == PowerState.ON) and self._health_model._communicating:
             self.logger.debug("Checking tpm power states")
@@ -282,7 +278,8 @@ class MccsSubrack(SKABaseDevice):
     #     """
     #     self._progress = progress
     #     self.logger.debug(f"Subrack progress value = {progress}")
-    #     # TODO: Link the progress update to an attribute to be exposed to the real world...
+    #     # TODO: Link the progress update to an attribute to be exposed
+    #     # to the real world...
     # ----------
     # Callbacks
     # ----------

@@ -32,8 +32,8 @@ import threading
 from time import sleep
 from typing import Any, Callable, Optional
 
+from ska_control_model import PowerState
 from ska_low_mccs_common.component import ObjectComponent
-from ska_tango_base.control_model import PowerState
 
 from ska_low_mccs.subrack.subrack_data import FanMode, SubrackData
 

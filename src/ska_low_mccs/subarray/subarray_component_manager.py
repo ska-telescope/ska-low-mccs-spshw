@@ -15,15 +15,19 @@ import threading
 from typing import Any, Callable, Optional, Sequence
 
 import ska_tango_base.subarray
+from ska_control_model import (
+    CommunicationStatus,
+    ObsState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common.component import (
     MccsComponentManager,
     ObsDeviceComponentManager,
     check_communicating,
     check_on,
 )
-from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import CommunicationStatus, ObsState, PowerState
-from ska_tango_base.executor import TaskStatus
 
 __all__ = ["SubarrayComponentManager"]
 
@@ -132,7 +136,8 @@ class SubarrayComponentManager(
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
             component state changes.
-        :param max_workers: Maximum number of workers in the worker pool. Defaults to None.
+        :param max_workers: Maximum number of workers in the worker pool.
+            Defaults to None.
         """
         self._component_state_changed_callback = component_state_changed_callback
 
@@ -243,7 +248,8 @@ class SubarrayComponentManager(
         """
         Assign resources to this subarray.
 
-        This is just for communication and health roll-up, resource management is done by controller.
+        This is just for communication and health roll-up, resource management
+        is done by controller.
 
         :param resource_spec: resource specification; for example
 
@@ -343,8 +349,10 @@ class SubarrayComponentManager(
         """
         Add station groups to this subarray component manager's _station_groups.
 
-        This is for housekeeping to store the station heirarchy for the assigned_resources_dict attribute.
-        A flattened (1-D) array is returned for adding new fqdns to the component manager's Station Proxies.
+        This is for housekeeping to store the station heirarchy for the
+        assigned_resources_dict attribute.
+        A flattened (1-D) array is returned for adding new fqdns to the component
+        manager's Station Proxies.
 
         :param station_fqdns: list of lists of stations
 
@@ -432,7 +440,10 @@ class SubarrayComponentManager(
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result="Not Implemented: MCCS Subarray cannot partially release resources.",
+                result=(
+                    "Not Implemented: MCCS Subarray cannot"
+                    "partially release resources."
+                ),
             )
         raise NotImplementedError("MCCS Subarray cannot partially release resources.")
 
@@ -584,7 +595,8 @@ class SubarrayComponentManager(
         """
         Configure the subarray beam resources for a scan.
 
-        :param subarray_beam_configuration: the subarray beam configuration to be applied
+        :param subarray_beam_configuration: the subarray beam configuration
+            to be applied
 
         :return: a result code
         """

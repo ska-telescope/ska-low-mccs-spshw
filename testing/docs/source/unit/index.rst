@@ -10,7 +10,6 @@ Unit tests
    APIU subpackage<apiu>
    Cluster manager subpackage<cluster_manager>
    Controller subpackage<controller>
-   PaSD bus subpackage<pasd_bus>
    Station subpackage<station>
    Station beam subpackage<station_beam>
    Subarray subpackage<subarray>

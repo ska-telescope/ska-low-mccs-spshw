@@ -196,6 +196,7 @@ def tile_device_state_changed_callback(
     """
     return mock_change_event_callback_factory("state")
 
+
 @pytest.fixture()
 def daq_device_state_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],

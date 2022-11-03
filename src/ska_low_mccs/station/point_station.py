@@ -283,7 +283,7 @@ class Pointing:
 
     def get_pointing_coefficients(
         self: Pointing, start_channel: int, nof_channels: int
-    ) -> Optional[tuple[np.cfloat]]:
+    ) -> Optional[tuple[np.complex128]]:
         """
         Get complex pointing coefficients from generated delays.
 
@@ -299,7 +299,7 @@ class Pointing:
         # If below horizon flat is set, return 0s
         if self._below_horizon:
             return np.zeros(
-                (self._nof_antennas, nof_channels), dtype=np.cfloat
+                (self._nof_antennas, nof_channels), dtype=np.complex128
             )  # type: ignore[return-value]
 
         # Compute frequency range

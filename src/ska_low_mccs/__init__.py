@@ -16,7 +16,6 @@ __all__ = [
     # devices
     "MccsAntenna",
     "MccsAPIU",
-    "MccsClusterManagerDevice",
     "MccsController",
     "MccsStation",
     "MccsStationBeam",
@@ -29,7 +28,6 @@ __all__ = [
     # device subpackages
     "antenna",
     "apiu",
-    "cluster_manager",
     "controller",
     "station",
     "station_beam",
@@ -44,7 +42,6 @@ __all__ = [
 from .antenna import MccsAntenna
 from .apiu import MccsAPIU
 
-from .cluster_manager import MccsClusterManagerDevice
 from .controller import MccsController
 from .station import MccsStation
 

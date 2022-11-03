@@ -7,7 +7,6 @@ DOCS_SOURCE_DIR=../src/api
 
 FILES="antenna/antenna_device.py \
        apiu/apiu_device.py \
-       cluster_manager/cluster_manager_device.py \
        controller/controller_device.py \
        subrack/subrack_device.py \
        tile/tile_device.py \

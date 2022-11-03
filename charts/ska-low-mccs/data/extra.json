@@ -1,14 +1,5 @@
 {
     "servers": {
-        "MccsClusterManagerDevice": {
-            "clustermanager": {
-                "MccsClusterManagerDevice": {
-                    "low-mccs/clustermanager/clustermanager": {
-                        "properties": {}
-                    }
-                }
-            }
-        },
         "MccsTelState": {
             "telstate": {
                 "MccsTelState": {

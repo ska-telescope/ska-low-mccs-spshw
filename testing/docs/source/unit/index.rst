@@ -8,7 +8,6 @@ Unit tests
 
    Antenna subpackage<antenna>
    APIU subpackage<apiu>
-   Cluster manager subpackage<cluster_manager>
    Controller subpackage<controller>
    Station subpackage<station>
    Station beam subpackage<station_beam>

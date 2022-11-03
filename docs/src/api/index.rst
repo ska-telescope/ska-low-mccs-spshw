@@ -8,7 +8,6 @@ API
 
   Antenna<antenna/index>
   APIU<apiu/index>
-  Cluster manager<cluster_manager/index>
   Controller<controller/index>
   Station<station/index>
   Station beam<station_beam/index>

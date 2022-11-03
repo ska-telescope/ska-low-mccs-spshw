@@ -279,7 +279,7 @@ ansible playbook with the --ask-become-pass, like this
 
    ansible-playbook install_ansible.yml -e "SQL_PASSWORD=<your sql password>" --ask-become-pass
 
- alternativly you can follow the manual instructions here
+alternativly you can follow the manual instructions here
 https://tango-controls.readthedocs.io/en/latest/installation/index.html
 
 

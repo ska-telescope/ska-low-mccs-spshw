@@ -1,0 +1,130 @@
+# This ansible playbook sets up a machine with all the packages and tools
+# that a developer should need to get started with MCCS project
+# It takes two arguements, the user that will be developing, as they will
+# need permissions to use docker, and a password for the sql server that will
+# be run.
+
+# Several of the tasks in this playbook require sudo privileges, so the user
+# must run it with the flag --ask-become-pass.
+# For example ansible-playbook install_ansible.yml -e "mypassword" --ask-become-pass
+
+- name: Setup development enviroment
+  hosts: localhost
+  connection: local
+  vars:
+    home_path: "/home/{{ lookup('env', 'USER') }}"
+    tango_path: "{{ home_path }}/tango/tango-9.3.5"
+
+  tasks:
+    # Check that arguments have been provided
+    - name: 'Check mandatory variables are defined'
+      assert:
+        that:
+          - SQL_PASSWORD is defined
+    - name: Docker install, precursors
+      apt:
+        name:
+          - build-essential
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+      become: true
+    - name: add docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+      become: true
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable
+        state: present
+      become: true
+    - name: Get docker cli
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+        update_cache: true
+      become: true
+    - name: Add user to docker
+      user:
+        name: "{{ lookup('env', 'USER') }}"
+        append: true
+        groups: docker
+      become: true
+    - name: Tango install, precursors
+      apt:
+        name:
+          - g++
+          - openjdk-8-jdk
+          - mariadb-server
+          - libmariadb-dev
+          - zlib1g-dev
+          - libomniorb4-dev
+          - libcos4-dev
+          - omniidl
+          - libzmq3-dev
+          - make
+          - python3-pip
+      become: true
+    - name: Install pymysql python package
+      pip:
+        name: pymysql
+    - name: Start sql server
+      service:
+        name: mariadb
+        state: started
+      become: true
+    - name: Change password
+      shell: mysql -e  "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ SQL_PASSWORD }}';"
+      become: true
+      tags:
+        - skip_ansible_lint
+    - name: Create a tango directory if it does not exist
+      file:
+        path: "{{ home_path }}/tango"
+        state: directory
+        mode: '0755'
+    - name: Unarchive tango
+      unarchive:
+        src: https://gitlab.com/api/v4/projects/24125890/packages/generic/TangoSourceDistribution/9.3.5/tango-9.3.5.tar.gz
+        dest: "{{ home_path }}/tango"
+        remote_src: true
+    - name: Configure tango
+      command: chdir="{{ tango_path }}" ./configure --enable-java=yes --enable-mariadb=yes --enable-dbserver=yes \
+        --enable-dbcreate=yes --with-mysql-admin=root --with-mysql-admin-passwd={{ SQL_PASSWORD }} --prefix=/usr/local/tango
+      tags:
+        - skip_ansible_lint
+    - name: Build the default target
+      make:
+        chdir: "{{ tango_path }}"
+    - name: Run 'install' target as root
+      make:
+        chdir: "{{ tango_path }}"
+        target: install
+      become: true
+    - name: add sql user to tango
+      lineinfile:
+        path: /usr/local/tango/bin/tango
+        line: export MYSQL_USER=root
+        state: present
+        backup: true
+        insertbefore: TANGO_DB_PORT=10000
+      become: true
+    - name: add sql password to tango
+      lineinfile:
+        path: /usr/local/tango/bin/tango
+        line: export MYSQL_PASSWORD={{ SQL_PASSWORD }}
+        state: present
+        backup: true
+        insertbefore: TANGO_DB_PORT=10000
+      become: true
+
+    - name: add tango host to bashrc
+      lineinfile:
+        path: "{{ home_path }}/.bashrc"
+        line: export TANGO_HOST=localhost:10000
+        state: present
+        backup: true
+      become: true

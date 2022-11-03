@@ -1,4 +1,3 @@
-# type: ignore
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -12,7 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import threading
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import tango
 from ska_control_model import (
@@ -26,11 +25,12 @@ from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.apiu import ApiuComponentManager, ApiuHealthModel
+from ska_low_mccs.apiu.apiu_component_manager import ApiuComponentManager
+from ska_low_mccs.apiu.apiu_health_model import ApiuHealthModel
 
 __all__ = ["MccsAPIU", "main"]
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 class MccsAPIU(SKABaseDevice):
@@ -44,6 +44,29 @@ class MccsAPIU(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: ApiuHealthModel
+        self.component_manager: ApiuComponentManager
+        self._are_antennas_on: list[bool]
+        self._overCurrentThreshold: float
+        self._overVoltageThreshold: float
+        self._humidityThreshold: float
+
     def init_device(self: MccsAPIU) -> None:
         """
         Initialise the device.
@@ -105,14 +128,20 @@ class MccsAPIU(SKABaseDevice):
             self.IsAntennaOnCommand(self.component_manager, self.logger),
         )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS APIU device."""
 
         def do(  # type: ignore[override]
             self: MccsAPIU.InitCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
+
+            :param args: arguments
+            :param kwargs: keyword arguments
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -170,6 +199,7 @@ class MccsAPIU(SKABaseDevice):
 
         :param state_change: dictionary of state change parameters.
         """
+        self.component_manager: ApiuComponentManager  # for the type-checker
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
@@ -189,9 +219,10 @@ class MccsAPIU(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_state]
-                )
+                if self.component_manager.power_state:
+                    self.op_state_model.perform_action(
+                        action_map[self.component_manager.power_state]
+                    )
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
@@ -204,33 +235,33 @@ class MccsAPIU(SKABaseDevice):
             self._are_antennas_on: list[bool]  # typehint only
             are_antennas_on = state_change.get("are_antennas_on")
             if self._are_antennas_on != are_antennas_on:
-                self._are_antennas_on = cast(List[bool], are_antennas_on)
+                self._are_antennas_on = cast(list[bool], are_antennas_on)
                 self.push_change_event("areAntennasOn", self._are_antennas_on)
 
     # ----------
     # Attributes
     # ----------
-    @attribute(
-        dtype=SimulationMode,
-        memorized=True,
-        hw_memorized=True,
-    )
-    def simulationMode(self: MccsAPIU):
-        """
-        Report the simulation mode of the device.
-
-        :return: the current simulation mode
-        """
-        return self.component_manager.simulation_mode
-
-    @simulationMode.write  # type: ignore[no-redef]
-    def simulationMode(self: MccsAPIU, value: SimulationMode) -> None:
-        """
-        Set the simulation mode.
-
-        :param value: The simulation mode, as a SimulationMode value
-        """
-        self.component_manager.simulation_mode = value
+#     @attribute(
+#         dtype=SimulationMode,
+#         memorized=True,
+#         hw_memorized=True,
+#     )
+#     def simulationMode(self: MccsAPIU):
+#         """
+#         Report the simulation mode of the device.
+#
+#         :return: the current simulation mode
+#         """
+#         return self.component_manager.simulation_mode
+#
+#     @simulationMode.write  # type: ignore[no-redef]
+#     def simulationMode(self: MccsAPIU, value: SimulationMode) -> None:
+#         """
+#         Set the simulation mode.
+#
+#         :param value: The simulation mode, as a SimulationMode value
+#         """
+#         self.component_manager.simulation_mode = value
 
     @attribute(dtype=int, label="antennas count")
     def antennaCount(self: MccsAPIU) -> int:
@@ -357,6 +388,7 @@ class MccsAPIU(SKABaseDevice):
     # Commands
     # --------
 
+    # pylint: disable=too-few-public-methods
     class IsAntennaOnCommand(FastCommand):
         """A class for the MccsAPIU's IsAntennaOn() command."""
 

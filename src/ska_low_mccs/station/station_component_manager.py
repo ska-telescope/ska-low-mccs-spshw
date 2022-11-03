@@ -30,6 +30,7 @@ __all__ = ["StationComponentManager"]
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _TileProxy,
         fqdn: str,
@@ -103,9 +104,11 @@ class _TileProxy(DeviceComponentManager):
         return result_code
 
 
+# pylint: disable=too-many-instance-attributes
 class StationComponentManager(MccsComponentManager):
     """A component manager for a station."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: StationComponentManager,
         station_id: int,
@@ -253,9 +256,10 @@ class StationComponentManager(MccsComponentManager):
         super().update_communication_state(communication_state)
 
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self._component_state_changed_callback(
-                {"is_configured": self.is_configured}
-            )
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(
+                    {"is_configured": self.is_configured}
+                )
 
     @threadsafe
     def _antenna_power_state_changed(
@@ -559,7 +563,8 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured
-            self._component_state_changed_callback({"is_configured": is_configured})
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback({"is_configured": is_configured})
 
     def configure(
         self: StationComponentManager,

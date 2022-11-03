@@ -1,4 +1,3 @@
-# type: ignore
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -17,19 +16,21 @@ from ska_control_model import (
     HealthState,
     PowerState,
     ResultCode,
-    SimulationMode,
+#    SimulationMode,
 )
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand
 from tango.server import attribute, device_property
 
-from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
+from ska_low_mccs.antenna.antenna_component_manager import AntennaComponentManager
+from ska_low_mccs.antenna.antenna_health_model import AntennaHealthModel
 
 __all__ = ["MccsAntenna", "main"]
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
+# pylint: disable=too-many-public-methods
 class MccsAntenna(SKABaseDevice):
     """An implementation of an antenna Tango device for MCCS."""
 
@@ -44,6 +45,25 @@ class MccsAntenna(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: AntennaHealthModel
+        self.component_manager: AntennaComponentManager
+
     def init_device(self: MccsAntenna) -> None:
         """
         Initialise the device.
@@ -80,16 +100,20 @@ class MccsAntenna(SKABaseDevice):
             self.component_state_changed_callback,
         )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS antenna device."""
 
         def do(  # type: ignore[override]
             self: MccsAntenna.InitCommand,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Stateless hook for device initialisation.
 
             Initialises the attributes and properties of the :py:class:`.MccsAntenna`.
+
+            :param kwargs: keywords arguments
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -213,9 +237,8 @@ class MccsAntenna(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                power_state_changed_callback(
-                    self.component_manager.power_state
-                )
+                if self.component_manager.power_state:
+                    power_state_changed_callback(self.component_manager.power_state)
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
@@ -223,7 +246,7 @@ class MccsAntenna(SKABaseDevice):
             health_state_changed_callback(health)
 
         if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
+            power_state = cast(PowerState, state_change.get("power_state"))
             with self.component_manager.power_state_lock:
                 self.component_manager.set_power_state(power_state, fqdn=fqdn)
                 if power_state:
@@ -270,30 +293,30 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    @attribute(
-        dtype=SimulationMode,
-        memorized=True,
-        hw_memorized=True,
-    )
-    def simulationMode(self):
-        """
-        Return the simulation mode of this device.
-
-        :return: the simulation mode of this device
-        """
-        return SimulationMode.FALSE
-
-    @simulationMode.write  # type: ignore [no-redef]
-    def simulationMode(self: MccsAntenna, value: SimulationMode) -> None:
-        """
-        Set the simulation mode of this device.
-
-        :param value: the new simulation mode
-
-        :raises ValueError: because this device cannot be put into simulation mode.
-        """
-        if value == SimulationMode.TRUE:
-            raise ValueError("MccsAntenna cannot be put into simulation mode.")
+#     @attribute(
+#         dtype=SimulationMode,
+#         memorized=True,
+#         hw_memorized=True,
+#     )
+#     def simulationMode(self):
+#         """
+#         Return the simulation mode of this device.
+#
+#         :return: the simulation mode of this device
+#         """
+#         return SimulationMode.FALSE
+#
+#     @simulationMode.write  # type: ignore [no-redef]
+#     def simulationMode(self: MccsAntenna, value: SimulationMode) -> None:
+#         """
+#         Set the simulation mode of this device.
+#
+#         :param value: the new simulation mode
+#
+#         :raises ValueError: because this device cannot be put into simulation mode.
+#         """
+#         if value == SimulationMode.TRUE:
+#             raise ValueError("MccsAntenna cannot be put into simulation mode.")
 
     @attribute(dtype="int", label="AntennaID")
     def antennaId(self: MccsAntenna) -> int:

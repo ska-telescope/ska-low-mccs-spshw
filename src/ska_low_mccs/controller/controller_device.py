@@ -12,20 +12,24 @@ from __future__ import annotations  # allow forward references in type hints
 import threading
 from typing import Any, List, Optional, Tuple, cast
 
-import ska_low_mccs_common.release as release
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
-from ska_tango_base.base import SKABaseDevice, BaseComponentManager
+from ska_low_mccs_common import release
+from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
+from ska_low_mccs.controller.controller_component_manager import (
+    ControllerComponentManager,
+)
+from ska_low_mccs.controller.controller_health_model import ControllerHealthModel
 
 __all__ = ["MccsController", "main"]
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
+# pylint: disable=too-many-instance-attributes
 class MccsController(SKABaseDevice):
     """An implementation of a controller Tango device for MCCS."""
 
@@ -41,6 +45,27 @@ class MccsController(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._communication_state: Optional[CommunicationStatus]
+        self._num_subservients: int
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: ControllerHealthModel
+        self.component_manager: ControllerComponentManager  # type: ignore[assignment]
+
     def init_device(self: MccsController) -> None:
         """
         Initialise the device.
@@ -120,6 +145,7 @@ class MccsController(SKABaseDevice):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """
         A class for :py:class:`~.MccsController`'s Init command.
@@ -130,9 +156,12 @@ class MccsController(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsController.InitCommand,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the `MccsController`.
+
+            :param kwargs: Optional keyword arguments
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

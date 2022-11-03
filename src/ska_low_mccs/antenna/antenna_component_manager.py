@@ -1,4 +1,3 @@
-# type: ignore
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -30,6 +29,7 @@ __all__ = ["AntennaComponentManager"]
 class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
     """A proxy to an antenna's APIU."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _ApiuProxy,
         fqdn: str,
@@ -245,6 +245,7 @@ class _TileProxy(DeviceComponentManager):
     At present it is an unused, unimplemented placeholder.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _TileProxy,
         fqdn: str,
@@ -362,6 +363,7 @@ class _TileProxy(DeviceComponentManager):
         raise NotImplementedError("Antenna hardware is not resettable.")
 
 
+# pylint: disable=too-many-instance-attributes
 class AntennaComponentManager(MccsComponentManager):
     """
     A component manager for managing the component of an MCCS antenna Tango device.
@@ -371,6 +373,7 @@ class AntennaComponentManager(MccsComponentManager):
     and/or tile Tango device.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: AntennaComponentManager,
         apiu_fqdn: str,

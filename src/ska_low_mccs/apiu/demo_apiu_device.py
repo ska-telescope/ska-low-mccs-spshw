@@ -1,4 +1,3 @@
-# type: ignore
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -20,7 +19,7 @@ from typing import List, Optional, Tuple
 from ska_tango_base.commands import ResultCode
 from tango.server import attribute, command
 
-from ska_low_mccs import MccsAPIU
+from ska_low_mccs.apiu.apiu_device import MccsAPIU
 
 __all__ = ["DemoAPIU"]
 

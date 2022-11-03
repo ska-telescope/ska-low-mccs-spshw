@@ -40,7 +40,7 @@ class DemoAPIU(MccsAPIU):
         Overridden here to log the fact that this is a demo APIU.
         """
         super().init_device()
-        self.logger.warn("I am a DEMO APIU!")
+        self.logger.info("I am a DEMO APIU!")
 
     @command(dtype_out="DevVarLongStringArray")
     def PowerUpAntenna1(self: DemoAPIU) -> DevVarLongStringArrayType:

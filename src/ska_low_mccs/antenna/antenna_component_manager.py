@@ -70,7 +70,7 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
             logger,
             max_workers,
             communication_state_changed_callback,
-            component_state_changed_callback,
+            component_state_changed_callback,  # type: ignore[arg-type]
         )
 
     def stop_communicating(self: _ApiuProxy) -> None:
@@ -224,7 +224,8 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
         #     # else PowerState.OFF
         #     power_state
         # )
-        self._component_state_changed_callback({"power_state": power_state}, fqdn=None)
+        if self._component_state_changed_callback is not None:
+            self._component_state_changed_callback({"power_state": power_state})
         self.update_supplied_power_state(power_state)
 
 
@@ -504,14 +505,14 @@ class AntennaComponentManager(MccsComponentManager):
 
     def _apiu_power_state_changed(
         self: AntennaComponentManager,
-        apiu_power_state: PowerState,
+        power_state: PowerState,
     ) -> None:
         with self._power_state_lock:
-            self._apiu_power_state = apiu_power_state
+            self._apiu_power_state = power_state
 
-            if apiu_power_state == PowerState.UNKNOWN:
+            if power_state == PowerState.UNKNOWN:
                 self.update_component_state({"power_state": PowerState.UNKNOWN})
-            elif apiu_power_state in [PowerState.OFF, PowerState.STANDBY]:
+            elif power_state in [PowerState.OFF, PowerState.STANDBY]:
                 self.update_component_state({"power_state": PowerState.OFF})
             else:
                 # power_state is ON, wait for antenna power change
@@ -600,6 +601,7 @@ class AntennaComponentManager(MccsComponentManager):
                 self._target_power_state = PowerState.OFF
             # TODO should deal with the return code here
             self._review_power()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -662,6 +664,7 @@ class AntennaComponentManager(MccsComponentManager):
                 self._target_power_state = PowerState.ON
             # TODO should deal with the return code here
             self._review_power()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")

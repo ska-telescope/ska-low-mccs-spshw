@@ -76,7 +76,7 @@ class MccsController(SKABaseDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         self._power_state_lock = threading.RLock()
-        self._communication_state: Optional[CommunicationStatus] = None
+        self._communication_state = None
         self._component_power_state: Optional[PowerState] = None
         self._mccs_build_state = release.get_release_info()
         self._mccs_version_id = release.version
@@ -156,12 +156,14 @@ class MccsController(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsController.InitCommand,
+            *args: Any,
             **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the `MccsController`.
 
-            :param kwargs: Optional keyword arguments
+            :param args: positional args to the component manager method
+            :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -228,6 +230,7 @@ class MccsController(SKABaseDevice):
             communication_state == CommunicationStatus.ESTABLISHED
         )
 
+    # pylint: disable=too-many-branches
     def _component_state_changed_callback(
         self: MccsController,
         state_change: dict[str, Any],
@@ -242,7 +245,6 @@ class MccsController(SKABaseDevice):
         :param state_change: the state of the component.
         :param fqdn: The fqdn of the device.
         """
-        self.component_manager: ControllerComponentManager  # for the type-checker
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",

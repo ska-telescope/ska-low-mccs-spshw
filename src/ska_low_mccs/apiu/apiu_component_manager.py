@@ -36,6 +36,7 @@ __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 class ApiuSimulatorComponentManager(ObjectComponentManager):
     """A component manager for an APIU simulator."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
@@ -143,6 +144,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
 class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
     """A component manager that switches between APIU simulator and driver."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: SwitchingApiuComponentManager,
         initial_simulation_mode: SimulationMode,
@@ -183,6 +185,7 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
 class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an APIU (simulator or driver) and its power supply."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: ApiuComponentManager,
         initial_simulation_mode: SimulationMode,
@@ -354,6 +357,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             super().on()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -406,6 +410,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 SwitchingApiuComponentManager, self._hardware_component_manager
             ).turn_off_antennas()
             super().off()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -506,6 +511,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             cast(
                 SwitchingApiuComponentManager, self._hardware_component_manager
             ).turn_on_antenna(antenna)
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -542,6 +548,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             cast(
                 SwitchingApiuComponentManager, self._hardware_component_manager
             ).turn_off_antenna(antenna)
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -576,6 +583,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             cast(
                 SwitchingApiuComponentManager, self._hardware_component_manager
             ).turn_on_antennas()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -611,6 +619,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             cast(
                 SwitchingApiuComponentManager, self._hardware_component_manager
             ).turn_off_antennas()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")

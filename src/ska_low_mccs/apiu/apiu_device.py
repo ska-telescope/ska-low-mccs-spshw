@@ -33,6 +33,7 @@ __all__ = ["MccsAPIU", "main"]
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
+# pylint: disable=too-many-instance-attributes
 class MccsAPIU(SKABaseDevice):
     """An implementation of an APIU Tango device for MCCS."""
 
@@ -132,7 +133,7 @@ class MccsAPIU(SKABaseDevice):
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS APIU device."""
 
-        def do(  # type: ignore[override]
+        def do(
             self: MccsAPIU.InitCommand,
             *args: Any,
             **kwargs: Any,
@@ -140,8 +141,8 @@ class MccsAPIU(SKABaseDevice):
             """
             Initialise the attributes and properties of the :py:class:`.MccsAPIU`.
 
-            :param args: arguments
-            :param kwargs: keyword arguments
+            :param args: positional args to the component manager method
+            :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -199,7 +200,6 @@ class MccsAPIU(SKABaseDevice):
 
         :param state_change: dictionary of state change parameters.
         """
-        self.component_manager: ApiuComponentManager  # for the type-checker
         action_map = {
             PowerState.OFF: "component_off",
             PowerState.STANDBY: "component_standby",
@@ -232,7 +232,6 @@ class MccsAPIU(SKABaseDevice):
                 self.push_change_event("healthState", health)
 
         if "are_antennas_on" in state_change.keys():
-            self._are_antennas_on: list[bool]  # typehint only
             are_antennas_on = state_change.get("are_antennas_on")
             if self._are_antennas_on != are_antennas_on:
                 self._are_antennas_on = cast(list[bool], are_antennas_on)
@@ -241,27 +240,27 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-#     @attribute(
-#         dtype=SimulationMode,
-#         memorized=True,
-#         hw_memorized=True,
-#     )
-#     def simulationMode(self: MccsAPIU):
-#         """
-#         Report the simulation mode of the device.
-#
-#         :return: the current simulation mode
-#         """
-#         return self.component_manager.simulation_mode
-#
-#     @simulationMode.write  # type: ignore[no-redef]
-#     def simulationMode(self: MccsAPIU, value: SimulationMode) -> None:
-#         """
-#         Set the simulation mode.
-#
-#         :param value: The simulation mode, as a SimulationMode value
-#         """
-#         self.component_manager.simulation_mode = value
+    #     @attribute(
+    #         dtype=SimulationMode,
+    #         memorized=True,
+    #         hw_memorized=True,
+    #     )
+    #     def simulationMode(self: MccsAPIU):
+    #         """
+    #         Report the simulation mode of the device.
+    #
+    #         :return: the current simulation mode
+    #         """
+    #         return self.component_manager.simulation_mode
+    #
+    #     @simulationMode.write  # type: ignore[no-redef]
+    #     def simulationMode(self: MccsAPIU, value: SimulationMode) -> None:
+    #         """
+    #         Set the simulation mode.
+    #
+    #         :param value: The simulation mode, as a SimulationMode value
+    #         """
+    #         self.component_manager.simulation_mode = value
 
     @attribute(dtype=int, label="antennas count")
     def antennaCount(self: MccsAPIU) -> int:
@@ -406,13 +405,16 @@ class MccsAPIU(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(  # type: ignore[override]
-            self: MccsAPIU.IsAntennaOnCommand, argin: int
+        def do(
+            self: MccsAPIU.IsAntennaOnCommand,
+            *argin: int,
+            **kwargs: Any,
         ) -> bool:
             """
             Stateless hook for device IsAntennaOn() command.
 
             :param argin: the logical antenna id of the antenna to power up
+            :param kwargs: keyword args to the component manager method
 
             :return: True if the antenna is on.
             """

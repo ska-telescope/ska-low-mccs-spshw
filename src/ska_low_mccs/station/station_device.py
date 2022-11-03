@@ -136,11 +136,16 @@ class MccsStation(SKAObsDevice):
         called upon :py:class:`~.MccsStation`'s initialisation.
         """
 
-        def do(  # type: ignore[override]
+        def do(
             self: MccsStation.InitCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Initialise the :py:class:`.MccsStation`.
+
+            :param args: positional args to the component manager method
+            :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -238,7 +243,6 @@ class MccsStation(SKAObsDevice):
 
         :raises ValueError: fqdn not found
         """
-        self.component_manager: StationComponentManager  # for the type-checker
         if fqdn is None:
             health_state_changed_callback = self.health_changed
             power_state_changed_callback = self._component_power_state_changed

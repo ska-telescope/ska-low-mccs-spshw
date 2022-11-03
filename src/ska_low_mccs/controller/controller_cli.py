@@ -82,9 +82,9 @@ class CliMeta(type):
             try:
                 return method(*args, **kwargs)
             except tango.DevFailed as ptex:
-                raise FireError(ptex.args[0].desc)
+                raise FireError(ptex.args[0].desc) from ptex
             except Exception as ex:
-                raise FireError(str(ex))
+                raise FireError(str(ex)) from ex
 
         return _wrapper
 
@@ -237,9 +237,9 @@ class MccsControllerCli(metaclass=CliMeta):
     def allocate(
         self: MccsControllerCli,
         subarray_id: int = 0,
-        station_ids: list[list[int]] = [[1]],
-        subarray_beam_ids: list[int] = [1],
-        channel_blocks: list[int] = [1],
+        station_ids: Optional[list[list[int]]] = None,
+        subarray_beam_ids: Optional[list[int]] = None,
+        channel_blocks: Optional[list[int]] = None,
     ) -> str:
         """
         Allocate stations to a subarray.
@@ -251,6 +251,12 @@ class MccsControllerCli(metaclass=CliMeta):
 
         :return: a result message
         """
+        if station_ids is None:
+            station_ids = [[1]]
+        if subarray_beam_ids is None:
+            subarray_beam_ids = [1]
+        if channel_blocks is None:
+            channel_blocks = [1]
         (rc, message) = self._dp.command_inout(
             "Allocate",
             json.dumps(

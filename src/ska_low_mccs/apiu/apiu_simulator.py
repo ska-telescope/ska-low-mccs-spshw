@@ -79,6 +79,7 @@ def check_antenna_id(func: Wrapped) -> Wrapped:
     return cast(Wrapped, _wrapper)
 
 
+# pylint: disable=too-many-instance-attributes,too-many-public-methods
 class ApiuSimulator(ObjectComponent):
     """A simulator of APIU hardware."""
 

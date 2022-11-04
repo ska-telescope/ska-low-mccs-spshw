@@ -240,28 +240,6 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    #     @attribute(
-    #         dtype=SimulationMode,
-    #         memorized=True,
-    #         hw_memorized=True,
-    #     )
-    #     def simulationMode(self: MccsAPIU):
-    #         """
-    #         Report the simulation mode of the device.
-    #
-    #         :return: the current simulation mode
-    #         """
-    #         return self.component_manager.simulation_mode
-    #
-    #     @simulationMode.write  # type: ignore[no-redef]
-    #     def simulationMode(self: MccsAPIU, value: SimulationMode) -> None:
-    #         """
-    #         Set the simulation mode.
-    #
-    #         :param value: The simulation mode, as a SimulationMode value
-    #         """
-    #         self.component_manager.simulation_mode = value
-
     @attribute(dtype=int, label="antennas count")
     def antennaCount(self: MccsAPIU) -> int:
         """
@@ -407,7 +385,7 @@ class MccsAPIU(SKABaseDevice):
 
         def do(
             self: MccsAPIU.IsAntennaOnCommand,
-            *argin: int,
+            *args: int,
             **kwargs: Any,
         ) -> bool:
             """
@@ -418,7 +396,8 @@ class MccsAPIU(SKABaseDevice):
 
             :return: True if the antenna is on.
             """
-            return self._component_manager.is_antenna_on(argin)
+            antenna_id = args[0]
+            return self._component_manager.is_antenna_on(antenna_id)
 
     @command(dtype_in="DevULong", dtype_out=bool)
     def IsAntennaOn(self: MccsAPIU, argin: int) -> bool:  # type: ignore[override]

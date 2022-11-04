@@ -16,6 +16,7 @@ from ska_control_model import (  # SimulationMode,
     HealthState,
     PowerState,
     ResultCode,
+    SimulationMode,
 )
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand
@@ -293,31 +294,33 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-    #     @attribute(
-    #         dtype=SimulationMode,
-    #         memorized=True,
-    #         hw_memorized=True,
-    #     )
-    #     def simulationMode(self):
-    #         """
-    #         Return the simulation mode of this device.
-    #
-    #         :return: the simulation mode of this device
-    #         """
-    #         return SimulationMode.FALSE
-    #
-    #     @simulationMode.write  # type: ignore [no-redef]
-    #     def simulationMode(self: MccsAntenna, value: SimulationMode) -> None:
-    #         """
-    #         Set the simulation mode of this device.
-    #
-    #         :param value: the new simulation mode
-    #
-    #         :raises ValueError: because this device cannot be put into
-    # simulation mode.
-    #         """
-    #         if value == SimulationMode.TRUE:
-    #             raise ValueError("MccsAntenna cannot be put into simulation mode.")
+    @attribute(
+        dtype=SimulationMode,
+        memorized=True,
+        hw_memorized=True,
+    )
+    def simulationMode(self):
+        """
+        Return the simulation mode of this device.
+
+        This overrides the base class as the antenna device cannot be put into
+        simulation mode TRUE
+
+        :return: the simulation mode of this device
+        """
+        return SimulationMode.FALSE
+
+    @simulationMode.write  # type: ignore [no-redef]
+    def simulationMode(self: MccsAntenna, value: SimulationMode) -> None:
+        """
+        Set the simulation mode of this device.
+
+        :param value: the new simulation mode
+
+        :raises ValueError: because this device cannot be put into simulation mode.
+        """
+        if value == SimulationMode.TRUE:
+            raise ValueError("MccsAntenna cannot be put into simulation mode.")
 
     @attribute(dtype="int", label="AntennaID")
     def antennaId(self: MccsAntenna) -> int:

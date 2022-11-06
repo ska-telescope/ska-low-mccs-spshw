@@ -56,9 +56,17 @@ as it makes things a lot easier when working with multiple repos and
 codebases, however it should be noted that this is a choice for devs to
 make, should they want they're free to develop on the bare metal of their
 machine and set up the environment variables and dependencies themselves.
-Should you wish to go via the recommended route and install docker, you can
-follow the instructions below or alternativly use the install_script.sh or
-install_ansible.yml files to install them for you.
+
+Should you wish to go via the recommended route and install docker,
+please follow the instructions in the "Docker" section below.
+To proceed with the basic installation you may use install_script.sh or
+install_ansible.yml files as follows.
+
+NOTE: These scripts should only be used with debian/ubuntu flavoured linux machines
+as they have not been tested with others and may not work
+
+If you already have an sql server installed then provide the password for it, otherwise choose a password
+that you would like for the server that will be installed.
 
 To use the shell script call
 
@@ -72,6 +80,21 @@ ansible playbook with the --ask-become-pass, like this
 .. code-block:: shell-session
 
    ansible-playbook install_ansible.yml -e "SQL_PASSWORD=<your sql password>" --ask-become-pass
+
+To test the script has successfully installed tango, first Set the TANGO_HOST variable
+.. code-block:: shell-session
+
+   export TANGO_HOST=localhost:10000
+
+Then start the device test server
+.. code-block:: shell-session
+
+   /usr/local/tango/bin/TangoTest test &
+
+Test jive
+.. code-block:: shell-session
+
+   /usr/local/tango/bin/TangoTest test &
 
 
 For more serious developers, further steps are

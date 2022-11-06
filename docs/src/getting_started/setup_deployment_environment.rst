@@ -266,6 +266,12 @@ Install TANGO
 To set up TANGO, pogo, jive and all the other tools you will need to develop and test the MCCS
 project you can either use the install_script.sh or install_ansible.yml files that will install
 those and their dependancies for you.
+
+NOTE: These scripts should only be used with debian/ubuntu flavoured linux machines
+as they have not been tested with others and may not work
+
+If you already have an sql server installed then provide the password for it, otherwise choose a password
+that you would like for the server that will be installed.
 To use the shell script call
 
 .. code-block:: shell-session

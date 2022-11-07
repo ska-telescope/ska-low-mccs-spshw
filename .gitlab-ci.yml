@@ -54,3 +54,11 @@ include:
   # k8s
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/k8s.gitlab-ci.yml'
+
+# we have a no-standatd test structure due to the test docs.
+k8s-test:
+  rules:
+    - exists:
+        - testing/src/tests/**/*
+
+

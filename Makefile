@@ -12,14 +12,7 @@ PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 
 K8S_TESTBED ?= test
-PYTHON_TEST_FILE = testing/src/
-PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
-
-K8S_RUN_TEST_FOLDER = ./testing/src
-K8S_TEST_TEST_COMMAND ?= $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \
-						pytest \
-						$(PYTHON_VARS_AFTER_PYTEST) ./testing/src/tests \
-						 | tee pytest.stdout ## k8s-test test command to run in container
+PYTHON_TEST_FILE = tests
 
 DOCS_SPHINXOPTS = -n -W --keep-going
 

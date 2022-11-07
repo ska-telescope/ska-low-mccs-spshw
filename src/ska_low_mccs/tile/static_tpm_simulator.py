@@ -188,21 +188,21 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         :param logger: a logger for this simulator to use
         """
         self.memory_map= {}
-        self.tpm = False
+        self.tpm = None
         self.logger = logger
         self.fpga_tile = 2
         super().__init__(logger)
 
     def get_fpga0_temperature(self):
-        return self.tpm.fpga1_temperature
+        return self.tpm._fpga1_temperature
+    def get_fpga1_temperature(self):
+        return self.tpm._fpga2_temperature
     def get_fpgs_sync_time(self):
         return self.tpm._sync_time
-    def get_fpga1_temperature(self):
-        return self.tpm.fpga2_temperature
     def get_temperature(self):
-        return self.tpm.board_temperature
+        return self.tpm._board_temperature
     def get_voltage(self):
-        return self.tpm.voltage
+        return self.tpm._voltage
     def get_tile_id(self):
         return self.tpm.tile_id
     def get_firmware_list(self):

@@ -446,3 +446,76 @@ class TestAntennaComponentManager:
             match="Antenna cannot be reset.",
         ):
             antenna_component_manager.reset()
+            
+    def test_power_commands1(
+        self: TestAntennaComponentManager,
+        antenna_component_manager: AntennaComponentManager,
+        mock_apiu_device_proxy: unittest.mock.Mock,
+        initial_are_antennas_on: list[bool],
+        apiu_antenna_id: int,
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
+        """
+        Test the power commands.
+
+        :param antenna_component_manager: the antenna component manager
+            under test
+        :param mock_apiu_device_proxy: a mock proxy to the antenna's
+            APIU device
+        :param initial_are_antennas_on: whether each antenna is
+            initially on in the APIU
+        :param apiu_antenna_id: the id of the antenna in its APIU
+            device
+        :param component_state_changed_callback: callback to be called
+            when the state of the component changes.
+        """
+
+        antenna_component_manager.start_communicating()
+        time.sleep(0.1)
+
+        component_state_changed_callback.assert_in_deque(
+            {"power_state": PowerState.OFF}
+        )
+
+        antenna_component_manager._antenna_power_state_changed(PowerState.UNKNOWN)
+        assert antenna_component_manager.power_state == PowerState.UNKNOWN
+
+        antenna_component_manager._apiu_component_fault_changed(True)
+        assert antenna_component_manager._faulty
+    
+        antenna_component_manager._apiu_component_fault_changed(False)
+        assert not antenna_component_manager._faulty
+
+        antenna_component_manager._tile_component_fault_changed(True)
+        assert antenna_component_manager._faulty
+
+        assert antenna_component_manager._faulty
+        with pytest.raises(ValueError, match = f"unknown fqdn 'incorrect_fqdn', should be None or belong to tile or apiu"):
+            antenna_component_manager.set_power_state(PowerState.ON, "incorrect_fqdn")
+
+
+        #case where we try to turn on with no proxy present.
+        
+        antenna_component_manager._apiu_proxy._proxy = None
+        antenna_component_manager._apiu_power_state = PowerState.ON
+        antenna_component_manager.power_state =PowerState.OFF
+        time.sleep(2)
+        
+        task_callback_on = MockCallable()
+        antenna_component_manager.on(task_callback_on)
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.FAILED
+        assert kwargs["result"] == f"Exception: "
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED

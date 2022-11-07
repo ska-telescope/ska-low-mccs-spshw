@@ -180,6 +180,7 @@ class TestTPMDriver:
         :param static_tpm_driver_simulator: An hardware tile mock
         """
 
+
         assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
@@ -217,6 +218,23 @@ class TestTPMDriver:
         patched_tpm_driver.update_communication_state(CommunicationStatus.DISABLED)
         assert patched_tpm_driver.stop_communicating() == None
 
+        #check start communicate where connect raises failure
+        assert not static_tpm_driver_simulator.tpm
+        mock_libraryerror = unittest.mock.Mock(side_effect=LibraryError("attribute mocked to fail"))
+        static_tpm_driver_simulator.connect = unittest.mock.MagicMock(side_effect= mock_libraryerror)
+
+        #start communicating unblocks the polling loop therefore starting it
+        assert patched_tpm_driver.communication_state ==CommunicationStatus.DISABLED
+        patched_tpm_driver.start_communicating()
+        assert (
+            patched_tpm_driver.communication_state
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
+        #allow time to run a few poll loops
+        time.sleep(8)
+        assert not patched_tpm_driver.tile.tpm
+        assert patched_tpm_driver._tpm_status ==TpmStatus.UNCONNECTED
+        assert patched_tpm_driver._faulty
 
     def test_write_read_registers(
         self: TestTPMDriver,
@@ -317,14 +335,24 @@ class TestTPMDriver:
 
         #the tile must be programmed to update attributes, therefore we mock that
         static_tpm_driver_simulator.is_programmed = unittest.mock.Mock(return_value=True)
+        #updated values
+        fpga1_temp = 2
+        fpga2_temp = 32
+        board_temp = 4
+        voltage = 1
+
+        static_tpm_driver_simulator.tpm._fpga1_temperature = fpga1_temp
+        static_tpm_driver_simulator.tpm._fpga2_temperature = fpga2_temp
+        static_tpm_driver_simulator.tpm._board_temperature = board_temp
+        static_tpm_driver_simulator.tpm._voltage = voltage
 
         patched_tpm_driver.updating_attributes()
 
         #check that they are updated
-        assert patched_tpm_driver._fpga1_temperature == StaticTpmDriverSimulator.FPGA1_TEMPERATURE
-        assert patched_tpm_driver._fpga2_temperature == StaticTpmDriverSimulator.FPGA2_TEMPERATURE
-        assert patched_tpm_driver._board_temperature == StaticTpmDriverSimulator.BOARD_TEMPERATURE
-        assert patched_tpm_driver._voltage == StaticTpmDriverSimulator.VOLTAGE
+        assert patched_tpm_driver._fpga1_temperature == fpga1_temp
+        assert patched_tpm_driver._fpga2_temperature == fpga2_temp
+        assert patched_tpm_driver._board_temperature == board_temp
+        assert patched_tpm_driver._voltage == voltage
 
         #Check value not updated if we have a failure
         static_tpm_driver_simulator.tpm._voltage = 2.2
@@ -612,7 +640,7 @@ class TestTPMDriver:
         """
 
 
-        assert static_tpm_driver_simulator.tpm == False
+        assert static_tpm_driver_simulator.tpm == None
         assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (

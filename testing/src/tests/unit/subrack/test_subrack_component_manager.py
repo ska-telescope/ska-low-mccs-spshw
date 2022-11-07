@@ -11,11 +11,12 @@ from __future__ import annotations
 import time
 import unittest
 from typing import Any, Union
-
+from ska_low_mccs_common.testing.mock import MockCallable
 import pytest
 from _pytest.fixtures import SubRequest
-from ska_control_model import CommunicationStatus, PowerState, SimulationMode
+from ska_control_model import CommunicationStatus, PowerState, SimulationMode, TaskStatus
 from ska_low_mccs_common.testing.mock import MockCallableDeque
+from ska_low_mccs_common.component import ComponentManagerWithUpstreamPowerSupply
 
 from ska_low_mccs.subrack import (
     SubrackComponentManager,
@@ -750,3 +751,127 @@ class TestSubrackComponentManager:
         time.sleep(0.3)
         component_state_changed_callback.assert_next_call_with_keys({"progress": 0})
         component_state_changed_callback.assert_next_call_with_keys({"progress": 100})
+    
+    def test_component_upstream_power_state_task_callback(
+        self: TestSubrackComponentManager,
+        subrack_component_manager: SubrackComponentManager,
+    ) -> None:
+        
+
+
+        subrack_component_manager.start_communicating()
+        time.sleep(0.1)     
+        task_callback_on = MockCallable()
+
+        subrack_component_manager.on(task_callback=task_callback_on)
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] =="On command has completed"
+
+
+        subrack_component_manager.off(task_callback=task_callback_on)
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] =="Off command completed"
+
+
+
+    def test_component_subservient_power_state_task_callback(
+        self: TestSubrackComponentManager,
+        subrack_component_manager: SubrackComponentManager,
+    ) -> None:
+
+        subrack_component_manager.start_communicating()
+        time.sleep(0.1)     
+        task_callback_on = MockCallable()
+        tpm_id  =2 
+        subrack_component_manager.turn_on_tpm(tpm_id, task_callback=task_callback_on)
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] ==f"Subrack TPM {tpm_id} turn on tpm task has completed"
+
+        subrack_component_manager.power_state = PowerState.ON
+
+        subrack_component_manager.turn_off_tpm(tpm_id, task_callback=task_callback_on)
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] ==f"Subrack TPM {tpm_id} turn off tpm task has completed"
+
+
+        subrack_component_manager.turn_on_tpms(task_callback=task_callback_on)
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] =="The turn tpms on task has completed"
+
+        subrack_component_manager.power_state = PowerState.ON
+
+        subrack_component_manager.turn_off_tpms(task_callback=task_callback_on)
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] =="The turn tpms off task has completed"
+
+        subrack_component_manager.power_state = PowerState.OFF
+        subrack_component_manager.turn_off_tpm(tpm_id, task_callback=task_callback_on)==None
+        time.sleep(0.1)
+        _, kwargs = task_callback_on.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+        
+        #This should be put in a queue for when the power next comes on
+        task_callback_on.assert_not_called()
+
+
+

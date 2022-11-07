@@ -597,3 +597,60 @@ def patched_tile_device_class(
             self.component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice
+
+@pytest.fixture()
+def mock_tile_component_manager_with_injected_tpm_component_manager(
+    simulation_mode: SimulationMode,
+    test_mode: TestMode,
+    logger: logging.Logger,
+    max_workers: int,
+    tile_id: int,
+    tpm_ip: str,
+    tpm_cpld_port: int,
+    tpm_version: str,
+    subrack_fqdn: str,
+    subrack_tpm_id: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    switching_tpm_component_manager,
+) -> TileComponentManager:
+    """
+    Return a tile component manager (in simulation and test mode as specified).
+
+    (This is a pytest fixture.)
+
+    :param simulation_mode: the initial simulation mode of this
+        component manager
+    :param test_mode: the initial test mode of this component manager
+    :param logger: the logger to be used by this object.
+    :param tile_id: the unique ID for the tile
+    :param tpm_ip: the IP address of the tile
+    :param tpm_cpld_port: the port at which the tile is accessed for control
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param subrack_fqdn: FQDN of the subrack that controls power to
+        this tile
+    :param subrack_tpm_id: This tile's position in its subrack
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
+
+    :return: a TPM component manager in the specified simulation mode.
+    """
+    return TileComponentManager(
+        simulation_mode,
+        test_mode,
+        logger,
+        max_workers,
+        tile_id,
+        tpm_ip,
+        tpm_cpld_port,
+        tpm_version,
+        subrack_fqdn,
+        subrack_tpm_id,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+        switching_tpm_component_manager,
+    )

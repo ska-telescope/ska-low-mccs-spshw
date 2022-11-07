@@ -322,6 +322,51 @@ def subrack_driver(
         component_state_changed_callback,
     )
 
+@pytest.fixture()
+def component_manager_with_upstream_power_supply():
+    return unittest.mock.MagicMock
+
+@pytest.fixture()
+def subrack_component_manager_mocked_upstream_power(
+    logger: logging.Logger,
+    component_manager_with_upstream_power_supply,
+    max_workers: int,
+    subrack_ip: str,
+    subrack_port: int,
+    communication_state_changed_callback: Callable[[CommunicationStatus], None],
+    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    initial_power_state: PowerState,
+) -> SubrackComponentManager:
+    """
+    Return an subrack component manager (in simulation mode as specified).
+
+    (This is a pytest fixture.)
+
+    :param logger: the logger to be used by this object.
+    :param subrack_ip: the IP address of the subrack
+    :param subrack_port: the subrack port
+    :param max_workers: nos. of worker threads
+    :param communication_state_changed_callback: callback to be
+        called when the status of the communications channel between
+        the component manager and its component changes
+    :param component_state_changed_callback: callback to be
+        called when the component state changes
+    :param initial_power_state: the initial power mode of the simulated
+        power supply.
+
+    :return: an subrack component manager in the specified simulation mode.
+    """
+    ComponentManagerWithUpstreamPowerSupply = component_manager_with_upstream_power_supply
+    return SubrackComponentManager(
+        SimulationMode.TRUE,
+        logger,
+        max_workers,
+        subrack_ip,
+        subrack_port,
+        communication_state_changed_callback,
+        component_state_changed_callback,
+        initial_power_state,
+    )
 
 @pytest.fixture()
 def subrack_component_manager(

@@ -31,6 +31,7 @@ from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
+    StaticTpmDriverSimulator,
     StaticTpmSimulatorComponentManager,
     SwitchingTpmComponentManager,
     TileComponentManager,
@@ -265,6 +266,19 @@ def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     """
     return StaticTpmSimulator(logger)
 
+@pytest.fixture()
+def static_tpm_driver_simulator(logger: logging.Logger) -> StaticTpmSimulator:
+    """
+    Return a static TPM simulator.
+
+    (This is a pytest fixture.)
+
+    :param logger: a object that implements the standard logging
+        interface of :py:class:`logging.Logger`
+
+    :return: a static TPM simulator
+    """
+    return StaticTpmDriverSimulator(logger)
 
 @pytest.fixture()
 def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:

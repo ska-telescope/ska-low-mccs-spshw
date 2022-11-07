@@ -14,6 +14,8 @@ PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 K8S_TESTBED ?= test
 PYTHON_TEST_FILE = tests
 
+PYTHON_LINT_TARGET = src/ska_low_mccs tests  ## Paths containing python to be formatted and linted
+
 DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk

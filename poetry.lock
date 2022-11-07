@@ -1207,7 +1207,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "e1cd10d92571cba36306ec580bc5fdef9249ad9f5fef4dc1e47fa45679977937"
+content-hash = "de9f87201f55487f593519acf20671b54acf36f4c63310139ba681aeedb895e4"
 
 [metadata.files]
 aavs-system = [

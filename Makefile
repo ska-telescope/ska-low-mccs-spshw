@@ -11,8 +11,8 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = tests
-PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
 PYTHON_VARS_AFTER_PYTEST = --cov-fail-under=80
+PYTHON_LINT_TARGET = src/ska_low_mccs tests  ## Paths containing python to be formatted and linted
 
 DOCS_SPHINXOPTS = -n -W --keep-going
 
@@ -28,11 +28,11 @@ include .make/helm.mk
 -include PrivateRules.mak
 
 python-post-format:
-	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ testing/src/ 	
+	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	
 
 # Add this for typehints & static type checking
 # removed temporarily
 # python-post-lint:
-#	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
+#	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ tests/
 
 .PHONY: python-post-format python-post-lint

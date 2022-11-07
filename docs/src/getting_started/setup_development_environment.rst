@@ -288,7 +288,7 @@ Try it out:
 	Skipping virtualenv creation, as specified in config file.
 	pytest 6.2.5
 	PYTHONPATH=./src:/app/src poetry run pytest  \
-	 --cov=src --cov-report=term-missing --cov-report xml:build/reports/code-coverage.xml --junitxml=build/reports/unit-tests.xml testing/src/
+	 --cov=src --cov-report=term-missing --cov-report xml:build/reports/code-coverage.xml --junitxml=build/reports/unit-tests.xml tests/
 	Skipping virtualenv creation, as specified in config file.
 	PyTango 9.3.3 (9, 3, 3)
 	PyTango compiled with:
@@ -329,7 +329,7 @@ what tests to run.
 
 To run tests in a specific file or directory change the ``PYTHON_TEST_FILE``
 variable in the Makefile. This can also be done from the command line, for example:
-``make PYTHON_TEST_FILE=testing/src/tests/unit/tile python-test`` will run all tests
+``make PYTHON_TEST_FILE=tests/unit/tile python-test`` will run all tests
 found in the tile directory.
 
 Since the repository is read-write mounted in the container, it is

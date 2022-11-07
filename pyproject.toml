@@ -79,7 +79,7 @@ mccs-controller = "ska_low_mccs.controller.controller_cli:main"
 mccs-tile = "ska_low_mccs.tile.tile_cli:main"
 
 [tool.pytest.ini_options]
-testpaths = "testing/src/"
+testpaths = "tests/"
 addopts = "--json-report --json-report-file=build/reports/report.json --cov-report html:build/htmlcov --cov-report xml:build/reports/code-coverage.xml --cov-report term:skip-covered --cov=ska_low_mccs --junitxml=build/reports/unit-tests.xml --verbose"
 console_output_style = "progress"
 junit_family = "legacy"

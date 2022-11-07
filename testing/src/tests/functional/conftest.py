@@ -121,6 +121,7 @@ def tango_harness(
     ) as harness:
         yield harness
 
+
 @pytest.fixture()
 def state_changed_callback_factory(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
@@ -164,6 +165,7 @@ def obs_state_changed_callback_factory(
 
     return _factory
 
+
 @pytest.fixture()
 def controller_device_admin_mode_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
@@ -180,6 +182,7 @@ def controller_device_admin_mode_changed_callback(
         when the device admin mode changes.
     """
     return mock_change_event_callback_factory("adminMode")
+
 
 @pytest.fixture()
 def controller_device_state_changed_callback(
@@ -216,6 +219,7 @@ def controller_device_lrc_changed_callback(
     """
     return mock_change_event_callback_factory("longRunningCommandResult")
 
+
 @pytest.fixture()
 def subrack_device_lrc_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
@@ -232,6 +236,7 @@ def subrack_device_lrc_changed_callback(
         gets called when the device state changes.
     """
     return mock_change_event_callback_factory("longRunningCommandResult")
+
 
 @pytest.fixture()
 def subarray_device_obs_state_changed_callback(
@@ -286,14 +291,16 @@ def subrack_device_state_changed_callback(
     """
     return mock_change_event_callback_factory("state")
 
+
 @pytest.fixture()
 def tpm_number():
     return 2
 
+
 @pytest.fixture()
 def subrack_tpm_power_state_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-    tpm_number
+    tpm_number,
 ) -> MockChangeEventCallback:
     """
     Return a mock change event callback for subrack device tpm power state change.
@@ -307,6 +314,7 @@ def subrack_tpm_power_state_changed_callback(
         when the tpm power state changes.
     """
     return mock_change_event_callback_factory(f"tpm{tpm_number}PowerState")
+
 
 @pytest.fixture()
 def tile_device_admin_mode_changed_callback(
@@ -447,6 +455,7 @@ def subrack(
     :return: the subrack device
     """
     return tango_harness.get_device("low-mccs/subrack/01")
+
 
 @pytest.fixture()
 def daq(

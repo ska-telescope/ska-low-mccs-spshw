@@ -43,5 +43,5 @@ Feature: Test the thin slice
         And the DAQRX has been configured
         And the DAQRX has been started
         When the user tells the TPM to send data
-        Then the TPM reports that it is has successfully started sending data
+        Then the TPM does not report a fault
         And the DAQRX reports that it is successfully receiving data

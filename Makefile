@@ -18,10 +18,11 @@ DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk
 include .make/k8s.mk
-include .make/helm.mk
 include .make/python.mk
 include .make/raw.mk
 include .make/base.mk
+include .make/docs.mk
+include .make/helm.mk
 
 # define private overrides for above variables in here
 -include PrivateRules.mak

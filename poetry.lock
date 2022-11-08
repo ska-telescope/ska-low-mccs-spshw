@@ -571,7 +571,11 @@ flake8 = ">=3.9.1"
 
 [[package]]
 name = "platformdirs"
+<<<<<<< HEAD
 version = "2.5.4"
+=======
+version = "2.5.3"
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
@@ -776,7 +780,11 @@ testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xm
 
 [[package]]
 name = "pytest-bdd"
+<<<<<<< HEAD
 version = "6.1.1"
+=======
+version = "6.1.0"
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 description = "BDD for pytest"
 category = "dev"
 optional = false
@@ -948,7 +956,11 @@ test = ["asv", "gmpy2", "mpmath", "pytest", "pytest-cov", "pytest-xdist", "sciki
 
 [[package]]
 name = "setuptools"
+<<<<<<< HEAD
 version = "65.6.0"
+=======
+version = "65.5.1"
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 category = "dev"
 optional = false
@@ -986,7 +998,7 @@ reference = 'ska-nexus'
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "0.1.3"
+version = "0.1.2"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 category = "main"
 optional = false
@@ -1075,7 +1087,11 @@ python-versions = "*"
 
 [[package]]
 name = "termcolor"
+<<<<<<< HEAD
 version = "2.1.1"
+=======
+version = "2.1.0"
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 description = "ANSI color formatting for output in terminal"
 category = "main"
 optional = false
@@ -1219,14 +1235,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-<<<<<<< HEAD
-<<<<<<< HEAD
 content-hash = "aa05f435346759a6dfd3a57f0967140705fe68962092ebbfb9cb6a2386e0f1b8"
-=======
->>>>>>> 10e38316 (MCCS-1038 changes due base classes)
-=======
-content-hash = "e1cd10d92571cba36306ec580bc5fdef9249ad9f5fef4dc1e47fa45679977937"
->>>>>>> 1d1e2bfc (MCCS-1038 type checking new strategy)
 
 [metadata.files]
 aavs-system = [
@@ -1643,8 +1652,13 @@ pep8-naming = [
     {file = "pep8_naming-0.13.2-py3-none-any.whl", hash = "sha256:59e29e55c478db69cffbe14ab24b5bd2cd615c0413edf790d47d3fb7ba9a4e23"},
 ]
 platformdirs = [
+<<<<<<< HEAD
     {file = "platformdirs-2.5.4-py3-none-any.whl", hash = "sha256:af0276409f9a02373d540bf8480021a048711d572745aef4b7842dad245eba10"},
     {file = "platformdirs-2.5.4.tar.gz", hash = "sha256:1006647646d80f16130f052404c6b901e80ee4ed6bef6792e1f238a8969106f7"},
+=======
+    {file = "platformdirs-2.5.3-py3-none-any.whl", hash = "sha256:0cb405749187a194f444c25c82ef7225232f11564721eabffc6ec70df83b11cb"},
+    {file = "platformdirs-2.5.3.tar.gz", hash = "sha256:6e52c21afff35cb659c6e52d8b4d61b9bd544557180440538f255d9382c8cbe0"},
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 ]
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
@@ -1759,8 +1773,13 @@ pytest = [
     {file = "pytest-6.2.5.tar.gz", hash = "sha256:131b36680866a76e6781d13f101efb86cf674ebb9762eb70d3082b6f29889e89"},
 ]
 pytest-bdd = [
+<<<<<<< HEAD
     {file = "pytest_bdd-6.1.1-py3-none-any.whl", hash = "sha256:57eba5878d77036f356a85fb1d108cb061d8af4fb4d032b1a424fa9abe9e498b"},
     {file = "pytest_bdd-6.1.1.tar.gz", hash = "sha256:138af3592bcce5d4684b0d690777cf199b39ce45d423ca28086047ffe6111010"},
+=======
+    {file = "pytest_bdd-6.1.0-py3-none-any.whl", hash = "sha256:552b709ca630c7a718758f2ef39b12d6cecafa81771301731a8b2814bff8ca9d"},
+    {file = "pytest_bdd-6.1.0.tar.gz", hash = "sha256:36fb2d025f7b9ca163d5f27499952c837ac95216db0a2a98c6728be82388c5a1"},
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 ]
 pytest-cov = [
     {file = "pytest-cov-4.0.0.tar.gz", hash = "sha256:996b79efde6433cdbd0088872dbc5fb3ed7fe1578b68cdbba634f14bb8dd0470"},
@@ -1867,8 +1886,13 @@ scipy = [
     {file = "scipy-1.9.3.tar.gz", hash = "sha256:fbc5c05c85c1a02be77b1ff591087c83bc44579c6d2bd9fb798bb64ea5e1a027"},
 ]
 setuptools = [
+<<<<<<< HEAD
     {file = "setuptools-65.6.0-py3-none-any.whl", hash = "sha256:6211d2f5eddad8757bd0484923ca7c0a6302ebc4ab32ea5e94357176e0ca0840"},
     {file = "setuptools-65.6.0.tar.gz", hash = "sha256:d1eebf881c6114e51df1664bc2c9133d022f78d12d5f4f665b9191f084e2862d"},
+=======
+    {file = "setuptools-65.5.1-py3-none-any.whl", hash = "sha256:d0b9a8433464d5800cbe05094acf5c6d52a91bfac9b52bcfc4d41382be5d5d31"},
+    {file = "setuptools-65.5.1.tar.gz", hash = "sha256:e197a19aa8ec9722928f2206f8de752def0e4c9fc6953527360d1c36d94ddb2f"},
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
@@ -1879,8 +1903,8 @@ ska-control-model = [
     {file = "ska_control_model-0.1.2-py3-none-any.whl", hash = "sha256:aa5d57e579109d3e22487d73a3ee6059c0306e4daa960d3636c43027b376b1dd"},
 ]
 ska-low-mccs-common = [
-    {file = "ska_low_mccs_common-0.1.3-py3-none-any.whl", hash = "sha256:1e5da53e4da00eefd4a78eba6094fc6b30656c1b5a921228733300bf43709ee2"},
-    {file = "ska_low_mccs_common-0.1.3.tar.gz", hash = "sha256:729148d87b1832fe47fd9df17709c999a9db97682bae28084f190a9051df1bd7"},
+    {file = "ska_low_mccs_common-0.1.2-py3-none-any.whl", hash = "sha256:d1a30e5667167556e84bed14874a0c8d5f0f987c18b37430ab93014efbc24eec"},
+    {file = "ska_low_mccs_common-0.1.2.tar.gz", hash = "sha256:d96cb772a1df57801b4a665b527caff6b874bae8a8aaebe777b4464ad26c4d83"},
 ]
 ska-ser-logging = [
     {file = "ska_ser_logging-0.4.1+0a677a67-py3-none-any.whl", hash = "sha256:8b2bf14e9981966c22503b6b6477b6386dec1def1f71295579f0686d55b83841"},
@@ -1899,8 +1923,13 @@ snowballstemmer = [
     {file = "snowballstemmer-2.2.0.tar.gz", hash = "sha256:09b16deb8547d3412ad7b590689584cd0fe25ec8db3be37788be3810cbf19cb1"},
 ]
 termcolor = [
+<<<<<<< HEAD
     {file = "termcolor-2.1.1-py3-none-any.whl", hash = "sha256:fa852e957f97252205e105dd55bbc23b419a70fec0085708fc0515e399f304fd"},
     {file = "termcolor-2.1.1.tar.gz", hash = "sha256:67cee2009adc6449c650f6bcf3bdeed00c8ba53a8cda5362733c53e0a39fb70b"},
+=======
+    {file = "termcolor-2.1.0-py3-none-any.whl", hash = "sha256:91dd04fdf661b89d7169cefd35f609b19ca931eb033687eaa647cef1ff177c49"},
+    {file = "termcolor-2.1.0.tar.gz", hash = "sha256:b80df54667ce4f48c03fe35df194f052dc27a541ebbf2544e4d6b47b5d6949c4"},
+>>>>>>> 38bd0d9d (MCCS-1038 fix tests)
 ]
 toml = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},

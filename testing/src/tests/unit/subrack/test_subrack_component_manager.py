@@ -20,7 +20,6 @@ from ska_control_model import (
     SimulationMode,
     TaskStatus,
 )
-from ska_low_mccs_common.component import ComponentManagerWithUpstreamPowerSupply
 from ska_low_mccs_common.testing.mock import MockCallable, MockCallableDeque
 
 from ska_low_mccs.subrack import (
@@ -761,7 +760,12 @@ class TestSubrackComponentManager:
         self: TestSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
     ) -> None:
+        """
+        Test the task callbacks during on and off commands.
 
+        :param subrack_component_manager: the subrack component manager under
+            test
+        """
         subrack_component_manager.start_communicating()
         time.sleep(0.1)
         task_callback_on = MockCallable()
@@ -798,7 +802,12 @@ class TestSubrackComponentManager:
         self: TestSubrackComponentManager,
         subrack_component_manager: SubrackComponentManager,
     ) -> None:
+        """
+        Test the task callbacks during power commands to subservient device.
 
+        :param subrack_component_manager: the subrack component manager under
+            test
+        """
         subrack_component_manager.start_communicating()
         time.sleep(0.1)
         task_callback_on = MockCallable()
@@ -868,9 +877,8 @@ class TestSubrackComponentManager:
         assert kwargs["result"] == "The turn tpms off task has completed"
 
         subrack_component_manager.power_state = PowerState.OFF
-        subrack_component_manager.turn_off_tpm(
-            tpm_id, task_callback=task_callback_on
-        ) == None
+
+        subrack_component_manager.turn_off_tpm(tpm_id, task_callback=task_callback_on)
         time.sleep(0.1)
         _, kwargs = task_callback_on.get_next_call()
         assert kwargs["status"] == TaskStatus.QUEUED

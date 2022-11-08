@@ -602,7 +602,7 @@ def patched_tile_device_class(
 
 
 @pytest.fixture()
-def mock_tile_component_manager_with_injected_tpm_component_manager(
+def mock_tile_component_manager_with_tpm_manager_fixture(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
@@ -639,6 +639,7 @@ def mock_tile_component_manager_with_injected_tpm_component_manager(
         the component manager and its component changes
     :param component_state_changed_callback: callback to be
         called when the component state changes
+    :param switching_tpm_component_manager: the injected tpm_component_manager mock
 
     :return: a TPM component manager in the specified simulation mode.
     """

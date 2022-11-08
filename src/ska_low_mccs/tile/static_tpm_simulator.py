@@ -12,11 +12,9 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 import re
 
-from pyfabil.base.definitions import *
+from pyfabil.base.definitions import LibraryError
 
 from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
-
-from .tpm_status import TpmStatus
 
 
 class StaticTpmSimulator(BaseTpmSimulator):
@@ -88,14 +86,23 @@ class StaticTpmSimulator(BaseTpmSimulator):
         return self._fpga2_temperature
 
 
-class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
+class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
+    """
+    A patch to implement __getitem__, __setitem__.
+
+    And overwrite read_address, write_address, write_register,
+    write_register. Used for testing the tpm_driver against the
+    simulator, so the interface is similar to that in aavs/tile This
+    class would not be needed is we dependency inject the tile into the
+    TPM driver
+    """
+
     def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
         """
-
         super().__init__(logger)
 
     def read_address(self: BaseTpmSimulator, address: int) -> list[int]:
@@ -103,11 +110,9 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
         Return a list of values from a given address.
 
         :param address: address of start of read
-        :param nvalues: number of values to read
 
         :return: values at the address
         """
-
         return self._address_map.get(str(address), 0)
 
     def write_address(self: BaseTpmSimulator, address: int, values: int) -> None:
@@ -117,7 +122,6 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
         :param address: address of start of read
         :param values: values to write
         """
-
         self._address_map.update({str(address): values})
 
     def write_register(self, address: int, values: int) -> None:
@@ -127,7 +131,6 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
         :param address: address of start of read
         :param values: values to write
         """
-
         self._register_map.update({str(address): values})
 
     def read_register(self, address: int) -> None:
@@ -135,12 +138,22 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
         Write a list of values to a given address.
 
         :param address: address of start of read
-        :param values: values to write
-        """
 
+        :return: values at the address
+        """
         return self._register_map.get(str(address), 0)
 
     def find_register(self, address):
+        """
+        Find a item in a dictionary.
+
+        This is mocking the reading of a register for the purpose of
+        testing TPM_driver
+
+        :param address: address of start of read
+
+        :return: register found at address
+        """
         matches = []
         for k, v in self._register_map.items():
             if type(k) == int:
@@ -150,43 +163,60 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
         return matches
 
     def __getitem__(self, key):
-        # Check if the specified key is a memory address or register name
+        """
+        Check if the specified key is a memory address or register name.
+
+        :param key: the key to a register.
+
+        :return: the value at the mocked register
+
+        :raises LibraryError: Attempting to get a register not in the memory address.
+        """
         if isinstance(key, int):
             return self.read_address(key)
 
-        elif type(key) is str or isinstance(key, basestring):
+        elif type(key) is str:
             # Check if a device is specified in the register name
             return self.read_register(key)
         else:
             raise LibraryError(
-                "Unrecognised key type, must be register name, memory address or SPI device tuple"
+                "must be register name, memory address or SPI device tuple"
             )
-
         # Register not found
-        raise LibraryError("Register %s not found" % key)
+        raise LibraryError(f"Register {key} not found")
 
     def __setitem__(self, key, value):
-        # Check is the specified key is a memory address or register name
+        """
+        Check is the specified key is a memory address or register name.
+
+        :param key: the key to a register.
+        :param value: the value to write in register.
+
+        :raises LibraryError:Attempting to set a register not in the memory address.
+        :return:none
+        """
         if isinstance(key, int):
-            print("dsd")
-            return self.write_address(key, value)
+            self.write_address(key, value)
+            return
 
-        elif type(key) is str or isinstance(key, basestring):
+        elif type(key) is str:
             # Check if device is specified in the register name
-
-            return self.write_register(key, value)
+            self.write_register(key, value)
+            return
         else:
-            raise LibraryError(
-                "Unrecognised key type (%s), must be register name or memory address"
-                % key.__class__.__name__
-            )
+            raise LibraryError(f"Unrecognised key type {key.__class__.__name__}")
 
         # Register not found
-        raise LibraryError("Register %s not found" % key)
+        raise LibraryError(f"Register {key} not found")
 
 
 class StaticTpmDriverSimulator(StaticTpmSimulator):
-    """A simulator for a TPM."""
+    """
+    A simulator for a TPM.
+
+    This class would not be needed is we dependency inject the tile into
+    the TPM driver
+    """
 
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -209,34 +239,59 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         super().__init__(logger)
 
     def get_fpga0_temperature(self):
+        """:return: the mocked fpga0 temperature."""
         return self.tpm._fpga1_temperature
 
     def get_fpga1_temperature(self):
+        """:return: the mocked fpga1 temperature."""
         return self.tpm._fpga2_temperature
 
     def get_fpgs_sync_time(self):
+        """:return: the mocked sync_time."""
         return self.tpm._sync_time
 
     def get_temperature(self):
+        """:return: the mocked board temperature."""
         return self.tpm._board_temperature
 
     def get_voltage(self):
+        """:return: the mocked voltage."""
         return self.tpm._voltage
 
     def get_tile_id(self):
+        """:return: the mocked tile_id."""
         return self.tpm.tile_id
 
     def initialise_beamformer(self, start_channel, nof_channels):
+        """
+        Mock set the beamformer parameters.
+
+        :param start_channel:start_channel
+        :param nof_channels:nof_channels
+        """
         self.attributes.update({"start_channel": start_channel})
         self.attributes.update({"nof_channels": nof_channels})
 
     def get_firmware_list(self):
+        """:return: the firmware list."""
         return self.firmware_list
 
     def program_fpgas(self, firmware_name):
+        """
+        Mock programmed state to True.
+
+        :param firmware_name:firmware_name
+        """
         self.tpm._is_programmed = True
 
     def set_station_id(self, tile_id, station_id):
+        """
+        Set mock registers to some value.
+
+        :param tile_id:tile_id
+        :param station_id:station_id
+        :return:none
+        """
         fpgas = ["fpga1", "fpga2"]
         for f in fpgas:
             self[f + ".dsp_regfile.config_id.station_id"] = station_id
@@ -245,15 +300,27 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         return
 
     def get_adc_rms(self):
+        """:return: the fpga_time."""
         return self.tpm.adc_rms
 
     def get_fpga_time(self, device):
+        """
+        :param device: device.
+
+        :return: the fpga_time.
+        """
         return self.fpga_tile
 
     def get_pps_delay(self):
+        """:return: the pps delay."""
         return self.tpm._pps_delay
 
     def is_programmed(self: BaseTpmSimulator) -> bool:
+        """
+        Return whether the mock has been implemented.
+
+        :return: the mocked programmed state
+        """
         return self.tpm._is_programmed
 
     def get_40g_core_configuration(
@@ -279,35 +346,50 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
                 return item
         return
 
-    def start_acquisition(
-        self: BaseTpmSimulator,
-        start_time: Optional[int] = None,
-        delay: Optional[int] = 2,
-    ) -> None:
-        """
-        Start data acquisition.
+    # def start_acquisition(
+    #     self: BaseTpmSimulator,
+    #     start_time: Optional[int] = None,
+    #     delay: Optional[int] = 2,
+    # ) -> None:
+    #     """
+    #     Start data acquisition.
 
-        :param start_time: the time at which to start data acquisition,
-            defaults to None
-        :param delay: delay start, defaults to 2
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator:Start acquisition")
-        self._tpm_status = TpmStatus.SYNCHRONISED
+    #     :param start_time: the time at which to start data acquisition,
+    #         defaults to None
+    #     :param delay: delay start, defaults to 2
+    #     :raises NotImplementedError: because this method is not yet
+    #         meaningfully implemented
+    #     """
+    #     self.logger.debug("TpmSimulator:Start acquisition")
+    #     self._tpm_status = TpmStatus.SYNCHRONISED
 
     def check_arp_table(self):
+        """Not Implemented."""
         pass
 
     def reset_eth_errors(self):
+        """Not Implemented."""
         pass
 
     def connect(self):
-        self.tpm = StaticTpmSimulator_patched_read_write(self.logger)
+        """Fake a connection by constructing the TPM."""
+        self.tpm = StaticTpmSimulatorPatchedReadWrite(self.logger)
         self[int(0x30000000)] = [3, 7]
 
     def __getitem__(self, key):
+        """
+        Get the register from the TPM.
+
+        :param key: key
+        :return: mocked item at address
+        """
         return self.tpm[key]
 
     def __setitem__(self, key, value):
+        """
+        Set a registers value in the TPM.
+
+        :param key: key
+        :param value: value
+        """
         self.tpm[key] = value

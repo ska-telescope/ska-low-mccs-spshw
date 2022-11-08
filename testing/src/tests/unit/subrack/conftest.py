@@ -325,6 +325,11 @@ def subrack_driver(
 
 @pytest.fixture()
 def component_manager_with_upstream_power_supply():
+    """
+    Mock callable.
+
+    :return: the mock callable
+    """
     return unittest.mock.MagicMock
 
 
@@ -355,12 +360,10 @@ def subrack_component_manager_mocked_upstream_power(
         called when the component state changes
     :param initial_power_state: the initial power mode of the simulated
         power supply.
+    :param component_manager_with_upstream_power_supply: mocked component_manager
 
     :return: an subrack component manager in the specified simulation mode.
     """
-    ComponentManagerWithUpstreamPowerSupply = (
-        component_manager_with_upstream_power_supply
-    )
     return SubrackComponentManager(
         SimulationMode.TRUE,
         logger,

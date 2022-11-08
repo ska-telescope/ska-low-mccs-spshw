@@ -292,7 +292,7 @@ def subrack_device_state_changed_callback(
     return mock_change_event_callback_factory("state")
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def tpm_number():
     return 2
 
@@ -351,6 +351,22 @@ def tile_device_state_changed_callback(
     """
     return mock_change_event_callback_factory("state")
 
+@pytest.fixture()
+def tile_device_lrc_changed_callback(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for tile device state change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback to be registered with the
+        tile device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return mock_change_event_callback_factory("longRunningCommandResult")
 
 @pytest.fixture()
 def daq_device_state_changed_callback(

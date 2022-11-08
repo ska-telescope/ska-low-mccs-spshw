@@ -318,7 +318,6 @@ class TestApiuComponentManager:
 
     def test_turn_on_off_antenna(
         self: TestApiuComponentManager,
-        monkeypatch: pytest.MonkeyPatch,
         apiu_component_manager: ApiuComponentManager,
         component_state_changed_callback: MockCallableDeque,
     ) -> None:
@@ -327,13 +326,10 @@ class TestApiuComponentManager:
 
         (i.e. turn it on or off).
 
-        :param apiu_antenna_count: number of antennas managed by the
-            APIU
         :param apiu_component_manager: the APIU component manager under
             test
         :param component_state_changed_callback: callback to be
             called when the power mode of an antenna changes
-        :param antenna_id: the number of the antenna to use in the test
         """
         apiu_component_manager.start_communicating()
         time.sleep(0.1)
@@ -349,17 +345,27 @@ class TestApiuComponentManager:
         apiu_component_manager: ApiuComponentManager,
         component_state_changed_callback: MockCallableDeque,
     ) -> None:
-        def mockedException(self, args=None):
-            raise Exception("This has been mocked to raise this exception for test")
+        """
+        Test task callbacks with mocked failure.
 
-        # This will mean any call to these functions get the mockedException
-        monkeypatch.setattr(ApiuSimulator, "turn_off_antennas", mockedException)
-        monkeypatch.setattr(ApiuSimulator, "turn_on_antennas", mockedException)
+        :param monkeypatch: a monkeypatch to mock failures
+        :param apiu_component_manager: the APIU component manager under
+            test
+        :param component_state_changed_callback: a mocked callable for state
+            change
+        """
+
+        def mocked_exception(self, args=None):
+            raise Exception("This has been mocked to fail")
+
+        # This will mean any call to these functions get the mocked_exception
+        monkeypatch.setattr(ApiuSimulator, "turn_off_antennas", mocked_exception)
+        monkeypatch.setattr(ApiuSimulator, "turn_on_antennas", mocked_exception)
         monkeypatch.setattr(
-            ComponentManagerWithUpstreamPowerSupply, "on", mockedException
+            ComponentManagerWithUpstreamPowerSupply, "on", mocked_exception
         )
-        monkeypatch.setattr(ApiuSimulator, "turn_on_antenna", mockedException)
-        monkeypatch.setattr(ApiuSimulator, "turn_off_antenna", mockedException)
+        monkeypatch.setattr(ApiuSimulator, "turn_on_antenna", mocked_exception)
+        monkeypatch.setattr(ApiuSimulator, "turn_off_antenna", mocked_exception)
 
         apiu_component_manager.start_communicating()
         time.sleep(0.1)
@@ -389,12 +395,11 @@ class TestApiuComponentManager:
             time.sleep(0.1)
             component_state_changed_callback.assert_last_call(
                 status=TaskStatus.FAILED,
-                result=f"Exception: This has been mocked to raise this exception for test",
+                result="Exception: This has been mocked to fail",
             )
 
     def test_turn_on_off_apiu_antenna_task_callbacks(
         self: TestApiuComponentManager,
-        monkeypatch: pytest.MonkeyPatch,
         apiu_component_manager: ApiuComponentManager,
         component_state_changed_callback: MockCallableDeque,
     ) -> None:
@@ -403,13 +408,10 @@ class TestApiuComponentManager:
 
         (i.e. turn it on or off).
 
-        :param apiu_antenna_count: number of antennas managed by the
-            APIU
         :param apiu_component_manager: the APIU component manager under
             test
         :param component_state_changed_callback: callback to be
             called when the power mode of an antenna changes
-        :param antenna_id: the number of the antenna to use in the test
         """
         apiu_component_manager.start_communicating()
         time.sleep(0.1)

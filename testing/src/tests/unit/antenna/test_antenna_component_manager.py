@@ -469,7 +469,6 @@ class TestAntennaComponentManager:
         :param component_state_changed_callback: callback to be called
             when the state of the component changes.
         """
-
         antenna_component_manager.start_communicating()
         time.sleep(0.1)
 
@@ -492,9 +491,9 @@ class TestAntennaComponentManager:
         assert antenna_component_manager._faulty
         with pytest.raises(
             ValueError,
-            match=f"unknown fqdn 'incorrect_fqdn', should be None or belong to tile or apiu",
+            match="unknown fqdn 'wrong_fqdn', should be None or belong to tile or apiu",
         ):
-            antenna_component_manager.set_power_state(PowerState.ON, "incorrect_fqdn")
+            antenna_component_manager.set_power_state(PowerState.ON, "wrong_fqdn")
 
         # case where we try to turn on with no proxy present.
 
@@ -516,7 +515,7 @@ class TestAntennaComponentManager:
         time.sleep(0.1)
         _, kwargs = task_callback_on.get_next_call()
         assert kwargs["status"] == TaskStatus.FAILED
-        assert kwargs["result"] == f"Exception: "
+        assert kwargs["result"] == "Exception: "
 
         time.sleep(0.1)
         _, kwargs = task_callback_on.get_next_call()

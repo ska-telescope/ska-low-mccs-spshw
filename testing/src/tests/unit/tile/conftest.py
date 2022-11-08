@@ -30,8 +30,8 @@ from ska_low_mccs import MccsTile
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
-    StaticTpmSimulator,
     StaticTpmDriverSimulator,
+    StaticTpmSimulator,
     StaticTpmSimulatorComponentManager,
     SwitchingTpmComponentManager,
     TileComponentManager,
@@ -266,6 +266,7 @@ def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     """
     return StaticTpmSimulator(logger)
 
+
 @pytest.fixture()
 def static_tpm_driver_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     """
@@ -279,6 +280,7 @@ def static_tpm_driver_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     :return: a static TPM simulator
     """
     return StaticTpmDriverSimulator(logger)
+
 
 @pytest.fixture()
 def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
@@ -597,6 +599,7 @@ def patched_tile_device_class(
             self.component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice
+
 
 @pytest.fixture()
 def mock_tile_component_manager_with_injected_tpm_component_manager(

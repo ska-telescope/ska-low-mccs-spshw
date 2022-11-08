@@ -14,8 +14,9 @@ from typing import Callable, Union, cast
 import pytest
 from _pytest.fixtures import SubRequest
 from ska_control_model import PowerState, TaskStatus
-from ska_low_mccs_common.testing.mock import MockCallableDeque
 from ska_low_mccs_common.component import ComponentManagerWithUpstreamPowerSupply
+from ska_low_mccs_common.testing.mock import MockCallableDeque
+
 from ska_low_mccs.apiu import (
     ApiuComponentManager,
     ApiuSimulator,
@@ -319,8 +320,8 @@ class TestApiuComponentManager:
         self: TestApiuComponentManager,
         monkeypatch: pytest.MonkeyPatch,
         apiu_component_manager: ApiuComponentManager,
-        component_state_changed_callback : MockCallableDeque,
-    )-> None:
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
         """
         Test that the callback is called when we change the power mode of an antenna.
 
@@ -342,23 +343,21 @@ class TestApiuComponentManager:
         component_state_changed_callback.assert_in_deque(expected_arguments)
         apiu_component_manager.power_state = PowerState.ON
 
-
-
-
-    def test_on_off_apiu_antenna_mockedfailure_task_callbacks(        
+    def test_on_off_apiu_antenna_mockedfailure_task_callbacks(
         self: TestApiuComponentManager,
         monkeypatch: pytest.MonkeyPatch,
         apiu_component_manager: ApiuComponentManager,
-        component_state_changed_callback : MockCallableDeque,
-        )->None:
-
-        def mockedException(self, args = None):
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
+        def mockedException(self, args=None):
             raise Exception("This has been mocked to raise this exception for test")
 
-        #This will mean any call to these functions get the mockedException
+        # This will mean any call to these functions get the mockedException
         monkeypatch.setattr(ApiuSimulator, "turn_off_antennas", mockedException)
         monkeypatch.setattr(ApiuSimulator, "turn_on_antennas", mockedException)
-        monkeypatch.setattr(ComponentManagerWithUpstreamPowerSupply, "on", mockedException)
+        monkeypatch.setattr(
+            ComponentManagerWithUpstreamPowerSupply, "on", mockedException
+        )
         monkeypatch.setattr(ApiuSimulator, "turn_on_antenna", mockedException)
         monkeypatch.setattr(ApiuSimulator, "turn_off_antenna", mockedException)
 
@@ -370,30 +369,35 @@ class TestApiuComponentManager:
         component_state_changed_callback.assert_in_deque(expected_arguments)
         apiu_component_manager.power_state = PowerState.ON
 
-
-        commands = {"power_down":None,
-                    "power_up":None,
-                    "power_up_antenna":1,
-                    "power_down_antenna":1
+        commands = {
+            "power_down": None,
+            "power_up": None,
+            "power_up_antenna": 1,
+            "power_down_antenna": 1,
         }
 
         for command, parameter in commands.items():
             if parameter:
-                getattr(apiu_component_manager, command)(parameter, component_state_changed_callback)
+                getattr(apiu_component_manager, command)(
+                    parameter, component_state_changed_callback
+                )
             else:
-                getattr(apiu_component_manager, command)(component_state_changed_callback)
+                getattr(apiu_component_manager, command)(
+                    component_state_changed_callback
+                )
             component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)
             time.sleep(0.1)
-            component_state_changed_callback.assert_last_call(status=TaskStatus.FAILED, result=f"Exception: This has been mocked to raise this exception for test")
-        
-
+            component_state_changed_callback.assert_last_call(
+                status=TaskStatus.FAILED,
+                result=f"Exception: This has been mocked to raise this exception for test",
+            )
 
     def test_turn_on_off_apiu_antenna_task_callbacks(
         self: TestApiuComponentManager,
         monkeypatch: pytest.MonkeyPatch,
         apiu_component_manager: ApiuComponentManager,
-        component_state_changed_callback : MockCallableDeque,
-    )-> None:
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
         """
         Test that the callback is called when we change the power mode of an antenna.
 
@@ -415,33 +419,38 @@ class TestApiuComponentManager:
         component_state_changed_callback.assert_in_deque(expected_arguments)
         apiu_component_manager.power_state = PowerState.ON
 
-
-
-        commands = {"on": "On command has completed",
-                    "off": "Off command has completed",
-                    "power_up": "The antenna all on task has completed",
-                    "power_down":"The antenna all off task has completed",
+        commands = {
+            "on": "On command has completed",
+            "off": "Off command has completed",
+            "power_up": "The antenna all on task has completed",
+            "power_down": "The antenna all off task has completed",
         }
 
         for command, expected_result in commands.items():
             getattr(apiu_component_manager, command)(component_state_changed_callback)
-            component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)  
+            component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)
             time.sleep(0.1)
-            component_state_changed_callback.assert_last_call(status=TaskStatus.COMPLETED, result=expected_result)
-            
-        #Turns off antenna
+            component_state_changed_callback.assert_last_call(
+                status=TaskStatus.COMPLETED, result=expected_result
+            )
+
+        # Turns off antenna
         apiu_component_manager.power_up_antenna(1, component_state_changed_callback)
         component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)
-        #wait to give time for process to complete
+        # wait to give time for process to complete
         time.sleep(0.1)
-        component_state_changed_callback.assert_last_call(status=TaskStatus.COMPLETED, result="The antenna on task has completed")
+        component_state_changed_callback.assert_last_call(
+            status=TaskStatus.COMPLETED, result="The antenna on task has completed"
+        )
 
-        #Turns off antennas
+        # Turns off antennas
         apiu_component_manager.power_down_antenna(1, component_state_changed_callback)
         component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)
-        #wait to give time for process to complete
+        # wait to give time for process to complete
         time.sleep(0.1)
-        component_state_changed_callback.assert_last_call(status=TaskStatus.COMPLETED, result="The antenna off task has completed")
+        component_state_changed_callback.assert_last_call(
+            status=TaskStatus.COMPLETED, result="The antenna off task has completed"
+        )
 
     @pytest.mark.parametrize("antenna_id", [1, 2])
     def test_component_antenna_power_changed_callback(

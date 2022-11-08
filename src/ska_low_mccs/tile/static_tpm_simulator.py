@@ -8,11 +8,16 @@
 """An implementation of a TPM simulator."""
 
 from __future__ import annotations  # allow forward references in type hints
-import re
+
 import logging
-from .tpm_status import TpmStatus
-from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
+import re
+
 from pyfabil.base.definitions import *
+
+from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
+
+from .tpm_status import TpmStatus
+
 
 class StaticTpmSimulator(BaseTpmSimulator):
     """A simulator for a TPM."""
@@ -82,8 +87,8 @@ class StaticTpmSimulator(BaseTpmSimulator):
         """
         return self._fpga2_temperature
 
-class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
 
+class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
     def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new TPM simulator instance.
@@ -135,7 +140,6 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
 
         return self._register_map.get(str(address), 0)
 
-
     def find_register(self, address):
         matches = []
         for k, v in self._register_map.items():
@@ -146,7 +150,7 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
         return matches
 
     def __getitem__(self, key):
-                # Check if the specified key is a memory address or register name
+        # Check if the specified key is a memory address or register name
         if isinstance(key, int):
             return self.read_address(key)
 
@@ -154,32 +158,41 @@ class StaticTpmSimulator_patched_read_write(BaseTpmSimulator):
             # Check if a device is specified in the register name
             return self.read_register(key)
         else:
-            raise LibraryError("Unrecognised key type, must be register name, memory address or SPI device tuple")
-        
+            raise LibraryError(
+                "Unrecognised key type, must be register name, memory address or SPI device tuple"
+            )
+
         # Register not found
         raise LibraryError("Register %s not found" % key)
 
-        
     def __setitem__(self, key, value):
-                # Check is the specified key is a memory address or register name
+        # Check is the specified key is a memory address or register name
         if isinstance(key, int):
             print("dsd")
             return self.write_address(key, value)
 
         elif type(key) is str or isinstance(key, basestring):
             # Check if device is specified in the register name
-            
+
             return self.write_register(key, value)
         else:
             raise LibraryError(
-            	"Unrecognised key type (%s), must be register name or memory address" % key.__class__.__name__)
+                "Unrecognised key type (%s), must be register name or memory address"
+                % key.__class__.__name__
+            )
 
         # Register not found
         raise LibraryError("Register %s not found" % key)
 
+
 class StaticTpmDriverSimulator(StaticTpmSimulator):
     """A simulator for a TPM."""
 
+    FIRMWARE_LIST = [
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+    ]
 
     def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
         """
@@ -187,38 +200,62 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
 
         :param logger: a logger for this simulator to use
         """
-        self.memory_map= {}
+        self.firmware_list = self.FIRMWARE_LIST
+        self.memory_map = {}
         self.tpm = None
         self.logger = logger
         self.fpga_tile = 2
+        self.attributes = {}
         super().__init__(logger)
 
     def get_fpga0_temperature(self):
         return self.tpm._fpga1_temperature
+
     def get_fpga1_temperature(self):
         return self.tpm._fpga2_temperature
+
     def get_fpgs_sync_time(self):
         return self.tpm._sync_time
+
     def get_temperature(self):
         return self.tpm._board_temperature
+
     def get_voltage(self):
         return self.tpm._voltage
+
     def get_tile_id(self):
         return self.tpm.tile_id
+
+    def initialise_beamformer(self, start_channel, nof_channels):
+        self.attributes.update({"start_channel": start_channel})
+        self.attributes.update({"nof_channels": nof_channels})
+
     def get_firmware_list(self):
+        return self.firmware_list
+
+    def program_fpgas(self, firmware_name):
+        self.tpm._is_programmed = True
+
+    def set_station_id(self, tile_id, station_id):
+        fpgas = ["fpga1", "fpga2"]
+        for f in fpgas:
+            self[f + ".dsp_regfile.config_id.station_id"] = station_id
+            self[f + ".dsp_regfile.config_id.tpm_id"] = tile_id
+
         return
-    def program_fpgas(self):
-        return 
-    def set_station_id(self):
-        return 
+
     def get_adc_rms(self):
         return self.tpm.adc_rms
+
     def get_fpga_time(self, device):
         return self.fpga_tile
+
     def get_pps_delay(self):
         return self.tpm._pps_delay
+
     def is_programmed(self: BaseTpmSimulator) -> bool:
         return self.tpm._is_programmed
+
     def get_40g_core_configuration(
         self: BaseTpmSimulator,
         core_id: int = -1,
@@ -240,7 +277,7 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
             if item.get("core_id") == core_id:
                 print(item)
                 return item
-        return 
+        return
 
     def start_acquisition(
         self: BaseTpmSimulator,
@@ -261,15 +298,16 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
 
     def check_arp_table(self):
         pass
+
     def reset_eth_errors(self):
         pass
 
     def connect(self):
         self.tpm = StaticTpmSimulator_patched_read_write(self.logger)
-        self[int(0x30000000)] = [3,7]
+        self[int(0x30000000)] = [3, 7]
 
     def __getitem__(self, key):
         return self.tpm[key]
-        
+
     def __setitem__(self, key, value):
         self.tpm[key] = value

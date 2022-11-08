@@ -446,7 +446,7 @@ class TestAntennaComponentManager:
             match="Antenna cannot be reset.",
         ):
             antenna_component_manager.reset()
-            
+
     def test_power_commands1(
         self: TestAntennaComponentManager,
         antenna_component_manager: AntennaComponentManager,
@@ -482,7 +482,7 @@ class TestAntennaComponentManager:
 
         antenna_component_manager._apiu_component_fault_changed(True)
         assert antenna_component_manager._faulty
-    
+
         antenna_component_manager._apiu_component_fault_changed(False)
         assert not antenna_component_manager._faulty
 
@@ -490,17 +490,19 @@ class TestAntennaComponentManager:
         assert antenna_component_manager._faulty
 
         assert antenna_component_manager._faulty
-        with pytest.raises(ValueError, match = f"unknown fqdn 'incorrect_fqdn', should be None or belong to tile or apiu"):
+        with pytest.raises(
+            ValueError,
+            match=f"unknown fqdn 'incorrect_fqdn', should be None or belong to tile or apiu",
+        ):
             antenna_component_manager.set_power_state(PowerState.ON, "incorrect_fqdn")
 
+        # case where we try to turn on with no proxy present.
 
-        #case where we try to turn on with no proxy present.
-        
         antenna_component_manager._apiu_proxy._proxy = None
         antenna_component_manager._apiu_power_state = PowerState.ON
-        antenna_component_manager.power_state =PowerState.OFF
+        antenna_component_manager.power_state = PowerState.OFF
         time.sleep(2)
-        
+
         task_callback_on = MockCallable()
         antenna_component_manager.on(task_callback_on)
         time.sleep(0.1)

@@ -12,18 +12,13 @@ import logging
 import time
 import unittest.mock
 from typing import Any, Callable
-from pyfabil.base.definitions import LibraryError
+
 import pytest
-
-
-from ska_control_model import (
-    CommunicationStatus,
-    SimulationMode,
-
-)
+from pyfabil.base.definitions import LibraryError
+from ska_control_model import CommunicationStatus, SimulationMode, TaskStatus
 from ska_low_mccs_common.testing.mock import MockCallable
 
-from ska_low_mccs.tile import TpmDriver, StaticTpmDriverSimulator
+from ska_low_mccs.tile import StaticTpmDriverSimulator, TpmDriver
 from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 
 # from .static_tpm_driver_simulator import StaticTpmDriverSimulator
@@ -66,8 +61,10 @@ class TestTPMDriver:
         """
 
         tpm = {}
+
         def get_item(item):
             return tpm[item]
+
         def set_item(item, value):
             tpm[item] = value
 
@@ -118,7 +115,7 @@ class TestTPMDriver:
                 component_state_changed_callback,
             )
             self.tile = static_tpm_driver_simulator
-    
+
     @pytest.fixture()
     def patched_tpm_driver(
         self: TestTPMDriver,
@@ -159,12 +156,9 @@ class TestTPMDriver:
             tpm_version,
             communication_state_changed_callback,
             component_state_changed_callback,
-            static_tpm_driver_simulator
+            static_tpm_driver_simulator,
         )
-    
-    
-    
-    
+
     def test_communication(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
@@ -180,7 +174,6 @@ class TestTPMDriver:
         :param static_tpm_driver_simulator: An hardware tile mock
         """
 
-
         assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
@@ -191,7 +184,7 @@ class TestTPMDriver:
         # Wait for the message to execute
         time.sleep(1)
         assert static_tpm_driver_simulator.tpm
-        
+
         # assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
         # assert patched_tpm_driver._queue_manager._task_result[1] == str(
         #    ResultCode.OK.value
@@ -201,39 +194,43 @@ class TestTPMDriver:
         # "Connected to Tile"
         assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
 
-        #call again to check None returns
+        # call again to check None returns
         assert patched_tpm_driver.start_communicating() == None
 
         patched_tpm_driver.stop_communicating()
-        assert (
-            patched_tpm_driver.communication_state
-            == CommunicationStatus.ESTABLISHED
-        )
+        assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
 
         time.sleep(1)
         assert static_tpm_driver_simulator.tpm == None
-        assert patched_tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            patched_tpm_driver.communication_state
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
 
-        #check that when we call stop communicating with communication disabled
+        # check that when we call stop communicating with communication disabled
         patched_tpm_driver.update_communication_state(CommunicationStatus.DISABLED)
         assert patched_tpm_driver.stop_communicating() == None
 
-        #check start communicate where connect raises failure
+        # check start communicate where connect raises failure
         assert not static_tpm_driver_simulator.tpm
-        mock_libraryerror = unittest.mock.Mock(side_effect=LibraryError("attribute mocked to fail"))
-        static_tpm_driver_simulator.connect = unittest.mock.MagicMock(side_effect= mock_libraryerror)
+        mock_libraryerror = unittest.mock.Mock(
+            side_effect=LibraryError("attribute mocked to fail")
+        )
+        static_tpm_driver_simulator.connect = unittest.mock.MagicMock(
+            side_effect=mock_libraryerror
+        )
 
-        #start communicating unblocks the polling loop therefore starting it
-        assert patched_tpm_driver.communication_state ==CommunicationStatus.DISABLED
+        # start communicating unblocks the polling loop therefore starting it
+        assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
             patched_tpm_driver.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
-        #allow time to run a few poll loops
+        # allow time to run a few poll loops
         time.sleep(8)
         assert not patched_tpm_driver.tile.tpm
-        assert patched_tpm_driver._tpm_status ==TpmStatus.UNCONNECTED
+        assert patched_tpm_driver._tpm_status == TpmStatus.UNCONNECTED
         assert patched_tpm_driver._faulty
 
     def test_write_read_registers(
@@ -241,55 +238,60 @@ class TestTPMDriver:
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
+        """
         Test we can write values to a register.
 
-        In this case we are using a static_tpm_driver_simulator to mock the functionality 
+        In this case we are using a static_tpm_driver_simulator to mock the functionality
         of writing to a register
 
         :param patched_tpm_driver: The patched tpm driver under test.
         :param static_tpm_driver_simulator: The mocked tile
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
-        static_tpm_driver_simulator.tpm.write_register("fpga1.1" , 3)
-        static_tpm_driver_simulator.tpm.write_register("fpga2.2" , 2)
-        static_tpm_driver_simulator.tpm.write_register("fpga1.dsp_regfile.stream_status.channelizer_vld" , 2)
+        static_tpm_driver_simulator.tpm.write_register("fpga1.1", 3)
+        static_tpm_driver_simulator.tpm.write_register("fpga2.2", 2)
+        static_tpm_driver_simulator.tpm.write_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld", 2
+        )
 
-
-        #write to fpga1
-        #write_register(register_name, values, offset, device)
+        # write to fpga1
+        # write_register(register_name, values, offset, device)
         patched_tpm_driver.write_register("1", 17, 1, 1)
         read_value = patched_tpm_driver.read_register("1", 13, 0, 1)
         assert read_value == [17]
 
-        #test write to unknown register
+        # test write to unknown register
         patched_tpm_driver.write_register("unknown", 17, 1, 1)
         read_value = patched_tpm_driver.read_register("unknown", 13, 0, 1)
         assert read_value == []
 
-        #write to fpga2
+        # write to fpga2
         patched_tpm_driver.write_register("2", 17, 1, 2)
         read_value = patched_tpm_driver.read_register("2", 13, 0, 2)
         assert read_value == [17]
 
-        #test write to unknown register
+        # test write to unknown register
         patched_tpm_driver.write_register("unknown", 17, 1, 2)
         read_value = patched_tpm_driver.read_register("unknown", 13, 0, 2)
         assert read_value == []
 
-        #write to register with no associated device
-        patched_tpm_driver.write_register("fpga1.dsp_regfile.stream_status.channelizer_vld", 17, 1, "")
-        read_value = patched_tpm_driver.read_register("fpga1.dsp_regfile.stream_status.channelizer_vld", 13, 0, "")
+        # write to register with no associated device
+        patched_tpm_driver.write_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld", 17, 1, ""
+        )
+        read_value = patched_tpm_driver.read_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld", 13, 0, ""
+        )
         assert read_value == [17]
 
-        #test write to unknown register
+        # test write to unknown register
         patched_tpm_driver.write_register("unknown", 17, 1, "")
         read_value = patched_tpm_driver.read_register("unknown", 13, 0, "")
         assert read_value == []
 
-        #test register that returns list
+        # test register that returns list
         read_value = patched_tpm_driver.read_register("mocked_list", 13, 0, "")
         assert read_value == []
 
@@ -298,25 +300,24 @@ class TestTPMDriver:
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
+        """
         Test we can write and read addresses on the static_tpm_driver_simulator.
 
         :param patched_tpm_driver: The patched tpm driver under test.
         :param static_tpm_driver_simulator: The mocked tile
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
 
-        #write_address(address, values)
-        patched_tpm_driver.write_address(4, [2,3,4,5])
+        # write_address(address, values)
+        patched_tpm_driver.write_address(4, [2, 3, 4, 5])
         read_value = patched_tpm_driver.read_address(4, 4)
-        assert read_value == [2,3,4,5]
+        assert read_value == [2, 3, 4, 5]
 
-        #mock a failed write by trying to write them no tpm attacked
+        # mock a failed write by trying to write them no tpm attacked
         static_tpm_driver_simulator.tpm = None
-        patched_tpm_driver.write_address(4, [2,3,4,5])
-
+        patched_tpm_driver.write_address(4, [2, 3, 4, 5])
 
     def test_updating_attributes(
         self: TestTPMDriver,
@@ -329,13 +330,15 @@ class TestTPMDriver:
         :param patched_tpm_driver: The patched tpm driver under test.
         :param static_tpm_driver_simulator: The mocked tile
         """
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
 
-        #the tile must be programmed to update attributes, therefore we mock that
-        static_tpm_driver_simulator.is_programmed = unittest.mock.Mock(return_value=True)
-        #updated values
+        # the tile must be programmed to update attributes, therefore we mock that
+        static_tpm_driver_simulator.is_programmed = unittest.mock.Mock(
+            return_value=True
+        )
+        # updated values
         fpga1_temp = 2
         fpga2_temp = 32
         board_temp = 4
@@ -348,107 +351,124 @@ class TestTPMDriver:
 
         patched_tpm_driver.updating_attributes()
 
-        #check that they are updated
+        # check that they are updated
         assert patched_tpm_driver._fpga1_temperature == fpga1_temp
         assert patched_tpm_driver._fpga2_temperature == fpga2_temp
         assert patched_tpm_driver._board_temperature == board_temp
         assert patched_tpm_driver._voltage == voltage
 
-        #Check value not updated if we have a failure
+        # Check value not updated if we have a failure
         static_tpm_driver_simulator.tpm._voltage = 2.2
-        mock_get_fpga0_temperature_fail = unittest.mock.Mock(side_effect=Exception("get_fpga0_temperature mocked to fail"))
-        static_tpm_driver_simulator.get_voltage  = unittest.mock.MagicMock(side_effect= mock_get_fpga0_temperature_fail)
+        mock_get_fpga0_temperature_fail = unittest.mock.Mock(
+            side_effect=Exception("get_fpga0_temperature mocked to fail")
+        )
+        static_tpm_driver_simulator.get_voltage = unittest.mock.MagicMock(
+            side_effect=mock_get_fpga0_temperature_fail
+        )
         patched_tpm_driver.updating_attributes()
-        assert patched_tpm_driver._voltage != static_tpm_driver_simulator.tpm._voltage 
-    
+        assert patched_tpm_driver._voltage != static_tpm_driver_simulator.tpm._voltage
+
     def test_read_tile_attributes(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
+        """
         Test that tpm_driver can read attributes from tile.
 
         :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tpm_driver_simulator: The mocked tile 
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        :param static_tpm_driver_simulator: The mocked tile
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
         static_tpm_driver_simulator.fpga_time = 2
         static_tpm_driver_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
         static_tpm_driver_simulator.tpm._fpga_current_frame = 2
-        
-        board_temperature =  getattr(patched_tpm_driver,"board_temperature")
-        voltage =  getattr(patched_tpm_driver, "voltage")
-        fpga1_temperature =  getattr(patched_tpm_driver,"fpga1_temperature")
-        fpga2_temperature =  getattr(patched_tpm_driver,"fpga2_temperature")
-        adc_rms =  getattr(patched_tpm_driver,"adc_rms")
-        get_fpga_time =  getattr(patched_tpm_driver,"fpgas_time")
-        get_pps_delay =  getattr(patched_tpm_driver,"pps_delay")
-        get_fpgs_sync_time =  getattr(patched_tpm_driver,"fpga_sync_time")
-        get_fpga_current_frame =  getattr(patched_tpm_driver,"fpga_current_frame")
+
+        board_temperature = getattr(patched_tpm_driver, "board_temperature")
+        voltage = getattr(patched_tpm_driver, "voltage")
+        fpga1_temperature = getattr(patched_tpm_driver, "fpga1_temperature")
+        fpga2_temperature = getattr(patched_tpm_driver, "fpga2_temperature")
+        adc_rms = getattr(patched_tpm_driver, "adc_rms")
+        get_fpga_time = getattr(patched_tpm_driver, "fpgas_time")
+        get_pps_delay = getattr(patched_tpm_driver, "pps_delay")
+        get_fpgs_sync_time = getattr(patched_tpm_driver, "fpga_sync_time")
+        get_fpga_current_frame = getattr(patched_tpm_driver, "fpga_current_frame")
 
         assert board_temperature == StaticTpmDriverSimulator.BOARD_TEMPERATURE
         assert voltage == StaticTpmDriverSimulator.VOLTAGE
         assert fpga1_temperature == StaticTpmDriverSimulator.FPGA1_TEMPERATURE
-        assert fpga2_temperature  == StaticTpmDriverSimulator.FPGA2_TEMPERATURE
+        assert fpga2_temperature == StaticTpmDriverSimulator.FPGA2_TEMPERATURE
         assert adc_rms == list(StaticTpmDriverSimulator.ADC_RMS)
-        assert get_fpga_time == [2,2]
-        assert get_pps_delay ==  StaticTpmDriverSimulator.PPS_DELAY
+        assert get_fpga_time == [2, 2]
+        assert get_pps_delay == StaticTpmDriverSimulator.PPS_DELAY
         assert get_fpgs_sync_time == 0.4
-
 
     def test_read_mocked_to_fail_tile_attributes(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
+        """
         Test that is a failure occurs during a attribute read we get expected response.
 
         :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tpm_driver_simulator: The mocked tile 
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        :param static_tpm_driver_simulator: The mocked tile
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
 
-        #mock all read attributes to fail
-        mock_tile_connect_to_fail = unittest.mock.Mock(side_effect=Exception("attribute mocked to fail"))
-        static_tpm_driver_simulator.get_temperature  = unittest.mock.MagicMock(side_effect= mock_tile_connect_to_fail)
-        static_tpm_driver_simulator.get_voltage  = unittest.mock.MagicMock(side_effect= mock_tile_connect_to_fail)
-        static_tpm_driver_simulator.get_fpga0_temperature  = unittest.mock.MagicMock(side_effect= mock_tile_connect_to_fail)
-        static_tpm_driver_simulator.get_fpga1_temperature  = unittest.mock.MagicMock(side_effect= mock_tile_connect_to_fail)
-        static_tpm_driver_simulator.get_adc_rms  = unittest.mock.MagicMock(side_effect= mock_tile_connect_to_fail)
-        static_tpm_driver_simulator.get_fpga_time  = unittest.mock.MagicMock(side_effect= mock_tile_connect_to_fail)
-        static_tpm_driver_simulator.get_pps_delay  = unittest.mock.MagicMock(side_effect= mock_tile_connect_to_fail)
-        
+        # mock all read attributes to fail
+        mock_tile_connect_to_fail = unittest.mock.Mock(
+            side_effect=Exception("attribute mocked to fail")
+        )
+        static_tpm_driver_simulator.get_temperature = unittest.mock.MagicMock(
+            side_effect=mock_tile_connect_to_fail
+        )
+        static_tpm_driver_simulator.get_voltage = unittest.mock.MagicMock(
+            side_effect=mock_tile_connect_to_fail
+        )
+        static_tpm_driver_simulator.get_fpga0_temperature = unittest.mock.MagicMock(
+            side_effect=mock_tile_connect_to_fail
+        )
+        static_tpm_driver_simulator.get_fpga1_temperature = unittest.mock.MagicMock(
+            side_effect=mock_tile_connect_to_fail
+        )
+        static_tpm_driver_simulator.get_adc_rms = unittest.mock.MagicMock(
+            side_effect=mock_tile_connect_to_fail
+        )
+        static_tpm_driver_simulator.get_fpga_time = unittest.mock.MagicMock(
+            side_effect=mock_tile_connect_to_fail
+        )
+        static_tpm_driver_simulator.get_pps_delay = unittest.mock.MagicMock(
+            side_effect=mock_tile_connect_to_fail
+        )
 
-        board_temperature =  getattr(patched_tpm_driver,"board_temperature")
-        voltage =  getattr(patched_tpm_driver, "voltage")
+        board_temperature = getattr(patched_tpm_driver, "board_temperature")
+        voltage = getattr(patched_tpm_driver, "voltage")
         with pytest.raises(ConnectionError, match="Cannot read time from FPGA"):
-            getattr(patched_tpm_driver,"fpgas_time")
-        fpga1_temperature =  getattr(patched_tpm_driver,"fpga1_temperature")
-        fpga2_temperature =  getattr(patched_tpm_driver,"fpga2_temperature")
-        adc_rms =  getattr(patched_tpm_driver,"adc_rms")
-        get_pps_delay =  getattr(patched_tpm_driver,"pps_delay")
+            getattr(patched_tpm_driver, "fpgas_time")
+        fpga1_temperature = getattr(patched_tpm_driver, "fpga1_temperature")
+        fpga2_temperature = getattr(patched_tpm_driver, "fpga2_temperature")
+        adc_rms = getattr(patched_tpm_driver, "adc_rms")
+        get_pps_delay = getattr(patched_tpm_driver, "pps_delay")
 
-        #assert that the values are the same as the initialised values
+        # assert that the values are the same as the initialised values
         assert board_temperature == patched_tpm_driver.BOARD_TEMPERATURE
         assert voltage == patched_tpm_driver.VOLTAGE
-        assert fpga1_temperature  == patched_tpm_driver.FPGA1_TEMPERATURE
-        assert fpga2_temperature  == patched_tpm_driver.FPGA2_TEMPERATURE
+        assert fpga1_temperature == patched_tpm_driver.FPGA1_TEMPERATURE
+        assert fpga2_temperature == patched_tpm_driver.FPGA2_TEMPERATURE
         assert adc_rms == list(patched_tpm_driver.ADC_RMS)
-        assert get_pps_delay ==  BaseTpmSimulator.PPS_DELAY
+        assert get_pps_delay == BaseTpmSimulator.PPS_DELAY
 
-
-    def test_polling_loop(        
+    def test_polling_loop(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
+        """
         Test the polling loop works as expected.
 
         The polling loop is run on a thread so to unit test here is tricky.
@@ -456,68 +476,72 @@ class TestTPMDriver:
         loop to be tested.
 
         :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tpm_driver_simulator: The mocked tile 
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        :param static_tpm_driver_simulator: The mocked tile
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         assert not static_tpm_driver_simulator.tpm
         static_tpm_driver_simulator.connect()
         assert static_tpm_driver_simulator.tpm
 
-        #start communicating unblocks the polling loop therefore starting it
-        assert patched_tpm_driver.communication_state ==CommunicationStatus.DISABLED
+        # start communicating unblocks the polling loop therefore starting it
+        assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
         assert (
             patched_tpm_driver.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
-        #allow time to run a few poll loops
+        # allow time to run a few poll loops
         time.sleep(0.1)
- 
-        #trigger the stop polling loop should disconnect the tpm and 
-        #set communication state to NOT_ESTABLISHED
+
+        # trigger the stop polling loop should disconnect the tpm and
+        # set communication state to NOT_ESTABLISHED
         patched_tpm_driver._stop_polling_event.set()
-        #allow time to poll complete poll
+        # allow time to poll complete poll
         time.sleep(0.1)
         assert patched_tpm_driver._is_programmed == False
-        assert patched_tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            patched_tpm_driver.communication_state
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
         assert patched_tpm_driver._tpm_status == TpmStatus.UNCONNECTED
-        assert not static_tpm_driver_simulator.tpm
+        assert static_tpm_driver_simulator.tpm == None
 
-        #restart the polling loop. Since the connection state is ESTABLISHED the loop will
-        #attempt to poll the tpm to check communication. 
-        #However the connection is now lost
+        # restart the polling loop. Since the connection state is ESTABLISHED the loop will
+        # attempt to poll the tpm to check communication.
+        # However the connection is now lost
         assert not static_tpm_driver_simulator.tpm
-        #restart polling loop
+        # restart polling loop
         patched_tpm_driver.update_communication_state(CommunicationStatus.ESTABLISHED)
         patched_tpm_driver._stop_polling_event.clear()
         patched_tpm_driver._start_polling_event.set()
 
-        #give sufficient time to give up an connecting and return fault
+        # give sufficient time to give up an connecting and return fault
         time.sleep(1)
 
         assert patched_tpm_driver._faulty
-        assert patched_tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
+        assert (
+            patched_tpm_driver.communication_state
+            == CommunicationStatus.NOT_ESTABLISHED
+        )
         assert patched_tpm_driver._tpm_status == TpmStatus.UNCONNECTED
 
-        #the connection should attempt to restart given enough time
+        # the connection should attempt to restart given enough time
         time.sleep(6)
         assert static_tpm_driver_simulator.tpm
         assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
 
-
-
-    def test_tpm_status(        
+    def test_tpm_status(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
-        Test that the tpm status reports as expected
+        """
+        Test that the tpm status reports as expected.
 
         :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tpm_driver_simulator: The mocked tile 
-        '''
+        :param static_tpm_driver_simulator: The mocked tile
+        """
         getattr(patched_tpm_driver, "tpm_status")
         assert patched_tpm_driver._tpm_status == TpmStatus.UNCONNECTED
 
@@ -526,102 +550,126 @@ class TestTPMDriver:
         getattr(patched_tpm_driver, "tpm_status")
         assert patched_tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
-        #reset with connection to TPM
+        # reset with connection to TPM
         static_tpm_driver_simulator.tpm._is_programmed = True
         patched_tpm_driver._tpm_status = TpmStatus.UNCONNECTED
         getattr(patched_tpm_driver, "tpm_status")
         assert patched_tpm_driver._tpm_status == TpmStatus.PROGRAMMED
 
-        #reset tpm_status.
-        #set tile_id of hardware mock to be same as software
-        static_tpm_driver_simulator["fpga1.regfile.tpm_id"] = patched_tpm_driver._tile_id
+        # reset tpm_status.
+        # set tile_id of hardware mock to be same as software
+        static_tpm_driver_simulator[
+            "fpga1.regfile.tpm_id"
+        ] = patched_tpm_driver._tile_id
         patched_tpm_driver._tpm_status = TpmStatus.UNCONNECTED
         getattr(patched_tpm_driver, "tpm_status")
-        
-        #self._check_channeliser_started() does not exist and is throwing a exception for the wrong reason.
 
+        # self._check_channeliser_started() does not exist and is throwing a exception for the wrong reason.
 
-
-    def test_get_tile_id(        
+    def test_get_tile_id(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
-        Test that we can get the tile_id from the mocked Tile
+        """
+        Test that we can get the tile_id from the mocked Tile.
 
         :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tpm_driver_simulator: The mocked tile 
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        :param static_tpm_driver_simulator: The mocked tile
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
         static_tpm_driver_simulator.tpm._tile_id = 5
         assert static_tpm_driver_simulator.tpm
         tile_id = getattr(patched_tpm_driver, "get_tile_id")()
         assert tile_id == 5
 
-        #mocked error case
-        mock_libraryerror = unittest.mock.Mock(side_effect=LibraryError("attribute mocked to fail"))
-        static_tpm_driver_simulator.get_tile_id  = unittest.mock.MagicMock(side_effect= mock_libraryerror)
+        # mocked error case
+        mock_libraryerror = unittest.mock.Mock(
+            side_effect=LibraryError("attribute mocked to fail")
+        )
+        static_tpm_driver_simulator.get_tile_id = unittest.mock.MagicMock(
+            side_effect=mock_libraryerror
+        )
         assert getattr(patched_tpm_driver, "get_tile_id")() == 0
 
-    def test_start_acquisition(        
+    def test_start_acquisition(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
+        """
         Test that start acquisition writes to mocked registers on the mocked tile.
 
         :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tpm_driver_simulator: The mocked tile 
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        :param static_tpm_driver_simulator: The mocked tile
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
 
         getattr(patched_tpm_driver, "start_acquisition")()
         assert patched_tpm_driver.tile._tpm_status == TpmStatus.SYNCHRONISED
 
-        #start_acquisition with failure should return false and not start
+        # start_acquisition with failure should return false and not start
         mock_error = unittest.mock.Mock(side_effect=Exception("mocked to fail"))
-        static_tpm_driver_simulator.check_arp_table  = unittest.mock.MagicMock(side_effect= mock_error)
+        static_tpm_driver_simulator.check_arp_table = unittest.mock.MagicMock(
+            side_effect=mock_error
+        )
         assert getattr(patched_tpm_driver, "start_acquisition")() == False
 
-    def test_set_time_delays(        
+    def test_set_time_delays(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
-        '''
+        """
         Test that we can set the delays to the tile hardware mock.
 
         :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tpm_driver_simulator: The mocked tile 
-        '''
-        #No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
-        #Therefore the tile will have access to the TPM after connect().
+        :param static_tpm_driver_simulator: The mocked tile
+        """
+        # No UDP connection are used here. Simply the static_tpm_driver_simulator constructs a mocked TPM
+        # Therefore the tile will have access to the TPM after connect().
         static_tpm_driver_simulator.connect()
-        #mocked register return
+        # mocked register return
         expected_delay_written = [344.0, 200.7]
-        static_tpm_driver_simulator["fpga1.test_generator.delay_0"] = expected_delay_written
-        static_tpm_driver_simulator["fpga2.test_generator.delay_0"] = expected_delay_written
+        static_tpm_driver_simulator[
+            "fpga1.test_generator.delay_0"
+        ] = expected_delay_written
+        static_tpm_driver_simulator[
+            "fpga2.test_generator.delay_0"
+        ] = expected_delay_written
 
         getattr(patched_tpm_driver, "set_time_delays")(expected_delay_written)
 
-        #assert both fpgas have that delay
-        assert static_tpm_driver_simulator["fpga1.test_generator.delay_0"] == expected_delay_written
-        assert static_tpm_driver_simulator["fpga2.test_generator.delay_0"] == expected_delay_written
+        # assert both fpgas have that delay
+        assert (
+            static_tpm_driver_simulator["fpga1.test_generator.delay_0"]
+            == expected_delay_written
+        )
+        assert (
+            static_tpm_driver_simulator["fpga2.test_generator.delay_0"]
+            == expected_delay_written
+        )
 
-        #check set_time_delay failure
+        # check set_time_delay failure
         expected_delay_written = [43.0, 98.2]
         mock_error = unittest.mock.Mock(side_effect=Exception("mocked to fail"))
-        static_tpm_driver_simulator.set_time_delays  = unittest.mock.MagicMock(side_effect= mock_error)
+        static_tpm_driver_simulator.set_time_delays = unittest.mock.MagicMock(
+            side_effect=mock_error
+        )
         getattr(patched_tpm_driver, "set_time_delays")(expected_delay_written)
-    
-        assert static_tpm_driver_simulator["fpga1.test_generator.delay_0"] != expected_delay_written
-        assert static_tpm_driver_simulator["fpga2.test_generator.delay_0"] != expected_delay_written
+
+        assert (
+            static_tpm_driver_simulator["fpga1.test_generator.delay_0"]
+            != expected_delay_written
+        )
+        assert (
+            static_tpm_driver_simulator["fpga2.test_generator.delay_0"]
+            != expected_delay_written
+        )
 
     def test_read_write_address(
         self: TestTPMDriver,
@@ -629,17 +677,12 @@ class TestTPMDriver:
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
         """
-        Test we can create the driver and start communication with the component.
+        Test that when we write to a address on the tpm_driver, That value is written to
+        the TPM_simulator Test that:
 
-        We can create the tile class object under test, and we will mock
-        the underlying component (which is a hardware TPM that does not exist
-        in this test harness).
-
-        :param patched_tpm_driver: the patched tpm driver under test.
-        :param hardware_tile_mock: An hardware tile mock
+        * we can write to a address
+        * we can read that same value from that address.
         """
-
-
         assert static_tpm_driver_simulator.tpm == None
         assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
         patched_tpm_driver.start_communicating()
@@ -652,17 +695,25 @@ class TestTPMDriver:
         time.sleep(1)
         assert static_tpm_driver_simulator.tpm
 
-        expected_read = [2,3,3]
+        expected_read = [2, 3, 3]
         patched_tpm_driver.write_address(4, expected_read)
         assert patched_tpm_driver.read_address(4, len(expected_read)) == expected_read
-    
+
     def test_configure_40g_core(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
         static_tpm_driver_simulator: StaticTpmDriverSimulator,
     ) -> None:
+        """
+        Test that we can configure the 40g core. Test that:
+
+        * we can configure and get that configuration with core_id specified
+        * when no core_id is specified we gather all the cores with core_id 0 or one
+        """
+        # mocked connection to the TPM simuator.
         static_tpm_driver_simulator.connect()
 
+        # this is core_id 2 should this be allowed since we have core_id 0 or 1?
         core_dict = {
             "core_id": 2,
             "arp_table_entry": 1,
@@ -683,11 +734,98 @@ class TestTPMDriver:
         }
         patched_tpm_driver.configure_40g_core(**core_dict)
 
-        configuration = patched_tpm_driver.get_40g_configuration(core_id=core_dict.get("core_id"))
+        configuration = patched_tpm_driver.get_40g_configuration(
+            core_id=core_dict.get("core_id")
+        )
 
         assert configuration == [core_dict]
 
-        #request the configuration without a core_id
+        # request the configuration without a core_id
         patched_tpm_driver.configure_40g_core(**core_dict2)
         configuration = patched_tpm_driver.get_40g_configuration()
-        assert configuration == [core_dict2,core_dict2]
+
+        # Is this what is wanted?
+        assert configuration == [core_dict2, core_dict2]
+
+    def test_firmware_avaliable(
+        self: TestTPMDriver,
+        patched_tpm_driver: PatchedTpmDriver,
+        static_tpm_driver_simulator: StaticTpmDriverSimulator,
+    ) -> None:
+        """Test that the we can get the firmware from the tpm_driver."""
+        firmware = getattr(patched_tpm_driver, "firmware_available")
+
+        assert firmware == static_tpm_driver_simulator.FIRMWARE_LIST
+        firmware_version = getattr(patched_tpm_driver, "firmware_version")
+        assert firmware_version == "Ver.1.2 build 0:"
+
+    def test_check_programmed(
+        self: TestTPMDriver,
+        patched_tpm_driver: PatchedTpmDriver,
+        static_tpm_driver_simulator: StaticTpmDriverSimulator,
+    ) -> None:
+        """Test whether the tpm_driver can read the programmed state of the
+        mockedTPM."""
+        assert patched_tpm_driver._check_programmed() == False
+        static_tpm_driver_simulator.connect()
+        static_tpm_driver_simulator.tpm._is_programmed = True
+        assert patched_tpm_driver._check_programmed() == True
+
+    def test_initialise(
+        self: TestTPMDriver,
+        patched_tpm_driver: PatchedTpmDriver,
+        static_tpm_driver_simulator: StaticTpmDriverSimulator,
+    ) -> None:
+        """
+        Test that when we initialise the tpm_driver the mockedTPM gets the correct
+        calls. Test cases:
+
+        * programfpga succeeds to programm the fpga
+        * programfpga fails to programm the fpga
+        """
+        # establish connection to the TPM
+        static_tpm_driver_simulator.connect()
+        initialise_task_callback = MockCallable()
+        patched_tpm_driver.initialise(task_callback=initialise_task_callback)
+        assert static_tpm_driver_simulator.is_programmed() == False
+
+        time.sleep(0.1)
+        _, kwargs = initialise_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = initialise_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+
+        assert static_tpm_driver_simulator.is_programmed() == True
+        assert patched_tpm_driver._is_programmed == True
+        assert patched_tpm_driver._tpm_status == TpmStatus.INITIALISED
+        static_tpm_driver_simulator.tpm._tpm_status = TpmStatus.PROGRAMMED
+
+        assert (
+            static_tpm_driver_simulator["fpga1.dsp_regfile.config_id.station_id"] == 0
+        )
+        assert static_tpm_driver_simulator["fpga1.dsp_regfile.config_id.tile_id"] == 0
+
+        _, kwargs = initialise_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] == "The initialisation task has completed"
+
+        # The FPGA is mocked to not be programmed after the program_fpga command.
+        # check that the initialisation process has failed.
+        static_tpm_driver_simulator.tpm._is_programmed = False
+        static_tpm_driver_simulator.program_fpgas = unittest.mock.MagicMock(
+            return_value=False
+        )
+        patched_tpm_driver.initialise(task_callback=initialise_task_callback)
+        time.sleep(0.1)
+        _, kwargs = initialise_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.QUEUED
+
+        time.sleep(0.1)
+        _, kwargs = initialise_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        time.sleep(0.1)
+        _, kwargs = initialise_task_callback.get_next_call()
+        assert kwargs["status"] == TaskStatus.COMPLETED
+        assert kwargs["result"] == "The initialisation task has failed"

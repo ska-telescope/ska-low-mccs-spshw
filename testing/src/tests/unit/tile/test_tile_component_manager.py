@@ -823,75 +823,93 @@ class TestStaticSimulatorCommon:
         assert tile.get_40g_configuration(-1, 0) == [expected]
         assert tile.get_40g_configuration(2) == [expected]
         assert tile.get_40g_configuration(10) == []
-    
+
     def test_test_mode(
         self: TestDriverCommon,
         mock_tile_component_manager_with_injected_tpm_component_manager: TileComponentManager,
         switching_tpm_component_manager: SwitchingTpmComponentManager,
-    )->None:
-        
-        mock_tile_component_manager_with_injected_tpm_component_manager.test_mode = TestMode.TEST
+    ) -> None:
+        """
+        Test that when we changes to the test mode on the tile are propagated to TPM.
+
+        Test that:
+        * Test that when we set test mode on the TileComponentManager this is propagated to the TPMComponentManager.
+        """
+        mock_tile_component_manager_with_injected_tpm_component_manager.test_mode = (
+            TestMode.TEST
+        )
         assert getattr(switching_tpm_component_manager, "test_mode") == TestMode.TEST
-        assert mock_tile_component_manager_with_injected_tpm_component_manager.test_mode == TestMode.TEST
+        assert (
+            mock_tile_component_manager_with_injected_tpm_component_manager.test_mode
+            == TestMode.TEST
+        )
 
-        mock_tile_component_manager_with_injected_tpm_component_manager.test_mode = TestMode.NONE
+        mock_tile_component_manager_with_injected_tpm_component_manager.test_mode = (
+            TestMode.NONE
+        )
         assert getattr(switching_tpm_component_manager, "test_mode") == TestMode.NONE
-        assert mock_tile_component_manager_with_injected_tpm_component_manager.test_mode == TestMode.NONE
+        assert (
+            mock_tile_component_manager_with_injected_tpm_component_manager.test_mode
+            == TestMode.NONE
+        )
 
-    def test_start_tpm_connection(
-        self: TestDriverCommon,
-        mock_tile_component_manager_with_injected_tpm_component_manager: TileComponentManager,
-        switching_tpm_component_manager: SwitchingTpmComponentManager,
-        communication_state_changed_callback: unittest.mock.Mock,
-        component_state_changed_callback:unittest.mock.Mock, 
-    )->None:
-        #tile orchestrator requests to connect to TPM
-        #mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._start_communicating_with_tpm()
+        # def test_start_tpm_connection(
+        #     self: TestDriverCommon,
+        #     mock_tile_component_manager_with_injected_tpm_component_manager: TileComponentManager,
+        #     switching_tpm_component_manager: SwitchingTpmComponentManager,
+        #     communication_state_changed_callback: unittest.mock.Mock,
+        #     component_state_changed_callback: unittest.mock.Mock,
+        # )->None:
+        """
+        Test the start tpm_connection
 
-        #sanity check of initial conditions
-        assert switching_tpm_component_manager.simulation_mode == SimulationMode.TRUE
-        assert switching_tpm_component_manager.test_mode == TestMode.TEST
-        assert switching_tpm_component_manager._communication_state == CommunicationStatus.DISABLED
-        #tile orchestrator requests to connect to TPM
-        mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._start_communicating_with_tpm()
-        #we check that we have established a connection
-        communication_state_changed_callback.assert_last_call(CommunicationStatus.ESTABLISHED)
+        Test that:
+        * when the tile orchestrator commands the tile to connect to the TPM with the correct states assumed, a connection is ESTABLISHED
+        *When the tile orchestrator command the tile to stop communicating the power state is none and fault is none
+        """
 
-        mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._stop_communicating_with_tpm()
-        #we check that we have established a connection
-        component_state_changed_callback.assert_last_call({"power_state": None, "fault": None})
+    #     #tile orchestrator requests to connect to TPM
+    #     #mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._start_communicating_with_tpm()
 
-    # def test_turn_standby(
-    #     self: TestDriverCommon,
-    #     mock_tile_component_manager_with_injected_tpm_component_manager: TileComponentManager,
-    #     switching_tpm_component_manager: SwitchingTpmComponentManager,
-    #     communication_state_changed_callback: unittest.mock.Mock,
-    #     component_state_changed_callback:unittest.mock.Mock, 
-    #     mock_subrack,
-    # )->None:
-    #     #overwrite the mocked tile subrack proxy 
-    #     mock_tile_component_manager_with_injected_tpm_component_manager._subrack_proxy = mock_subrack
-        
-    #     mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._start_communicating_with_subrack()
+    #     #sanity check of initial conditions
+    #     assert switching_tpm_component_manager.simulation_mode == SimulationMode.TRUE
+    #     assert switching_tpm_component_manager.test_mode == TestMode.TEST
+    #     assert switching_tpm_component_manager._communication_state == CommunicationStatus.DISABLED
+    #     #tile orchestrator requests to connect to TPM
+    #     mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._start_communicating_with_tpm()
+    #     #we check that we have established a connection
+    #     communication_state_changed_callback.assert_last_call(CommunicationStatus.ESTABLISHED)
 
+    #     mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._stop_communicating_with_tpm()
+    #     #we check that we have established a connection
+    #     component_state_changed_callback.assert_last_call({"power_state": None, "fault": None})
 
-    #     mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._turn_tpm_on()
+    # # def test_turn_standby(
+    # #     self: TestDriverCommon,
+    # #     mock_tile_component_manager_with_injected_tpm_component_manager: TileComponentManager,
+    # #     switching_tpm_component_manager: SwitchingTpmComponentManager,
+    # #     communication_state_changed_callback: unittest.mock.Mock,
+    # #     component_state_changed_callback:unittest.mock.Mock,
+    # #     mock_subrack,
+    # # )->None:
+    # #     #overwrite the mocked tile subrack proxy
+    # #     mock_tile_component_manager_with_injected_tpm_component_manager._subrack_proxy = mock_subrack
 
+    # #     mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._start_communicating_with_subrack()
 
+    # #     mock_tile_component_manager_with_injected_tpm_component_manager._tile_orchestrator._turn_tpm_on()
 
-    #     task_callback_standby = MockCallable()
-    #     mock_tile_component_manager_with_injected_tpm_component_manager.standby(task_callback = task_callback_standby)
+    # #     task_callback_standby = MockCallable()
+    # #     mock_tile_component_manager_with_injected_tpm_component_manager.standby(task_callback = task_callback_standby)
 
-    #     _, kwargs = task_callback_standby.get_next_call()
-    #     assert kwargs["status"] == TaskStatus.QUEUED
+    # #     _, kwargs = task_callback_standby.get_next_call()
+    # #     assert kwargs["status"] == TaskStatus.QUEUED
 
-    #     _, kwargs = task_callback_standby.get_next_call()
-    #     assert kwargs["status"] == TaskStatus.IN_PROGRESS
+    # #     _, kwargs = task_callback_standby.get_next_call()
+    # #     assert kwargs["status"] == TaskStatus.IN_PROGRESS
 
-    #     _, kwargs = task_callback_standby.get_next_call()
-    #     assert kwargs["status"] == TaskStatus.FAILED
-
-
+    # #     _, kwargs = task_callback_standby.get_next_call()
+    # #     assert kwargs["status"] == TaskStatus.FAILED
 
 
 class TestDynamicSimulatorCommon:
@@ -1089,8 +1107,6 @@ class TestDynamicSimulatorCommon:
         # {"power_state": PowerState.ON})
         # tile.power_state = PowerState.ON
         assert getattr(tile, attribute_name) == expected_value
-    
-
 
 
 class TestDriverCommon:
@@ -1283,10 +1299,6 @@ class TestDriverCommon:
         # "Connected to Tile"
         assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
 
-
-
-
-
         # assert getattr(switching_tpm_component_manager, "test_mode") == TestMode.TEST
         # assert mock_tile_component_manager_with_injected_tpm_component_manager.test_mode == TestMode.TEST
 
@@ -1315,19 +1327,19 @@ class TestDriverCommon:
 
 #         def __init__(
 #             self: TestTileComponentManagerWithPatchedTpmComponentManager,
-#             initial_simulation_mode: SimulationMode, 
-#             initial_test_mode: TestMode, 
+#             initial_simulation_mode: SimulationMode,
+#             initial_test_mode: TestMode,
 #             logger: logging.Logger,
 #             max_workers: int,
 #             tile_id: int,
-#             tpm_ip: str, 
-#             tpm_cpld_port: int, 
-#             tpm_version: str, 
-#             subrack_fqdn: str, 
-#             subrack_tpm_id: int, 
+#             tpm_ip: str,
+#             tpm_cpld_port: int,
+#             tpm_version: str,
+#             subrack_fqdn: str,
+#             subrack_tpm_id: int,
 #             communication_state_changed_callback: Callable[[CommunicationStatus], None],
 #             component_state_changed_callback: Callable[[bool], None],
-#             _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None, 
+#             _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
 #         ) -> None:
 #             """
 #             Initialise a new patched TPM driver instance.
@@ -1358,7 +1370,7 @@ class TestDriverCommon:
 #             #overwrite the _tpm_component_manager with a mock
 #             self._tpm_component_manager = switching_tpm_component_manager
 
-    
+
 #     @pytest.fixture()
 #     def patched_tile_component_manager(
 #         self: TestTileComponentManagerWithPatchedTpmComponentManager,

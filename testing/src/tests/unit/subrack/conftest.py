@@ -322,9 +322,11 @@ def subrack_driver(
         component_state_changed_callback,
     )
 
+
 @pytest.fixture()
 def component_manager_with_upstream_power_supply():
     return unittest.mock.MagicMock
+
 
 @pytest.fixture()
 def subrack_component_manager_mocked_upstream_power(
@@ -356,7 +358,9 @@ def subrack_component_manager_mocked_upstream_power(
 
     :return: an subrack component manager in the specified simulation mode.
     """
-    ComponentManagerWithUpstreamPowerSupply = component_manager_with_upstream_power_supply
+    ComponentManagerWithUpstreamPowerSupply = (
+        component_manager_with_upstream_power_supply
+    )
     return SubrackComponentManager(
         SimulationMode.TRUE,
         logger,
@@ -367,6 +371,7 @@ def subrack_component_manager_mocked_upstream_power(
         component_state_changed_callback,
         initial_power_state,
     )
+
 
 @pytest.fixture()
 def subrack_component_manager(

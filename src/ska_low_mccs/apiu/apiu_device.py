@@ -391,7 +391,7 @@ class MccsAPIU(SKABaseDevice):
             """
             Stateless hook for device IsAntennaOn() command.
 
-            :param argin: the logical antenna id of the antenna to power up
+            :param args: the logical antenna id of the antenna to power up
             :param kwargs: keyword args to the component manager method
 
             :return: True if the antenna is on.

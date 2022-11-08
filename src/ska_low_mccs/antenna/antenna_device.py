@@ -310,6 +310,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return SimulationMode.FALSE
 
+    # pylint: disable=arguments-differ
     @simulationMode.write  # type: ignore [no-redef]
     def simulationMode(self: MccsAntenna, value: SimulationMode) -> None:
         """

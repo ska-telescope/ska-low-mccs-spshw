@@ -103,14 +103,27 @@ class TpmDriver(MccsComponentManager):
         """
         self.logger = logger
         self._hardware_lock = threading.Lock()
-        self._is_programmed = False
-        self._is_beamformer_running = False
-        self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
         self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
         self._station_id = 0
+        self._firmware_name = self.FIRMWARE_NAME
+        self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
+        self._ip = ip
+        self._port = port
+        self._tpm_status = TpmStatus.UNKNOWN
+        # Configuration table cache
+        self._beamformer_table = [
+            [64, 0, 0, 0, 0, 0, 0, 0]
+        ] * 48  # empty beamformer table
+        self._channelizer_truncation = [3] * 512
+        self._csp_rounding = [3] * 384
+        self._forty_gb_core_list: list = []
+        self._preadu_levels = [0] * 32
+        self._static_delays = [0] * 32
+        # Hardware register cache. Updated by polling thread
+        self._is_programmed = False
+        self._is_beamformer_running = False
         self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
         self._board_temperature = self.BOARD_TEMPERATURE
         self._fpga1_temperature = self.FPGA1_TEMPERATURE
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
@@ -118,19 +131,17 @@ class TpmDriver(MccsComponentManager):
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._current_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
-        self._firmware_name = self.FIRMWARE_NAME
-        self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._test_generator_active = False
         self._arp_table: dict[int, list[int]] = {}
         self._fpgas_time = self.FPGAS_TIME
         self._fpga_current_frame = 0
         self._fpga_sync_time = 0
-        self._address_map: dict = {}
-        self._forty_gb_core_list: list = []
-        self._register_map = copy.deepcopy(self.REGISTER_MAP)
-        self._ip = ip
-        self._port = port
-        self._tpm_status = TpmStatus.UNKNOWN
+        self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+        self._pps_present = True
+        self._clock_present = True
+        self._sysref_present = True
+        self._pll_locked = True
+        # Hardware
         self._tpm_version: str | None  # type hint only
         if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
             self.logger.warning(
@@ -357,6 +368,17 @@ class TpmDriver(MccsComponentManager):
             else:
                 self.logger.debug("tpm_driver: tpm_status uses current value")
 
+    def _check_channeliser_started(self: TpmDriver) -> bool:
+        """
+        Check that the channeliser is correctly generating samples.
+
+        :return: channelised stream data valid flag
+        """
+        return (
+            self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"] == 1
+            and self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"] == 1
+        )
+
     def get_tile_id(self: TpmDriver) -> int:
         """
         Get the tile ID stored in the FPGA.
@@ -513,18 +535,6 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
-
-    def cpld_flash_write(self: TpmDriver, bitfile: bytes) -> None:
-        """
-        Flash a program to the tile's CPLD (complex programmable logic device).
-
-        :param bitfile: the program to be flashed
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmDriver: program_cpld")
-        raise NotImplementedError
 
     def _initialise(
         self: TpmDriver,
@@ -688,18 +698,6 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
         return self._voltage
-
-    @property
-    def current(self: TpmDriver) -> float:
-        """
-        Return the current of the TPM.
-
-        :return: the current of the TPM
-        """
-        self.logger.debug("TpmDriver: current")
-        # not implemented
-        self._current = 1.0
-        return self._current
 
     @property
     def fpga1_temperature(self: TpmDriver) -> float:
@@ -880,7 +878,7 @@ class TpmDriver(MccsComponentManager):
         return reglist
 
     def read_register(
-        self: TpmDriver, register_name: str, nb_read: int, offset: int, device: int
+        self: TpmDriver, register_name: str, nb_read: int, offset: int
     ) -> list[int]:
         """
         Read the values in a named register.
@@ -888,25 +886,17 @@ class TpmDriver(MccsComponentManager):
         :param register_name: name of the register
         :param nb_read: number of values to read
         :param offset: offset from which to start reading
-        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2, other = none
 
         :return: values read from the register
         """
         assert self.tile.tpm is not None  # for the type checker
-        if device == 1:
-            devname = "fpga1."
-        elif device == 2:
-            devname = "fpga2."
-        else:
-            devname = ""
-        regname = devname + register_name
-        if len(self.tile.tpm.find_register(regname)) == 0:
+        if len(self.tile.tpm.find_register(register_name)) == 0:
             with self._hardware_lock:
-                self.logger.error("Register '" + regname + "' not present")
+                self.logger.error("Register '" + register_name + "' not present")
             value = None
             return []
         else:
-            value = cast(Any, self.tile[regname])
+            value = cast(Any, self.tile[register_name])
         if type(value) != list:
             lvalue = [value]
         else:
@@ -916,7 +906,7 @@ class TpmDriver(MccsComponentManager):
         return lvalue[nmin:nmax]
 
     def write_register(
-        self: TpmDriver, register_name: str, values: list[Any], offset: int, device: int
+        self: TpmDriver, register_name: str, values: list[Any], offset: int
     ) -> None:
         """
         Read the values in a register.
@@ -924,20 +914,12 @@ class TpmDriver(MccsComponentManager):
         :param register_name: name of the register
         :param values: values to write
         :param offset: offset from which to start reading. Is this redundant???????
-        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
         """
-        if device == 1:
-            devname = "fpga1."
-        elif device == 2:
-            devname = "fpga2."
-        else:
-            devname = ""
-        regname = devname + register_name
         assert self.tile.tpm is not None  # for the type checker
-        if len(self.tile.tpm.find_register(regname)) == 0:
-            self.logger.error("Register '" + regname + "' not present")
+        if len(self.tile.tpm.find_register(register_name)) == 0:
+            self.logger.error("Register '" + register_name + "' not present")
         else:
-            self.tile[regname] = values
+            self.tile.tpm[register_name] = values
 
     def read_address(self: TpmDriver, address: int, nvalues: int) -> list[int]:
         """
@@ -980,7 +962,7 @@ class TpmDriver(MccsComponentManager):
         for value in values:
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
-                    self.tile[current_address] = value
+                    self.tile.tpm[current_address] = value
                 except Exception:
                     err_flag = True
                 current_address = current_address + 4
@@ -1111,18 +1093,44 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def set_channeliser_truncation(self: TpmDriver, array: list[list[int]]) -> None:
+    @property
+    def channeliser_truncation(self: TpmDriver) -> list[int]:
+        """
+        Read the cached value for the channeliser truncation.
+
+        :return: cached value for the channeliser truncation
+        """
+        return self._channeliser_truncation
+
+    @channeliser_truncation.write
+    def channeliser_truncation(self: TpmDriver, truncation: int | list[int]):
+        """
+        Set the channeliser truncation.
+
+        :param truncation: number of LS bits discarded after channelisation.
+            Either a signle value or a list of one value per physical frequency channel
+            0 means no bits discarded, up to 7. 3 is the correct value for a uniform
+            white noise.
+        """
+        if type(truncation) == int:
+            self.channeliser_truncation = [truncation] * 512
+        elif type(truncation) == list[int]:
+            self.channeliser_truncation = truncation
+        self.set_channeliser_truncation(self._channeliser_truncation)
+
+    def set_channeliser_truncation(self: TpmDriver, array: list[int]) -> None:
         """
         Set the channeliser coefficients to modify the bandpass.
 
-        :param array: an N * M numpy.array, where N is the number of input
-            channels, and M is the number of frequency channels.
+        :param array: list with M values, one for each of the
+            frequency channels. Same truncation is applied to the corresponding
+            frequency channels in all inputs.
         """
         self.logger.debug("TpmDriver: set_channeliser_truncation")
-        [nb_chan, nb_freq] = np.shape(array)
-        for chan in range(nb_chan):
-            trunc = [0] * 512
-            trunc[0:nb_freq] = array[chan]
+        nb_freq = np.shape(array)
+        trunc = [0] * 512
+        trunc[0:nb_freq] = array
+        for chan in range(32):
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
                     self.tile.set_channeliser_truncation(trunc, chan)
@@ -1131,6 +1139,166 @@ class TpmDriver(MccsComponentManager):
                 self._hardware_lock.release()
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+
+    @property
+    def static_delays(self: TpmDriver) -> list[float]:
+        """
+        Read the cached value for the static delays, in sample.
+
+        :return: static delay, in samples one per TPM input
+        """
+        return self._static_delays
+
+    @static_delays.write
+    def static_delays(self: TpmDriver, delays: list[float]):
+        """
+        Set the static delays.
+
+        :param delays: Delay in nanoseconds, nominal = 0, positive delay adds
+            delay to the signal stream
+
+        :param delays: Static zenith delays, one per input channel
+        """
+        self._static_delays = delays
+        self.set_time_delays(delays)
+
+    @property
+    def csp_rounding(self: TpmDriver) -> list[int]:
+        """
+        Read the cached value for the final rounding in the CSP samples.
+
+        Need to be specfied only for the last tile
+        :return: Final rounding for the CSP samples. Up to 384 values
+        """
+        return self._csp_rounding
+
+    @csp_rounding.write
+    def csp_rounding(self: TpmDriver, rounding: list[int] | int):
+        """
+        Set the final rounding in the CSP samples, one value per beamformer channel.
+
+        :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+        """
+        if type(rounding) == int:
+            self._csp_rounding = [rounding] * 384
+        else:
+            self._csp_rounding = rounding
+        self.set_csp_rounding(rounding)
+
+    @property
+    def preadu_levels(self: TpmDriver) -> list[float]:
+        """
+        Get preadu levels in dB.
+
+        :return: cached values of Preadu attenuation level in dB
+        """
+        return self._preadu_levels
+
+    @preadu_levels.write
+    def preadu_levels(self: TpmDriver, levels: list[float]):
+        """
+        Set preadu levels in dB.
+
+        :param levels: Preadu attenuation levels in dB
+        """
+        self._preadu_levels = levels
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self._set_preadu_levels(levels)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+
+    def _set_preadu_levels(self: TpmDriver, levels: list[int]):
+        self.logger.debug("TpmDriver: set_preadu_levels")
+        # TODO This should be moved to pyaavs Tile
+        preadu_signal_map = {
+            0: {"preadu_id": 1, "channel": 14},
+            1: {"preadu_id": 1, "channel": 15},
+            2: {"preadu_id": 1, "channel": 12},
+            3: {"preadu_id": 1, "channel": 13},
+            4: {"preadu_id": 1, "channel": 10},
+            5: {"preadu_id": 1, "channel": 11},
+            6: {"preadu_id": 1, "channel": 8},
+            7: {"preadu_id": 1, "channel": 9},
+            8: {"preadu_id": 0, "channel": 0},
+            9: {"preadu_id": 0, "channel": 1},
+            10: {"preadu_id": 0, "channel": 2},
+            11: {"preadu_id": 0, "channel": 3},
+            12: {"preadu_id": 0, "channel": 4},
+            13: {"preadu_id": 0, "channel": 5},
+            14: {"preadu_id": 0, "channel": 6},
+            15: {"preadu_id": 0, "channel": 7},
+            16: {"preadu_id": 1, "channel": 6},
+            17: {"preadu_id": 1, "channel": 7},
+            18: {"preadu_id": 1, "channel": 4},
+            19: {"preadu_id": 1, "channel": 5},
+            20: {"preadu_id": 1, "channel": 2},
+            21: {"preadu_id": 1, "channel": 3},
+            22: {"preadu_id": 1, "channel": 0},
+            23: {"preadu_id": 1, "channel": 1},
+            24: {"preadu_id": 0, "channel": 8},
+            25: {"preadu_id": 0, "channel": 9},
+            26: {"preadu_id": 0, "channel": 10},
+            27: {"preadu_id": 0, "channel": 11},
+            28: {"preadu_id": 0, "channel": 12},
+            29: {"preadu_id": 0, "channel": 13},
+            30: {"preadu_id": 0, "channel": 14},
+            31: {"preadu_id": 0, "channel": 15},
+        }
+        # Get current preadu settings
+        for preadu in self.tile.tpm.tpm_preadu:
+            preadu.select_low_passband()
+            preadu.read_configuration()
+
+        for channel in list(preadu_signal_map.keys()):
+            # Apply attenuation
+            pid = preadu_signal_map[channel]["preadu_id"]
+            channel = preadu_signal_map[channel]["channel"]
+            attenuation = int(round(levels[channel]))
+            self.tile.tpm.tpm_preadu[pid].set_attenuation(attenuation, [channel])
+
+        for preadu in self.tile.tpm.tpm_preadu:
+            preadu.write_configuration()
+
+    # TODO connect all these with real hardware probes (in poll loop)
+    @property
+    def pps_present(self: TpmDriver) -> bool:
+        """
+        Check if PPS signal is present.
+
+        :return: True if PPS is present. Checked in poll loop, cached
+        """
+        return self._pps_present
+
+    @property
+    def clock_present(self: TpmDriver) -> bool:
+        """
+        Check if 10 MHz clock signal is present.
+
+        :return: True if 10 MHz clock is present. Checked in poll loop, cached
+        """
+        return self._clock_present
+
+    @property
+    def sysref_present(self: TpmDriver) -> bool:
+        """
+        Check if SYSREF signal is present.
+
+        :return: True if SYSREF is present. Checked in poll loop, cached
+        """
+        return self._sysref_present
+
+    @property
+    def pll_locked(self: TpmDriver) -> bool:
+        """
+        Check if ADC clock PLL is locked.
+
+        :return: True if PLL is locked. Checked in poll loop, cached
+        """
+        return self._pll_locked
 
     def set_beamformer_regions(self: TpmDriver, regions: list[int]) -> None:
         """
@@ -1169,7 +1337,12 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: initialise_beamformer")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.initialise_beamformer(start_channel, nof_channels)
+                self.tile.tpm.station_beamf[0].defineChannelTable(
+                    [[start_channel, nof_channels, 0]]
+                )
+                self.tile.tpm.station_beamf[1].defineChannelTable(
+                    [[start_channel, nof_channels, 0]]
+                )
                 self.tile.set_first_last_tile(is_first, is_last)
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1202,52 +1375,6 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def load_calibration_curve(
-        self: TpmDriver, antenna: int, beam: int, calibration_coefficients: list[int]
-    ) -> None:
-        """
-        Load calibration curve.
-
-        This is the frequency dependent response for a single
-        antenna and beam, as a function of frequency. It will be combined together with
-        tapering coefficients and beam angles by ComputeCalibrationCoefficients, and
-        made active by SwitchCalibrationBank. The calibration coefficients do not
-        include the geometric delay.
-
-        :param antenna: the antenna to which the coefficients apply
-        :param beam: the beam to which the coefficients apply
-        :param calibration_coefficients: a bidirectional complex array of
-            coefficients, flattened into a list
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmDriver: load_calibration_curve")
-        raise NotImplementedError
-
-    def load_beam_angle(self: TpmDriver, angle_coefficients: list[float]) -> None:
-        """
-        Load the beam angle.
-
-        :param angle_coefficients: list containing angle coefficients for each
-            beam
-        """
-        self.logger.debug("TpmDriver: load_beam_angle")
-        self.tile.load_beam_angle(angle_coefficients)
-
-    def load_antenna_tapering(
-        self: TpmDriver, beam: int, tapering_coefficients: list[float]
-    ) -> None:
-        """
-        Loat the antenna tapering coefficients.
-
-        :param beam: the beam to which the coefficients apply
-        :param tapering_coefficients: list of tapering coefficients for each
-            antenna
-        """
-        self.logger.debug("TpmDriver: load_antenna_tapering")
-        self.tile.load_antenna_tapering(beam, tapering_coefficients)
-
     def switch_calibration_bank(
         self: TpmDriver, switch_time: Optional[int] = 0
     ) -> None:
@@ -1270,25 +1397,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def compute_calibration_coefficients(self: TpmDriver) -> None:
-        """
-        Compute the calibration coefficients.
-
-        Calculate from previously specified gain curves, tapering
-        weights and beam angles, load them in the hardware. It must be
-        followed by switch_calibration_bank() to make these active.
-        """
-        self.logger.debug("TpmDriver: compute_calibration_coefficients")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self.tile.compute_calibration_coefficients()
-            except Exception:
-                self.logger.warning("TpmDriver: Tile access failed")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
-
-    def set_pointing_delay(
+    def load_pointing_delay(
         self: TpmDriver, delay_array: list[list[float]], beam_index: int
     ) -> None:
         """
@@ -1315,7 +1424,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def load_pointing_delay(self: TpmDriver, load_time: int) -> None:
+    def apply_pointing_delay(self: TpmDriver, load_time: int) -> None:
         """
         Load the pointing delay at a specified time.
 
@@ -1332,7 +1441,11 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def start_beamformer(
-        self: TpmDriver, start_time: int = 0, duration: int = -1
+        self: TpmDriver,
+        start_time: int = 0,
+        duration: int = -1,
+        subarray_beam_id: int = 1,
+        scan_id: int = 0,
     ) -> None:
         """
         Start the beamformer at the specified time.
@@ -1341,8 +1454,16 @@ class TpmDriver(MccsComponentManager):
             defaults to 0
         :param duration: duration for which to run the beamformer,
             defaults to -1 (run forever)
+        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param scan_id: ID of the scan which is started.
         """
         self.logger.debug("TpmDriver: Start beamformer")
+        if subarray_beam_id != -1:
+            self.logger.warning(
+                "start_beamformer: separate start for different subarrays not supported"
+            )
+        if scan_id != 0:
+            self.logger.warning("start_beamformer: scan ID value ignored")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 if self.tile.start_beamformer(start_time, duration):
@@ -1436,7 +1557,47 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def send_raw_data(
+    def send_data_samples(self: TpmDriver, params: dict) -> None:
+        """
+        Front end for send_xxx_data methods.
+
+        :param params: dictionary with appropriate
+        """
+        # Check for type of data to be sent to LMC
+        data_type = params.get("data_type", None)
+        timestamp = params.get("timestamp", 0)
+        if timestamp == 0:
+            seconds = params.get("seconds", 0.2)
+        else:
+            seconds = 0.0
+
+        if data_type == "raw":
+            sync = params.get("sync", False)
+            self._send_raw_data(sync, timestamp, seconds)
+        elif data_type == "channel":
+            n_samples = params.get("n_samples", 1024)
+            first_channel = params.get("first_channel", 0)
+            last_channel = params.get("last_channel", 511)
+            self._send_channelised_data(
+                n_samples, first_channel, last_channel, timestamp, seconds
+            )
+        elif data_type == "channel_continuous":
+            n_samples = params.get("n_samples", 128)
+            channel_id = params.get("channel_id", 64)
+            self._send_channelised_data_continuous(
+                channel_id, n_samples, timestamp, seconds
+            )
+        elif data_type == "narrowband":
+            n_samples = params.get("n_samples", 1024)
+            frequency = params.get("frequency", 0.0)
+            round_bits = params.get("round_bits", 3)
+            self._send_channelised_data_narrowband(
+                frequency, round_bits, n_samples, timestamp, seconds
+            )
+        elif data_type == "beam":
+            self._send_beam_data(timestamp, seconds)
+
+    def _send_raw_data(
         self: TpmDriver,
         sync: bool = False,
         timestamp: Optional[str] = None,
@@ -1459,7 +1620,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def send_channelised_data(
+    def _send_channelised_data(
         self: TpmDriver,
         number_of_samples: int = 1024,
         first_channel: int = 0,
@@ -1492,7 +1653,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def send_channelised_data_continuous(
+    def _send_channelised_data_continuous(
         self: TpmDriver,
         channel_id: int,
         number_of_samples: int = 1024,
@@ -1527,7 +1688,45 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def send_beam_data(
+    def _send_channelised_data_narrowband(
+        self: TpmDriver,
+        frequency: int,
+        round_bits: int,
+        number_of_samples: int = 128,
+        wait_seconds: int = 0,
+        timestamp: Optional[str] = None,
+        seconds: float = 0.2,
+    ) -> None:
+        """
+        Continuously send channelised data from a single channel.
+
+        This is a special mode used for UAV campaigns.
+
+        :param frequency: sky frequency to transmit
+        :param round_bits: which bits to round
+        :param number_of_samples: number of spectra to send, defaults to 128
+        :param wait_seconds: wait time before sending data, defaults to 0
+        :param timestamp: when to start, defaults to None
+        :param seconds: when to synchronise, defaults to 0.2
+        """
+        self.logger.debug("TpmDriver: send_channelised_data_narrowband")
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.send_channelised_data_narrowband(
+                    frequency,
+                    round_bits,
+                    number_of_samples,
+                    wait_seconds,
+                    timestamp,
+                    seconds,
+                )
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+
+    def _send_beam_data(
         self: TpmDriver, timestamp: Optional[str] = None, seconds: float = 0.2
     ) -> None:
         """
@@ -1644,16 +1843,16 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def set_csp_rounding(self: TpmDriver, rounding: float) -> None:
+    def set_csp_rounding(self: TpmDriver, rounding: list[int]) -> None:
         """
         Set output rounding for CSP.
 
-        :param rounding: the output rounding
+        :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
         self.logger.debug("TpmDriver: set_csp_rounding")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.set_csp_rounding(int(rounding))
+                self.tile.set_csp_rounding(rounding[0])
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
@@ -1789,44 +1988,6 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
         return request
-
-    def send_channelised_data_narrowband(
-        self: TpmDriver,
-        frequency: int,
-        round_bits: int,
-        number_of_samples: int = 128,
-        wait_seconds: int = 0,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
-    ) -> None:
-        """
-        Continuously send channelised data from a single channel.
-
-        This is a special mode used for UAV campaigns.
-
-        :param frequency: sky frequency to transmit
-        :param round_bits: which bits to round
-        :param number_of_samples: number of spectra to send, defaults to 128
-        :param wait_seconds: wait time before sending data, defaults to 0
-        :param timestamp: when to start, defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-        """
-        self.logger.debug("TpmDriver: send_channelised_data_narrowband")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self.tile.send_channelised_data_narrowband(
-                    frequency,
-                    round_bits,
-                    number_of_samples,
-                    wait_seconds,
-                    timestamp,
-                    seconds,
-                )
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -1980,20 +2141,3 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
-
-    @staticmethod
-    def calculate_delay(
-        current_delay: float, current_tc: int, ref_lo: float, ref_hi: float
-    ) -> None:
-        """
-        Calculate the delay.
-
-        :param current_delay: the current delay
-        :param current_tc: current phase register terminal count
-        :param ref_lo: low reference
-        :param ref_hi: high reference
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        raise NotImplementedError

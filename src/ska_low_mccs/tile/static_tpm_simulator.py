@@ -340,7 +340,7 @@ class StaticTileSimulator(StaticTpmSimulator):
         Return a 40G configuration.
 
         :param core_id: id of the core for which a configuration is to
-            be return. Defaults to -1, in which case all cores
+            be returned. Defaults to -1, in which case all core
             configurations are returned, defaults to -1
         :param arp_table_entry: ARP table entry to use
 

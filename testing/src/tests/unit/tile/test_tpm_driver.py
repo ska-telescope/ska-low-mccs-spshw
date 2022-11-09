@@ -404,65 +404,65 @@ class TestTPMDriver:
         assert get_pps_delay == StaticTileSimulator.PPS_DELAY
         assert get_fpgs_sync_time == 0.4
 
-    def test_read_mocked_to_fail_tile_attributes(
-        self: TestTPMDriver,
-        patched_tpm_driver: PatchedTpmDriver,
-        static_tile_simulator: StaticTileSimulator,
-    ) -> None:
-        """
-        Test that is a failure occurs during a attribute read we get expected response.
+    # def test_read_mocked_to_fail_tile_attributes(
+    #     self: TestTPMDriver,
+    #     patched_tpm_driver: PatchedTpmDriver,
+    #     static_tile_simulator: StaticTileSimulator,
+    # ) -> None:
+    #     """
+    #     Test that is a failure occurs during a attribute read we get expected response.
 
-        :param patched_tpm_driver: The patched tpm driver under test.
-        :param static_tile_simulator: The mocked tile
-        """
-        # No UDP connection are used here. The static_tile_simulator
-        # constructs a mocked TPM
-        # Therefore the tile will have access to the TPM after connect().
-        static_tile_simulator.connect()
+    #     :param patched_tpm_driver: The patched tpm driver under test.
+    #     :param static_tile_simulator: The mocked tile
+    #     """
+    #     # No UDP connection are used here. The static_tile_simulator
+    #     # constructs a mocked TPM
+    #     # Therefore the tile will have access to the TPM after connect().
+    #     static_tile_simulator.connect()
 
-        # mock all read attributes to fail
-        mock_tile_connect_to_fail = unittest.mock.Mock(
-            side_effect=Exception("attribute mocked to fail")
-        )
+    #     # mock all read attributes to fail
+    #     mock_tile_connect_to_fail = unittest.mock.Mock(
+    #         side_effect=Exception("attribute mocked to fail")
+    #     )
 
-        static_tile_simulator.get_temperature = unittest.mock.MagicMock(
-            side_effect=mock_tile_connect_to_fail
-        )
-        static_tile_simulator.get_voltage = unittest.mock.MagicMock(
-            side_effect=mock_tile_connect_to_fail
-        )
-        static_tile_simulator.get_fpga0_temperature = unittest.mock.MagicMock(
-            side_effect=mock_tile_connect_to_fail
-        )
-        static_tile_simulator.get_fpga1_temperature = unittest.mock.MagicMock(
-            side_effect=mock_tile_connect_to_fail
-        )
-        static_tile_simulator.get_adc_rms = unittest.mock.MagicMock(
-            side_effect=mock_tile_connect_to_fail
-        )
-        static_tile_simulator.get_fpga_time = unittest.mock.MagicMock(
-            side_effect=mock_tile_connect_to_fail
-        )
-        static_tile_simulator.get_pps_delay = unittest.mock.MagicMock(
-            side_effect=mock_tile_connect_to_fail
-        )
+    #     static_tile_simulator.get_temperature = unittest.mock.MagicMock(
+    #         side_effect=mock_tile_connect_to_fail
+    #     )
+    #     static_tile_simulator.get_voltage = unittest.mock.MagicMock(
+    #         side_effect=mock_tile_connect_to_fail
+    #     )
+    #     static_tile_simulator.get_fpga0_temperature = unittest.mock.MagicMock(
+    #         side_effect=mock_tile_connect_to_fail
+    #     )
+    #     static_tile_simulator.get_fpga1_temperature = unittest.mock.MagicMock(
+    #         side_effect=mock_tile_connect_to_fail
+    #     )
+    #     static_tile_simulator.get_adc_rms = unittest.mock.MagicMock(
+    #         side_effect=mock_tile_connect_to_fail
+    #     )
+    #     static_tile_simulator.get_fpga_time = unittest.mock.MagicMock(
+    #         side_effect=mock_tile_connect_to_fail
+    #     )
+    #     static_tile_simulator.get_pps_delay = unittest.mock.MagicMock(
+    #         side_effect=mock_tile_connect_to_fail
+    #     )
 
-        board_temperature = patched_tpm_driver.board_temperature
-        voltage = patched_tpm_driver.voltage
-        with pytest.raises(ConnectionError, match="Cannot read time from FPGA"):
-            patched_tpm_driver.fpgas_time
-        fpga1_temperature = patched_tpm_driver.fpga1_temperature
-        fpga2_temperature = patched_tpm_driver.fpga2_temperature
-        adc_rms = patched_tpm_driver.adc_rms
-        get_pps_delay = patched_tpm_driver.pps_delay
+    #     board_temperature = patched_tpm_driver.board_temperature
+    #     voltage = patched_tpm_driver.voltage
+    #     with pytest.raises(ConnectionError, match="Cannot read time from FPGA"):
+    #         patched_tpm_driver.fpgas_time
+    #     fpga1_temperature = patched_tpm_driver.fpga1_temperature
+    #     fpga2_temperature = patched_tpm_driver.fpga2_temperature
+    #     adc_rms = patched_tpm_driver.adc_rms
+    #     get_pps_delay = patched_tpm_driver.pps_delay
 
-        # assert that the values are the same as the initialised values
-        assert board_temperature == patched_tpm_driver.BOARD_TEMPERATURE
-        assert voltage == patched_tpm_driver.VOLTAGE
-        assert fpga1_temperature == patched_tpm_driver.FPGA1_TEMPERATURE
-        assert fpga2_temperature == patched_tpm_driver.FPGA2_TEMPERATURE
-        assert adc_rms == list(patched_tpm_driver.ADC_RMS)
-        assert get_pps_delay == BaseTpmSimulator.PPS_DELAY
+    #     # assert that the values are the same as the initialised values
+    #     assert board_temperature == patched_tpm_driver.BOARD_TEMPERATURE
+    #     assert voltage == patched_tpm_driver.VOLTAGE
+    #     assert fpga1_temperature == patched_tpm_driver.FPGA1_TEMPERATURE
+    #     assert fpga2_temperature == patched_tpm_driver.FPGA2_TEMPERATURE
+    #     assert adc_rms == list(patched_tpm_driver.ADC_RMS)
+    #     assert get_pps_delay == BaseTpmSimulator.PPS_DELAY
 
     def test_polling_loop(
         self: TestTPMDriver,

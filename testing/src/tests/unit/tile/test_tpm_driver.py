@@ -19,7 +19,6 @@ from ska_control_model import CommunicationStatus, SimulationMode, TaskStatus
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs.tile import StaticTileSimulator, TpmDriver
-from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 
 # from .static_tile_simulator import StaticTileSimulator
 from ska_low_mccs.tile.tpm_status import TpmStatus
@@ -410,7 +409,7 @@ class TestTPMDriver:
     #     static_tile_simulator: StaticTileSimulator,
     # ) -> None:
     #     """
-    #     Test that is a failure occurs during a attribute read we get expected response.
+    #     Test that a failure occurs during a attribute read we get expected response.
 
     #     :param patched_tpm_driver: The patched tpm driver under test.
     #     :param static_tile_simulator: The mocked tile

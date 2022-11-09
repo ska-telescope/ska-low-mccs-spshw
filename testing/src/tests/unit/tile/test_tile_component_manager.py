@@ -829,14 +829,14 @@ class TestStaticSimulatorCommon:
         switching_tpm_component_manager: SwitchingTpmComponentManager,
     ) -> None:
         """
-        Test that when we changes to the test mode on the tile are propagated to TPM.
+        Test that changes made to the Tiles test mode are propagated to TPM.
 
         :param mock_tile_component_manager_with_tpm_manager_fixture: the
-            mocked tile with a mocked tpm_component manager injected.
-        :param switching_tpm_component_manager: the mocked tpm injected.
+            mocked tile with a mocked TPM manager.
+        :param switching_tpm_component_manager: the mocked TPM manager.
 
         Test that:
-        * Test that when we set test mode on the TileComponentManager this is
+        * When we set test mode on the TileComponentManager this is
         propagated to the TPMComponentManager.
         """
         mock_tile_component_manager_with_tpm_manager_fixture.test_mode = TestMode.TEST
@@ -875,9 +875,6 @@ class TestStaticSimulatorCommon:
         * when the tile orchestrator command the tile to stop communicating
         the power state is none and fault is none
         """
-        # tile orchestrator requests to connect to TPM
-        # mock_tile_component_manager_with_tpm_manager_fixture._tile_orchestrator._start_communicating_with_tpm()
-
         # sanity check of initial conditions
         assert switching_tpm_component_manager.simulation_mode == SimulationMode.TRUE
         assert switching_tpm_component_manager.test_mode == TestMode.TEST

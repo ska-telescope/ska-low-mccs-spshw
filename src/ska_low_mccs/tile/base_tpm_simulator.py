@@ -512,7 +512,7 @@ class BaseTpmSimulator(ObjectComponent):
         for item in self._forty_gb_core_list:
             if item.get("core_id") == core_id:
                 return [item]
-        return []
+        return
 
     @property
     def arp_table(self: BaseTpmSimulator) -> dict[int, list[int]]:

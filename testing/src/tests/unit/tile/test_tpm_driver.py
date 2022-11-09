@@ -386,14 +386,14 @@ class TestTPMDriver:
         static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
         static_tile_simulator.tpm._fpga_current_frame = 2
 
-        board_temperature = getattr(patched_tpm_driver, "board_temperature")
-        voltage = getattr(patched_tpm_driver, "voltage")
-        fpga1_temperature = getattr(patched_tpm_driver, "fpga1_temperature")
-        fpga2_temperature = getattr(patched_tpm_driver, "fpga2_temperature")
-        adc_rms = getattr(patched_tpm_driver, "adc_rms")
-        get_fpga_time = getattr(patched_tpm_driver, "fpgas_time")
-        get_pps_delay = getattr(patched_tpm_driver, "pps_delay")
-        get_fpgs_sync_time = getattr(patched_tpm_driver, "fpga_sync_time")
+        board_temperature = patched_tpm_driver.board_temperature
+        voltage = patched_tpm_driver.voltage
+        fpga1_temperature = patched_tpm_driver.fpga1_temperature
+        fpga2_temperature = patched_tpm_driver.fpga2_temperature
+        adc_rms = patched_tpm_driver.adc_rms
+        get_fpga_time = patched_tpm_driver.fpgas_time
+        get_pps_delay = patched_tpm_driver.pps_delay
+        get_fpgs_sync_time = patched_tpm_driver.fpga_sync_time
 
         assert board_temperature == StaticTileSimulator.BOARD_TEMPERATURE
         assert voltage == StaticTileSimulator.VOLTAGE
@@ -447,14 +447,14 @@ class TestTPMDriver:
             side_effect=mock_tile_connect_to_fail
         )
 
-        board_temperature = getattr(patched_tpm_driver, "board_temperature")
-        voltage = getattr(patched_tpm_driver, "voltage")
+        board_temperature = patched_tpm_driver.board_temperature
+        voltage = patched_tpm_driver.voltage
         with pytest.raises(ConnectionError, match="Cannot read time from FPGA"):
-            getattr(patched_tpm_driver, "fpgas_time")
-        fpga1_temperature = getattr(patched_tpm_driver, "fpga1_temperature")
-        fpga2_temperature = getattr(patched_tpm_driver, "fpga2_temperature")
-        adc_rms = getattr(patched_tpm_driver, "adc_rms")
-        get_pps_delay = getattr(patched_tpm_driver, "pps_delay")
+            patched_tpm_driver.fpgas_time
+        fpga1_temperature = patched_tpm_driver.fpga1_temperature
+        fpga2_temperature = patched_tpm_driver.fpga2_temperature
+        adc_rms = patched_tpm_driver.adc_rms
+        get_pps_delay = patched_tpm_driver.pps_delay
 
         # assert that the values are the same as the initialised values
         assert board_temperature == patched_tpm_driver.BOARD_TEMPERATURE
@@ -545,25 +545,21 @@ class TestTPMDriver:
         :param patched_tpm_driver: The patched tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
-        getattr(patched_tpm_driver, "tpm_status")
-        assert patched_tpm_driver._tpm_status == TpmStatus.UNCONNECTED
+        assert patched_tpm_driver._tpm_status == TpmStatus.UNKNOWN
+        # just used to call update_tpm_status and cover the tpm_status property in test
+
+        assert patched_tpm_driver.tpm_status == TpmStatus.UNCONNECTED
 
         static_tile_simulator.connect()
         patched_tpm_driver.update_communication_state(CommunicationStatus.ESTABLISHED)
-        getattr(patched_tpm_driver, "tpm_status")
-        assert patched_tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
+
+        assert patched_tpm_driver.tpm_status == TpmStatus.UNPROGRAMMED
 
         # reset with connection to TPM
         static_tile_simulator.tpm._is_programmed = True
         patched_tpm_driver._tpm_status = TpmStatus.UNCONNECTED
-        getattr(patched_tpm_driver, "tpm_status")
-        assert patched_tpm_driver._tpm_status == TpmStatus.PROGRAMMED
 
-        # reset tpm_status.
-        # set tile_id of hardware mock to be same as software
-        static_tile_simulator["fpga1.regfile.tpm_id"] = patched_tpm_driver._tile_id
-        patched_tpm_driver._tpm_status = TpmStatus.UNCONNECTED
-        getattr(patched_tpm_driver, "tpm_status")
+        assert patched_tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
     def test_get_tile_id(
         self: TestTPMDriver,
@@ -582,7 +578,7 @@ class TestTPMDriver:
         static_tile_simulator.connect()
         static_tile_simulator.tpm._tile_id = 5
         assert static_tile_simulator.tpm
-        tile_id = getattr(patched_tpm_driver, "get_tile_id")()
+        tile_id = patched_tpm_driver.get_tile_id()
         assert tile_id == 5
 
         # mocked error case
@@ -592,7 +588,7 @@ class TestTPMDriver:
         static_tile_simulator.get_tile_id = unittest.mock.MagicMock(
             side_effect=mock_libraryerror
         )
-        assert getattr(patched_tpm_driver, "get_tile_id")() == 0
+        assert patched_tpm_driver.get_tile_id() == 0
 
     def test_start_acquisition(
         self: TestTPMDriver,
@@ -610,15 +606,27 @@ class TestTPMDriver:
         # Therefore the tile will have access to the TPM after connect().
         static_tile_simulator.connect()
 
-        getattr(patched_tpm_driver, "start_acquisition")()
-        assert patched_tpm_driver.tile._tpm_status == TpmStatus.SYNCHRONISED
+        # get_arp_table is mocked to fail, so start_acquisition should
+        # return false.
+        assert patched_tpm_driver.start_acquisition() is False
 
-        # start_acquisition with failure should return false and not start
-        mock_error = unittest.mock.Mock(side_effect=Exception("mocked to fail"))
         static_tile_simulator.check_arp_table = unittest.mock.MagicMock(
-            side_effect=mock_error
+            return_value=True
         )
-        assert getattr(patched_tpm_driver, "start_acquisition")() is False
+        static_tile_simulator.start_acquisition = unittest.mock.MagicMock(
+            return_value=True
+        )
+        # mocked response from one register other will fail
+        static_tile_simulator["fpga1.dsp_regfile.stream_status.channelizer_vld"] = 1
+        assert patched_tpm_driver.start_acquisition() is False
+        assert patched_tpm_driver._tpm_status == TpmStatus.UNKNOWN
+
+        # mocked response from both register
+        static_tile_simulator["fpga1.dsp_regfile.stream_status.channelizer_vld"] = 1
+        static_tile_simulator["fpga2.dsp_regfile.stream_status.channelizer_vld"] = 1
+
+        assert patched_tpm_driver.start_acquisition() is True
+        assert patched_tpm_driver._tpm_status == TpmStatus.SYNCHRONISED
 
     def test_set_time_delays(
         self: TestTPMDriver,
@@ -640,7 +648,7 @@ class TestTPMDriver:
         static_tile_simulator["fpga1.test_generator.delay_0"] = expected_delay_written
         static_tile_simulator["fpga2.test_generator.delay_0"] = expected_delay_written
 
-        getattr(patched_tpm_driver, "set_time_delays")(expected_delay_written)
+        patched_tpm_driver.set_time_delays(expected_delay_written)
 
         # assert both fpgas have that delay
         assert (
@@ -658,7 +666,7 @@ class TestTPMDriver:
         static_tile_simulator.set_time_delays = unittest.mock.MagicMock(
             side_effect=mock_error
         )
-        getattr(patched_tpm_driver, "set_time_delays")(expected_delay_written)
+        patched_tpm_driver.set_time_delays(expected_delay_written)
 
         assert (
             static_tile_simulator["fpga1.test_generator.delay_0"]
@@ -737,23 +745,37 @@ class TestTPMDriver:
             "src_mac": 0x14109FD4041A,
             "src_ip": "3221226219",
             "src_port": 8080,
-            "dst_ip": "3221226219",
+            "dst_ip": "3221222219",
             "dst_port": 9000,
         }
         patched_tpm_driver.configure_40g_core(**core_dict)
 
-        configuration = patched_tpm_driver.get_40g_configuration(
-            core_id=core_dict.get("core_id")
+        configurations = patched_tpm_driver.get_40g_configuration(
+            core_id=core_dict.get("core_id"),
+            arp_table_entry=core_dict.get("arp_table_entry"),
         )
-
-        assert configuration == [core_dict]
+        for configuration in configurations:
+            assert configuration["core_id"] == core_dict["core_id"]
+            assert configuration["arp_table_entry"] == core_dict["arp_table_entry"]
+            assert configuration["src_mac"] == core_dict["src_mac"]
+            assert configuration["src_port"] == core_dict["src_port"]
+            assert configuration["dst_port"] == core_dict["dst_port"]
+            assert configuration["src_ip"] == "192.0.2.235"
+            assert configuration["dst_ip"] == "192.0.2.235"
 
         # request the configuration without a core_id
         patched_tpm_driver.configure_40g_core(**core_dict2)
-        configuration = patched_tpm_driver.get_40g_configuration()
+        configurations = patched_tpm_driver.get_40g_configuration()
 
         # Is this what is wanted?
-        assert configuration == [core_dict2, core_dict2]
+        for configuration in configurations:
+            assert configuration["core_id"] == core_dict2["core_id"]
+            assert configuration["arp_table_entry"] == core_dict2["arp_table_entry"]
+            assert configuration["src_mac"] == core_dict2["src_mac"]
+            assert configuration["src_port"] == core_dict2["src_port"]
+            assert configuration["dst_port"] == core_dict2["dst_port"]
+            assert configuration["src_ip"] == "192.0.2.235"
+            assert configuration["dst_ip"] == "191.255.243.75"
 
     def test_firmware_avaliable(
         self: TestTPMDriver,
@@ -766,10 +788,10 @@ class TestTPMDriver:
         :param patched_tpm_driver: The patched tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
-        firmware = getattr(patched_tpm_driver, "firmware_available")
+        firmware = patched_tpm_driver.firmware_available
 
         assert firmware == static_tile_simulator.FIRMWARE_LIST
-        firmware_version = getattr(patched_tpm_driver, "firmware_version")
+        firmware_version = patched_tpm_driver.firmware_version
         assert firmware_version == "Ver.1.2 build 0:"
 
     def test_check_programmed(
@@ -778,7 +800,10 @@ class TestTPMDriver:
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
         """
-        Test That tpm_driver can read if mockedTPM programmed.
+        Test to ensure the tpm_driver can check the TPM programmed state.
+
+        Test to ensure the tpm_driver can read the _check_programmed() method
+        correctly if the mocked TPM is programmed.
 
         :param patched_tpm_driver: The patched tpm driver under test.
         :param static_tile_simulator: The mocked tile

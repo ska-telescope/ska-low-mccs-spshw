@@ -88,13 +88,20 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
 class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     """
-    A patch to implement __getitem__, __setitem__.
+    This attempts to simulate pyfabil TPM.
 
-    And overwrite read_address, write_address, write_register,
-    write_register. Used for testing the tpm_driver against the
-    simulator, so the interface is similar to that in aavs/tile This
-    class would not be needed is we dependency inject the tile into the
-    TPM driver
+    This is used for testing the tpm_driver, and implements
+    __getitem__, __setitem__ so that the TileSimulator can
+    interface with the TPMSimulator in the same way as the
+    AAVS Tile interfaces with the pyfabil TPM. Instead of writing to
+    a register we write to a dictionary.
+
+    And overwrite read_address, write_address, read_register,
+    write_register.
+
+    The reason for this class is that the BaseTPMSimulator does not
+    have the same interface as the pyfabil TPM, so a subclass has
+    wrapped this to give that interface needed for testing tpm_driver.
     """
 
     def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
@@ -189,6 +196,8 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         Check is the specified key is a memory address or register name.
 
+        This calls either write register or write address depending whether
+        the key is a int of a str.
         :param key: the key to a register.
         :param value: the value to write in register.
 
@@ -212,22 +221,24 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
 
 class StaticTileSimulator(StaticTpmSimulator):
     """
-    A simulator for a TPM.
+    A simulator for a AAVS Tile.
 
-    This class would not be needed is we dependency inject the tile into
-    the TPM driver
+    A AAVS Tile simulator. Allows for testing of the tpm_driver against a
+    simulated Tile with the same interface as the AAVS Tile.
+
+    The connect method constructs a TPM instead of forming a UDP connection for
+    simplicity.
     """
 
     # this is just mocked with some dummy information.
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-        {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        {"design": "tpm_test1", "major": 2, "minor": 1, "build": 1, "time": "4"},
     ]
 
     def __init__(self: StaticTileSimulator, logger: logging.Logger) -> None:
         """
-        Initialise a new TPM simulator instance.
+        Initialise a new Tile simulator instance.
 
         :param logger: a logger for this simulator to use
         """
@@ -333,19 +344,27 @@ class StaticTileSimulator(StaticTpmSimulator):
             configurations are returned, defaults to -1
         :param arp_table_entry: ARP table entry to use
 
-        :return: core configuration or list of core configurations
+        :return: core configuration or list of core configurations or none
         """
         if core_id == -1:
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
-            if item.get("core_id") == core_id:
-                print(item)
+            if (
+                item.get("core_id") == core_id
+                and item.get("arp_table_entry") == arp_table_entry
+            ):
+                item["src_ip"] = int(item["src_ip"])
+                item["dst_ip"] = int(item["dst_ip"])
                 return item
         return
 
     def check_arp_table(self: StaticTileSimulator):
-        """Not Implemented."""
-        pass
+        """
+        Not Implemented.
+
+        :raises NotImplementedError: if not overwritten
+        """
+        raise NotImplementedError
 
     def reset_eth_errors(self: StaticTileSimulator):
         """Not Implemented."""

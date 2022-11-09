@@ -18,6 +18,7 @@ DOCS_SPHINXOPTS = -n -W --keep-going
 include .make/oci.mk
 include .make/k8s.mk
 include .make/helm.mk
+PYTHON_VARS_AFTER_PYTEST = --cov-fail-under=80
 include .make/python.mk
 include .make/raw.mk
 include .make/base.mk

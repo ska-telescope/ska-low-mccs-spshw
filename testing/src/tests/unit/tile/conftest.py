@@ -30,7 +30,7 @@ from ska_low_mccs import MccsTile
 from ska_low_mccs.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
-    StaticTpmDriverSimulator,
+    StaticTileSimulator,
     StaticTpmSimulator,
     StaticTpmSimulatorComponentManager,
     SwitchingTpmComponentManager,
@@ -268,7 +268,7 @@ def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
 
 
 @pytest.fixture()
-def static_tpm_driver_simulator(logger: logging.Logger) -> StaticTpmSimulator:
+def static_tile_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     """
     Return a static TPM simulator.
 
@@ -279,7 +279,7 @@ def static_tpm_driver_simulator(logger: logging.Logger) -> StaticTpmSimulator:
 
     :return: a static TPM simulator
     """
-    return StaticTpmDriverSimulator(logger)
+    return StaticTileSimulator(logger)
 
 
 @pytest.fixture()

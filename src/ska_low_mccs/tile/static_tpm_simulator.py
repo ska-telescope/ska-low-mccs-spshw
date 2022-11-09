@@ -210,7 +210,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         raise LibraryError(f"Register {key} not found")
 
 
-class StaticTpmDriverSimulator(StaticTpmSimulator):
+class StaticTileSimulator(StaticTpmSimulator):
     """
     A simulator for a TPM.
 
@@ -218,13 +218,14 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
     the TPM driver
     """
 
+    # this is just mocked with some dummy information.
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
 
-    def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
+    def __init__(self: StaticTileSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new TPM simulator instance.
 
@@ -238,31 +239,27 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         self.attributes = {}
         super().__init__(logger)
 
-    def get_fpga0_temperature(self):
+    def get_fpga0_temperature(self: StaticTileSimulator):
         """:return: the mocked fpga0 temperature."""
         return self.tpm._fpga1_temperature
 
-    def get_fpga1_temperature(self):
+    def get_fpga1_temperature(self: StaticTileSimulator):
         """:return: the mocked fpga1 temperature."""
         return self.tpm._fpga2_temperature
 
-    def get_fpgs_sync_time(self):
-        """:return: the mocked sync_time."""
-        return self.tpm._sync_time
-
-    def get_temperature(self):
+    def get_temperature(self: StaticTileSimulator):
         """:return: the mocked board temperature."""
         return self.tpm._board_temperature
 
-    def get_voltage(self):
+    def get_voltage(self: StaticTileSimulator):
         """:return: the mocked voltage."""
         return self.tpm._voltage
 
-    def get_tile_id(self):
+    def get_tile_id(self: StaticTileSimulator):
         """:return: the mocked tile_id."""
         return self.tpm.tile_id
 
-    def initialise_beamformer(self, start_channel, nof_channels):
+    def initialise_beamformer(self: StaticTileSimulator, start_channel, nof_channels):
         """
         Mock set the beamformer parameters.
 
@@ -272,11 +269,11 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         self.attributes.update({"start_channel": start_channel})
         self.attributes.update({"nof_channels": nof_channels})
 
-    def get_firmware_list(self):
+    def get_firmware_list(self: StaticTileSimulator):
         """:return: the firmware list."""
         return self.firmware_list
 
-    def program_fpgas(self, firmware_name):
+    def program_fpgas(self: StaticTileSimulator, firmware_name):
         """
         Mock programmed state to True.
 
@@ -284,7 +281,7 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         """
         self.tpm._is_programmed = True
 
-    def set_station_id(self, tile_id, station_id):
+    def set_station_id(self: StaticTileSimulator, tile_id, station_id):
         """
         Set mock registers to some value.
 
@@ -299,11 +296,11 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
 
         return
 
-    def get_adc_rms(self):
+    def get_adc_rms(self: StaticTileSimulator):
         """:return: the fpga_time."""
         return self.tpm.adc_rms
 
-    def get_fpga_time(self, device):
+    def get_fpga_time(self: StaticTileSimulator, device):
         """
         :param device: device.
 
@@ -311,20 +308,20 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         """
         return self.fpga_tile
 
-    def get_pps_delay(self):
+    def get_pps_delay(self: StaticTileSimulator):
         """:return: the pps delay."""
         return self.tpm._pps_delay
 
-    def is_programmed(self: BaseTpmSimulator) -> bool:
+    def is_programmed(self: StaticTileSimulator) -> bool:
         """
         Return whether the mock has been implemented.
 
         :return: the mocked programmed state
         """
-        return self.tpm._is_programmed
+        return self.tpm.is_programmed
 
     def get_40g_core_configuration(
-        self: BaseTpmSimulator,
+        self: StaticTileSimulator,
         core_id: int = -1,
         arp_table_entry: int = 0,
     ) -> dict | list[dict] | None:
@@ -346,37 +343,20 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
                 return item
         return
 
-    # def start_acquisition(
-    #     self: BaseTpmSimulator,
-    #     start_time: Optional[int] = None,
-    #     delay: Optional[int] = 2,
-    # ) -> None:
-    #     """
-    #     Start data acquisition.
-
-    #     :param start_time: the time at which to start data acquisition,
-    #         defaults to None
-    #     :param delay: delay start, defaults to 2
-    #     :raises NotImplementedError: because this method is not yet
-    #         meaningfully implemented
-    #     """
-    #     self.logger.debug("TpmSimulator:Start acquisition")
-    #     self._tpm_status = TpmStatus.SYNCHRONISED
-
-    def check_arp_table(self):
+    def check_arp_table(self: StaticTileSimulator):
         """Not Implemented."""
         pass
 
-    def reset_eth_errors(self):
+    def reset_eth_errors(self: StaticTileSimulator):
         """Not Implemented."""
         pass
 
-    def connect(self):
+    def connect(self: StaticTileSimulator):
         """Fake a connection by constructing the TPM."""
         self.tpm = StaticTpmSimulatorPatchedReadWrite(self.logger)
         self[int(0x30000000)] = [3, 7]
 
-    def __getitem__(self, key):
+    def __getitem__(self: StaticTileSimulator, key):
         """
         Get the register from the TPM.
 
@@ -385,7 +365,7 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         """
         return self.tpm[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self: StaticTileSimulator, key, value):
         """
         Set a registers value in the TPM.
 
@@ -393,3 +373,16 @@ class StaticTpmDriverSimulator(StaticTpmSimulator):
         :param value: value
         """
         self.tpm[key] = value
+
+    def __getattr__(self: StaticTileSimulator, name):
+        """
+        Get the attribute from the tpm if not found here.
+
+        :param name: name of the attribute
+        :return: the attribute
+        :raises AttributeError: if not found
+        """
+        if name in dir(self.tpm):
+            return getattr(self.tpm, name)
+        else:
+            raise AttributeError(f"TPM object has no attribute: {name}")

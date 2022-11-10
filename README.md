@@ -24,6 +24,9 @@ installing something in the wrong place like I've done twice now)
 
 You can use either the shell script install_script.sh or the ansible playbook
 install_ansible.yml depending on which you are more familiar with.
+
+NOTE: These scripts should only be used with debian/ubuntu flavoured linux machines
+as they have not been tested with others and may not work
 To use the shell script simply call the install script script, passing it one argument
 which will be the password for your sql database. So something like
 

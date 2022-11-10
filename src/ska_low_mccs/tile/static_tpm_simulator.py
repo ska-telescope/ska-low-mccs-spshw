@@ -11,6 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import re
+from typing import Any, List
 
 from pyfabil.base.definitions import LibraryError
 
@@ -90,14 +91,12 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     """
     This attempts to simulate pyfabil TPM.
 
-    This is used for testing the tpm_driver, and implements
+    This is used for testing the tpm_driver, it implements
     __getitem__, __setitem__ so that the TileSimulator can
     interface with the TPMSimulator in the same way as the
     AAVS Tile interfaces with the pyfabil TPM. Instead of writing to
-    a register we write to a dictionary.
-
-    And overwrite read_address, write_address, read_register,
-    write_register.
+    a register we write to a dictionary. It overwrite read_address,
+    write_address, read_register, write_register for simplicity.
 
     The reason for this class is that the BaseTPMSimulator does not
     have the same interface as the pyfabil TPM, so a subclass has
@@ -124,25 +123,25 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
 
     def write_address(self: BaseTpmSimulator, address: int, values: int) -> None:
         """
-        Write a list of values to a given address.
+        Write a integer value to a given address.
 
-        :param address: address of start of read
+        :param address: address to write
         :param values: values to write
         """
         self._address_map.update({str(address): values})
 
     def write_register(self, address: int, values: int) -> None:
         """
-        Write a list of values to a given address.
+        Write a integer value to a given register.
 
-        :param address: address of start of read
+        :param address: register to write
         :param values: values to write
         """
         self._register_map.update({str(address): values})
 
     def read_register(self, address: int) -> None:
         """
-        Write a list of values to a given address.
+        Read a value at a given register.
 
         :param address: address of start of read
 
@@ -150,7 +149,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         return self._register_map.get(str(address), 0)
 
-    def find_register(self, address):
+    def find_register(self, address: int) -> List[Any]:
         """
         Find a item in a dictionary.
 
@@ -159,7 +158,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
 
         :param address: address of start of read
 
-        :return: register found at address
+        :return: registers found at address
         """
         matches = []
         for k, v in self._register_map.items():
@@ -169,7 +168,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
                 matches.append(v)
         return matches
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> Any | LibraryError:
         """
         Check if the specified key is a memory address or register name.
 
@@ -192,12 +191,12 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         # Register not found
         raise LibraryError(f"Register {key} not found")
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: int, value: Any) -> None | LibraryError:
         """
-        Check is the specified key is a memory address or register name.
+        Check if the specified key is a memory address or register name.
 
         This calls either write register or write address depending whether
-        the key is a int of a str.
+        the key is a int or a str.
         :param key: the key to a register.
         :param value: the value to write in register.
 
@@ -246,31 +245,33 @@ class StaticTileSimulator(StaticTpmSimulator):
         self.memory_map = {}
         self.tpm = None
         self.logger = logger
-        self.fpga_tile = 2
+        self.fpga_time = 2
         self.attributes = {}
         super().__init__(logger)
 
-    def get_fpga0_temperature(self: StaticTileSimulator):
+    def get_fpga0_temperature(self: StaticTileSimulator) -> float:
         """:return: the mocked fpga0 temperature."""
         return self.tpm._fpga1_temperature
 
-    def get_fpga1_temperature(self: StaticTileSimulator):
+    def get_fpga1_temperature(self: StaticTileSimulator) -> float:
         """:return: the mocked fpga1 temperature."""
         return self.tpm._fpga2_temperature
 
-    def get_temperature(self: StaticTileSimulator):
+    def get_temperature(self: StaticTileSimulator) -> float:
         """:return: the mocked board temperature."""
         return self.tpm._board_temperature
 
-    def get_voltage(self: StaticTileSimulator):
+    def get_voltage(self: StaticTileSimulator) -> float:
         """:return: the mocked voltage."""
         return self.tpm._voltage
 
-    def get_tile_id(self: StaticTileSimulator):
+    def get_tile_id(self: StaticTileSimulator) -> int:
         """:return: the mocked tile_id."""
         return self.tpm.tile_id
 
-    def initialise_beamformer(self: StaticTileSimulator, start_channel, nof_channels):
+    def initialise_beamformer(
+        self: StaticTileSimulator, start_channel: float, nof_channels: int
+    ) -> None:
         """
         Mock set the beamformer parameters.
 
@@ -280,11 +281,11 @@ class StaticTileSimulator(StaticTpmSimulator):
         self.attributes.update({"start_channel": start_channel})
         self.attributes.update({"nof_channels": nof_channels})
 
-    def get_firmware_list(self: StaticTileSimulator):
+    def get_firmware_list(self: StaticTileSimulator) -> List[dict]:
         """:return: the firmware list."""
         return self.firmware_list
 
-    def program_fpgas(self: StaticTileSimulator, firmware_name):
+    def program_fpgas(self: StaticTileSimulator, firmware_name: str) -> None:
         """
         Mock programmed state to True.
 
@@ -292,7 +293,9 @@ class StaticTileSimulator(StaticTpmSimulator):
         """
         self.tpm._is_programmed = True
 
-    def set_station_id(self: StaticTileSimulator, tile_id, station_id):
+    def set_station_id(
+        self: StaticTileSimulator, tile_id: int, station_id: int
+    ) -> None:
         """
         Set mock registers to some value.
 
@@ -307,19 +310,19 @@ class StaticTileSimulator(StaticTpmSimulator):
 
         return
 
-    def get_adc_rms(self: StaticTileSimulator):
+    def get_adc_rms(self: StaticTileSimulator) -> tuple(tuple(float)):
         """:return: the fpga_time."""
         return self.tpm.adc_rms
 
-    def get_fpga_time(self: StaticTileSimulator, device):
+    def get_fpga_time(self: StaticTileSimulator, device: str) -> float:
         """
         :param device: device.
 
         :return: the fpga_time.
         """
-        return self.fpga_tile
+        return self.fpga_time
 
-    def get_pps_delay(self: StaticTileSimulator):
+    def get_pps_delay(self: StaticTileSimulator) -> float:
         """:return: the pps delay."""
         return self.tpm._pps_delay
 
@@ -358,7 +361,7 @@ class StaticTileSimulator(StaticTpmSimulator):
                 return item
         return
 
-    def check_arp_table(self: StaticTileSimulator):
+    def check_arp_table(self: StaticTileSimulator) -> NotImplementedError:
         """
         Not Implemented.
 
@@ -366,16 +369,16 @@ class StaticTileSimulator(StaticTpmSimulator):
         """
         raise NotImplementedError
 
-    def reset_eth_errors(self: StaticTileSimulator):
+    def reset_eth_errors(self: StaticTileSimulator) -> None:
         """Not Implemented."""
         pass
 
-    def connect(self: StaticTileSimulator):
+    def connect(self: StaticTileSimulator) -> None:
         """Fake a connection by constructing the TPM."""
         self.tpm = StaticTpmSimulatorPatchedReadWrite(self.logger)
         self[int(0x30000000)] = [3, 7]
 
-    def __getitem__(self: StaticTileSimulator, key):
+    def __getitem__(self: StaticTileSimulator, key: int) -> Any:
         """
         Get the register from the TPM.
 
@@ -384,7 +387,7 @@ class StaticTileSimulator(StaticTpmSimulator):
         """
         return self.tpm[key]
 
-    def __setitem__(self: StaticTileSimulator, key, value):
+    def __setitem__(self: StaticTileSimulator, key: int, value: Any) -> None:
         """
         Set a registers value in the TPM.
 
@@ -393,7 +396,7 @@ class StaticTileSimulator(StaticTpmSimulator):
         """
         self.tpm[key] = value
 
-    def __getattr__(self: StaticTileSimulator, name):
+    def __getattr__(self: StaticTileSimulator, name: str) -> Any | AttributeError:
         """
         Get the attribute from the tpm if not found here.
 

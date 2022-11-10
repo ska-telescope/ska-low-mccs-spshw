@@ -16,10 +16,6 @@ PYTHON_LINT_TARGET = src/ska_low_mccs tests  ## Paths containing python to be fo
 
 DOCS_SPHINXOPTS = -n -W --keep-going
 
-ifeq ($(strip $(CI_JOB_ID)),)
-K8S_TEST_IMAGE_TO_TEST = $(CAR_OCI_REGISTRY_HOST)/$(NAME):$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
-endif
-
 include .make/oci.mk
 include .make/k8s.mk
 include .make/python.mk
@@ -30,6 +26,10 @@ include .make/helm.mk
 
 # define private overrides for above variables in here
 -include PrivateRules.mak
+
+ifneq ($(strip $(CI_JOB_ID)),)
+  K8S_TEST_IMAGE_TO_TEST = $(CI_REGISTRY_IMAGE)/$(NAME):$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
+endif
 
 python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	

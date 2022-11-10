@@ -275,8 +275,8 @@ class StaticTileSimulator(StaticTpmSimulator):
         """
         Mock set the beamformer parameters.
 
-        :param start_channel:start_channel
-        :param nof_channels:nof_channels
+        :param start_channel: start_channel
+        :param nof_channels: nof_channels
         """
         self.attributes.update({"start_channel": start_channel})
         self.attributes.update({"nof_channels": nof_channels})
@@ -289,7 +289,7 @@ class StaticTileSimulator(StaticTpmSimulator):
         """
         Mock programmed state to True.
 
-        :param firmware_name:firmware_name
+        :param firmware_name: firmware_name
         """
         self.tpm._is_programmed = True
 
@@ -299,9 +299,9 @@ class StaticTileSimulator(StaticTpmSimulator):
         """
         Set mock registers to some value.
 
-        :param tile_id:tile_id
-        :param station_id:station_id
-        :return:none
+        :param tile_id: tile_id
+        :param station_id: station_id
+        :return: none
         """
         fpgas = ["fpga1", "fpga2"]
         for f in fpgas:

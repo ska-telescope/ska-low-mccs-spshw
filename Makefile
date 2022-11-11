@@ -32,7 +32,7 @@ ifneq ($(strip $(CI_JOB_ID)),)
 endif
 
 ifeq ($(MAKECMDGOALS),k8s-test)
-PYTHON_VARS_AFTER_PYTEST += --true-context
+PYTHON_VARS_AFTER_PYTEST += --testbed local
 endif
 
 python-post-format:

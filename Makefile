@@ -31,6 +31,10 @@ ifneq ($(strip $(CI_JOB_ID)),)
   K8S_TEST_IMAGE_TO_TEST = $(CI_REGISTRY_IMAGE)/$(NAME):$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif
 
+ifeq ($(MAKECMDGOALS),k8s-test)
+PYTHON_VARS_AFTER_PYTEST += --true-context
+endif
+
 python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	
 

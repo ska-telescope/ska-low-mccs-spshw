@@ -650,6 +650,56 @@ class TestTPMDriver:
         patched_tpm_driver.write_address(4, expected_read)
         assert patched_tpm_driver.read_address(4, len(expected_read)) == expected_read
 
+    @pytest.mark.xfail
+    def test_error_configure_40g_core(
+        self: TestTPMDriver,
+        patched_tpm_driver: PatchedTpmDriver,
+        static_tile_simulator: StaticTileSimulator,
+    ) -> None:
+        """
+        Test that configuration is checked and raises errors.
+
+        :param patched_tpm_driver: The patched tpm driver under test.
+        :param static_tile_simulator: The mocked tile
+
+        Test that:
+        * The core_id is 0 or 1
+        * The arp table entries are (0-7) for each core
+        """
+        static_tile_simulator.connect()
+
+        # this is core_id 2 should not be allowed since there are 2 cores 0,1
+        core_dict = {
+            "core_id": 2,
+            "arp_table_entry": 1,
+            "src_mac": 0x14109FD4041A,
+            "src_ip": "3221226219",
+            "src_port": 8080,
+            "dst_ip": "3221226219",
+            "dst_port": 9000,
+        }
+        # this is arp_table_entry 8 should not be allowed since there are 8 per core 0-7
+        core_dict2 = {
+            "core_id": 1,
+            "arp_table_entry": 8,
+            "src_mac": 0x14109FD4041A,
+            "src_ip": "3221226219",
+            "src_port": 8080,
+            "dst_ip": "3221222219",
+            "dst_port": 9000,
+        }
+
+        with pytest.raises(
+            ValueError, match=f'cannot configure core {core_dict["core_id"]}'
+        ):
+            patched_tpm_driver.configure_40g_core(**core_dict)
+
+        with pytest.raises(
+            ValueError,
+            match=f'cannot configure arp_table_entry {core_dict2["arp_table_entry"]}',
+        ):
+            patched_tpm_driver.configure_40g_core(**core_dict2)
+
     def test_configure_40g_core(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,
@@ -670,7 +720,7 @@ class TestTPMDriver:
 
         # this is core_id 2 should this be allowed since we have core_id 0 or 1?
         core_dict = {
-            "core_id": 2,
+            "core_id": 0,
             "arp_table_entry": 1,
             "src_mac": 0x14109FD4041A,
             "src_ip": "3221226219",
@@ -693,28 +743,14 @@ class TestTPMDriver:
             core_id=core_dict.get("core_id"),
             arp_table_entry=core_dict.get("arp_table_entry"),
         )
-        for configuration in configurations:
-            assert configuration["core_id"] == core_dict["core_id"]
-            assert configuration["arp_table_entry"] == core_dict["arp_table_entry"]
-            assert configuration["src_mac"] == core_dict["src_mac"]
-            assert configuration["src_port"] == core_dict["src_port"]
-            assert configuration["dst_port"] == core_dict["dst_port"]
-            assert configuration["src_ip"] == "192.0.2.235"
-            assert configuration["dst_ip"] == "192.0.2.235"
 
-        # request the configuration without a core_id
+        assert configurations == [core_dict]
+
+        # request the configuration without a core_id, returns all.
         patched_tpm_driver.configure_40g_core(**core_dict2)
         configurations = patched_tpm_driver.get_40g_configuration()
 
-        # Is this what is wanted?
-        for configuration in configurations:
-            assert configuration["core_id"] == core_dict2["core_id"]
-            assert configuration["arp_table_entry"] == core_dict2["arp_table_entry"]
-            assert configuration["src_mac"] == core_dict2["src_mac"]
-            assert configuration["src_port"] == core_dict2["src_port"]
-            assert configuration["dst_port"] == core_dict2["dst_port"]
-            assert configuration["src_ip"] == "192.0.2.235"
-            assert configuration["dst_ip"] == "191.255.243.75"
+        assert configurations == [core_dict, core_dict2]
 
     def test_firmware_avaliable(
         self: TestTPMDriver,

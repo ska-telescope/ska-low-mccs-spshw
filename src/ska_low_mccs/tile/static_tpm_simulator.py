@@ -356,8 +356,7 @@ class StaticTileSimulator(StaticTpmSimulator):
                 item.get("core_id") == core_id
                 and item.get("arp_table_entry") == arp_table_entry
             ):
-                item["src_ip"] = int(item["src_ip"])
-                item["dst_ip"] = int(item["dst_ip"])
+
                 return item
         return
 

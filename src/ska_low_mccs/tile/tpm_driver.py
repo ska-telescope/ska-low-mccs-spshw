@@ -70,9 +70,11 @@ class TpmDriver(MccsComponentManager):
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
-    REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+    REGISTER_MAP: dict[str, dict] = {
+        "test-reg1": {},
+        "test-reg2": {},
+        "test-reg3": {},
+        "test-reg4": {},
     }
 
     def __init__(
@@ -112,14 +114,12 @@ class TpmDriver(MccsComponentManager):
         self._port = port
         self._tpm_status = TpmStatus.UNKNOWN
         # Configuration table cache
-        self._beamformer_table = [
-            [64, 0, 0, 0, 0, 0, 0, 0]
-        ] * 48  # empty beamformer table
-        self._channelizer_truncation = [3] * 512
+        self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48  # empty beamformer table
+        self._channeliser_truncation = [3] * 512
         self._csp_rounding = [3] * 384
         self._forty_gb_core_list: list = []
         self._preadu_levels = [0] * 32
-        self._static_delays = [0] * 32
+        self._static_delays = [0.0] * 32
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
         self._is_beamformer_running = False
@@ -367,6 +367,15 @@ class TpmDriver(MccsComponentManager):
                 self._hardware_lock.release()
             else:
                 self.logger.debug("tpm_driver: tpm_status uses current value")
+
+    @property
+    def hardware_version(self: TpmDriver) -> int:
+        """
+        Return whether this TPM is 1.2 or 1.6.
+
+        :return: TPM hardware version. 120 or 160
+        """
+        return self._tpm_version
 
     def _check_channeliser_started(self: TpmDriver) -> bool:
         """
@@ -823,9 +832,7 @@ class TpmDriver(MccsComponentManager):
         failed = False
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self._fpga_current_frame = self.tile[
-                    "fpga1.pps_manager.timestamp_read_val"
-                ]
+                self._fpga_current_frame = self.tile.get_fpga_timestamp()
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
                 failed = True
@@ -913,13 +920,15 @@ class TpmDriver(MccsComponentManager):
 
         :param register_name: name of the register
         :param values: values to write
-        :param offset: offset from which to start reading. Is this redundant???????
+        :param offset: offset from which to start writing. Unused
         """
+        devname = ""
+        regname = devname + register_name
         assert self.tile.tpm is not None  # for the type checker
         if len(self.tile.tpm.find_register(register_name)) == 0:
             self.logger.error("Register '" + register_name + "' not present")
         else:
-            self.tile.tpm[register_name] = values
+            self.tile[regname] = values
 
     def read_address(self: TpmDriver, address: int, nvalues: int) -> list[int]:
         """
@@ -1100,9 +1109,9 @@ class TpmDriver(MccsComponentManager):
 
         :return: cached value for the channeliser truncation
         """
-        return self._channeliser_truncation
+        return copy.deepcopy(self._channeliser_truncation)
 
-    @channeliser_truncation.write
+    @channeliser_truncation.setter
     def channeliser_truncation(self: TpmDriver, truncation: int | list[int]):
         """
         Set the channeliser truncation.
@@ -1116,9 +1125,9 @@ class TpmDriver(MccsComponentManager):
             self.channeliser_truncation = [truncation] * 512
         elif type(truncation) == list[int]:
             self.channeliser_truncation = truncation
-        self.set_channeliser_truncation(self._channeliser_truncation)
+        self._set_channeliser_truncation(self._channeliser_truncation)
 
-    def set_channeliser_truncation(self: TpmDriver, array: list[int]) -> None:
+    def _set_channeliser_truncation(self: TpmDriver, array: list[int]) -> None:
         """
         Set the channeliser coefficients to modify the bandpass.
 
@@ -1147,9 +1156,9 @@ class TpmDriver(MccsComponentManager):
 
         :return: static delay, in samples one per TPM input
         """
-        return self._static_delays
+        return copy.deepcopy(self._static_delays)
 
-    @static_delays.write
+    @static_delays.setter
     def static_delays(self: TpmDriver, delays: list[float]):
         """
         Set the static delays.
@@ -1160,7 +1169,28 @@ class TpmDriver(MccsComponentManager):
         :param delays: Static zenith delays, one per input channel
         """
         self._static_delays = delays
-        self.set_time_delays(delays)
+        self._set_time_delays(delays)
+
+    def _set_time_delays(self: TpmDriver, delays: list[float]) -> None:
+        """
+        Set coarse zenith delay for input ADC streams.
+
+        :param delays: the delay in input streams, specified in nanoseconds.
+            A positive delay adds delay to the signal stream
+        """
+        self.logger.debug("TpmDriver: set_time_delays")
+        # tile.set_time_delays is picky about type
+        delays_float = []
+        for d in delays:
+            delays_float.append(float(d))
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.set_time_delays(delays_float)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
 
     @property
     def csp_rounding(self: TpmDriver) -> list[int]:
@@ -1170,9 +1200,9 @@ class TpmDriver(MccsComponentManager):
         Need to be specfied only for the last tile
         :return: Final rounding for the CSP samples. Up to 384 values
         """
-        return self._csp_rounding
+        return copy.deepcopy(self._csp_rounding)
 
-    @csp_rounding.write
+    @csp_rounding.setter
     def csp_rounding(self: TpmDriver, rounding: list[int] | int):
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
@@ -1183,7 +1213,23 @@ class TpmDriver(MccsComponentManager):
             self._csp_rounding = [rounding] * 384
         else:
             self._csp_rounding = rounding
-        self.set_csp_rounding(rounding)
+        self._set_csp_rounding(rounding)
+
+    def _set_csp_rounding(self: TpmDriver, rounding: list[int]) -> None:
+        """
+        Set output rounding for CSP.
+
+        :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+        """
+        self.logger.debug("TpmDriver: set_csp_rounding")
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.set_csp_rounding(rounding[0])
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
 
     @property
     def preadu_levels(self: TpmDriver) -> list[float]:
@@ -1192,9 +1238,9 @@ class TpmDriver(MccsComponentManager):
 
         :return: cached values of Preadu attenuation level in dB
         """
-        return self._preadu_levels
+        return copy.deepcopy(self._preadu_levels)
 
-    @preadu_levels.write
+    @preadu_levels.setter
     def preadu_levels(self: TpmDriver, levels: list[float]):
         """
         Set preadu levels in dB.
@@ -1273,6 +1319,31 @@ class TpmDriver(MccsComponentManager):
         """
         return self._pps_present
 
+    def _check_pps_present(self: TpmDriver) -> bool:
+        """
+        Check in hardware if PPS is present.
+
+        Requires to be run inside a thread protected code block
+        TODO To be moved in pyaavs.Tile
+        :return: True if PPS is present and internal PPS locked to it
+        """
+        if not self._is_programmed:
+            return False
+        # check PPS detection
+        pps_lock = True
+        if self.tile.tpm["fpga1.pps_manager.pps_detected"] == 0x1:
+            self.logger.debug("FPGA1 is locked to external PPS")
+        else:
+            self.logger.debug("FPGA1 is not locked to external PPS")
+            pps_lock = False
+        if self.tile.tpm["fpga2.pps_manager.pps_detected"] == 0x1:
+            self.logger.debug("FPGA2 is locked to external PPS")
+        else:
+            self.logger.debug("FPGA2 is not locked to external PPS")
+            pps_lock = False
+        self._pps_present = pps_lock
+        return pps_lock
+
     @property
     def clock_present(self: TpmDriver) -> bool:
         """
@@ -1299,6 +1370,19 @@ class TpmDriver(MccsComponentManager):
         :return: True if PLL is locked. Checked in poll loop, cached
         """
         return self._pll_locked
+
+    def _check_pll_locked(self: TpmDriver) -> bool:
+        """
+        Check in hardware if PLL is locked.
+
+        Requires to be run inside a thread protected code block
+        TODO To be moved in pyaavs.Tile
+        :return: True if PPS is locked
+        """
+        pll_status = self.tile.tpm["pll", 0x508]
+        pll_lock = pll_status in [0xF2, 0xE7]
+        self._pll_locked = pll_lock
+        return pll_lock
 
     def set_beamformer_regions(self: TpmDriver, regions: list[int]) -> None:
         """
@@ -1792,7 +1876,15 @@ class TpmDriver(MccsComponentManager):
         started = False
         for i in range(max_timeout):
             time.sleep(0.1)
-            started = self._check_channelizer_started()
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    started = self._check_channeliser_started()
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+                self._hardware_lock.release()
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
+
             if started:
                 self._tpm_status = TpmStatus.SYNCHRONISED
                 break
@@ -1801,63 +1893,6 @@ class TpmDriver(MccsComponentManager):
                 f"Acquisition not started after {max_timeout*0.1} seconds"
             )
         return started
-
-    def _check_channelizer_started(self: TpmDriver) -> bool:
-        """
-        Check whether acquisition has started correctly.
-
-        :return: true if data stream is valid, acquisitinon has started
-        """
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                started = (
-                    self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"] == 1
-                ) and (
-                    self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"] == 1
-                )
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
-        return started
-
-    def set_time_delays(self: TpmDriver, delays: list[float]) -> None:
-        """
-        Set coarse zenith delay for input ADC streams.
-
-        :param delays: the delay in input streams, specified in nanoseconds.
-            A positive delay adds delay to the signal stream
-        """
-        self.logger.debug("TpmDriver: set_time_delays")
-        # tile.set_time_delays is picky about type
-        delays_float = []
-        for d in delays:
-            delays_float.append(float(d))
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self.tile.set_time_delays(delays_float)
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
-
-    def set_csp_rounding(self: TpmDriver, rounding: list[int]) -> None:
-        """
-        Set output rounding for CSP.
-
-        :param rounding: Number of bits rounded in final 8 bit requantization to CSP
-        """
-        self.logger.debug("TpmDriver: set_csp_rounding")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self.tile.set_csp_rounding(rounding[0])
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
 
     def set_lmc_integrated_download(
         self: TpmDriver,
@@ -1896,43 +1931,6 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
-
-    def send_raw_data_synchronised(
-        self: TpmDriver, timestamp: Optional[str] = None, seconds: float = 0.2
-    ) -> None:
-        """
-        Send synchronised raw data.
-
-        :param timestamp: when to start(?), defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-        """
-        self.logger.debug("TpmDriver: send_raw_data_synchronised")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self.tile.send_raw_data(timestamp, seconds, sync=True)
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
-
-    @property
-    def current_tile_frame(self: TpmDriver) -> int:
-        """
-        Return current frame, in units of 256 ADC frames.
-
-        :return: current tile beamformer frame
-        """
-        self.logger.debug("TpmDriver: current_tile_beamformer_frame")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self._current_tile_frame = self.tile.current_tile_beamformer_frame()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
-        return self._current_tile_frame
 
     @property
     def current_tile_beamformer_frame(self: TpmDriver) -> int:
@@ -1995,16 +1993,6 @@ class TpmDriver(MccsComponentManager):
     # synchronisation is performed), however I am not sure whether the routine
     # for the new TPMs will still required these
     #
-    def tweak_transceivers(self: TpmDriver) -> None:
-        """
-        Tweak the transceivers.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmDriver: tweak_transceivers")
-        raise NotImplementedError
-
     @property
     def phase_terminal_count(self: TpmDriver) -> int:
         """

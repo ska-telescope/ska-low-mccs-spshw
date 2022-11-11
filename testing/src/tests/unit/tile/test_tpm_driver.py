@@ -668,7 +668,7 @@ class TestTPMDriver:
         """
         static_tile_simulator.connect()
 
-        # this is core_id 2 should not be allowed since there are 2 cores 0,1
+        # core_id must be 0,1
         core_dict = {
             "core_id": 2,
             "arp_table_entry": 1,
@@ -678,7 +678,7 @@ class TestTPMDriver:
             "dst_ip": "3221226219",
             "dst_port": 9000,
         }
-        # this is arp_table_entry 8 should not be allowed since there are 8 per core 0-7
+        # arp_table_entry must be 0-7
         core_dict2 = {
             "core_id": 1,
             "arp_table_entry": 8,
@@ -718,7 +718,6 @@ class TestTPMDriver:
         # mocked connection to the TPM simuator.
         static_tile_simulator.connect()
 
-        # this is core_id 2 should this be allowed since we have core_id 0 or 1?
         core_dict = {
             "core_id": 0,
             "arp_table_entry": 1,

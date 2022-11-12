@@ -1459,9 +1459,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def switch_calibration_bank(
-        self: TpmDriver, switch_time: Optional[int] = 0
-    ) -> None:
+    def apply_calibration(self: TpmDriver, switch_time: Optional[int] = 0) -> None:
         """
         Switch the calibration bank.
 
@@ -1481,7 +1479,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def load_pointing_delay(
+    def load_pointing_delays(
         self: TpmDriver, delay_array: list[list[float]], beam_index: int
     ) -> None:
         """
@@ -1508,7 +1506,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def apply_pointing_delay(self: TpmDriver, load_time: int) -> None:
+    def apply_pointing_delays(self: TpmDriver, load_time: int) -> None:
         """
         Load the pointing delay at a specified time.
 

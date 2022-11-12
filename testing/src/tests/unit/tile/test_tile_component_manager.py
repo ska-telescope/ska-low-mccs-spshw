@@ -11,7 +11,8 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
-from typing import Any, Callable, Union
+from datetime import datetime, timezone
+from typing import Any, Callable, Union, cast
 
 import pytest
 import pytest_mock
@@ -396,7 +397,6 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
-            ("current", StaticTpmSimulator.CURRENT),
             ("voltage", StaticTpmSimulator.VOLTAGE),
             ("board_temperature", StaticTpmSimulator.BOARD_TEMPERATURE),
             ("fpga1_temperature", StaticTpmSimulator.FPGA1_TEMPERATURE),
@@ -407,9 +407,16 @@ class TestStaticSimulatorCommon:
                 "current_tile_beamformer_frame",
                 StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
             ),
+            ("fpga_current_frame", 0),
+            ("fpga_sync_time", 0),
             ("pps_delay", StaticTpmSimulator.PPS_DELAY),
             ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
-            ("register_list", list(StaticTpmSimulator.REGISTER_MAP[0].keys())),
+            ("register_list", list(StaticTpmSimulator.REGISTER_MAP.keys())),
+            ("pps_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
+            ("clock_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
+            ("sysref_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
+            ("pll_locked", StaticTpmSimulator.CLOCK_SIGNALS_OK),
+            ("pps_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
         ),
     )
     def test_read_attribute(
@@ -458,6 +465,25 @@ class TestStaticSimulatorCommon:
                 StaticTpmSimulator.PHASE_TERMINAL_COUNT,
                 [1, 2],
             ),
+            (
+                "static_delays",
+                StaticTpmSimulator.STATIC_DELAYS,
+                [[1.0, 2.0, 3.0, 4.0] * 8],
+            ),
+            ("csp_rounding", StaticTpmSimulator.CSP_ROUNDING, [[1, 2, 3, 4] * 96]),
+            (
+                "preadu_levels",
+                StaticTpmSimulator.PREADU_LEVELS,
+                [[-10.0 - 5, 5, 10] * 8],
+            ),
+            (
+                "channeliser_truncation",
+                StaticTpmSimulator.CHANNELISER_TRUNCATION,
+                [[2] * 512],
+            ),
+            ("tile_id", 0, [123]),
+            ("station_id", 0, [321]),
+            ("test_generator_active", False, [True]),
         ),
     )
     def test_write_attribute(
@@ -514,37 +540,15 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("command_name", "num_args"),
         (
-            ("get_arp_table", 0),
-            ("cpld_flash_write", 1),
-            ("set_channeliser_truncation", 1),
-            ("set_beamformer_regions", 1),
-            ("initialise_beamformer", 4),
             ("set_lmc_download", 1),
-            ("switch_calibration_bank", 0),
-            ("load_beam_angle", 1),
-            ("load_calibration_coefficients", 2),
-            ("load_calibration_curve", 3),
-            ("load_antenna_tapering", 2),
-            ("load_pointing_delay", 1),
-            ("set_pointing_delay", 2),
+            ("load_pointing_delays", 2),
             ("configure_integrated_channel_data", 3),
             ("configure_integrated_beam_data", 3),
+            ("start_acquisition", 0),
             ("stop_integrated_data", 0),
-            ("send_raw_data", 0),
-            ("send_channelised_data", 0),
-            ("send_channelised_data", 1),
-            ("send_beam_data", 0),
-            ("stop_data_transmission", 0),
-            ("compute_calibration_coefficients", 0),
-            ("start_acquisition", 2),
-            ("set_time_delays", 1),
-            ("set_csp_rounding", 1),
             ("set_lmc_integrated_download", 3),
-            ("send_channelised_data_narrowband", 2),
-            ("tweak_transceivers", 0),
             ("post_synchronisation", 0),
             ("sync_fpgas", 0),
-            ("check_pending_data_requests", 0),
         ),
     )
     def test_command(
@@ -571,11 +575,8 @@ class TestStaticSimulatorCommon:
         :param num_args: the number of args the command takes
         """
         lrc_list = [
-            "cpld_flash_write",
-            "get_arp_table",
             "start_acquisition",
             "post_synchronisation",
-            "sync_fpgas",
         ]
         args = [mocker.Mock()] * num_args
         if command_name in lrc_list and self.tile_name == "tile_component_manager":
@@ -595,6 +596,81 @@ class TestStaticSimulatorCommon:
             tile.power_state = PowerState.ON
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)
+
+    @pytest.mark.parametrize(
+        ("command_name", "implemented"),
+        (
+            ("apply_calibration", False),
+            ("apply_pointing_delays", False),
+            ("start_beamformer", True),
+        ),
+    )
+    def test_timed_command(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        mocker: pytest_mock.MockerFixture,
+        command_name: str,
+        implemented: bool,
+    ) -> None:
+        """
+        Test of commands that require a UTC time.
+
+        Since the commands don't really do
+        anything, these tests simply check that the command can be called.
+
+        :param mocker: fixture that wraps unittest.mock
+        :param tile: the tile class object under test.
+        :param command_name: the name of the command under test
+        :param implemented: the command is implemented, does not raise error
+        """
+        # Use ISO formatted time for component manager, numeric for drivers
+        # Must also set FPGA sync time in driver
+        #
+        if self.tile_name == "tile_component_manager":
+            args = "2022-11-10T12:34:56.0Z"
+            dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
+            timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
+            cast(
+                SwitchingTpmComponentManager, tile._tpm_component_manager
+            ).fpga_sync_time = timestamp
+            assert (
+                cast(
+                    SwitchingTpmComponentManager, tile._tpm_component_manager
+                ).fpga_sync_time
+                == timestamp
+            )
+            tile._tile_time.set_reference_time(timestamp)
+        else:
+            args = 123456
+        # With the update to v0.13 of the base classes the logic to change
+        # the power_state of a device has been moved from the component manager
+        # to the device itself.
+        # This means that during component manager tests we cannot change the
+        # power state or other attributes "naturally" and thus this workaround
+        # is used where we assert the callback was called as we would expect and
+        # then manually set the attribute. We exclude the StaticTpmSimulator as
+        # it does not have this callback.
+        if not isinstance(tile, StaticTpmSimulator):
+            tile._component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.ON}
+            )
+            tile.power_state = PowerState.ON
+        if implemented:
+            getattr(tile, command_name)()
+            getattr(tile, command_name)(0)
+            getattr(tile, command_name)(args)
+        else:
+            with pytest.raises(NotImplementedError):
+                getattr(tile, command_name)()
+            with pytest.raises(NotImplementedError):
+                getattr(tile, command_name)(0)
+            with pytest.raises(NotImplementedError):
+                getattr(tile, command_name)(args)
 
     def test_initialise(
         self: TestStaticSimulatorCommon,
@@ -648,7 +724,6 @@ class TestStaticSimulatorCommon:
         time.sleep(0.2)
         assert tile.is_programmed
 
-    @pytest.mark.parametrize("device", (1,))
     @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
     @pytest.mark.parametrize("read_offset", (2,))
     @pytest.mark.parametrize("read_length", (4,))
@@ -662,7 +737,6 @@ class TestStaticSimulatorCommon:
             SwitchingTpmComponentManager,
             TileComponentManager,
         ],
-        device: int,
         register: str,
         read_offset: int,
         read_length: int,
@@ -677,7 +751,6 @@ class TestStaticSimulatorCommon:
         * write_register command
 
         :param tile: the tile class object under test.
-        :param device: which FPGA is being addressed
         :param register: which register is being addressed
         :param read_offset: offset to start read at
         :param read_length: length of read
@@ -689,11 +762,8 @@ class TestStaticSimulatorCommon:
         for (index, value) in enumerate(write_values):
             buffer[write_offset + index] = value
         expected_read = buffer[read_offset : (read_offset + read_length)]
-        tile.write_register(register, write_values, write_offset, device)
-        assert (
-            tile.read_register(register, read_length, read_offset, device)
-            == expected_read
-        )
+        tile.write_register(register, write_values, write_offset)
+        assert tile.read_register(register, read_length, read_offset) == expected_read
 
     @pytest.mark.parametrize(
         "write_address",
@@ -778,6 +848,67 @@ class TestStaticSimulatorCommon:
         tile.stop_beamformer()
         assert not tile.is_beamformer_running
 
+    def test_initialise_beamformer(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+    ) -> None:
+        """
+        Test initialise_beamformer.
+
+        Test that:
+        * the initialise_beamformer command executes
+        * the beamformer table is correctly configured
+
+        :param tile: the tile class object under test.
+        """
+        tile.initialise_beamformer(64, 32, False, False)
+
+        table = tile.beamformer_table
+        expected = [
+            [64, 0, 0, 0, 0, 0, 0],
+            [72, 0, 0, 8, 0, 0, 0],
+            [80, 0, 0, 16, 0, 0, 0],
+            [88, 0, 0, 24, 0, 0, 0],
+        ] + [[0, 0, 0, 0, 0, 0, 0]] * 44
+
+        assert table == expected
+
+    def test_set_beamformer_regions(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+    ) -> None:
+        """
+        Test set_beamformer_regions.
+
+        Test that:
+        * the set_beamformer_regions accepts 2 regions
+        * the beamformer table is correctly configured
+
+        :param tile: the tile class object under test.
+        """
+        regions = [[64, 16, 2, 3, 8, 7, 8, 9], [140, 16, 4, 5, 32, 10, 11, 12]]
+        tile.set_beamformer_regions(regions)
+
+        table = tile.beamformer_table
+        expected = [
+            [64, 2, 3, 8, 7, 8, 9],
+            [72, 2, 3, 16, 7, 8, 9],
+            [140, 4, 5, 32, 10, 11, 12],
+            [148, 4, 5, 40, 10, 11, 12],
+        ] + [[0, 0, 0, 0, 0, 0, 0]] * 44
+
+        assert table == expected
+
     def test_40g_configuration(
         self: TestStaticSimulatorCommon,
         tile: Union[
@@ -800,8 +931,8 @@ class TestStaticSimulatorCommon:
         assert tile.get_40g_configuration(9) == []
 
         tile.configure_40g_core(
-            2,
             1,
+            0,
             "mock_src_mac",
             "mock_src_ip",
             8888,
@@ -810,8 +941,8 @@ class TestStaticSimulatorCommon:
         )
 
         expected = {
-            "core_id": 2,
-            "arp_table_entry": 1,
+            "core_id": 1,
+            "arp_table_entry": 0,
             "src_mac": "mock_src_mac",
             "src_ip": "mock_src_ip",
             "src_port": 8888,
@@ -820,7 +951,7 @@ class TestStaticSimulatorCommon:
         }
 
         assert tile.get_40g_configuration(-1, 0) == [expected]
-        assert tile.get_40g_configuration(2) == [expected]
+        assert tile.get_40g_configuration(1) == [expected]
         assert tile.get_40g_configuration(10) == []
 
 
@@ -938,7 +1069,6 @@ class TestDynamicSimulatorCommon:
     @pytest.mark.parametrize(
         "attribute_name",
         (
-            "current",
             "voltage",
             "board_temperature",
             "fpga1_temperature",
@@ -983,7 +1113,7 @@ class TestDynamicSimulatorCommon:
             ("firmware_available", DynamicTpmSimulator.FIRMWARE_AVAILABLE),
             (
                 "register_list",
-                list(DynamicTpmSimulator.REGISTER_MAP[0].keys()),
+                list(DynamicTpmSimulator.REGISTER_MAP.keys()),
             ),
         ),
     )

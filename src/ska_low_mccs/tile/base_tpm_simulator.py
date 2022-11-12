@@ -18,7 +18,7 @@ import numpy as np
 from ska_low_mccs_common.component import ObjectComponent
 from typing_extensions import Final
 
-from .tile_data import TileData
+# from .tile_data import TileData
 from .tpm_status import TpmStatus
 
 __all__ = ["BaseTpmSimulator"]
@@ -50,18 +50,10 @@ class BaseTpmSimulator(ObjectComponent):
         "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
     REGISTER_MAP: dict[str, dict] = {
-        0: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
-        1: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
+        "test-reg1": {},
+        "test-reg2": {},
+        "test-reg3": {},
+        "test-reg4": {},
     }
     # ARP resolution table
     # Values are consistent with unit test test_MccsTile
@@ -76,6 +68,11 @@ class BaseTpmSimulator(ObjectComponent):
     ARP_TABLE = {0: [0, 1], 1: [1]}
     # TPM version: "tpm_v1_2" or "tpm_v1_6"
     TPM_VERSION = 120
+    CLOCK_SIGNALS_OK = True
+    STATIC_DELAYS = [0.0] * 32
+    CSP_ROUNDING = [3] * 384
+    PREADU_LEVELS = [16] * 32
+    CHANNELISER_TRUNCATION = [4] * 512
 
     def _arp(self: BaseTpmSimulator, ip: str) -> str:
         """
@@ -119,20 +116,20 @@ class BaseTpmSimulator(ObjectComponent):
         self._forty_gb_core_list: list[dict[str, Any]] = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._test_generator_active = False
-        self._pending_data_request = False
+        self._pending_data_requests = False
         self._fpga_current_frame = 0
         self._fpga_sync_time = 0
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
-        self._pps_present = True
-        self._clock_present = True
-        self._sysref_present = True
-        self._pll_locked = True
+        self._pps_present = self.CLOCK_SIGNALS_OK
+        self._clock_present = self.CLOCK_SIGNALS_OK
+        self._sysref_present = self.CLOCK_SIGNALS_OK
+        self._pll_locked = self.CLOCK_SIGNALS_OK
         # Configuration table cache
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48  # empty beamformer table
-        self._static_delays = [0.0] * 32
-        self._csp_rounding = [3] * 384
-        self._preadu_levels = [0] * 32
-        self._channeliser_truncation = [3] * 512
+        self._static_delays = self.STATIC_DELAYS
+        self._csp_rounding = self.CSP_ROUNDING
+        self._preadu_levels = self.PREADU_LEVELS
+        self._channeliser_truncation = self.CHANNELISER_TRUNCATION
 
     @property
     def firmware_available(
@@ -374,7 +371,7 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: list of registers
         """
-        return list(self._register_map[0].keys())
+        return list(self._register_map.keys())
 
     @property
     def pps_present(self: BaseTpmSimulator) -> bool:
@@ -383,8 +380,6 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: True if PPS is present. Checked in poll loop, cached
         """
-        if not self._is_programmed:
-            return False
         return self._pps_present
 
     @property
@@ -403,8 +398,6 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: True if SYSREF is present. Checked in poll loop, cached
         """
-        if not self._is_programmed:
-            return False
         return self._sysref_present
 
     @property
@@ -436,9 +429,9 @@ class BaseTpmSimulator(ObjectComponent):
             white noise.
         """
         if type(truncation) == int:
-            self.channeliser_truncation = [truncation] * 512
-        elif type(truncation) == list[int]:
-            self.channeliser_truncation = truncation
+            self._channeliser_truncation = [truncation] * 512
+        elif type(truncation) == list:
+            self._channeliser_truncation = copy.deepcopy(truncation)
 
     @property
     def static_delays(self: BaseTpmSimulator) -> list[float]:
@@ -651,7 +644,7 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: reference time
         """
-        return self._sync_time
+        return self._fpga_sync_time
 
     @property
     def fpga_current_frame(self: BaseTpmSimulator) -> int:
@@ -660,10 +653,11 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: current frame
         """
-        if self._sync_time == 0:
+        if self._fpga_sync_time == 0:
             return 0
         else:
-            return int((time.time() - self._sync_time) / (TileData.FRAME_PERIOD))
+            # return int((time.time() - self._fpga_sync_time) / (TileData.FRAME_PERIOD))
+            return 1000000
 
     def set_lmc_download(
         self: BaseTpmSimulator,
@@ -701,7 +695,9 @@ class BaseTpmSimulator(ObjectComponent):
         # Check for type of data to be sent to LMC
         data_type = params.get("data_type", None)
         if data_type == "channel_continuous":
-            self._pending_data_request = True
+            self._pending_data_requests = True
+        else:
+            self._pending_data_requests = False
 
     def set_beamformer_regions(
         self: BaseTpmSimulator, regions: list[list[int]]
@@ -730,7 +726,9 @@ class BaseTpmSimulator(ObjectComponent):
             channel = region[0]
             logical_channel = region[4]
             for i in range(num_blocks):
-                table_entry = [channel] + region[2:4] + [logical_channel] + region[5:8]
+                table_entry = region[1:8]
+                table_entry[0] = channel
+                table_entry[3] = logical_channel
                 self._beamformer_table[block] = table_entry
                 channel = channel + 8
                 logical_channel = logical_channel + 8
@@ -759,6 +757,25 @@ class BaseTpmSimulator(ObjectComponent):
                 [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
             )
 
+    @property
+    def beamformer_table(self: BaseTpmSimulator) -> list[list[int]]:
+        """
+        Fetch internal beamformer table.
+
+        Fetch table used by the hardware beamformer to define beams and logical bands
+        :return: bidimensional table, with 48 entries, one every 8 channels
+
+        * start physical channel
+        * tile hardware beam
+        * subarray ID
+        * subarray start logical channel
+        * subarray_beam_id - (int) ID of the subarray beam
+        * substation_id - (int) Substation
+        * aperture_id:  ID of the aperture (station*100+substation?)
+
+        """
+        return copy.deepcopy(self._beamformer_table)
+
     def load_calibration_coefficients(
         self: BaseTpmSimulator,
         antenna: int,
@@ -780,7 +797,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_calibration_coefficients")
         raise NotImplementedError
 
-    def switch_calibration_bank(self: BaseTpmSimulator, switch_time: int = 0) -> None:
+    def apply_calibration(self: BaseTpmSimulator, switch_time: int = 0) -> None:
         """
         Switch the calibration bank.
 
@@ -793,7 +810,7 @@ class BaseTpmSimulator(ObjectComponent):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: switch_calibration_bank")
+        self.logger.debug("TpmSimulator: apply_calibration")
         raise NotImplementedError
 
     def load_pointing_delays(
@@ -815,7 +832,9 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: set_pointing_delay")
         raise NotImplementedError
 
-    def apply_pointing_delays(self: BaseTpmSimulator, load_time: int) -> None:
+    def apply_pointing_delays(
+        self: BaseTpmSimulator, load_time: Optional[int] = 0
+    ) -> None:
         """
         Load the pointing delay at a specified time.
 
@@ -903,7 +922,7 @@ class BaseTpmSimulator(ObjectComponent):
     def stop_data_transmission(self: BaseTpmSimulator) -> None:
         """Stop data transmission."""
         self.logger.debug("TpmSimulator: stop_data_transmission")
-        self._pending_data_request = False
+        self._pending_data_requests = False
 
     def start_acquisition(
         self: BaseTpmSimulator,
@@ -1000,7 +1019,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: set_phase_terminal_count")
         self._phase_terminal_count = value
 
-    def post_synchronisation(self) -> None:
+    def post_synchronisation(self: BaseTpmSimulator) -> None:
         """
         Perform post tile configuration synchronization.
 
@@ -1010,7 +1029,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: post_synchronisation")
         raise NotImplementedError
 
-    def sync_fpgas(self) -> None:
+    def sync_fpgas(self: BaseTpmSimulator) -> None:
         """
         Synchronise the FPGAs.
 

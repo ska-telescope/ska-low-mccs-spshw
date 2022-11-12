@@ -91,8 +91,9 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
 
     __PASSTHROUGH = [
         "adc_rms",
-        "apply_pointing_delay",
+        "apply_pointing_delays",
         "arp_table",
+        "beamformer_table",
         "board_temperature",
         "channeliser_truncation",
         "check_pending_data_requests",
@@ -113,7 +114,6 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "fpga_current_frame",
         "fpgas_time",
         "fpga_sync_time",
-        "fpga_current_frame",
         "get_40g_configuration",
         "tpm_version",
         "initialise_beamformer",
@@ -121,7 +121,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "is_beamformer_running",
         "is_programmed",
         "load_calibration_coefficients",
-        "load_pointing_delay",
+        "load_pointing_delays",
         "phase_terminal_count",
         "pll_locked",
         "post_synchronisation",
@@ -142,8 +142,9 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
-        "switch_calibration_bank",
+        "apply_calibration",
         "sync_fpgas",
+        "sysref_present",
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
@@ -512,7 +513,7 @@ class TileComponentManager(MccsComponentManager):
             logger,
         )
 
-        self._tile_time = TileTime()
+        self._tile_time = TileTime(0)
 
         super().__init__(
             logger,
@@ -850,30 +851,36 @@ class TileComponentManager(MccsComponentManager):
     # Timed commands. Convert time to frame number
     #
     @check_communicating
-    def apply_calibration(self: TileComponentManager, switch_time: str) -> None:
+    def apply_calibration(
+        self: TileComponentManager, load_time: Optional[str] = ""
+    ) -> None:
         """
         Load the calibration coefficients at the specified time delay.
 
-        :param switch_time: switch time as ISO formatted time
+        :param load_time: switch time as ISO formatted time
 
         :raises ValueError: invalid time
         """
-        if switch_time is None:
-            switch_frame = 0
+        if load_time == "":
+            load_frame = 0
+        elif type(load_time) == int:  # added for backward compatibility
+            load_frame = load_time
         else:
-            switch_frame = self._tile_time.frame_from_utc_time(switch_time)
-            if switch_frame < 0:
-                self.logger.error("apply_calibration: Invalid time")
-                raise ValueError("Invalid time")
-            if switch_frame - self.fpga_current_frame < 20:
+            load_frame = self._tile_time.frame_from_utc_time(load_time)
+            if load_frame < 0:
+                self.logger.error(f"apply_calibration: Invalid time {load_time}")
+                raise ValueError(f"Invalid time {load_time}")
+            if (load_frame - self.fpga_current_frame) < 20:
                 self.logger.error("apply_calibration: time not enough in the future")
                 raise ValueError("Time too early")
         cast(
             SwitchingTpmComponentManager, self._tpm_component_manager
-        ).switch_calibration_bank(switch_frame)
+        ).apply_calibration(load_frame)
 
     @check_communicating
-    def apply_pointing_delays(self: TileComponentManager, load_time: str) -> None:
+    def apply_pointing_delays(
+        self: TileComponentManager, load_time: Optional[str] = ""
+    ) -> None:
         """
         Load the pointing delays at the specified time delay.
 
@@ -881,14 +888,16 @@ class TileComponentManager(MccsComponentManager):
 
         :raises ValueError: invalid time
         """
-        if load_time is None:
+        if load_time == "":
             load_frame = 0
+        elif type(load_time) == int:  # added for backward compatibility
+            load_frame = load_time
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
             if load_frame < 0:
-                self.logger.error("apply_pointing_delays: Invalid time")
-                raise ValueError("Invalid time")
-            if load_frame - self.fpga_current_frame < 20:
+                self.logger.error(f"apply_pointing_delays: Invalid time {load_time}")
+                raise ValueError(f"Invalid time {load_time}")
+            if (load_frame - self.fpga_current_frame) < 20:
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )
@@ -900,7 +909,7 @@ class TileComponentManager(MccsComponentManager):
     @check_communicating
     def start_beamformer(
         self: TileComponentManager,
-        start_time: str,
+        start_time: Optional[str] = None,
         duration: Optional[int] = -1,
         subarray_beam_id: Optional[int] = -1,
         scan_id: Optional[int] = 0,
@@ -922,12 +931,14 @@ class TileComponentManager(MccsComponentManager):
         """
         if start_time is None:
             start_frame = 0
+        elif type(start_time) == int:  # added for backward compatibility
+            start_frame = start_time
         else:
             start_frame = self._tile_time.frame_from_utc_time(start_time)
             if start_frame < 0:
-                self.logger.error("start_beamformer: Invalid time")
-                raise ValueError("Invalid time")
-            if start_frame - self.fpga_current_frame < 20:
+                self.logger.error(f"start_beamformer: Invalid time {start_time}")
+                raise ValueError(f"Invalid time {start_time}")
+            if (start_frame - self.fpga_current_frame) < 20:
                 self.logger.error("start_beamformer: time not enough in the future")
                 raise ValueError("Time too early")
         cast(
@@ -972,7 +983,7 @@ class TileComponentManager(MccsComponentManager):
             if load_frame < 0:
                 self.logger.error("configure_test_generator: Invalid time")
                 raise ValueError("Invalid time")
-            if load_frame - self.fpga_current_frame < 20:
+            if (load_frame - self.fpga_current_frame) < 20:
                 self.logger.error(
                     "configure_test_generator: time not enough in the future"
                 )
@@ -992,9 +1003,11 @@ class TileComponentManager(MccsComponentManager):
 
     __PASSTHROUGH = [
         "adc_rms",
-        "apply_pointing_delay",
+        "apply_pointing_delays",
         "arp_table",
+        "beamformer_table",
         "board_temperature",
+        "channeliser_truncation",
         "check_pending_data_requests",
         "clock_present",
         "configure_40g_core",
@@ -1016,10 +1029,9 @@ class TileComponentManager(MccsComponentManager):
         "is_beamformer_running",
         "is_programmed",
         "load_calibration_coefficients",
-        "load_pointing_delay",
+        "load_pointing_delays",
         "phase_terminal_count",
         "pll_locked",
-        "post_synchronisation",
         "pps_delay",
         "pps_present",
         "preadu_levels",
@@ -1030,11 +1042,13 @@ class TileComponentManager(MccsComponentManager):
         "set_beamformer_regions",
         "set_lmc_download",
         "set_lmc_integrated_download",
+        "static_delays",
         "station_id",
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
         "sync_fpgas",
+        "sysref_present",
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
@@ -1252,7 +1266,7 @@ class TileComponentManager(MccsComponentManager):
             start_frame = None
             delay = params.get("delay", 2)
         else:
-            start_frame = self._tile_time.frame_from_utc_time(start_time)
+            start_frame = self._tile_time.timestamp_from_utc_time(start_time)
             if start_frame < 0:
                 self.logger.error("Invalid time")
             delay = 0
@@ -1265,7 +1279,7 @@ class TileComponentManager(MccsComponentManager):
 
     def _start_acquisition(
         self: TileComponentManager,
-        start_time: Optional[int] = None,
+        start_time: Optional[str] = None,
         delay: Optional[int] = 2,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -1311,6 +1325,63 @@ class TileComponentManager(MccsComponentManager):
                 task_callback(
                     status=TaskStatus.FAILED, result="Start acquisition task failed"
                 )
+            return
+
+    @check_communicating
+    def post_synchronisation(
+        self: TileComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the post_synchronisation slow task.
+
+        This method returns immediately after it is submitted for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
+        """
+        return self.submit_task(self._post_synchronisation, task_callback=task_callback)
+
+    def _post_synchronisation(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Post synchronisation using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises NotImplementedError: Command not implemented
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            cast(
+                SwitchingTpmComponentManager, self._tpm_component_manager
+            ).post_synchronisation()
+        except NotImplementedError:
+            raise NotImplementedError
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED,
+                    result="Post synchronisation task aborted",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Post synchronisation has completed"
+            )
             return
 
     def set_power_state(self: TileComponentManager, power_state: PowerState) -> None:

@@ -472,7 +472,7 @@ class TileOrchestrator:
         except KeyError:
             self._logger.error(f"TileOrchestrator encountered unhandled case: {key}")
             raise
-        self._logger.warning(f"TileOrchestrator: {key} ==> {actions}")
+        self._logger.info(f"TileOrchestrator: {key} ==> {actions}")
 
         result_code = None
         for action in actions:

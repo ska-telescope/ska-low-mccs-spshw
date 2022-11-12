@@ -8,6 +8,7 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations  # allow forward references in type hints
 
+import itertools
 import json
 import logging
 import os.path
@@ -109,7 +110,7 @@ class MccsTile(SKABaseDevice):
             ("WriteAddress", self.WriteAddressCommand),
             ("Configure40GCore", self.Configure40GCoreCommand),
             ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
-            ("GetArpTable", "get_arp_table"),
+            ("GetArpTable", self.GetArpTableCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
             ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
@@ -418,60 +419,6 @@ class MccsTile(SKABaseDevice):
         :param value: the station id
         """
         self.component_manager.station_id = value
-
-    @attribute(dtype="DevString")
-    def cspDestinationIp(self: MccsTile) -> str:
-        """
-        Return the CSP destination IP address.
-
-        :return: the CSP destination IP address
-        """
-        return self._csp_destination_ip
-
-    @cspDestinationIp.write  # type: ignore[no-redef]
-    def cspDestinationIp(self: MccsTile, value: str) -> None:
-        """
-        Set the CSP destination IP address.
-
-        :param value: the new IP address
-        """
-        self._csp_destination_ip = value
-
-    @attribute(dtype="DevString")
-    def cspDestinationMac(self: MccsTile) -> str:
-        """
-        Return the CSP destination MAC address.
-
-        :return: a MAC address
-        """
-        return self._csp_destination_mac
-
-    @cspDestinationMac.write  # type: ignore[no-redef]
-    def cspDestinationMac(self: MccsTile, value: str) -> None:
-        """
-        Set the CSP destination MAC address.
-
-        :param value: MAC address
-        """
-        self._csp_destination_mac = value
-
-    @attribute(dtype="DevLong")
-    def cspDestinationPort(self: MccsTile) -> int:
-        """
-        Return the cspDestinationPort attribute.
-
-        :return: CSP destination port
-        """
-        return self._csp_destination_port
-
-    @cspDestinationPort.write  # type: ignore[no-redef]
-    def cspDestinationPort(self: MccsTile, value: int) -> None:
-        """
-        Set the CSP destination port.
-
-        :param value: CSP destination port
-        """
-        self._csp_destination_port = value
 
     @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
@@ -797,7 +744,7 @@ class MccsTile(SKABaseDevice):
 
         :returns: list of 512 values, one per channel.
         """
-        return self.component_manager.channelizer_truncation
+        return self.component_manager.channeliser_truncation
 
     @channeliserRounding.write
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
@@ -807,7 +754,7 @@ class MccsTile(SKABaseDevice):
         :param truncation: List with either a single value (applies to all channels)
                            or a list of 512 values. Range 0 (no truncation) to 7
         """
-        self.component_manager.channelizer_truncation = truncation
+        self.component_manager.channeliser_truncation = truncation
 
     @attribute(
         dtype=("DevLong",),
@@ -872,7 +819,7 @@ class MccsTile(SKABaseDevice):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self.component_manager.preadu_level
+        return self.component_manager.preadu_levels
 
     @preaduLevels.write
     def preaduLevels(self: MccsTile, levels: list[int]) -> None:
@@ -881,7 +828,7 @@ class MccsTile(SKABaseDevice):
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self.component_manager.preadu_level = levels
+        self.component_manager.preadu_levels = levels
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: MccsTile) -> list[int]:
@@ -901,14 +848,16 @@ class MccsTile(SKABaseDevice):
 
         :return: list of up to 7*48 values
         """
-        return self.component_manager.beamformer_table
+        return list(
+            itertools.chain.from_iterable(self.component_manager.beamformer_table)
+        )
 
     # # --------
     # # Commands
     # # --------
 
     @command(dtype_out="DevVarLongStringArray")
-    def Initi1891Galise(self: MccsTile) -> DevVarLongStringArrayType:
+    def Initialise(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Perform all required initialisation.
 
@@ -1990,7 +1939,7 @@ class MccsTile(SKABaseDevice):
         """
         Load the calibration coefficients, but does not apply them.
 
-        This is performed by switch_calibration_bank.
+        This is performed by apply_calibration.
         The calibration coefficients may include any rotation
         matrix (e.g. the parallactic angle), but do not include the geometric delay.
 
@@ -2053,7 +2002,7 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "ApplyCalibration command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.ApplyCalibrationCommand, argin: int
+            self: MccsTile.ApplyCalibrationCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ApplyCalibration` command functionality.
@@ -2069,7 +2018,7 @@ class MccsTile(SKABaseDevice):
             self._component_manager.apply_calibration(switch_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ApplyCalibration(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Load the calibration coefficients at the specified time delay.
@@ -2083,7 +2032,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ApplyCalibration", 10)
+        >>> dp.command_inout("ApplyCalibration", "")
         """
         handler = self.get_command_object("ApplyCalibration")
         (return_code, message) = handler(argin)
@@ -2181,7 +2130,7 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "ApplyPointingDelays command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.ApplyPointingDelaysCommand, argin: int
+            self: MccsTile.ApplyPointingDelaysCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ApplyPointingDelays` command functionality.
@@ -2197,8 +2146,8 @@ class MccsTile(SKABaseDevice):
             self._component_manager.apply_pointing_delays(load_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
-    def ApplyPointingDelays(self: MccsTile, argin: int) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def ApplyPointingDelays(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Apply the pointing delays at the specified time delay.
 
@@ -2211,9 +2160,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ApplyPointingDelays", 10)
+        >>> dp.command_inout("ApplyPointingDelays", "")
         """
-        handler = self.get_command_object("ApplyPointingDelay")
+        handler = self.get_command_object("ApplyPointingDelays")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

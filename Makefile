@@ -10,10 +10,9 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs
 
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
-PYTHON_TEST_FILE = tests
-PYTHON_VARS_AFTER_PYTEST = --cov-fail-under=80
 PYTHON_LINT_TARGET = src/ska_low_mccs tests  ## Paths containing python to be formatted and linted
-#PYTHON_VARS_AFTER_PYTEST = --forked
+PYTHON_VARS_AFTER_PYTEST = --forked --cov-fail-under=80
+PYTHON_TEST_FILE = tests
 
 DOCS_SPHINXOPTS = -n -W --keep-going
 
@@ -33,9 +32,13 @@ ifneq ($(strip $(CI_JOB_ID)),)
 endif
 
 ifeq ($(MAKECMDGOALS),k8s-test)
-PYTHON_TEST_FILE = tests/functional
 PYTHON_VARS_AFTER_PYTEST += --testbed local
 endif
+
+K8S_TEST_TEST_COMMAND ?= $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \
+						pytest \
+						$(PYTHON_VARS_AFTER_PYTEST) ./tests/functional \
+						 | tee pytest.stdout
 
 python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	

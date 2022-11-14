@@ -15,6 +15,7 @@ K8S_TESTBED ?= test
 PYTHON_TEST_FILE = tests
 
 PYTHON_LINT_TARGET = src/ska_low_mccs tests  ## Paths containing python to be formatted and linted
+#PYTHON_VARS_AFTER_PYTEST = --forked
 
 DOCS_SPHINXOPTS = -n -W --keep-going
 
@@ -35,6 +36,7 @@ endif
 
 ifeq ($(MAKECMDGOALS),k8s-test)
 PYTHON_VARS_AFTER_PYTEST += --testbed $(K8S_TESTBED)
+PYTHON_TEST_FILE = tests/functional
 endif
 
 K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \

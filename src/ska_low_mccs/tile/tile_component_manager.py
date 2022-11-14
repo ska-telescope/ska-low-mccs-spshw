@@ -113,7 +113,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "fpga2_temperature",
         "fpga_current_frame",
         "fpgas_time",
-        "fpga_sync_time",
+        "fpga_reference_time",
         "get_40g_configuration",
         "tpm_version",
         "initialise_beamformer",
@@ -829,7 +829,9 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA reference time
         """
-        reference_time = self.fpga_sync_time
+        reference_time = cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).fpga_reference_time
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_timestamp(reference_time)
 
@@ -844,7 +846,10 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA reference time
         """
-        self._tile_time.set_reference_time(self.fpga_sync_time)
+        reference_time = cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).fpga_reference_time
+        self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_frame(self.fpga_current_frame)
 
     #

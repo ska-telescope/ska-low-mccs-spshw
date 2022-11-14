@@ -118,7 +118,7 @@ class BaseTpmSimulator(ObjectComponent):
         self._test_generator_active = False
         self._pending_data_requests = False
         self._fpga_current_frame = 0
-        self._fpga_sync_time = 0
+        self._fpga_reference_time = 0
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
         self._pps_present = self.CLOCK_SIGNALS_OK
         self._clock_present = self.CLOCK_SIGNALS_OK
@@ -638,13 +638,13 @@ class BaseTpmSimulator(ObjectComponent):
         return copy.deepcopy(self._arp_table)
 
     @property
-    def fpga_sync_time(self: BaseTpmSimulator) -> int:
+    def fpga_reference_time(self: BaseTpmSimulator) -> int:
         """
         Return reference time for timestamp.
 
         :return: reference time
         """
-        return self._fpga_sync_time
+        return self._fpga_reference_time
 
     @property
     def fpga_current_frame(self: BaseTpmSimulator) -> int:
@@ -653,10 +653,11 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: current frame
         """
-        if self._fpga_sync_time == 0:
+        if self._fpga_reference_time == 0:
             return 0
         else:
-            # return int((time.time() - self._fpga_sync_time) / (TileData.FRAME_PERIOD))
+            # return int(
+            #    (time.time()-self._fpga_reference_time)/(TileData.FRAME_PERIOD))
             return 1000000
 
     def set_lmc_download(
@@ -940,7 +941,7 @@ class BaseTpmSimulator(ObjectComponent):
         """
         self.logger.debug("TpmSimulator:Start acquisition")
         self._tpm_status = TpmStatus.SYNCHRONISED
-        self._sync_time = int(time.time())
+        self._fpga_reference_time = int(time.time())
         raise NotImplementedError
 
     def set_lmc_integrated_download(

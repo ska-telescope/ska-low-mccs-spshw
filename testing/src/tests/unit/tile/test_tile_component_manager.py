@@ -408,7 +408,6 @@ class TestStaticSimulatorCommon:
                 StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
             ),
             ("fpga_current_frame", 0),
-            ("fpga_sync_time", 0),
             ("pps_delay", StaticTpmSimulator.PPS_DELAY),
             ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
             ("register_list", list(StaticTpmSimulator.REGISTER_MAP.keys())),
@@ -456,6 +455,59 @@ class TestStaticSimulatorCommon:
             )
             tile.power_state = PowerState.ON
         assert getattr(tile, attribute_name) == expected_value
+
+    @pytest.mark.parametrize(
+        ("attribute_name", "expected_value", "expected_component_value"),
+        (
+            ("fpga_reference_time", 0, "1970-01-01T00:00:00.000000Z"),
+            ("fpga_frame_time", None, "1970-01-01T00:00:00.000000Z"),
+        ),
+    )
+    def test_read_time_attribute(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            SwitchingTpmComponentManager,
+            TileComponentManager,
+        ],
+        attribute_name: str,
+        expected_value: Any,
+        expected_component_value: Any,
+    ) -> None:
+        """
+        Tests that read-only time attributes take known initial values.
+
+        This is a weak test; over time we should find ways to more thoroughly
+        test each of these independently.
+
+        :param tile: the tile class object under test.
+        :param attribute_name: the name of the attribute under test
+        :param expected_value: the expected value of the attribute. This
+            can be any type, but the test of the attribute is a single
+            "==" equality test.
+        :param expected_component_value: the expected value in the component
+            manager, which is in different format wrt. the value in the
+            underlying driver/simulator
+        """
+        # With the update to v0.13 of the base classes the logic to change the
+        # power_state of a device has been moved from the component manager to
+        # the device itself.
+        # This means that during component manager tests we cannot change the
+        # power state or other attributes "naturally" and thus this workaround
+        # is used where we assert the callback was called as we would expect and
+        # then manually set the attribute.
+        # We exclude the StaticTpmSimulator as it does not have this callback.
+        if not isinstance(tile, StaticTpmSimulator):
+            tile._component_state_changed_callback.assert_next_call_with_keys(
+                {"power_state": PowerState.ON}
+            )
+            tile.power_state = PowerState.ON
+        if not isinstance(tile, TileComponentManager):
+            if expected_value is not None:
+                assert getattr(tile, attribute_name) == expected_value
+        else:
+            assert getattr(tile, attribute_name) == expected_component_value
 
     @pytest.mark.parametrize(
         ("attribute_name", "initial_value", "values_to_write"),

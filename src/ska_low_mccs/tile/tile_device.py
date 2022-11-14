@@ -757,7 +757,7 @@ class MccsTile(SKABaseDevice):
         self.component_manager.channeliser_truncation = truncation
 
     @attribute(
-        dtype=("DevLong",),
+        dtype=("DevDouble",),
         max_dim_x=32,
     )
     def staticTimeDelays(self: MccsTile) -> list[int]:
@@ -773,7 +773,7 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.static_delays
 
     @staticTimeDelays.write
-    def staticTimeDelays(self: MccsTile, delays: list[int]) -> None:
+    def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
         """
         Set static time delay.
 
@@ -1640,7 +1640,7 @@ class MccsTile(SKABaseDevice):
 
             :return: a JSON-encoded dictionary of coreId and populated arpID table
             """
-            return json.dumps(self.component_manager.get_arp_table())
+            return json.dumps(self._component_manager.get_arp_table())
 
     @command(dtype_out="DevString")
     def GetArpTable(self: MccsTile) -> str:
@@ -1801,7 +1801,7 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficients command completed OK"
+        SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
         def do(  # type: ignore[override]
             self: MccsTile.ConfigureStationBeamformerCommand, argin: str
@@ -1888,7 +1888,7 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
+        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficents command completed OK"
 
         def do(  # type: ignore[override]
             self: MccsTile.LoadCalibrationCoefficientsCommand, argin: list[float]

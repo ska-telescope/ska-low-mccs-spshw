@@ -135,7 +135,7 @@ class TpmDriver(MccsComponentManager):
         self._arp_table: dict[int, list[int]] = {}
         self._fpgas_time = self.FPGAS_TIME
         self._fpga_current_frame = 0
-        self._fpga_sync_time = 0
+        self._fpga_reference_time = 0
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
         self._pps_present = True
         self._clock_present = True
@@ -800,7 +800,7 @@ class TpmDriver(MccsComponentManager):
         return self._fpgas_time
 
     @property
-    def fpga_sync_time(self: TpmDriver) -> int:
+    def fpga_reference_time(self: TpmDriver) -> int:
         """
         Return the FPGA reference time.
 
@@ -809,16 +809,16 @@ class TpmDriver(MccsComponentManager):
 
         :return: the FPGA_1 reference time, in Unix seconds
         """
-        self.logger.debug("TpmDriver: fpga_sync_time")
+        self.logger.debug("TpmDriver: fpga_reference_time")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self._fpga_sync_time = self.tile["fpga1.pps_manager.sync_time_val"]
+                self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
-        return self._fpga_sync_time
+        return self._fpga_reference_time
 
     @property
     def fpga_current_frame(self: TpmDriver) -> int:
@@ -967,11 +967,12 @@ class TpmDriver(MccsComponentManager):
         # TODO use list write method for tile
         #
         current_address = int(address & 0xFFFFFFFC)
+        assert self.tile.tpm is not None  # for the type checker
         err_flag = False
         for value in values:
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
-                    self.tile.tpm[current_address] = value
+                    self.tile[current_address] = value
                 except Exception:
                     err_flag = True
                 current_address = current_address + 4
@@ -1156,7 +1157,27 @@ class TpmDriver(MccsComponentManager):
 
         :return: static delay, in samples one per TPM input
         """
-        return copy.deepcopy(self._static_delays)
+        return copy.deepcopy(self._get_static_delays)
+
+    def _get_static_delays(self: TpmDriver) -> list[float]:
+        """
+        Read from hardware the static delays, in samples.
+
+        :return: array with static delays
+        """
+        delays = []
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                for i in range(16):
+                    delays.append(self.tile[f"fpga1.test_generator.delay_{i}"] * 1.25)
+                for i in range(16):
+                    delays.append(self.tile[f"fpga2.test_generator.delay_{i}"] * 1.25)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+        return delays
 
     @static_delays.setter
     def static_delays(self: TpmDriver, delays: list[float]):
@@ -1384,7 +1405,7 @@ class TpmDriver(MccsComponentManager):
         self._pll_locked = pll_lock
         return pll_lock
 
-    def set_beamformer_regions(self: TpmDriver, regions: list[int]) -> None:
+    def set_beamformer_regions(self: TpmDriver, regions: list[list[int]]) -> None:
         """
         Set the frequency regions to be beamformed into a single beam.
 
@@ -1428,6 +1449,40 @@ class TpmDriver(MccsComponentManager):
                     [[start_channel, nof_channels, 0]]
                 )
                 self.tile.set_first_last_tile(is_first, is_last)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+
+    @property
+    def beamformer_table(self: TpmDriver) -> list[list[int]]:
+        """
+        Fetch internal beamformer table.
+
+        Fetch table used by the hardware beamformer to define beams and logical bands
+        :return: bidimensional table, with 48 entries, one every 8 channels
+
+        * start physical channel
+        * tile hardware beam
+        * subarray ID
+        * subarray start logical channel
+        * subarray_beam_id - (int) ID of the subarray beam
+        * substation_id - (int) Substation
+        * aperture_id:  ID of the aperture (station*100+substation?)
+
+        """
+        self._get_beamformer_table()
+        return copy.deepcopy(self._beamformer_table)
+
+    def _get_beamformer_table(self: TpmDriver) -> None:
+        """Fetch internal beamformer table from hardware."""
+        self.logger.debug("TpmDriver: initialise_beamformer")
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self._beamformer_table = self.tile.tpm.station_beamf[
+                    0
+                ].get_channel_table()
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
@@ -2091,15 +2146,15 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 if load_time == 0:
-                    load_time = self.tile.get_fpga_timestamp() + 108
+                    load_time = self.tile.get_fpga_timestamp() + 180
                 # Set everything at same time
-                self.tile.set_test_generator_tone(
+                self.tile.test_generator_set_tone(
                     0, frequency0, amplitude0, 0.0, load_time
                 )
-                self.tile.set_test_generator_tone(
+                self.tile.test_generator_set_tone(
                     1, frequency1, amplitude1, 0.0, load_time
                 )
-                self.tile.set_test_generator_noise(amplitude_noise, load_time)
+                self.tile.test_generator_set_noise(amplitude_noise, load_time)
                 self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
                 end_time = self.tile.get_fpga_timestamp()
             except Exception as e:
@@ -2108,7 +2163,7 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
         if end_time < load_time:
-            self.logger.warning("Test generator failed to program in 30 ms")
+            self.logger.warning("Test generator failed to program in 50 ms")
 
     def test_generator_input_select(self: TpmDriver, inputs: int = 0) -> None:
         """

@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import itertools
 import json
-import logging
 import time
 import unittest
-import numpy as np
 from typing import Any, Optional
 
 import pytest
@@ -139,16 +137,16 @@ class TestMccsTile:
                 None,
             ),
             ("ppsDelay", 12, None),
-            #TODO Tests fail as np.ndarray is returned. 
-            #(
+            # TODO Tests fail as np.ndarray is returned.
+            # (
             #    "channeliserRounding",
             #    pytest.approx(StaticTpmSimulator.CHANNELISER_TRUNCATION),
             #    [2] * 512,
-            #),
-            #("preaduLevels", pytest.approx(StaticTpmSimulator.PREADU_LEVELS), [5] * 32),
-            #("staticDelays", pytest.approx(StaticTpmSimulator.STATIC_DELAYS), [12.] * 32),
-            #("cspRounding", pytest.approx(StaticTpmSimulator.CSP_ROUNDING), [3] * 384),
-            #("arpTable", StaticTpmSimulator.ARP_TABLE, None),
+            # ),
+            # ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [5] * 32),
+            # ("staticDelays", StaticTpmSimulator.STATIC_DELAYS, [12.] * 32),
+            # ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
+            # ("arpTable", StaticTpmSimulator.ARP_TABLE, None),
         ],
     )
     def test_component_attribute(
@@ -1005,7 +1003,7 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed, match="ValueError"):
             _ = tile_device.LoadCalibrationCoefficients(coefficients[0:16])
 
-    @pytest.mark.parametrize("start_time", (None, ))
+    @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(
         self: TestMccsTileCommands,
@@ -1101,12 +1099,12 @@ class TestMccsTileCommands:
             )
         )
         table = list(tile_device.beamformerTable)
-        expected = ([2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47)
+        expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
         tile_device.SetBeamFormerRegions([2, 8, 5, 3, 8, 1, 1, 101])
         table = list(tile_device.beamformerTable)
-        expected = ([2, 5, 3, 8, 1, 1, 101] + [0, 0, 0, 0, 0, 0, 0] * 47)
+        expected = [2, 5, 3, 8, 1, 1, 101] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
     def test_send_data_samples(

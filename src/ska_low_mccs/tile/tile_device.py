@@ -2815,7 +2815,9 @@ class MccsTile(SKABaseDevice):
         * set_time: time at which the generator is set, for synchronization
             among different TPMs. In UTC ISO format (string)
         * adc_channels: list of adc channels which will be substituted with
-
+            the generated signal. It is a 32 integer, with each bit representing
+            an input channel. Default: all if at least q source is specified,
+            none otherwises.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

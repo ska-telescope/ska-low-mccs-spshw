@@ -14,6 +14,7 @@ import time
 import unittest
 from typing import Any, Optional
 
+# import numpy as np
 import pytest
 from ska_control_model import AdminMode, HealthState, ResultCode, TestMode
 from ska_low_mccs_common import MccsDeviceProxy
@@ -139,13 +140,13 @@ class TestMccsTile:
             ("ppsDelay", 12, None),
             # TODO Tests fail as np.ndarray is returned.
             # (
-            #    "channeliserRounding",
-            #    pytest.approx(StaticTpmSimulator.CHANNELISER_TRUNCATION),
-            #    [2] * 512,
+            #   "channeliserRounding",
+            #   pytest.approx(StaticTpmSimulator.CHANNELISER_TRUNCATION),
+            #   [2] * 512,
             # ),
-            # ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [5] * 32),
-            # ("staticDelays", StaticTpmSimulator.STATIC_DELAYS, [12.] * 32),
-            # ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
+            # ("preaduLevels", pytest.approx(StaticTpmSimulator.PREADU_LEVELS), [5]*32),
+            # ("staticDelays", StaticTpmSimulator.STATIC_DELAYS, [12.]*32),
+            # ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3]*384),
             # ("arpTable", StaticTpmSimulator.ARP_TABLE, None),
         ],
     )

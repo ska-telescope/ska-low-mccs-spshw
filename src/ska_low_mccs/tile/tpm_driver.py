@@ -54,15 +54,14 @@ class TpmDriver(MccsComponentManager):
 
     # TODO Remove all unnecessary variables and constants after
     # all methods are completed and tested
-    VOLTAGE = 4.7
-    CURRENT = 0.4
+    VOLTAGE = 5.0
     BOARD_TEMPERATURE = 36.0
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
-    ADC_RMS = tuple(float(i) for i in range(32))
-    FPGAS_TIME = [1, 2]
+    ADC_RMS = [0] * 32
+    FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
-    PPS_DELAY = 12
+    PPS_DELAY = 0
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "itpm_v1_6.bit"
     FIRMWARE_LIST = [
@@ -70,11 +69,46 @@ class TpmDriver(MccsComponentManager):
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
-    REGISTER_MAP: dict[str, dict] = {
-        "test-reg1": {},
-        "test-reg2": {},
-        "test-reg3": {},
-        "test-reg4": {},
+    REGISTER_LIST: list[str] = []
+    BEAMFORMER_TABLE: list[list[int]] = [
+        [0, 0, 0, 0, 0, 0, 0]
+    ] * 48  # empty beamformer table
+    CHANNELISER_TRUNCATION: list[int] = [0] * 512
+    CSP_ROUNDING: list[int] = [0] * 384
+
+    PREADU_SIGNAL_MAP = {
+        0: {"preadu_id": 1, "channel": 14},
+        1: {"preadu_id": 1, "channel": 15},
+        2: {"preadu_id": 1, "channel": 12},
+        3: {"preadu_id": 1, "channel": 13},
+        4: {"preadu_id": 1, "channel": 10},
+        5: {"preadu_id": 1, "channel": 11},
+        6: {"preadu_id": 1, "channel": 8},
+        7: {"preadu_id": 1, "channel": 9},
+        8: {"preadu_id": 0, "channel": 0},
+        9: {"preadu_id": 0, "channel": 1},
+        10: {"preadu_id": 0, "channel": 2},
+        11: {"preadu_id": 0, "channel": 3},
+        12: {"preadu_id": 0, "channel": 4},
+        13: {"preadu_id": 0, "channel": 5},
+        14: {"preadu_id": 0, "channel": 6},
+        15: {"preadu_id": 0, "channel": 7},
+        16: {"preadu_id": 1, "channel": 6},
+        17: {"preadu_id": 1, "channel": 7},
+        18: {"preadu_id": 1, "channel": 4},
+        19: {"preadu_id": 1, "channel": 5},
+        20: {"preadu_id": 1, "channel": 2},
+        21: {"preadu_id": 1, "channel": 3},
+        22: {"preadu_id": 1, "channel": 0},
+        23: {"preadu_id": 1, "channel": 1},
+        24: {"preadu_id": 0, "channel": 8},
+        25: {"preadu_id": 0, "channel": 9},
+        26: {"preadu_id": 0, "channel": 10},
+        27: {"preadu_id": 0, "channel": 11},
+        28: {"preadu_id": 0, "channel": 12},
+        29: {"preadu_id": 0, "channel": 13},
+        30: {"preadu_id": 0, "channel": 14},
+        31: {"preadu_id": 0, "channel": 15},
     }
 
     def __init__(
@@ -114,15 +148,16 @@ class TpmDriver(MccsComponentManager):
         self._port = port
         self._tpm_status = TpmStatus.UNKNOWN
         # Configuration table cache
-        self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48  # empty beamformer table
-        self._channeliser_truncation = [3] * 512
-        self._csp_rounding = [3] * 384
+        self._beamformer_table = self.BEAMFORMER_TABLE
+        self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+        self._csp_rounding = self.CSP_ROUNDING
         self._forty_gb_core_list: list = []
         self._preadu_levels = [0] * 32
         self._static_delays = [0.0] * 32
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
         self._is_beamformer_running = False
+        self._pending_data_requests = False
         self._voltage = self.VOLTAGE
         self._board_temperature = self.BOARD_TEMPERATURE
         self._fpga1_temperature = self.FPGA1_TEMPERATURE
@@ -141,6 +176,7 @@ class TpmDriver(MccsComponentManager):
         self._clock_present = True
         self._sysref_present = True
         self._pll_locked = True
+        self._register_list = self.REGISTER_LIST
         # Hardware
         self._tpm_version: str | None  # type hint only
         if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
@@ -170,7 +206,9 @@ class TpmDriver(MccsComponentManager):
         self._poll_rate = 2.0
         self._start_polling_event = threading.Event()
         self._stop_polling_event = threading.Event()
-
+        # Update thread
+        self._last_update_time_1 = 0
+        self._last_update_time_2 = 0
         self._polling_thread = threading.Thread(
             target=self._polling_loop, name="tpm_polling_thread", daemon=True
         )
@@ -231,7 +269,7 @@ class TpmDriver(MccsComponentManager):
                     error_flag = True
                 # polling attempt succeeded
                 if not error_flag:
-                    self.updating_attributes()
+                    self._update_attributes()
                 self._hardware_lock.release()
             else:
                 self.logger.debug("Failed to acquire lock")
@@ -284,17 +322,75 @@ class TpmDriver(MccsComponentManager):
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
 
-    def updating_attributes(self: TpmDriver) -> None:
+    def _update_attributes(self: TpmDriver) -> None:
         """Update key hardware attributes."""
+        current_time = time.time()
+        time_interval_1 = 5.0
+        time_interval_2 = 30.0
         try:
-            if self.tile.is_programmed():
+            self._is_programmed = self.tile.is_programmed()
+            if self._is_programmed:
                 self.logger.debug("Updating key hardware attributes...")
-                self._fpga1_temperature = self.tile.get_fpga0_temperature()
-                self._fpga2_temperature = self.tile.get_fpga1_temperature()
-                self._board_temperature = self.tile.get_temperature()
+                self._adc_rms = self.tile.get_adc_rms()
+                # self._fpgas_time =
+                # self._fpga_current_frame
+                # self._current_tile_beamformer_frame
+                self._is_beamformer_running = self.tile.beamformer_is_running()
+                self._pending_data_requests = self.tile._pending_data_requests()
                 self._voltage = self.tile.get_voltage()
+                # slow update parameters
+                if (current_time - self._last_update_time_1) > time_interval_1:
+                    self._last_update_time_1 = current_time
+                    # self._clock_present = method_to_be_written
+                    self._pll_locked = self._check_pll_locked()
+                    self._pps_present = self._check_pps_present()
+                    self._pps_delay = self.tile.get_pps_delay()
+                    # self._sysref_present = method_to_be_written
+                    self._fpga1_temperature = self.tile.get_fpga0_temperature()
+                    self._fpga2_temperature = self.tile.get_fpga1_temperature()
+                    self._board_temperature = self.tile.get_temperature()
+                # very slow update parameters. Should update by set commands
+                if (current_time - self._last_update_time_2) > time_interval_2:
+                    self._last_update_time_2 = current_time
+                    self._fpga_reference_time = self.tile[
+                        "fpga1.pps_manager.sync_time_val"
+                    ]
+                    self._phase_terminal_count = self.tile.get_phase_terminal_count()
+                    # self._channeliser_truncation = method_to_be_written
+                    # self._csp_rounding = method_to_be_written
+                    self._preadu_levels = self._get_preadu_levels()
+                    self._static_delays = self._get_static_delays()
+                    self._station_id = self.tile.get_station_id()
+                    self._tile_id = self.tile.get_tile_id()
+                    self._beamformer_table = self.tile.tpm.station_beamf[
+                        0
+                    ].get_channel_table()
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
+
+        if not self._is_programmed:
+            self._pps_delay = 0
+            self._fpga_reference_time = 0
+            self._beamformer_table = self.BEAMFORMER_TABLE
+            self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+            self._csp_rounding = self.CSP_ROUNDING
+            self._preadu_levels = [0] * 32
+            self._static_delays = [0.0] * 32
+            self._is_programmed = False
+            self._is_beamformer_running = False
+            self._test_generator_active = False
+            self._pending_data_requests = False
+            self._arp_table: dict[int, list[int]] = {}
+            self._fpgas_time = self.FPGAS_TIME
+            self._fpga_current_frame = 0
+            self._current_tile_beamformer_frame = 0
+            self._fpga_reference_time = 0
+            self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+            self._pps_present = True
+            self._clock_present = True
+            self._sysref_present = True
+            self._pll_locked = True
+            self._register_list = self.REGISTER_LIST
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
@@ -587,7 +683,7 @@ class TpmDriver(MccsComponentManager):
             #
             # extra steps required to have it working
             #
-            self.initialise_beamformer(128, 8, True, True)
+            self._reset_and_initialise_beamformer()
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
                 # self.tile.post_synchronisation()
@@ -698,14 +794,6 @@ class TpmDriver(MccsComponentManager):
         :return: the voltage of the TPM
         """
         self.logger.debug("TpmDriver: voltage")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self._voltage = self.tile.get_voltage()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
         return self._voltage
 
     @property
@@ -714,19 +802,8 @@ class TpmDriver(MccsComponentManager):
         Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
-        :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        res = self._hardware_lock.acquire(timeout=0.5)
-        if res:
-            try:
-                self._fpga1_temperature = self.tile.get_fpga0_temperature()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Hardware locked")
-            raise ConnectionError("Cannot read from FPGA")
         return self._fpga1_temperature
 
     @property
@@ -735,39 +812,18 @@ class TpmDriver(MccsComponentManager):
         Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
-        :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        res = self._hardware_lock.acquire(timeout=0.5)
-        if res:
-            try:
-                self._fpga2_temperature = self.tile.get_fpga1_temperature()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Hardware locked")
-            raise ConnectionError("Cannot read from FPGA")
         return self._fpga2_temperature
 
     @property
     def adc_rms(self: TpmDriver) -> list[float]:
         """
-        Return the RMS power of the TPM's analog-to-digital converter.
+        Return the last measured RMS power of the TPM's analog-to-digital converter.
 
         :return: the RMS power of the TPM's ADC
         """
-        self.logger.debug("TpmDriver: adc_rms")
-        res = self._hardware_lock.acquire(timeout=0.5)
-        if res:
-            try:
-                self._adc_rms = self.tile.get_adc_rms()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Hardware locked")
-        return list(self._adc_rms)
+        return self._adc_rms
 
     @property
     def fpgas_time(self: TpmDriver) -> list[int]:
@@ -810,14 +866,6 @@ class TpmDriver(MccsComponentManager):
         :return: the FPGA_1 reference time, in Unix seconds
         """
         self.logger.debug("TpmDriver: fpga_reference_time")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
         return self._fpga_reference_time
 
     @property
@@ -847,19 +895,10 @@ class TpmDriver(MccsComponentManager):
     @property
     def pps_delay(self: TpmDriver) -> float:
         """
-        Return the PPS delay of the TPM.
+        Return the last measured PPS delay of the TPM.
 
         :return: PPS delay
         """
-        self.logger.debug("TpmDriver: get_pps_delay")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self._pps_delay = self.tile.get_pps_delay()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
         return self._pps_delay
 
     @property
@@ -869,6 +908,10 @@ class TpmDriver(MccsComponentManager):
 
         :return: list of registers
         """
+        return self._register_list
+
+    def _get_register_list(self: TpmDriver) -> None:
+        """Update the TPM register list."""
         assert self.tile.tpm is not None  # for the type checker
         self.logger.warning("TpmDriver: register_list too big to be transmitted")
         reglist = []
@@ -880,9 +923,9 @@ class TpmDriver(MccsComponentManager):
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
+            self._register_list = reglist
         else:
             self.logger.warning("Failed to acquire hardware lock")
-        return reglist
 
     def read_register(
         self: TpmDriver, register_name: str, nb_read: int, offset: int
@@ -898,12 +941,20 @@ class TpmDriver(MccsComponentManager):
         """
         assert self.tile.tpm is not None  # for the type checker
         if len(self.tile.tpm.find_register(register_name)) == 0:
-            with self._hardware_lock:
-                self.logger.error("Register '" + register_name + "' not present")
+            self.logger.error("Register '" + register_name + "' not present")
             value = None
             return []
         else:
-            value = cast(Any, self.tile[register_name])
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    value = cast(Any, self.tile[register_name])
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
+                return []
+            self._hardware_lock.release()
+
         if type(value) != list:
             lvalue = [value]
         else:
@@ -925,10 +976,20 @@ class TpmDriver(MccsComponentManager):
         devname = ""
         regname = devname + register_name
         assert self.tile.tpm is not None  # for the type checker
-        if len(self.tile.tpm.find_register(register_name)) == 0:
-            self.logger.error("Register '" + register_name + "' not present")
+        if len(self.tile.tpm.find_register(regname)) == 0:
+            self.logger.error("Register '" + regname + "' not present")
         else:
-            self.tile[regname] = values
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    if len(values) == 1:
+                        self.tile.__setitem__(register_name, values[0])
+                    else:
+                        self.tile.__setitem__(register_name, values)
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock.release()
 
     def read_address(self: TpmDriver, address: int, nvalues: int) -> list[int]:
         """
@@ -951,8 +1012,15 @@ class TpmDriver(MccsComponentManager):
                 + "of type "
                 + str(type(current_address))
             )
-            with self._hardware_lock:
-                values.append(cast(int, self.tile[current_address]))
+            if self._hardware_lock.acquire(timeout=0.2):
+                try:
+                    values.append(cast(int, self.tile[current_address]))
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock.release()
+
             current_address = current_address + 4
         return values
 
@@ -1157,26 +1225,24 @@ class TpmDriver(MccsComponentManager):
 
         :return: static delay, in samples one per TPM input
         """
-        return copy.deepcopy(self._get_static_delays)
+        return copy.deepcopy(self._static_delays)
 
     def _get_static_delays(self: TpmDriver) -> list[float]:
         """
-        Read from hardware the static delays, in samples.
+        Read from hardware the static delays, in nanoseconds.
 
-        :return: array with static delays
+        Requires to be run inside a thread protected block
+        :return: list of static delays, from the hardware, in ns
         """
+        self.logger.debug("TpmDriver: get_time_delays")
         delays = []
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                for i in range(16):
-                    delays.append(self.tile[f"fpga1.test_generator.delay_{i}"] * 1.25)
-                for i in range(16):
-                    delays.append(self.tile[f"fpga2.test_generator.delay_{i}"] * 1.25)
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
+        try:
+            for i in range(16):
+                delays.append(self.tile[f"fpga1.test_generator.delay_{i}"] * 1.25)
+            for i in range(16):
+                delays.append(self.tile[f"fpga2.test_generator.delay_{i}"] * 1.25)
+        except Exception as e:
+            self.logger.warning(f"TpmDriver: Tile access failed: {e}")
         return delays
 
     @static_delays.setter
@@ -1189,8 +1255,9 @@ class TpmDriver(MccsComponentManager):
 
         :param delays: Static zenith delays, one per input channel
         """
-        self._static_delays = delays
+        self.logger.debug("TpmDriver: static_delays.setter")
         self._set_time_delays(delays)
+        self._static_delays = delays
 
     def _set_time_delays(self: TpmDriver, delays: list[float]) -> None:
         """
@@ -1230,7 +1297,7 @@ class TpmDriver(MccsComponentManager):
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
-        if type(rounding) == int:
+        if type(rounding) == int or len(rounding) == 1:
             self._csp_rounding = [rounding] * 384
         else:
             self._csp_rounding = rounding
@@ -1268,10 +1335,10 @@ class TpmDriver(MccsComponentManager):
 
         :param levels: Preadu attenuation levels in dB
         """
-        self._preadu_levels = levels
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self._set_preadu_levels(levels)
+                self._preadu_levels = levels
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
@@ -1279,56 +1346,45 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def _set_preadu_levels(self: TpmDriver, levels: list[int]):
+        """
+        Get current preadu settings.
+
+        TODO This should be moved to pyaavs Tile
+        :param levels: Preadu attenuation levels in dB
+        """
         self.logger.debug("TpmDriver: set_preadu_levels")
-        # TODO This should be moved to pyaavs Tile
-        preadu_signal_map = {
-            0: {"preadu_id": 1, "channel": 14},
-            1: {"preadu_id": 1, "channel": 15},
-            2: {"preadu_id": 1, "channel": 12},
-            3: {"preadu_id": 1, "channel": 13},
-            4: {"preadu_id": 1, "channel": 10},
-            5: {"preadu_id": 1, "channel": 11},
-            6: {"preadu_id": 1, "channel": 8},
-            7: {"preadu_id": 1, "channel": 9},
-            8: {"preadu_id": 0, "channel": 0},
-            9: {"preadu_id": 0, "channel": 1},
-            10: {"preadu_id": 0, "channel": 2},
-            11: {"preadu_id": 0, "channel": 3},
-            12: {"preadu_id": 0, "channel": 4},
-            13: {"preadu_id": 0, "channel": 5},
-            14: {"preadu_id": 0, "channel": 6},
-            15: {"preadu_id": 0, "channel": 7},
-            16: {"preadu_id": 1, "channel": 6},
-            17: {"preadu_id": 1, "channel": 7},
-            18: {"preadu_id": 1, "channel": 4},
-            19: {"preadu_id": 1, "channel": 5},
-            20: {"preadu_id": 1, "channel": 2},
-            21: {"preadu_id": 1, "channel": 3},
-            22: {"preadu_id": 1, "channel": 0},
-            23: {"preadu_id": 1, "channel": 1},
-            24: {"preadu_id": 0, "channel": 8},
-            25: {"preadu_id": 0, "channel": 9},
-            26: {"preadu_id": 0, "channel": 10},
-            27: {"preadu_id": 0, "channel": 11},
-            28: {"preadu_id": 0, "channel": 12},
-            29: {"preadu_id": 0, "channel": 13},
-            30: {"preadu_id": 0, "channel": 14},
-            31: {"preadu_id": 0, "channel": 15},
-        }
-        # Get current preadu settings
         for preadu in self.tile.tpm.tpm_preadu:
             preadu.select_low_passband()
             preadu.read_configuration()
 
-        for channel in list(preadu_signal_map.keys()):
+        for channel in list(self.PREADU_SIGNAL_MAP.keys()):
             # Apply attenuation
-            pid = preadu_signal_map[channel]["preadu_id"]
-            channel = preadu_signal_map[channel]["channel"]
+            pid = self.PREADU_SIGNAL_MAP[channel]["preadu_id"]
+            channel = self.PREADU_SIGNAL_MAP[channel]["channel"]
             attenuation = int(round(levels[channel]))
             self.tile.tpm.tpm_preadu[pid].set_attenuation(attenuation, [channel])
 
         for preadu in self.tile.tpm.tpm_preadu:
             preadu.write_configuration()
+
+    def _get_preadu_levels(self: TpmDriver) -> list[int]:
+        """
+        Get current preadu settings.
+
+        :return: Preadu attenuation levels in dB
+        """
+        self.logger.debug("TpmDriver: get_preadu_levels")
+        for preadu in self.tile.tpm.tpm_preadu:
+            preadu.select_low_passband()
+            preadu.read_configuration()
+
+        levels = []
+        for channel in list(self.PREADU_SIGNAL_MAP.keys()):
+            pid = self.PREADU_SIGNAL_MAP[channel]["preadu_id"]
+            channel = self.PREADU_SIGNAL_MAP[channel]["channel"]
+            attenuation = self.tpm.tpm_preadu[pid].channel_filters[channel] >> 3
+            levels = levels + [attenuation]
+        return levels
 
     # TODO connect all these with real hardware probes (in poll loop)
     @property
@@ -1424,6 +1480,24 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
+    def _reset_and_initialise_beamformer(self: TpmDriver) -> None:
+        """
+        Initialise the beamformer.
+
+        Initial reset of the tile and station beamformer. Resets both
+        and sets the beamformer to a default state.
+        """
+        self.logger.debug("TpmDriver: initialise_beamformer")
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                self.tile.initialise_beamformer(128, 8)
+                self.tile.set_first_last_tile(False, False)
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+
     def initialise_beamformer(
         self: TpmDriver,
         start_channel: int,
@@ -1472,22 +1546,7 @@ class TpmDriver(MccsComponentManager):
         * aperture_id:  ID of the aperture (station*100+substation?)
 
         """
-        self._get_beamformer_table()
         return copy.deepcopy(self._beamformer_table)
-
-    def _get_beamformer_table(self: TpmDriver) -> None:
-        """Fetch internal beamformer table from hardware."""
-        self.logger.debug("TpmDriver: initialise_beamformer")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self._beamformer_table = self.tile.tpm.station_beamf[
-                    0
-                ].get_channel_table()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
 
     def load_calibration_coefficients(
         self: TpmDriver, antenna: int, calibration_coefficients: list[complex]
@@ -2012,33 +2071,17 @@ class TpmDriver(MccsComponentManager):
 
         :return: whether the beamformer is currently running
         """
-        self.logger.debug("TpmDriver: beamformer_is_running")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                self._is_beamformer_running = self.tile.beamformer_is_running()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
         return self._is_beamformer_running
 
-    def check_pending_data_requests(self: TpmDriver) -> bool:
+    @property
+    def pending_data_requests(self: TpmDriver) -> bool:
         """
         Check for pending data requests.
 
         :return: whether there are pending send data requests
         """
-        self.logger.debug("TpmDriver: check_pending_data_requests")
-        if self._hardware_lock.acquire(timeout=0.2):
-            try:
-                request = self.tile.check_pending_data_requests()
-            except Exception as e:
-                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-            self._hardware_lock.release()
-        else:
-            self.logger.warning("Failed to acquire hardware lock")
-        return request
+        self.logger.debug("TpmDriver: _pending_data_requests")
+        return self._pending_data_requests
 
     #
     # The synchronisation routine for the current TPM requires that

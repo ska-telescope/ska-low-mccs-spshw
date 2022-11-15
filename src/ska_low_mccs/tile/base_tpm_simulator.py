@@ -991,13 +991,14 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: beamformer_is_running")
         return self._is_beamformer_running
 
-    def check_pending_data_requests(self: BaseTpmSimulator) -> bool:
+    @property
+    def pending_data_requests(self: BaseTpmSimulator) -> bool:
         """
         Check for pending data requests.
 
         :return: whether there are pending send data requests
         """
-        self.logger.debug("TpmSimulator: check_pending_data_requests")
+        self.logger.debug("TpmSimulator: pending_data_requests")
         return self._pending_data_requests
 
     @property

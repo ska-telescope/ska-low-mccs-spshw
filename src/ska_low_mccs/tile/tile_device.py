@@ -641,13 +641,13 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.fpga_current_frame
 
     @attribute(dtype="DevBoolean")
-    def checkPendingDataRequests(self: MccsTile) -> bool:
+    def pendingDataRequests(self: MccsTile) -> bool:
         """
         Check for pending data requests.
 
         :return: whether there are data requests pending
         """
-        return self.component_manager.check_pending_data_requests()
+        return self.component_manager.pending_data_requests
 
     @attribute(dtype="DevBoolean")
     def isBeamformerRunning(self: MccsTile) -> bool:

@@ -416,6 +416,7 @@ class TestStaticSimulatorCommon:
             ("sysref_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
             ("pll_locked", StaticTpmSimulator.CLOCK_SIGNALS_OK),
             ("pps_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
+            ("pending_data_requests", False),
         ),
     )
     def test_read_attribute(

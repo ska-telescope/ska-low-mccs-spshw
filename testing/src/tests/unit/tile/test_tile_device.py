@@ -1167,14 +1167,14 @@ class TestMccsTileCommands:
             [[result_code], [message]] = tile_device.SendDataSamples(json_arg)
             assert result_code == ResultCode.OK
 
-        assert not tile_device.checkPendingDataRequests
+        assert not tile_device.pendingDataRequests
         json_arg = json.dumps(
             {"data_type": "channel_continuous", "channel_id": 2, "n_samples": 4}
         )
         [[result_code], [message]] = tile_device.SendDataSamples(json_arg)
         assert result_code == ResultCode.OK
         time.sleep(0.1)
-        assert tile_device.checkPendingDataRequests
+        assert tile_device.pendingDataRequests
         tile_device.StopDataTransmission()
         time.sleep(0.1)
-        assert not tile_device.checkPendingDataRequests
+        assert not tile_device.pendingDataRequests

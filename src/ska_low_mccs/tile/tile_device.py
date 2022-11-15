@@ -2063,7 +2063,7 @@ class MccsTile(SKABaseDevice):
             self: MccsTile.LoadPointingDelaysCommand, argin: list[float]
         ) -> Tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.LoadPointingsDelays` command functionality.
+            Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
 
             :param argin: an array containing a beam index and antenna
                 delays
@@ -2502,7 +2502,7 @@ class MccsTile(SKABaseDevice):
             self: MccsTile.SendDataSamplesCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.SendRawData` command functionality.
+            Implement :py:meth:`.MccsTile.SendDataSamples` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
 

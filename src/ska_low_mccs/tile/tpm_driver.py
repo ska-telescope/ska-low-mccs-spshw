@@ -336,7 +336,7 @@ class TpmDriver(MccsComponentManager):
                 # self._fpga_current_frame
                 # self._current_tile_beamformer_frame
                 self._is_beamformer_running = self.tile.beamformer_is_running()
-                self._pending_data_requests = self.tile._pending_data_requests()
+                self._pending_data_requests = self.tile.check_pending_data_requests()
                 self._voltage = self.tile.get_voltage()
                 # slow update parameters
                 if (current_time - self._last_update_time_1) > time_interval_1:
@@ -1040,7 +1040,7 @@ class TpmDriver(MccsComponentManager):
         for value in values:
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
-                    self.tile[current_address] = value
+                    self.tile.__setitem__(current_address, value)
                 except Exception:
                     err_flag = True
                 current_address = current_address + 4
@@ -1382,7 +1382,7 @@ class TpmDriver(MccsComponentManager):
         for channel in list(self.PREADU_SIGNAL_MAP.keys()):
             pid = self.PREADU_SIGNAL_MAP[channel]["preadu_id"]
             channel = self.PREADU_SIGNAL_MAP[channel]["channel"]
-            attenuation = self.tpm.tpm_preadu[pid].channel_filters[channel] >> 3
+            attenuation = self.tile.tpm_preadu[pid].channel_filters[channel] >> 3
             levels = levels + [attenuation]
         return levels
 

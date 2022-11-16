@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -19,9 +18,13 @@ from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command
 
-from ska_low_mccs.subarray_beam import (
+from ska_low_mccs.subarray_beam.subarray_beam_component_manager import (
     SubarrayBeamComponentManager,
+)
+from ska_low_mccs.subarray_beam.subarray_beam_health_model import (
     SubarrayBeamHealthModel,
+)
+from ska_low_mccs.subarray_beam.subarray_beam_obs_state_model import (
     SubarrayBeamObsStateModel,
 )
 
@@ -36,6 +39,25 @@ class MccsSubarrayBeam(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: SubarrayBeamHealthModel
+        self._obs_state_model: SubarrayBeamObsStateModel
+
     def init_device(self: MccsSubarrayBeam) -> None:
         """
         Initialise the device.
@@ -93,6 +115,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
         """
         A class for :py:class:`~.MccsSubarrayBeam`'s Init command.
@@ -101,6 +124,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         called upon :py:class:`~.MccsSubarrayBeam`'s initialisation.
         """
 
+        # pylint: disable-next=arguments-differ
         def do(  # type: ignore[override]
             self: MccsSubarrayBeam.InitCommand,
         ) -> tuple[ResultCode, str]:

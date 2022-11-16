@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -18,11 +17,12 @@ from typing import Any, Callable, Optional, cast
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import ObjectComponentManager, check_communicating
 
-from ska_low_mccs.subarray_beam import SubarrayBeam
+from ska_low_mccs.subarray_beam.subarray_beam import SubarrayBeam
 
 __all__ = ["SubarrayBeamComponentManager"]
 
 
+# pylint: disable=too-many-instance-attributes
 class SubarrayBeamComponentManager(ObjectComponentManager):
     """A component manager for a subarray beam."""
 
@@ -198,6 +198,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             task_callback=task_callback,
         )
 
+    # pylint: disable=too-many-arguments
     def _configure(
         self,
         subarray_beam_id: int,

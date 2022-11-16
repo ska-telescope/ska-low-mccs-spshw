@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -12,22 +11,23 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import Any, Callable, List, Optional, Tuple, cast
+from typing import Any, Callable, Optional, cast
 
-import ska_low_mccs_common.release as release
 import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
+from ska_low_mccs_common import release
 from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
 
-from ska_low_mccs.subarray import SubarrayComponentManager, SubarrayHealthModel
+from ska_low_mccs.subarray.subarray_component_manager import SubarrayComponentManager
+from ska_low_mccs.subarray.subarray_health_model import SubarrayHealthModel
 
 __all__ = ["MccsSubarray", "main"]
 
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 class MccsSubarray(SKASubarray):
@@ -40,6 +40,24 @@ class MccsSubarray(SKASubarray):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: SubarrayHealthModel
+
     def init_device(self: MccsSubarray) -> None:
         """
         Initialise the device.
@@ -91,9 +109,11 @@ class MccsSubarray(SKASubarray):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
         """Command class for device initialisation."""
 
+        # pylint: disable-next=arguments-differ
         def do(  # type: ignore[override]
             self: MccsSubarray.InitCommand,
         ) -> tuple[ResultCode, str]:
@@ -117,6 +137,7 @@ class MccsSubarray(SKASubarray):
     # ----------
     # Callbacks
     # ----------
+    # pylint: disable-next=too-many-branches, too-many-statements, too-many-locals
     def _component_state_changed_callback(
         self: MccsSubarray,
         state_change: dict[str, Any],
@@ -148,20 +169,21 @@ class MccsSubarray(SKASubarray):
                 }
                 # Identify and call subservient device method.
                 device_type = fqdn.split("/")[1]
-                if device_type in valid_device_types.keys():
+                if device_type in valid_device_types:
                     valid_device_types[device_type](fqdn, health)
                 else:
                     # We've somehow got a health update for a device type
                     # we don't manage.
-                    self.logger.warning(
+                    msg = (
                         f"Received a health state changed event for device {fqdn} "
                         "which is not managed by this subarray."
                     )
+                    self.logger.warning(msg)
 
         # resources should be passed in the dict's value as a list of sets
         # to be extracted here.
         if "resources_changed" in state_change.keys():
-            resources = cast(List[set], state_change.get("resources_changed"))
+            resources = cast(list[set], state_change.get("resources_changed"))
             station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
             station_beam_fqdns = resources[2]

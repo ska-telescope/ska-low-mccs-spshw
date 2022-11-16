@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
@@ -23,7 +23,7 @@ from ska_low_mccs.station.station_component_manager import StationComponentManag
 from ska_low_mccs.station.station_health_model import StationHealthModel
 from ska_low_mccs.station.station_obs_state_model import StationObsStateModel
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["MccsStation", "main"]
 

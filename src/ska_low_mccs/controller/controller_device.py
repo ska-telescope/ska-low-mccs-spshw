@@ -10,7 +10,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import threading
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
@@ -26,7 +26,7 @@ from ska_low_mccs.controller.controller_health_model import ControllerHealthMode
 
 __all__ = ["MccsController", "main"]
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 # pylint: disable=too-many-instance-attributes

@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -34,6 +33,8 @@ class SubarrayHealthModel(HealthModel):
         self._station_healths: dict[str, HealthState | None] = {}
         self._subarray_beam_healths: dict[str, HealthState | None] = {}
         self._station_beam_healths: dict[str, HealthState | None] = {}
+        self._subarray_beam_fqdns: dict[str, HealthState] = {}
+        self._station_beam_fqdns: dict[str, HealthState] = {}
         super().__init__(health_changed_callback)
 
     def evaluate_health(

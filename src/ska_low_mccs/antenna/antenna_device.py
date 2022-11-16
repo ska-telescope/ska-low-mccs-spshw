@@ -8,7 +8,7 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import tango
 from ska_control_model import (  # SimulationMode,
@@ -27,7 +27,7 @@ from ska_low_mccs.antenna.antenna_health_model import AntennaHealthModel
 
 __all__ = ["MccsAntenna", "main"]
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 # pylint: disable=too-many-public-methods

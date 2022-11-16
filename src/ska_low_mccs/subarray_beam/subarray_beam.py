@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -19,6 +18,7 @@ from ska_low_mccs_common.component import ObjectComponent
 __all__ = ["SubarrayBeam"]
 
 
+# pylint: disable=too-many-instance-attributes
 class SubarrayBeam(ObjectComponent):
     """A placeholder for a subarray beam component."""
 
@@ -57,6 +57,8 @@ class SubarrayBeam(ObjectComponent):
         self._desired_pointing: list[float] = []
         self._antenna_weights: list[float] = []
         self._phase_centre: list[float] = []
+        self._scan_id: int = 0
+        self._scan_time: int = 0
 
     def set_is_beam_locked_changed_callback(
         self: SubarrayBeam,
@@ -218,6 +220,7 @@ class SubarrayBeam(ObjectComponent):
         """
         return self._phase_centre
 
+    # pylint: disable=too-many-arguments
     def configure(
         self: SubarrayBeam,
         subarray_beam_id: int,

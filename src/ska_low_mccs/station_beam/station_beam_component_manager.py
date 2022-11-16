@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -45,9 +44,11 @@ class _StationProxy(DeviceComponentManager):
         return result_code
 
 
+# pylint: disable=too-many-instance-attributes
 class StationBeamComponentManager(MccsComponentManager):
     """A component manager for a station beam."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: StationBeamComponentManager,
         beam_id: int,
@@ -384,6 +385,7 @@ class StationBeamComponentManager(MccsComponentManager):
             task_callback=task_callback,
         )
 
+    # pylint: disable=too-many-arguments
     def _configure(
         self: StationBeamComponentManager,
         beam_id: int,

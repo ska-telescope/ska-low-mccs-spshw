@@ -35,7 +35,7 @@ ifeq ($(MAKECMDGOALS),k8s-test)
 PYTHON_VARS_AFTER_PYTEST += --testbed local
 endif
 
-k8s_test_folder = test/functional
+k8s_test_folder = tests/functional
 #K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \
 #						pytest \
 #						$(PYTHON_VARS_AFTER_PYTEST) ./tests/functional \

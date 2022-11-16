@@ -38,8 +38,12 @@ ifneq ($(strip $(CI_JOB_ID)),)
 endif
 
 ifeq ($(MAKECMDGOALS),k8s-test)
+<<<<<<< HEAD
 PYTHON_VARS_AFTER_PYTEST += --testbed $(K8S_TESTBED)
 PYTHON_TEST_FILE = tests/functional
+=======
+PYTHON_VARS_AFTER_PYTEST += --testbed test
+>>>>>>> fd503214 (MCCS-1154 testbed=test)
 endif
 
 K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \

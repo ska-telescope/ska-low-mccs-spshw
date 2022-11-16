@@ -42,7 +42,7 @@ PYTHON_VARS_AFTER_PYTEST += --testbed $(K8S_TESTBED)
 PYTHON_TEST_FILE = tests/functional
 endif
 
-k8s_test_folder = test/functional
+k8s_test_folder = tests/functional
 #K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \
 #						pytest \
 #						$(PYTHON_VARS_AFTER_PYTEST) ./tests/functional \

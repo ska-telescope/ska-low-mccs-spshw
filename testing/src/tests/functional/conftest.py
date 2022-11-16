@@ -79,7 +79,7 @@ def tango_config() -> dict[str, Any]:
 
     :return: a dictionary of configuration key-value pairs
     """
-    return {"process": False}
+    return {"process": True}
 
 
 @pytest.fixture(scope="module")
@@ -294,6 +294,10 @@ def subrack_device_state_changed_callback(
 
 @pytest.fixture(scope="module")
 def tpm_number():
+    """Get the id of the tpm to use.
+
+    :return: the tpm id to use
+    """
     return 2
 
 
@@ -308,6 +312,7 @@ def subrack_tpm_power_state_changed_callback(
     :param mock_change_event_callback_factory: fixture that provides a
         mock change event callback factory (i.e. an object that returns
         mock callbacks when called).
+    :param tpm_number: the id of the tpm to use
 
     :return: a mock change event callback to be registered with the
         subrack via a change event subscription, so that it gets called
@@ -351,6 +356,7 @@ def tile_device_state_changed_callback(
     """
     return mock_change_event_callback_factory("state")
 
+
 @pytest.fixture()
 def tile_device_lrc_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
@@ -368,6 +374,7 @@ def tile_device_lrc_changed_callback(
     """
     return mock_change_event_callback_factory("longRunningCommandResult")
 
+
 @pytest.fixture()
 def daq_device_state_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
@@ -384,6 +391,24 @@ def daq_device_state_changed_callback(
         when the device state changes.
     """
     return mock_change_event_callback_factory("state")
+
+
+@pytest.fixture()
+def daq_device_lrc_changed_callback(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for daq device state change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback to be registered with the
+        daq device via a change event subscription, so that it
+        gets called when the device state changes.
+    """
+    return mock_change_event_callback_factory("longRunningCommandResult")
 
 
 @pytest.fixture()

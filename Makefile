@@ -14,6 +14,8 @@ PYTHON_LINT_TARGET = src/ska_low_mccs tests  ## Paths containing python to be fo
 PYTHON_VARS_AFTER_PYTEST = --forked --cov-fail-under=80
 PYTHON_TEST_FILE = tests
 
+K8S_TESTBED ?= test
+
 DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk
@@ -32,7 +34,7 @@ ifneq ($(strip $(CI_JOB_ID)),)
 endif
 
 ifeq ($(MAKECMDGOALS),k8s-test)
-PYTHON_VARS_AFTER_PYTEST += --testbed test
+PYTHON_VARS_AFTER_PYTEST += --testbed $(K8S_TESTBED)
 endif
 
 K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \

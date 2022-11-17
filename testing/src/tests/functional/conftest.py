@@ -294,7 +294,8 @@ def subrack_device_state_changed_callback(
 
 @pytest.fixture(scope="module")
 def tpm_number():
-    """Get the id of the tpm to use.
+    """
+    Get the id of the tpm to use.
 
     :return: the tpm id to use
     """

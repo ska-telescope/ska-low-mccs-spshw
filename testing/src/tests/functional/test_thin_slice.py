@@ -37,7 +37,7 @@ def devices_to_load(tpm_number) -> DevicesToLoadType:
         "devices": [
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
             {"name": f"tile_000{tpm_number}", "proxy": MccsDeviceProxy},
-            {"name": "daq_01", "proxy": MccsDeviceProxy},
+            #{"name": "daq_01", "proxy": MccsDeviceProxy},
         ],
     }
 

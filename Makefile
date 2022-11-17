@@ -10,16 +10,10 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs
 
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
-<<<<<<< HEAD
-
-K8S_TESTBED ?= test
-PYTHON_TEST_FILE = tests
-
-=======
->>>>>>> 617584b2 (MCCS-1154 replace K8S_TEST_COMMAND)
 PYTHON_LINT_TARGET = src/ska_low_mccs tests  ## Paths containing python to be formatted and linted
 PYTHON_VARS_AFTER_PYTEST = --forked
 PYTHON_TEST_FILE = tests
+K8S_TESTBED ?= test
 DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk
@@ -38,12 +32,8 @@ ifneq ($(strip $(CI_JOB_ID)),)
 endif
 
 ifeq ($(MAKECMDGOALS),k8s-test)
-<<<<<<< HEAD
 PYTHON_VARS_AFTER_PYTEST += --testbed $(K8S_TESTBED)
 PYTHON_TEST_FILE = tests/functional
-=======
-PYTHON_VARS_AFTER_PYTEST += --testbed test
->>>>>>> fd503214 (MCCS-1154 testbed=test)
 endif
 
 K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \

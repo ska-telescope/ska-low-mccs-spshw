@@ -12,6 +12,7 @@ PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_TEST_FILE = testing/src/
 PYTHON_LINT_TARGET = src/ska_low_mccs testing/src/tests  ## Paths containing python to be formatted and linted
+PYTHON_VARS_AFTER_PYTEST = --cov-fail-under=80
 
 DOCS_SPHINXOPTS = -n -W --keep-going
 

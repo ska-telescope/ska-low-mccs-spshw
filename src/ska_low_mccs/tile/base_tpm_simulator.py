@@ -430,7 +430,9 @@ class BaseTpmSimulator(ObjectComponent):
                 key = str(offset + i)
                 address_map.update({key: value})
 
-    def read_address(self: BaseTpmSimulator, address: int, nvalues: int) -> list[int]:
+    def read_address(
+        self: BaseTpmSimulator, address: int, nvalues: int = 1
+    ) -> list[int]:
         """
         Return a list of values from a given address.
 

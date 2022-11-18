@@ -8,13 +8,15 @@
 """This module contains the tests of the APIU component manager and simulator."""
 from __future__ import annotations
 
+import threading
 import time
 from typing import Callable, Union, cast
+from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-from ska_control_model import PowerState
-from ska_low_mccs_common.testing.mock import MockCallableDeque
+from ska_control_model import PowerState, TaskStatus
+from ska_low_mccs_common.testing.mock import MockCallable, MockCallableDeque
 
 from ska_low_mccs.apiu import (
     ApiuComponentManager,
@@ -314,6 +316,217 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         expected_arguments = {"fault": False}
         component_state_changed_callback.assert_in_deque(expected_arguments)
+
+    def test_turn_on_off_antenna(
+        self: TestApiuComponentManager,
+        apiu_component_manager: ApiuComponentManager,
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
+        """
+        Test that the callback is called when we change the power mode of an antenna.
+
+        (i.e. turn it on or off).
+
+        :param apiu_component_manager: the APIU component manager under
+            test
+        :param component_state_changed_callback: callback to be
+            called when the power mode of an antenna changes
+        """
+        apiu_component_manager.start_communicating()
+        time.sleep(0.1)
+        apiu_component_manager.on()
+        time.sleep(0.1)
+        expected_arguments = {"power_state": PowerState.ON}
+        component_state_changed_callback.assert_in_deque(expected_arguments)
+        apiu_component_manager.power_state = PowerState.ON
+
+        def mocked_failure():
+            raise Exception("mocked exception")
+
+        with patch(
+            "ska_low_mccs.apiu.apiu_component_manager"
+            + ".ComponentManagerWithUpstreamPowerSupply.on",
+            side_effect=mocked_failure,
+        ):
+
+            task_callback_on = MockCallable()
+            apiu_component_manager.on(task_callback_on)
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.QUEUED
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.IN_PROGRESS
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.FAILED
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.COMPLETED
+
+        with patch(
+            "ska_low_mccs.apiu.apiu_component_manager"
+            + ".ApiuSimulatorComponentManager._get_from_component",
+            side_effect=mocked_failure,
+        ):
+
+            task_callback_on = MockCallable()
+            apiu_component_manager.off(task_callback_on)
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.QUEUED
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.IN_PROGRESS
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.FAILED
+            time.sleep(0.1)
+            _, kwargs = task_callback_on.get_next_call()
+            assert kwargs["status"] == TaskStatus.COMPLETED
+
+    def test_on_off_apiu_antenna_mockedfailure_task_callbacks(
+        self: TestApiuComponentManager,
+        apiu_component_manager: ApiuComponentManager,
+    ) -> None:
+        """
+        Test task callbacks with mocked failure.
+
+        :param apiu_component_manager: the APIU component manager under
+            test
+        """
+
+        def mocked_failure():
+            raise Exception("mocked exception")
+
+        with patch(
+            "ska_low_mccs.apiu.apiu_component_manager."
+            + "ApiuSimulatorComponentManager._get_from_component",
+            side_effect=mocked_failure,
+        ):
+            task_callback = MockCallable()
+            commands = {
+                "power_down": None,
+                "power_up": None,
+                "power_up_antenna": 1,
+                "power_down_antenna": 1,
+            }
+
+            for command, parameter in commands.items():
+                if parameter:
+                    getattr(apiu_component_manager, command)(parameter, task_callback)
+                else:
+                    getattr(apiu_component_manager, command)(task_callback)
+                time.sleep(0.1)
+                _, kwargs = task_callback.get_next_call()
+                assert kwargs["status"] == TaskStatus.QUEUED
+                time.sleep(0.1)
+                _, kwargs = task_callback.get_next_call()
+                assert kwargs["status"] == TaskStatus.IN_PROGRESS
+                time.sleep(0.1)
+                _, kwargs = task_callback.get_next_call()
+                assert kwargs["status"] == TaskStatus.FAILED
+
+    def test_power_commands_with_abort(
+        self: TestApiuComponentManager,
+        apiu_component_manager: ApiuComponentManager,
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
+        """
+        Test task callbacks with mocked failure.
+
+        :param apiu_component_manager: the APIU component manager under
+            test
+        :param component_state_changed_callback: a mocked callable for state
+            change
+        """
+        apiu_component_manager.start_communicating()
+        time.sleep(0.1)
+        apiu_component_manager.on()
+        time.sleep(0.1)
+        expected_arguments = {"power_state": PowerState.ON}
+        component_state_changed_callback.assert_in_deque(expected_arguments)
+        apiu_component_manager.power_state = PowerState.ON
+        task_callback = MockCallable()
+        commands = {
+            "_on": None,
+            "_off": None,
+            "_turn_on_antenna": 1,
+            "_turn_off_antenna": 1,
+        }
+        abort_event = threading.Event()
+        abort_event.set()
+
+        for command, parameter in commands.items():
+            if parameter:
+                getattr(apiu_component_manager, command)(
+                    parameter, task_callback, abort_event
+                )
+            else:
+                getattr(apiu_component_manager, command)(task_callback, abort_event)
+
+            time.sleep(0.1)
+            _, kwargs = task_callback.get_next_call()
+            assert kwargs["status"] == TaskStatus.IN_PROGRESS
+            time.sleep(0.1)
+            _, kwargs = task_callback.get_next_call()
+            assert kwargs["status"] == TaskStatus.ABORTED
+
+    def test_turn_on_off_apiu_antenna_task_callbacks(
+        self: TestApiuComponentManager,
+        apiu_component_manager: ApiuComponentManager,
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
+        """
+        Test that the callback is called when we change the power mode of an antenna.
+
+        (i.e. turn it on or off).
+
+        :param apiu_component_manager: the APIU component manager under
+            test
+        :param component_state_changed_callback: callback to be
+            called when the power mode of an antenna changes
+        """
+        apiu_component_manager.start_communicating()
+        time.sleep(0.1)
+        apiu_component_manager.on()
+        time.sleep(0.1)
+        expected_arguments = {"power_state": PowerState.ON}
+        component_state_changed_callback.assert_in_deque(expected_arguments)
+        apiu_component_manager.power_state = PowerState.ON
+
+        commands = {
+            "on": "On command has completed",
+            "off": "Off command has completed",
+            "power_up": "The antenna all on task has completed",
+            "power_down": "The antenna all off task has completed",
+        }
+
+        for command, expected_result in commands.items():
+            getattr(apiu_component_manager, command)(component_state_changed_callback)
+            component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)
+            time.sleep(0.1)
+            component_state_changed_callback.assert_last_call(
+                status=TaskStatus.COMPLETED, result=expected_result
+            )
+
+        # Turns off antenna
+        apiu_component_manager.power_up_antenna(1, component_state_changed_callback)
+        component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)
+        # wait to give time for process to complete
+        time.sleep(0.1)
+        component_state_changed_callback.assert_last_call(
+            status=TaskStatus.COMPLETED, result="The antenna on task has completed"
+        )
+
+        # Turns off antennas
+        apiu_component_manager.power_down_antenna(1, component_state_changed_callback)
+        component_state_changed_callback.assert_last_call(status=TaskStatus.QUEUED)
+        # wait to give time for process to complete
+        time.sleep(0.1)
+        component_state_changed_callback.assert_last_call(
+            status=TaskStatus.COMPLETED, result="The antenna off task has completed"
+        )
 
     @pytest.mark.parametrize("antenna_id", [1, 2])
     def test_component_antenna_power_changed_callback(

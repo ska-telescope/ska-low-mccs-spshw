@@ -243,7 +243,7 @@ def given_tile_off(
     :param subrack_device_lrc_changed_callback: a callback that we can use to
         subscribe to long running command result changes on the subrack device.
     """
-    tpm_power_state = subrack_device.read_attribute(f"tpm{tpm_number}PowerState")
+    tpm_power_state = getattr(subrack_device, f"tpm{tpm_number}PowerState")
     if tpm_power_state != PowerState.OFF:
         turn_tile_off(
             tile_device,

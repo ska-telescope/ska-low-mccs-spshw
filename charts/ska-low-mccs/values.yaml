@@ -91,19 +91,19 @@ deviceServers:
     file: "data/controller.yaml"
   subarrays:
     # subarray instances have to be 0-padded to two digits
-    instances: ["subarray-01", "subarray-02"]
+    instances: []
     file: "data/subarray.yaml"
   stations:
     # station instances have to be 0-padded to three digits
-    instances: ["station-001", "station-002"]
+    instances: []
     file: "data/station.yaml"
   subracks:
     # subrack instances have to be 0-padded to two digits
-    instances: ["subrack-01"]
+    instances: []
     file: "data/subrack.yaml"
   tiles:
     # tile instances have to be 0-padded to four digits
-    instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004"]
+    instances: []
     file: "data/tile.yaml"
     resources:
       requests:
@@ -112,20 +112,19 @@ deviceServers:
         memory: 512Mi
   apius:
     # apiu instances have to be 0-padded to three digits
-    instances: ["apiu-001", "apiu-002"]
+    instances: []
     file: "data/apiu.yaml"
   antennas:
     # antenna instances have to be 0-padded to six digits
-    instances: ["antenna-000001", "antenna-000002", "antenna-000003", "antenna-000004",
-                "antenna-000005", "antenna-000006", "antenna-000007", "antenna-000008"]
+    instances: []
     file: "data/antenna.yaml"     
   station-beams:
     # beam instances have to be 0-padded to three digits
-    instances: ["beam-01", "beam-02", "beam-03", "beam-04"]
+    instances: []
     file: "data/station-beam.yaml"
   subarray-beams:
     # subarray beam instances have to be 0-padded to two digits
-    instances: ["subarraybeam-01", "subarraybeam-02", "subarraybeam-03", "subarraybeam-04"]
+    instances: []
     file: "data/subarray-beam.yaml"
 
 mccs_cli:

@@ -6,7 +6,7 @@
 {{- if hasKey $deviceserver "instances" }}
 {{- $_ := set $deviceserverspec "instances" $deviceserver.instances }}
 {{- end }}
-{{- end}}  # file
+{{- end }}
 {{- if hasKey $localchart.Values.global "instances" }}
 {{- $_ := set $deviceserverspec "instances" $localchart.Values.global.instances }}
 {{- end }}

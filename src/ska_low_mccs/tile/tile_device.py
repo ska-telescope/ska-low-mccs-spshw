@@ -1105,7 +1105,6 @@ class MccsTile(SKABaseDevice):
             if values is None:
                 self._component_manager.logger.error("Values is a mandatory parameter")
                 raise ValueError("values is a mandatory parameter")
-            offset = params.get("offset", 0)
 
             self._component_manager.write_register(name, values)
             return (ResultCode.OK, "WriteRegister completed OK")

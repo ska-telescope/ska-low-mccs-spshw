@@ -34,6 +34,8 @@ endif
 ifeq ($(MAKECMDGOALS),k8s-test)
 PYTHON_VARS_AFTER_PYTEST += --testbed $(K8S_TESTBED)
 PYTHON_TEST_FILE = tests/functional
+else
+PYTHON_VARS_AFTER_PYTEST +=  --cov-fail-under=80
 endif
 
 K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \

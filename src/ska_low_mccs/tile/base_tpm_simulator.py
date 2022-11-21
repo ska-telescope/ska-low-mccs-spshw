@@ -523,7 +523,9 @@ class BaseTpmSimulator(ObjectComponent):
         if address_map is not None:
             self._register_map.update({register_name: values})
 
-    def read_address(self: BaseTpmSimulator, address: int, nvalues: int) -> list[int]:
+    def read_address(
+        self: BaseTpmSimulator, address: int, nvalues: int = 1
+    ) -> list[int]:
         """
         Return a list of values from a given address.
 

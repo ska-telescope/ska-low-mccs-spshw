@@ -927,15 +927,11 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def read_register(
-        self: TpmDriver, register_name: str, nb_read: int, offset: int
-    ) -> list[int]:
+    def read_register(self: TpmDriver, register_name: str) -> list[int]:
         """
         Read the values in a named register.
 
         :param register_name: name of the register
-        :param nb_read: number of values to read
-        :param offset: offset from which to start reading
 
         :return: values read from the register
         """
@@ -959,19 +955,15 @@ class TpmDriver(MccsComponentManager):
             lvalue = [value]
         else:
             lvalue = cast(List, value)
-        nmin = min(len(lvalue) - 1, offset)
-        nmax = min(len(lvalue), nmin + nb_read)
-        return lvalue[nmin:nmax]
+        self.logger.debug(f"Read value: {value} = {hex(value)}")
+        return lvalue
 
-    def write_register(
-        self: TpmDriver, register_name: str, values: list[Any], offset: int
-    ) -> None:
+    def write_register(self: TpmDriver, register_name: str, values: list[Any]) -> None:
         """
         Read the values in a register.
 
         :param register_name: name of the register
         :param values: values to write
-        :param offset: offset from which to start writing. Unused
         """
         devname = ""
         regname = devname + register_name
@@ -1238,9 +1230,13 @@ class TpmDriver(MccsComponentManager):
         delays = []
         try:
             for i in range(16):
-                delays.append(self.tile[f"fpga1.test_generator.delay_{i}"] * 1.25)
+                delays.append(
+                    (self.tile[f"fpga1.test_generator.delay_{i}"] - 128) * 1.25
+                )
             for i in range(16):
-                delays.append(self.tile[f"fpga2.test_generator.delay_{i}"] * 1.25)
+                delays.append(
+                    (self.tile[f"fpga2.test_generator.delay_{i}"] - 128) * 1.25
+                )
         except Exception as e:
             self.logger.warning(f"TpmDriver: Tile access failed: {e}")
         return delays
@@ -1474,6 +1470,9 @@ class TpmDriver(MccsComponentManager):
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_beamformer_regions(regions)
+                self._beamformer_table = self.tile.tpm.station_beamf[
+                    0
+                ].get_channel_table()
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
@@ -1653,7 +1652,9 @@ class TpmDriver(MccsComponentManager):
         :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param scan_id: ID of the scan which is started.
         """
-        self.logger.debug("TpmDriver: Start beamformer")
+        self.logger.debug(
+            f"TpmDriver: Start beamformeri: params {start_time}, {duration}"
+        )
         if subarray_beam_id != -1:
             self.logger.warning(
                 "start_beamformer: separate start for different subarrays not supported"
@@ -1753,50 +1754,72 @@ class TpmDriver(MccsComponentManager):
         else:
             self.logger.warning("Failed to acquire hardware lock")
 
-    def send_data_samples(self: TpmDriver, params: dict) -> None:
+    def send_data_samples(
+        self: TpmDriver,
+        data_type: str = "",
+        timestamp: int = 0,
+        seconds: float = 0.2,
+        n_samples: int = 1024,
+        sync: bool = False,
+        first_channel: int = 0,
+        last_channel: int = 511,
+        channel_id: int = 128,
+        frequency: float = 150.0e6,
+        round_bits: int = 3,
+    ) -> None:
         """
         Front end for send_xxx_data methods.
 
-        :param params: dictionary with appropriate
+        :param data_type: sample type. "raw", "channel", "channel_continuous",
+                "narrowband", "beam"
+        :param timestamp: Timestamp for start sending data. Default 0 start now
+        :param seconds: Delay if timestamp is not specified. Default 0.2 seconds
+        :param n_samples: number of samples to send per packet
+        :param sync: (raw) send synchronised antenna samples, vs. round robin
+        :param first_channel: (channel) first channel to send, default 0
+        :param last_channel: (channel) last channel to send, default 511
+        :param channel_id: (channel_continuous) channel to send
+        :param frequency: (narrowband) Sky frequency for band centre, in Hz
+        :param round_bits: (narrowband) how many bits to round
+
+        :raises ValueError: if values wrong
         """
         # Check for type of data to be sent to LMC
-        data_type = params.get("data_type", None)
-        timestamp = params.get("timestamp", 0)
+
+        current_frame = self.fpga_current_frame
         if timestamp == 0:
-            seconds = params.get("seconds", 0.2)
-        else:
-            seconds = 0.0
+            timestamp = None
+        elif current_frame == 0:
+            self.logger.error("Cannot send data before StartAcquisition")
+            raise ValueError("Cannot send data before StartAcquisition")
+        elif timestamp < (current_frame + 20):
+            self.logger.error("Time is too early")
+            raise ValueError("Time is too early")
 
         if data_type == "raw":
-            sync = params.get("sync", False)
             self._send_raw_data(sync, timestamp, seconds)
         elif data_type == "channel":
-            n_samples = params.get("n_samples", 1024)
-            first_channel = params.get("first_channel", 0)
-            last_channel = params.get("last_channel", 511)
             self._send_channelised_data(
                 n_samples, first_channel, last_channel, timestamp, seconds
             )
         elif data_type == "channel_continuous":
-            n_samples = params.get("n_samples", 128)
-            channel_id = params.get("channel_id", 64)
             self._send_channelised_data_continuous(
                 channel_id, n_samples, timestamp, seconds
             )
         elif data_type == "narrowband":
-            n_samples = params.get("n_samples", 1024)
-            frequency = params.get("frequency", 0.0)
-            round_bits = params.get("round_bits", 3)
             self._send_channelised_data_narrowband(
                 frequency, round_bits, n_samples, timestamp, seconds
             )
         elif data_type == "beam":
             self._send_beam_data(timestamp, seconds)
+        else:
+            self.logger.error(f"Unknown sample type: {data_type}")
+            raise ValueError(f"Unknown sample type: {data_type}")
 
     def _send_raw_data(
         self: TpmDriver,
         sync: bool = False,
-        timestamp: Optional[str] = None,
+        timestamp: Optional[int] = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1821,7 +1844,7 @@ class TpmDriver(MccsComponentManager):
         number_of_samples: int = 1024,
         first_channel: int = 0,
         last_channel: int = 511,
-        timestamp: Optional[str] = None,
+        timestamp: Optional[int] = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1854,7 +1877,7 @@ class TpmDriver(MccsComponentManager):
         channel_id: int,
         number_of_samples: int = 1024,
         wait_seconds: int = 0,
-        timestamp: Optional[str] = None,
+        timestamp: Optional[int] = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1890,7 +1913,7 @@ class TpmDriver(MccsComponentManager):
         round_bits: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
-        timestamp: Optional[str] = None,
+        timestamp: Optional[int] = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1923,7 +1946,7 @@ class TpmDriver(MccsComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
 
     def _send_beam_data(
-        self: TpmDriver, timestamp: Optional[str] = None, seconds: float = 0.2
+        self: TpmDriver, timestamp: Optional[int] = None, seconds: float = 0.2
     ) -> None:
         """
         Transmit a snapshot containing beamformed data.

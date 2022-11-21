@@ -778,9 +778,6 @@ class TestStaticSimulatorCommon:
         assert tile.is_programmed
 
     @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
-    @pytest.mark.parametrize("read_offset", (2,))
-    @pytest.mark.parametrize("read_length", (4,))
-    @pytest.mark.parametrize("write_offset", (3,))
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
     def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
@@ -791,9 +788,6 @@ class TestStaticSimulatorCommon:
             TileComponentManager,
         ],
         register: str,
-        read_offset: int,
-        read_length: int,
-        write_offset: int,
         write_values: list[int],
     ) -> None:
         """
@@ -805,18 +799,11 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         :param register: which register is being addressed
-        :param read_offset: offset to start read at
-        :param read_length: length of read
-        :param write_offset: offset to start write at
         :param write_values: values to write to the register
         """
-        buffer_size = max(read_offset + read_length, write_offset + len(write_values))
-        buffer = [0] * buffer_size
-        for (index, value) in enumerate(write_values):
-            buffer[write_offset + index] = value
-        expected_read = buffer[read_offset : (read_offset + read_length)]
-        tile.write_register(register, write_values, write_offset)
-        assert tile.read_register(register, read_length, read_offset) == expected_read
+        expected_read = write_values
+        tile.write_register(register, write_values)
+        assert tile.read_register(register) == expected_read
 
     @pytest.mark.parametrize(
         "write_address",

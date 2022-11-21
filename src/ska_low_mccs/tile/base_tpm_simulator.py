@@ -49,11 +49,11 @@ class BaseTpmSimulator(ObjectComponent):
         "itpm_v1_5.bit": {"design": "model2", "major": 3, "minor": 7},
         "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
-    REGISTER_MAP: dict[str, dict] = {
-        "test-reg1": {},
-        "test-reg2": {},
-        "test-reg3": {},
-        "test-reg4": {},
+    REGISTER_MAP: dict[str, list[int]] = {
+        "test-reg1": [0] * 4,
+        "test-reg2": [0],
+        "test-reg3": [0],
+        "test-reg4": [0],
     }
     # ARP resolution table
     # Values are consistent with unit test test_MccsTile
@@ -497,44 +497,31 @@ class BaseTpmSimulator(ObjectComponent):
     def read_register(
         self: BaseTpmSimulator,
         register_name: str,
-        nb_read: int,
-        offset: int,
     ) -> list[int]:
         """
         Read the values in a register.
 
         :param register_name: name of the register
-        :param nb_read: number of values to read
-        :param offset: offset from which to start reading
 
         :return: values read from the register
         """
-        address_map = self._register_map.get(register_name, None)
-        values = []
-        if address_map is not None:
-            for i in range(nb_read):
-                key = str(offset + i)
-                values.append(address_map.get(key, 0))
+        values = self._register_map.get(register_name)
         return values
 
     def write_register(
         self: BaseTpmSimulator,
         register_name: str,
         values: list[int],
-        offset: int,
     ) -> None:
         """
         Read the values in a register.
 
         :param register_name: name of the register
         :param values: values to write
-        :param offset: offset from which to start reading
         """
         address_map = self._register_map.get(register_name, None)
         if address_map is not None:
-            for i, value in enumerate(values):
-                key = str(offset + i)
-                address_map.update({key: value})
+            self._register_map.update({register_name: values})
 
     def read_address(self: BaseTpmSimulator, address: int, nvalues: int) -> list[int]:
         """
@@ -684,21 +671,49 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: set_lmc_download")
         raise NotImplementedError
 
-    def send_data_samples(self: BaseTpmSimulator, params: dict) -> None:
+    def send_data_samples(
+        self: BaseTpmSimulator,
+        data_type: str = "",
+        timestamp: int = 0,
+        seconds: float = 0.2,
+        n_samples: int = 1024,
+        sync: bool = False,
+        first_channel: int = 0,
+        last_channel: int = 511,
+        channel_id: int = 128,
+        frequency: float = 150.0e6,
+        round_bits: int = 3,
+    ) -> None:
         """
         Front end for send_xxx_data methods.
 
-        :param params: dictionary with appropriate parameters
-            * data_type: "raw", "channel", "channel_continuous", "narrowband", "beam"
-            * timestamp [Optional]: frame to sync data
-            * seconds [Optional]: sync delay, if timestamp not specified or 0
+        :param data_type: sample type. "raw", "channel", "channel_continuous",
+                "narrowband", "beam"
+        :param timestamp: Timestamp for start sending data. Default 0 start now
+        :param seconds: Delay if timestamp is not specified. Default 0.2 seconds
+        :param n_samples: number of samples to send per packet
+        :param sync: (raw) send synchronised antenna samples, vs. round robin
+        :param first_channel: (channel) first channel to send, default 0
+        :param last_channel: (channel) last channel to send, default 511
+        :param channel_id: (channel_continuous) channel to send
+        :param frequency: (narrowband) Sky frequency for band centre, in Hz
+        :param round_bits: (narrowband) how many bits to round
+
+        :raises ValueError: if values wrong
         """
         # Check for type of data to be sent to LMC
-        data_type = params.get("data_type", None)
         if data_type == "channel_continuous":
             self._pending_data_requests = True
         else:
             self._pending_data_requests = False
+        if data_type not in [
+            "raw",
+            "channel",
+            "channel_continuous",
+            "narrowband",
+            "beam",
+        ]:
+            raise ValueError(f"Unknown sample type: {data_type}")
 
     def set_beamformer_regions(
         self: BaseTpmSimulator, regions: list[list[int]]

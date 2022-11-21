@@ -1022,56 +1022,41 @@ class MccsTile(SKABaseDevice):
             super().__init__(logger)
 
         def do(
-            self: MccsTile.ReadRegisterCommand, argin: str
+            self: MccsTile.ReadRegisterCommand, name: str
         ) -> list[int]:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsTile.ReadRegister` command functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
-                including RegisterName, NbRead, Offset
+            :param name: the register name
 
             :return: list of register values
 
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
+            :raises ValueError: if the name is invalid
             """
-            params = json.loads(argin)
-            name = params.get("register_name", None)
-            if name is None:
+            if name is None or name == "":
                 self._component_manager.logger.error(
-                    "register_name is a mandatory parameter"
+                    "register name is a mandatory parameter"
                 )
-                raise ValueError("register_name is a mandatory parameter")
-            nb_read = params.get("number_read", 1)
-            offset = params.get("offset", 0)
+                raise ValueError("register name is a mandatory parameter")
+            value = self._component_manager.read_register(name)
+            self.logger.debug(f"Register {name} = {value}")
+            return value
 
-            return self._component_manager.read_register(name, nb_read, offset)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongArray")
-    def ReadRegister(self: MccsTile, argin: str) -> list[int]:
+    @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    def ReadRegister(self: MccsTile, register_name: str) -> list[int]:
         """
         Return the value(s) of the specified register.
 
-        :param argin: json dictionary with mandatory keywords:
-
-        * RegisterName - (string) register_name is the registers string representation
-        * NbRead - (int) is the number of 32-bit values to read, default 1
-        * Offset - (int) offset is the address offset within the register, default 0
-
+        :param register_name: full hyerarchic register name
         :return: a list of register values
 
         :example:
 
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"register_name": "test-reg1", "number_read": 3,
-                    "offset": 2}
-        >>> jstr = json.dumps(dict)
-        >>> values = dp.command_inout("ReadRegister", jstr)
+        >>> dp = tango.DeviceProxy("fpga1./tile/01")
+        >>> values = dp.command_inout("ReadRegister", "test-reg1")
         """
         handler = self.get_command_object("ReadRegister")
-        return handler(argin)
+        return handler(register_name)
 
     class WriteRegisterCommand(FastCommand):
         """Class for handling the WriteRegister(argin) command."""
@@ -1122,7 +1107,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("values is a mandatory parameter")
             offset = params.get("offset", 0)
 
-            self._component_manager.write_register(name, values, offset)
+            self._component_manager.write_register(name, values)
             return (ResultCode.OK, "WriteRegister completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -2528,7 +2513,7 @@ class MccsTile(SKABaseDevice):
                 "beam",
             ]:
                 self._component_manager.logger.error("Invalid data_type specified")
-                raise ValueError("Invalid DataType specified")
+                raise ValueError("Invalid data_type specified")
             if data_type == "channel_continuous":
                 channel_id = params.get("channel_id", None)
                 if channel_id is None:

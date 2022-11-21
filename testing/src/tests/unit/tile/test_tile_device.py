@@ -713,23 +713,8 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
 
         num_values = 4
-        arg = {
-            "register_name": "test-reg1",
-            "number_read": num_values,
-            "offset": 1,
-        }
-        json_arg = json.dumps(arg)
-        values = tile_device.ReadRegister(json_arg)
+        values = tile_device.ReadRegister("test-reg1")
         assert list(values) == [0] * num_values
-
-        for exclude_key in ["register_name"]:  # is the only mandatory parameter
-            bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
-            bad_json_arg = json.dumps(bad_arg)
-            with pytest.raises(
-                DevFailed,
-                match=f"{exclude_key} is a mandatory parameter",
-            ):
-                _ = tile_device.ReadRegister(bad_json_arg)
 
     def test_WriteRegister(
         self: TestMccsTileCommands,
@@ -766,7 +751,6 @@ class TestMccsTileCommands:
         arg = {
             "register_name": "test-reg1",
             "values": [0, 1, 2, 3],
-            "offset": 1,
         }
         json_arg = json.dumps(arg)
         [[result_code], [message]] = tile_device.WriteRegister(json_arg)

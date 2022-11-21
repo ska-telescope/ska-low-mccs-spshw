@@ -1006,6 +1006,73 @@ class TileComponentManager(MccsComponentManager):
             load_frame,
         )
 
+    @check_communicating
+    def send_data_samples(self: TpmDriver, params: dict) -> None:
+        """
+        Front end for send_xxx_data methods.
+
+        :param params: dictionary with appropriate entries
+            for each sample type
+
+        :raises ValueError: error in time specification
+        """
+        self.logger.debug(f"send_data_samples: {params}")
+        # Check if another operation is pending
+        if self.pending_data_requests:
+            time.sleep(0.2)
+            if self.pending_data_requests:
+                self.logger.error("Another send operation is active")
+                raise ValueError("Cannot send data, another send operatin active")
+        # Check for type of data to be sent to LMC
+        data_type = params.get("data_type", None)
+        start_time = params.get("timestamp", None)
+        if start_time is None:
+            timestamp = 0
+            seconds = params.get("seconds", 0.2)
+        elif self.fpga_reference_time == 0:
+            self.logger.error("Cannot send data, acquisition not started")
+            raise ValueError("Cannot send data, acquisition not started")
+        else:
+            timestamp = self._tile_time.frame_from_utc_time(start_time)
+            if timestamp < 0:
+                self.logger.error(f"Invalid time: {start_time}")
+                raise ValueError(f"Invalid time: {start_time}")
+            seconds = 0.0
+
+        sync = params.get("sync", False)
+        n_samples = None
+        if data_type == "channel":
+            n_samples = params.get("n_samples", 1024)
+        elif data_type == "channel_continuous":
+            n_samples = params.get("n_samples", 128)
+        elif data_type == "narrowband":
+            n_samples = params.get("n_samples", 1024)
+
+        # data_type == "raw":
+        sync = params.get("sync", False)
+        # data_type == "channel":
+        first_channel = params.get("first_channel", 0)
+        last_channel = params.get("last_channel", 511)
+        # data_type == "channel_continuous":
+        channel_id = params.get("channel_id", 128)
+        # data_type == "narrowband":
+        frequency = params.get("frequency", 150e6)
+        round_bits = params.get("round_bits", 3)
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).send_data_samples(
+            data_type,
+            timestamp,
+            seconds,
+            n_samples,
+            sync,
+            first_channel,
+            last_channel,
+            channel_id,
+            frequency,
+            round_bits,
+        )
+
     __PASSTHROUGH = [
         "adc_rms",
         "apply_pointing_delays",
@@ -1043,7 +1110,7 @@ class TileComponentManager(MccsComponentManager):
         "read_address",
         "read_register",
         "register_list",
-        "send_data_samples",
+        # "send_data_samples",
         "set_beamformer_regions",
         "set_lmc_download",
         "set_lmc_integrated_download",
@@ -1322,6 +1389,7 @@ class TileComponentManager(MccsComponentManager):
 
         if task_callback:
             if success:
+                self._tile_time.set_reference_time(self.tile_reference_time)
                 task_callback(
                     status=TaskStatus.COMPLETED,
                     result="Start acquisition has completed",

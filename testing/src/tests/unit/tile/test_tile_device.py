@@ -116,7 +116,7 @@ class TestMccsTile:
         [
             ("logicalTileId", 0, 7),
             ("stationId", 0, 5),
-            ("voltage", 4.7, None),
+            ("voltage", StaticTpmSimulator.VOLTAGE, None),
             ("boardTemperature", StaticTpmSimulator.BOARD_TEMPERATURE, None),
             ("fpga1Temperature", StaticTpmSimulator.FPGA1_TEMPERATURE, None),
             ("fpga2Temperature", StaticTpmSimulator.FPGA2_TEMPERATURE, None),

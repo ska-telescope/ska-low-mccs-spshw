@@ -687,7 +687,7 @@ class TpmDriver(MccsComponentManager):
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
                 # self.tile.post_synchronisation()
-                self.tile.set_station_id(self._tile_id, self._station_id)
+                self.tile.set_station_id(self._station_id, self._tile_id)
             self.logger.debug("Lock released")
             self._tpm_status = TpmStatus.INITIALISED
             self.logger.debug("TpmDriver: initialisation completed")
@@ -740,6 +740,9 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
+        self.logger.debug(
+            f"TpmDriver: station:{self._station_id}, tile:{self._tile_id}"
+        )
 
     @property
     def station_id(self: TpmDriver) -> int:
@@ -766,6 +769,9 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
+        self.logger.debug(
+            f"TpmDriver: station:{self._station_id}, tile:{self._tile_id}"
+        )
 
     @property
     def board_temperature(self: TpmDriver) -> float:
@@ -946,6 +952,7 @@ class TpmDriver(MccsComponentManager):
                     value = cast(Any, self.tile[register_name])
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+                    return []
             else:
                 self.logger.warning("Failed to acquire hardware lock")
                 return []
@@ -973,7 +980,7 @@ class TpmDriver(MccsComponentManager):
         else:
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
-                    if len(values) == 1:
+                    if type(len) == list and len(values) == 1:
                         self.tile.__setitem__(register_name, values[0])
                     else:
                         self.tile.__setitem__(register_name, values)
@@ -1027,8 +1034,10 @@ class TpmDriver(MccsComponentManager):
         # TODO use list write method for tile
         #
         current_address = int(address & 0xFFFFFFFC)
-        assert self.tile.tpm is not None  # for the type checker
+        # assert self.tile.tpm is not None  # for the type checker
         err_flag = False
+        if type(values) == int:
+            values = [values]
         for value in values:
             if self._hardware_lock.acquire(timeout=0.2):
                 try:
@@ -1467,12 +1476,43 @@ class TpmDriver(MccsComponentManager):
             and a substation ID (not used)
         """
         self.logger.debug("TpmDriver: set_beamformer_regions")
+        # TODO: Remove when interface with station beamformer allows multiple
+        # subarrays, stations and apertures
+        subarray_id = 0
+        substation_id = 0
+        aperture_id = 0
+        changed = False
+        if len(regions[0]) == 8:
+            subarray_id = regions[0][3]
+            substation_id = regions[0][6]
+            aperture_id = regions[0][7]
+            for region in regions[1:]:
+                if (
+                    region[3] != subarray_id
+                    or region[6] != substation_id
+                    or region[7] != aperture_id
+                ):
+                    changed = True
+                region[3] = subarray_id
+                region[6] = substation_id
+                region[7] = aperture_id
+        if changed:
+            self.logger.info(
+                "Different subarrays or substations not supported. "
+                "Using only first defined"
+            )
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_beamformer_regions(regions)
                 self._beamformer_table = self.tile.tpm.station_beamf[
                     0
                 ].get_channel_table()
+                self.tile.define_spead_header(
+                    self._station_id,
+                    subarray_id,
+                    aperture_id,
+                    self._fpga_reference_time,
+                )
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
@@ -1515,10 +1555,10 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("TpmDriver: initialise_beamformer")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
-                self.tile.tpm.station_beamf[0].defineChannelTable(
+                self.tile.tpm.station_beamf[0].define_channel_table(
                     [[start_channel, nof_channels, 0]]
                 )
-                self.tile.tpm.station_beamf[1].defineChannelTable(
+                self.tile.tpm.station_beamf[1].define_channel_table(
                     [[start_channel, nof_channels, 0]]
                 )
                 self.tile.set_first_last_tile(is_first, is_last)

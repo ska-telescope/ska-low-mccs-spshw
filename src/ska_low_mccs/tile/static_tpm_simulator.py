@@ -21,7 +21,7 @@ from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 class StaticTpmSimulator(BaseTpmSimulator):
     """A simulator for a TPM."""
 
-    VOLTAGE = 4.7
+    VOLTAGE = 5.0
     CURRENT = 0.4
     BOARD_TEMPERATURE = 36.0
     FPGA1_TEMPERATURE = 38.0

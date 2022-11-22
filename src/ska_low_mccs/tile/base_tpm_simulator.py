@@ -519,8 +519,7 @@ class BaseTpmSimulator(ObjectComponent):
         :param register_name: name of the register
         :param values: values to write
         """
-        address_map = self._register_map.get(register_name, None)
-        if address_map is not None:
+        if register_name != "" or register_name != "unknown":
             self._register_map.update({register_name: values})
 
     def read_address(

@@ -86,7 +86,7 @@ as *RW*.
   * *currentTileBeamformerFrame*: Vale of the frame currently being processed by the Tile 
     beamformer, in units of 256 frames (276,48 us) 
 
-  * *checkPendingDataRequests*: Bool, True if a SendData request is still being processed
+  * *pendingDataRequests*: Bool, True if a SendData request is still being processed
     by the LMC data transmitter. 
 
   * *isBeamformerRunning*: Bool, True if the **station** beamformer is running. The tile 
@@ -111,7 +111,7 @@ as *RW*.
 
   * *testGeneratorActive*: Bool True if at least one of the TPM inputs is being sourced
     by the internal test signal generator. 
- 
+
 ***************************
 Tango Tile device commands
 ***************************
@@ -155,19 +155,13 @@ to access individual hardware registers.
     The initialisation required to set up a complete station involves further steps, 
     performed by the Station device. 
 
-  * *registerList*: (attribute) Returns a list of all the TPM register names (about 3 thousand names). 
+  * *GetRegisterList*: Returns a list of all the TPM register names (about 3 thousand names). 
 
-  * *ReadRegister*: Reads the value of one or more registers. Each register is a 32 bit integer. 
-    If is possible to specify an offset from the given addreess, in words, and a number of 
-    consecutive registers to read. Parameters given as a json string: 
+  * *ReadRegister*: Reads the value of one named register. Each register is a 32 bit integer. 
+    Register may return a list of values if so defined in the xml register description. 
+    Parameter is the full qualified hyerarchic register name (string)
 
-    * register_name - (mandatory string) Name of the register to read
-
-    * offset - (int) Offset in words of the first register read
-
-    * number_read - (int) number of words (registers) to read
-
-    Returns a list of 32 bit integers. 
+    Returns a list of ione or more unsigned 32 bit values.
 
   * *WriteRegister*: Write into one or more registers. Each register is a 32 bit integer.
     If is possible to specify an offset from the given addreess, in words, and a number of
@@ -175,10 +169,18 @@ to access individual hardware registers.
 
     * register_name: (mandatory string) Name of the register to read
 
-    * offset - (int) Offset in words of the first register read
-
     * values - (int or list(int) ) Values to write. Values are written into consecutive 
-      registers.
+      register addresses.
+
+  * *ReadAddress*: Reads one or more values at a specific address. Parameter is a list 
+    of one or two integers. First value is the absolute address in the TPM AXI4 memory
+    mapped address space. If 2 values are specified the second is the number of words read.
+
+    Returns a list of unsigned 32 bit values.
+
+  * *WriteAddress*: Writes one or more values to hardware address. Parameter: list of
+    integer values, first the address, followed by the values to be written. If more than
+    one value is specified, these are written in consecutive word (4 byte) addresses. 
 
 
 Ethernet interface configuration
@@ -511,11 +513,11 @@ TPM data processing is highly configurable.
     with each element representing a normalized coefficient, with (1.0, 0.0) being the
     normal, expected response for an ideal antenna.
 
-    Argument: numeric list comprises:
+    Argument: is a list with (8 * *number_of_channels* + 1) real values:
 
-    * antenna - (int) is the antenna to which the coefficients will be applied.
+    * argument[0]: antenna - (int) is the antenna to which the coefficients will be applied.
 
-    * calibration_coefficients - [array] a flattended bidimensional complex array 
+    * argument[1:N] calibration_coefficients - a flattended bidimensional complex array 
       of (8 * *number_of_channels*) real values.
 
   * *ApplyCalibration*: Activates the specified calibration values. Calibration 

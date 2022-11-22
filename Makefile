@@ -28,10 +28,10 @@ include .make/helm.mk
 -include PrivateRules.mak
 
 #ifneq ($(strip $(CI_JOB_ID)),)
-ifneq ($(CI_REGISTRY),)
-  K8S_TEST_IMAGE_TO_TEST = $(CI_REGISTRY_IMAGE)/$(NAME):$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
+ifeq ($(CI_REGISTRY),)
+K8S_TEST_IMAGE_TO_TEST = $(CI_REGISTRY_IMAGE)/$(NAME):$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 else
-K8S_TEST_IMAGE_TO_TEST = artefact.skao.int/ska-low-mccs:$(VERSION)
+K8S_TEST_IMAGE_TO_TEST = $(CAR_OCI_REGISTRY_HOST)/$(NAME):$(VERSION)
 endif
 
 ifeq ($(MAKECMDGOALS),k8s-test)
@@ -45,12 +45,6 @@ K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \
 						pytest \
 						$(PYTHON_VARS_AFTER_PYTEST) ./tests/functional \
 						 | tee pytest.stdout
-
-ifneq ($(CI_REGISTRY),)
-K8S_TEST_IMAGE_TO_TEST=$(CI_REGISTRY)/ska-telescope/mccs/ska-low-mccs/ska-low-mccs:$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
-else
-K8S_TEST_IMAGE_TO_TEST = artefact.skao.int/ska-low-mccs:$(VERSION)
-endif
 
 python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	

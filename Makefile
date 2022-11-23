@@ -40,7 +40,7 @@ ifeq ($(MAKECMDGOALS),k8s-test)
 PYTHON_VARS_AFTER_PYTEST += --testbed $(K8S_TESTBED)
 PYTHON_TEST_FILE = tests/functional
 else
-PYTHON_VARS_AFTER_PYTEST +=  --cov-fail-under=80
+PYTHON_VARS_AFTER_PYTEST +=  --cov-fail-under=10
 endif
 
 K8S_TEST_TEST_COMMAND = $(PYTHON_VARS_BEFORE_PYTEST) $(PYTHON_RUNNER) \
@@ -53,6 +53,6 @@ python-post-format:
 
 # Add this for typehints & static type checking
 python-post-lint:
-	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ testing/src/
+	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ tests
 
 .PHONY: python-post-format python-post-lint

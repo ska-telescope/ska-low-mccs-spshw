@@ -28,7 +28,9 @@ include .make/helm.mk
 -include PrivateRules.mak
 
 #ifneq ($(strip $(CI_JOB_ID)),)
-ifeq ($(CI_REGISTRY),)
+ifneq ($(CI_REGISTRY),)
+K8S_CHART_PARAMS = --set low_mccs.image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \
+	--set low_mccs.image.registry=$(CI_REGISTRY_IMAGE)
 K8S_TEST_IMAGE_TO_TEST = $(CI_REGISTRY_IMAGE)/$(NAME):$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 else
 K8S_TEST_IMAGE_TO_TEST = $(CAR_OCI_REGISTRY_HOST)/$(NAME):$(VERSION)

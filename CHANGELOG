@@ -2,53 +2,56 @@
 
 ## unrelease
 
+## 0.10.2
+* MCCS-1192 - k8s-test bug fix
+
 ## 0.10.1
 ## 0.10.0
 
-MCCS-1154 Add make k8s test to the ska-low-mccs pipeline
-MCCS-1190 Support zero instances
-MCCS-1096 Investigate MCCS code coverage threshold
-MCCS-1136 Create script for setting up dev environment
-MCCS-1176 archive cluster manager
-MCCS-1136 Create script for setting up dev environment
-MCCS-1174 remove pasd code from ska-low-mccs repository
-MCCS-1145 Impose max-line-length = 88
-MCCS-1157 Dependency update
-MCCS-1143 Create Sequence Diagram to capture the PI16 'Thin Slice'
-MCCS-969  Changed pyfabil and pyaavs whl to revision mccs-969
-MCCS-1147 Identify where the callbacks where strings are missmanaged
-MCCS-1078 Remove DAQ code from main MCCS repo
-MCCS-1029 Integrate DAQ library with MCCS
-LOW-365   dependency update
-MCCS-1134 Remove common code from ska-low-mccs repository
-MCCS-1067 Update MCCS BDD Tests for Controller-Only Deployment
-MCCS-1062 debug integration test pipeline failures
-MCCS-1132 fix Tile Off command failure
-MCCS-1135 Updated Dockerfile."
-LOW-304   Update development environment
-MCCS-1065 Investigate MCCSController with no subservient devices
-MCCS-1030 DAQ Documentation
-MCCS-976  Create and test chart with AAVS multiplicity
-LOW-280   Test harness race condition
-MCCS-1014 Change base classes to V0.13.2
-MCCS-1011 Updated charts for Taranta Dashboard
-MCCS-1014 Base Classes 0.13 update feature branch
-MCCS-1054 Typos corrected
-MCCS-1054 Updated deployment documentation"
-MCCS-1011 Raj
-MCCS-997  Config fixes
-MCCS-1008 Update test harness
-MCCS-1005 Raj
-MCCS-1001 Docs style update
-MCCS-992  only publish ska-low-mccs chart
+* MCCS-1154 - Add make k8s test to the ska-low-mccs pipeline
+* MCCS-1190 - Support zero instances
+* MCCS-1096 - Investigate MCCS code coverage threshold
+* MCCS-1136 - Create script for setting up dev environment
+* MCCS-1176 - archive cluster manager
+* MCCS-1136 - Create script for setting up dev environment
+* MCCS-1174 - remove pasd code from ska-low-mccs repository
+* MCCS-1145 - Impose max-line-length = 88
+* MCCS-1157 - Dependency update
+* MCCS-1143 - Create Sequence Diagram to capture the PI16 'Thin Slice'
+* MCCS-969  - Changed pyfabil and pyaavs whl to revision mccs-969
+* MCCS-1147 - Identify where the callbacks where strings are missmanaged
+* MCCS-1078 - Remove DAQ code from main MCCS repo
+* MCCS-1029 - Integrate DAQ library with MCCS
+* LOW-365   - dependency update
+* MCCS-1134 - Remove common code from ska-low-mccs repository
+* MCCS-1067 - Update MCCS BDD Tests for Controller-Only Deployment
+* MCCS-1062 - debug integration test pipeline failures
+* MCCS-1132 - fix Tile Off command failure
+* MCCS-1135 - Updated Dockerfile."
+* LOW-304   - Update development environment
+* MCCS-1065 - Investigate MCCSController with no subservient devices
+* MCCS-1030 - DAQ Documentation
+* MCCS-976  - Create and test chart with AAVS multiplicity
+* LOW-280   - Test harness race condition
+* MCCS-1014 - Change base classes to V0.13.2
+* MCCS-1011 - Updated charts for Taranta Dashboard
+* MCCS-1014 - Base Classes 0.13 update feature branch
+* MCCS-1054 - Typos corrected
+* MCCS-1054 - Updated deployment documentation"
+* MCCS-1011 - Raj
+* MCCS-997  - Config fixes
+* MCCS-1008 - Update test harness
+* MCCS-1005 - Raj
+* MCCS-1001 - Docs style update
+* MCCS-992  - only publish ska-low-mccs chart
 
 ## 0.9.1
 
-* MCCS-915 Adopt poetry and update CI Pipeline
-* MCCS-493 Poetry
-* MCCS-874 Monitor hardware connection status for Tile
-* MCCS-701 add adminMode to config file
-* MCCS-736 Test hardware tile interaction using 0.12 base classes
+* MCCS-915 - Adopt poetry and update CI Pipeline
+* MCCS-493 - Poetry
+* MCCS-874 - Monitor hardware connection status for Tile
+* MCCS-701 - add adminMode to config file
+* MCCS-736 - Test hardware tile interaction using 0.12 base classes
 
 ## 0.9.0
 

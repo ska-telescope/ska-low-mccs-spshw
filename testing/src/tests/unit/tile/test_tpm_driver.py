@@ -406,6 +406,74 @@ class TestTPMDriver:
         assert get_pps_delay == StaticTileSimulator.PPS_DELAY
         assert get_fpgs_sync_time == 0.4
 
+    def test_dumb_read_tile_attributes(
+        self: TestTPMDriver,
+        patched_tpm_driver: PatchedTpmDriver,
+        static_tile_simulator: StaticTileSimulator,
+    ) -> None:
+        """
+        Dumb test of attribute read. Just check that the attributes can be read.
+
+        :param patched_tpm_driver: The patched tpm driver under test.
+        :param static_tile_simulator: The mocked tile
+        """
+        static_tile_simulator.connect()
+        static_tile_simulator.fpga_time = 2
+        static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
+        static_tile_simulator.tpm._fpga_current_frame = 2
+
+        _ = patched_tpm_driver.register_list
+        _ = patched_tpm_driver._get_register_list()
+        _ = patched_tpm_driver.pps_present
+        _ = patched_tpm_driver._check_pps_present()
+        _ = patched_tpm_driver.sysref_present
+        _ = patched_tpm_driver.clock_present
+        _ = patched_tpm_driver.pll_locked
+
+    def test_dumb_write_tile_attributes(
+        self: TestTPMDriver,
+        patched_tpm_driver: PatchedTpmDriver,
+        static_tile_simulator: StaticTileSimulator,
+    ) -> None:
+        """
+        Dumb test of attribute write. Just check that the attributes can be written.
+
+        :param patched_tpm_driver: The patched tpm driver under test.
+        :param static_tile_simulator: The mocked tile
+        """
+        static_tile_simulator.connect()
+        static_tile_simulator.fpga_time = 2
+        static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
+        static_tile_simulator.tpm._fpga_current_frame = 2
+
+        patched_tpm_driver.channeliser_truncation = [4] * 512
+        _ = patched_tpm_driver.channeliser_truncation
+        patched_tpm_driver.static_delays = [12.0] * 32
+        _ = patched_tpm_driver.static_delays
+        patched_tpm_driver.csp_rounding = [2] * 384
+        _ = patched_tpm_driver.csp_rounding
+        patched_tpm_driver.preadu_levels = list(range(32))
+        _ = patched_tpm_driver.preadu_levels
+
+    def test_set_beamformer_regions(
+        self: TestTPMDriver,
+        patched_tpm_driver: PatchedTpmDriver,
+        static_tile_simulator: StaticTileSimulator,
+    ) -> None:
+        """
+        Test the set_beamformer_regions command.
+
+        :param patched_tpm_driver: The patched tpm driver under test.
+        :param static_tile_simulator: The mocked tile
+        """
+        static_tile_simulator.connect()
+        static_tile_simulator.fpga_time = 2
+        static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
+
+        patched_tpm_driver.set_beamformer_regions(
+            [[64, 32, 1, 0, 0, 0, 0, 0], [128, 8, 0, 2, 32, 1, 1, 1]]
+        )
+
     def test_polling_loop(
         self: TestTPMDriver,
         patched_tpm_driver: PatchedTpmDriver,

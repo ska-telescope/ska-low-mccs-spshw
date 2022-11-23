@@ -14,7 +14,7 @@ import time
 import unittest
 from typing import Any, Optional
 
-# import numpy as np
+import numpy as np
 import pytest
 from ska_control_model import AdminMode, HealthState, ResultCode, TestMode
 from ska_low_mccs_common import MccsDeviceProxy
@@ -121,6 +121,7 @@ class TestMccsTile:
             ("fpga1Temperature", StaticTpmSimulator.FPGA1_TEMPERATURE, None),
             ("fpga2Temperature", StaticTpmSimulator.FPGA2_TEMPERATURE, None),
             ("fpgasUnixTime", pytest.approx(StaticTpmSimulator.FPGAS_TIME), None),
+            ("fpgaTime", "1970-01-01T00:00:01.000000Z", None),
             (
                 "currentTileBeamformerFrame",
                 StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
@@ -134,20 +135,25 @@ class TestMccsTile:
             ),
             (
                 "adcPower",
-                pytest.approx(tuple(float(i) for i in range(32))),
+                # pytest.approx(tuple(float(i) for i in range(32))),
+                list(float(i) for i in range(32)),
                 None,
             ),
             ("ppsDelay", 12, None),
             # TODO Tests fail as np.ndarray is returned.
-            # (
-            #   "channeliserRounding",
-            #   pytest.approx(StaticTpmSimulator.CHANNELISER_TRUNCATION),
-            #   [2] * 512,
-            # ),
-            # ("preaduLevels", pytest.approx(StaticTpmSimulator.PREADU_LEVELS), [5]*32),
-            # ("staticDelays", StaticTpmSimulator.STATIC_DELAYS, [12.]*32),
-            # ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3]*384),
-            # ("arpTable", StaticTpmSimulator.ARP_TABLE, None),
+            (
+                "channeliserRounding",
+                StaticTpmSimulator.CHANNELISER_TRUNCATION,
+                [2] * 512,
+            ),
+            ("preaduLevels", pytest.approx(StaticTpmSimulator.PREADU_LEVELS), [5] * 32),
+            ("staticTimeDelays", StaticTpmSimulator.STATIC_DELAYS, [12.0] * 32),
+            ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
+            ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [1, 2, 3, 4] * 4),
+            ("ppsPresent", True, None),
+            ("clockPresent", True, None),
+            ("sysrefPresent", True, None),
+            ("pllLocked", True, None),
         ],
     )
     def test_component_attribute(
@@ -208,11 +214,19 @@ class TestMccsTile:
         time.sleep(0.1)
         device_state_changed_callback.assert_last_change_event(DevState.ON)
 
-        assert getattr(tile_device, attribute) == initial_value
+        if type(initial_value) == list:
+            initial_value = np.array(initial_value)
+            assert (getattr(tile_device, attribute) == initial_value).all()
+        else:
+            assert getattr(tile_device, attribute) == initial_value
 
         if write_value is not None:
             tile_device.write_attribute(attribute, write_value)
-            assert getattr(tile_device, attribute) == write_value
+            if type(write_value) == list:
+                write_value = np.array(write_value)
+                assert (getattr(tile_device, attribute) == write_value).all()
+            else:
+                assert getattr(tile_device, attribute) == write_value
 
     def test_antennaIds(
         self: TestMccsTile,
@@ -1162,3 +1176,65 @@ class TestMccsTileCommands:
         tile_device.StopDataTransmission()
         time.sleep(0.1)
         assert not tile_device.pendingDataRequests
+
+    def test_configure_test_generator(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
+        """
+        Test for various flavors of TestGenerator signals.
+
+        Also tests:
+        TestGeneratorActive
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the tile
+            device
+        """
+        tile_device.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
+        assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
+
+        tile_device.MockTpmOff()
+        time.sleep(0.1)
+        tile_device.MockTpmOn()
+
+        args = [
+            {
+                "tone_frequency": 100e6,
+                "tone_amplitude": 0.5,
+                "tone_2_frequency": 100e6,
+                "tone_2_amplitude": 0.5,
+                "noise_amplitude": 0.3,
+                "pulse_frequency": 5,
+                "pulse_amplitude": 0.2,
+                "adc_channels": [1, 2, 3, 14],
+            },
+            {
+                "tone_frequency": 100e6,
+                "tone_amplitude": 0.5,
+            },
+            {"noise_amplitude": 1.0},
+        ]
+        for arg in args:
+            tile_device.loggingLevel = 5
+            tile_device.ConfigureTestGenerator(json.dumps(arg))
+            assert tile_device.testGeneratorActive is True
+            tile_device.ConfigureTestGenerator("{}")
+            assert tile_device.testGeneratorActive is False
+            tile_device.loggingLevel = 3
+        with pytest.raises(DevFailed, match="pulse_frequency must be between 0 and 7"):
+            tile_device.ConfigureTestGenerator(json.dumps({"pulse_frequency": 8}))

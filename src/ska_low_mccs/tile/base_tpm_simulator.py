@@ -1132,6 +1132,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug(
             "TpmSimulator: test_generator_input_select: " + str(hex(bit_mask))
         )
+        self._test_generator_active = bit_mask != 0
 
     @property
     def test_generator_active(self) -> bool:

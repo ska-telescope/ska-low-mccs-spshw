@@ -22,7 +22,7 @@ import threading
 import time
 from typing import Any, Callable, List, Optional, cast
 
-import numpy as np
+# import numpy as np
 from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
@@ -1206,7 +1206,7 @@ class TpmDriver(MccsComponentManager):
             frequency channels in all inputs.
         """
         self.logger.debug("TpmDriver: set_channeliser_truncation")
-        nb_freq = np.shape(array)
+        nb_freq = len(array)
         trunc = [0] * 512
         trunc[0:nb_freq] = array
         for chan in range(32):

@@ -225,7 +225,9 @@ class _ApiuProxy(DeviceComponentManager, PowerSupplyProxyComponentManager):
         #     power_state
         # )
         if self._component_state_changed_callback is not None:
-            self._component_state_changed_callback({"power_state": power_state})
+            self._component_state_changed_callback(
+                {"power_state": power_state}, fqdn=None  # type: ignore[call-arg]
+            )
         self.update_supplied_power_state(power_state)
 
 
@@ -555,7 +557,7 @@ class AntennaComponentManager(MccsComponentManager):
         )
 
     @property
-    def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
+    def power_state_lock(self: MccsComponentManager) -> threading.RLock:
         """
         Return the power state lock of this component manager.
 
@@ -563,34 +565,76 @@ class AntennaComponentManager(MccsComponentManager):
         """
         return self._power_state_lock
 
-    # @check_communicating
     # TODO should the decorator be uncommented
-    def off(self: AntennaComponentManager) -> ResultCode | None:
+    # @check_communicating
+    def off(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the off slow task.
+
+        This method returns immediately after it submitted
+        `self._off` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :returns: task status and message
+        """
+        return self.submit_task(self._off, task_callback=task_callback)
+
+    def _off(
+        self: AntennaComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Turn the antenna off.
 
         It does so by telling the APIU to turn the right antenna off.
 
-        :return: a ResultCode, or None if there was nothing to do
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
-        with self._power_state_lock:
-            self._target_power_state = PowerState.OFF
-        return self._review_power()
+        # Indicate that the task has started
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            with self._power_state_lock:
+                self._target_power_state = PowerState.OFF
+            # TODO should deal with the return code here
+            self._review_power()
+        # pylint: disable=broad-except
+        except Exception as ex:
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
 
-    def standby(self: AntennaComponentManager) -> None:
+        # Indicate that the task has completed
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="This slow task has completed"
+            )
+
+    def standby(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Put the antenna into standby state; this is not implemented.
 
         This raises NotImplementedError because the antenna has no
         standby state.
 
+        :param task_callback: Update task state, defaults to None
+
         :raises NotImplementedError: because the antenna has no standby
             state.
         """
         raise NotImplementedError("Antenna has no standby state.")
 
+    # TODO should the decorator be uncommented
     # @check_communicating
-    def on(self: AntennaComponentManager, task_callback: Callable = None):
+    def on(
+        self: AntennaComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.
 
@@ -605,8 +649,8 @@ class AntennaComponentManager(MccsComponentManager):
 
     def _on(
         self: AntennaComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn the antenna on.
@@ -615,18 +659,23 @@ class AntennaComponentManager(MccsComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
         # Indicate that the task has started
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             with self._power_state_lock:
                 self._target_power_state = PowerState.ON
+            # TODO should deal with the return code here
             self._review_power()
+        # pylint: disable=broad-except
         except Exception as ex:
-            task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
 
         # Indicate that the task has completed
-        task_callback(
-            status=TaskStatus.COMPLETED, result="This slow task has completed"
-        )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="This slow task has completed"
+            )
 
     def _review_power(self: AntennaComponentManager) -> ResultCode | None:
         with self._power_state_lock:

@@ -16,8 +16,8 @@ from astropy.time.core import Time
 
 from ska_low_mccs.station.point_station import Pointing, StationInformation
 
-locationsfile = "testing/data/AAVS2_loc_italia_190429.txt"
-outputfile = "testing/results/pointingtest.txt"
+locationsfile = "tests/data/AAVS2_loc_italia_190429.txt"
+outputfile = "tests/results/pointingtest.txt"
 stat_lat, stat_lon, stat_height = (-26.82472208, 116.7644482, 346.59)
 
 

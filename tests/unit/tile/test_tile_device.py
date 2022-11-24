@@ -608,7 +608,7 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        bitfile = "testing/data/Vivado_test_firmware_bitfile.bit"
+        bitfile = "tests/data/Vivado_test_firmware_bitfile.bit"
         [[result_code], [message]] = tile_device.DownloadFirmware(bitfile)
         assert result_code == ResultCode.QUEUED
         assert "DownloadFirmware" in message.split("_")[-1]

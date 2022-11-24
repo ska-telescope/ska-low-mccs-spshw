@@ -99,6 +99,7 @@ def controller_ready_for_commands(controller_bdd, admin_mode_value):
     :param controller_bdd: The MccsDeviceProxy to controller to use.
     :param admin_mode_value: The value of AdminMode to set on MccsController.
     """
+    print("setting adminmode", admin_mode_value)
     controller_bdd.adminMode = admin_mode_value
 
 

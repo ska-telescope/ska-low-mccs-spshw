@@ -44,7 +44,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     print(tango.utils.info())
 
 
-with open("testing/testbeds.yaml", "r") as stream:
+with open("tests/testbeds.yaml", "r") as stream:
     _testbeds: dict[str, set[str]] = yaml.safe_load(stream)
 
 

@@ -84,7 +84,7 @@ The commands are as follows:
 
 Here is an example command:
 
-`python3 src/ska_low_mccs/point_station.py statpos -26.8247 116.7644 346.36 displacements testing/data/AAVS2_loc_italia_190429.txt sun startat '2021-05-09T23:00:00' utc msequence 720 10 4 write testing/results/sun_10s2.txt`
+`python3 src/ska_low_mccs/point_station.py statpos -26.8247 116.7644 346.36 displacements tests/data/AAVS2_loc_italia_190429.txt sun startat '2021-05-09T23:00:00' utc msequence 720 10 4 write testing/results/sun_10s2.txt`
 
 * The station position is set to the nominal array centre.
 * Displacements are read from the included AAVS file.

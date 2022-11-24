@@ -1,38 +1,22 @@
 {{ $localchart := . }}
-
 {{- range $key, $deviceserver := .Values.deviceServers }}
-
+{{- $deviceserverspec := $deviceserver }}
 {{- if hasKey $deviceserver "file"}}
-
-{{- $filedeviceserver := tpl ($.Files.Get $deviceserver.file) $ | fromYaml }}
-{{- $_ := set $filedeviceserver "instances" (coalesce $localchart.Values.global.instances $deviceserver.instances $filedeviceserver.instances) }}
-{{- $context := dict "name" $key "deviceserver" $filedeviceserver "image" $deviceserver.image "local" $localchart }}
+{{- $deviceserverspec = tpl ($.Files.Get $deviceserver.file) $ | fromYaml }}
+{{- if hasKey $deviceserver "instances" }}
+{{- $_ := set $deviceserverspec "instances" $deviceserver.instances }}
+{{- end }}
+{{- end }}
+{{- if hasKey $localchart.Values.global "instances" }}
+{{- $_ := set $deviceserverspec "instances" $localchart.Values.global.instances }}
+{{- end }}
+{{- if $deviceserverspec.instances }}
+{{- $context := dict "name" $key "deviceserver" $deviceserverspec "image" $deviceserver.image "local" $localchart }}
 {{ template "ska-tango-util.multidevice-config.tpl" $context }}
 {{ template "ska-tango-util.multidevice-sacc-role.tpl" $context }}
 {{ template "ska-tango-util.multidevice-job.tpl" $context }}
-{{- if hasKey $deviceserver "deploy_service"}}
-{{- if eq $deviceserver.deploy_service true }}
+{{- if or $deviceserver.deploy_service (not (hasKey $deviceserver "deploy_service")) }}
 {{ template "ska-tango-util.multidevice-svc.tpl" $context }}
 {{- end }}
-{{- else }}
-{{ template "ska-tango-util.multidevice-svc.tpl" $context }}
-{{- end }}
-
-{{- else }}
-
-{{- $_ := set $deviceserver "instances" (coalesce $localchart.Values.global.instances $deviceserver.instances) }}
-{{- $context := dict "name" $key "deviceserver" $deviceserver "image" $deviceserver.image "local" $localchart }}
-{{ template "ska-tango-util.multidevice-config.tpl" $context }}
-{{ template "ska-tango-util.multidevice-sacc-role.tpl" $context }}
-{{ template "ska-tango-util.multidevice-job.tpl" $context }}
-
-{{- if hasKey $deviceserver "deploy_service"}}
-{{- if eq $deviceserver.deploy_service true }}
-{{ template "ska-tango-util.multidevice-svc.tpl" $context }}
-{{- end }}
-{{- else }}
-{{ template "ska-tango-util.multidevice-svc.tpl" $context }}
-{{- end }}
-
-{{- end }} # if
-{{- end }} # deviceservers
+{{- end }}  # if deviceserverspec.instances
+{{- end }}  # range deviceservers

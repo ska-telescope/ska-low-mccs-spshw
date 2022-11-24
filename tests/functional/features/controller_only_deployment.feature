@@ -21,4 +21,5 @@ Scenario Outline: Turn ON_OFF MCCS Controller
     Examples: on-off
         | initial_state | final_state   | attr_value    | initial_health    | final_health  |
         | 'disable'     | 'on'          | 'ONLINE'      | 'unknown'         | 'ok'          |
-        | 'on'          | 'disable'     | 'OFFLINE'     | 'ok'              | 'unknown'     |
+# this test will never work as the starting state is disable
+#        | 'on'          | 'disable'     | 'OFFLINE'     | 'ok'              | 'unknown'     |

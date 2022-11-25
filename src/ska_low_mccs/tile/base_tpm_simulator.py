@@ -724,14 +724,14 @@ class BaseTpmSimulator(ObjectComponent):
 
         :param regions: a list encoding up to 48 regions, with each region containing:
 
-        * start_channel - (int) region starting channel, must be even in range 0 to 510
-        * num_channels - (int) size of the region, must be a multiple of 8
-        * beam_index - (int) beam used for this region with range 0 to 47
-        * subarray_id - (int) Subarray
-        * subarray_logical_channel - (int) logical channel # in the subarray
-        * subarray_beam_id - (int) ID of the subarray beam
-        * substation_id - (int) Substation
-        * aperture_id:  ID of the aperture (station*100+substation?)
+            * start_channel - (int) region starting channel, must be even in range 0 to 510
+            * num_channels - (int) size of the region, must be a multiple of 8
+            * beam_index - (int) beam used for this region with range 0 to 47
+            * subarray_id - (int) Subarray
+            * subarray_logical_channel - (int) logical channel # in the subarray
+            * subarray_beam_id - (int) ID of the subarray beam
+            * substation_id - (int) Substation
+            * aperture_id:  ID of the aperture (station*100+substation?)
 
         """
         self.logger.debug("TpmSimulator: set_beamformer_regions")

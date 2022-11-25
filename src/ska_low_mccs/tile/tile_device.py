@@ -1492,11 +1492,11 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
-        * payload_length - (int) SPEAD payload length for channel data
-        * destination_ip - (string) Destination IP.
-        * source_port - (int) Source port for integrated data streams
-        * destination_port - (int) Destination port for integrated data streams
+            * mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
+            * payload_length - (int) SPEAD payload length for channel data
+            * destination_ip - (string) Destination IP.
+            * source_port - (int) Source port for integrated data streams
+            * destination_port - (int) Destination port for integrated data streams
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

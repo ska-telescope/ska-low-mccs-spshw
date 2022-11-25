@@ -261,7 +261,7 @@ class MccsTile(SKABaseDevice):
         power_state = self.component_manager.power_state
         self.logger.debug(
             f"communication_state: {communication_state}, adminMode: {admin_mode}, "
-            "powerMode: {power_state}"
+            f"powerMode: {power_state}"
         )
         # admin mode stuff here
         action = action_map[communication_state]
@@ -1119,9 +1119,8 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-            * register_name - (string) register_name is the registers string representation
+            * register_name - (string) register fully qualified string representation
             * values - (list) is a list containing the 32-bit values to write
-            * offset - (int) offset is the address offset within the register to write to
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1581,12 +1580,13 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * mode - (string) '1g' or '10g' (Mandatory)
-        * channel_payload_lenth - (int) SPEAD payload length for integrated channel data
-        * beam_payload_length - (int) SPEAD payload length for integrated beam data
-        * destination_ip - (string) Destination IP
-        * source_port - (int) Source port for integrated data streams
-        * destination_port - (int) Destination port for integrated data streams
+            * mode - (string) '1g' or '10g' (Mandatory)
+            * channel_payload_lenth - (int) SPEAD payload length for integrated
+                 channel data
+            * beam_payload_length - (int) SPEAD payload length for integrated beam data
+            * destination_ip - (string) Destination IP
+            * source_port - (int) Source port for integrated data streams
+            * destination_port - (int) Destination port for integrated data streams
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1837,9 +1837,9 @@ class MccsTile(SKABaseDevice):
               default = 192 (150 MHz)
             * n_channels - (int) is the number of channels in the observed region
               default = 8 (6.25 MHz)
-            * is_first - (bool) specifies whether the tile is the first one in the station
+            * is_first - (bool) whether the tile is the first one in the station
               default False
-            * is_last - (bool) specifies whether the tile is the last one in the station
+            * is_last - (bool) whether the tile is the last one in the station
               default False
 
         :return: A tuple containing a return code and a string
@@ -2541,7 +2541,15 @@ class MccsTile(SKABaseDevice):
                     )
                     raise ValueError("frequency must be between 1 and 390 MHz")
 
-            self._component_manager.send_data_samples(params)
+            n_samples = None
+            if data_type == "channel":
+                n_samples = params.get("n_samples", 1024)
+            elif data_type == "channel_continuous":
+                n_samples = params.get("n_samples", 128)
+            elif data_type == "narrowband":
+                n_samples = params.get("n_samples", 1024)
+            params["n_samples"] = n_samples
+            self._component_manager.send_data_samples(**params)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -2553,7 +2561,7 @@ class MccsTile(SKABaseDevice):
 
         * data_type - type of snapshot data (mandatory): "raw", "channel",
                     "channel_continuous", "narrowband", "beam"
-        * timestamp - Time (UTC string) to start sending data. Default immediately
+        * start_time - Time (UTC string) to start sending data. Default immediately
         * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
 
         Depending on the data type:

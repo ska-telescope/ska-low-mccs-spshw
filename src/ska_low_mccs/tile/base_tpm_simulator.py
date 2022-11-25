@@ -18,7 +18,7 @@ import numpy as np
 from ska_low_mccs_common.component import ObjectComponent
 from typing_extensions import Final
 
-# from .tile_data import TileData
+from .tile_data import TileData
 from .tpm_status import TpmStatus
 
 __all__ = ["BaseTpmSimulator"]
@@ -429,7 +429,9 @@ class BaseTpmSimulator(ObjectComponent):
             white noise.
         """
         if type(truncation) == int:
-            self._channeliser_truncation = [truncation] * 512
+            self._channeliser_truncation = [
+                truncation
+            ] * TileData.NUM_FREQUENCY_CHANNELS
         elif type(truncation) == list:
             self._channeliser_truncation = copy.deepcopy(truncation)
 
@@ -472,7 +474,7 @@ class BaseTpmSimulator(ObjectComponent):
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
         if type(rounding) == int:
-            self._csp_rounding = [rounding] * 384
+            self._csp_rounding = [rounding] * TileData.NUM_BEAMFORMER_CHANNELS
         else:
             self._csp_rounding = rounding
 
@@ -646,6 +648,7 @@ class BaseTpmSimulator(ObjectComponent):
         else:
             # return int(
             #    (time.time()-self._fpga_reference_time)/(TileData.FRAME_PERIOD))
+            # TODO Modify testbenches to expect realistic time from the TPM
             return 1000000
 
     def set_lmc_download(
@@ -724,7 +727,8 @@ class BaseTpmSimulator(ObjectComponent):
 
         :param regions: a list encoding up to 48 regions, with each region containing:
 
-            * start_channel - (int) region starting channel, must be even in range 0 to 510
+            * start_channel - (int) region starting channel, must be even in
+                range 0 to 510
             * num_channels - (int) size of the region, must be a multiple of 8
             * beam_index - (int) beam used for this region with range 0 to 47
             * subarray_id - (int) Subarray

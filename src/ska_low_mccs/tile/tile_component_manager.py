@@ -1007,25 +1007,46 @@ class TileComponentManager(MccsComponentManager):
         )
 
     @check_communicating
-    def send_data_samples(self: TpmDriver, params: dict) -> None:
+    def send_data_samples(
+        self: TpmDriver,
+        data_type: str = "",
+        start_time: str = None,
+        seconds: float = 0.2,
+        n_samples: int = 1024,
+        sync: bool = False,
+        first_channel: int = 0,
+        last_channel: int = 512,
+        channel_id: int = 128,
+        frequency: float = 100.0,
+        round_bits: int = 3,
+        **params: Any,
+    ) -> None:
         """
         Front end for send_xxx_data methods.
 
-        :param params: dictionary with appropriate entries
-            for each sample type
+        :param data_type: sample type. "raw", "channel", "channel_continuous",
+                "narrowband", "beam"
+        :param start_time: UTC Time for start sending data. Default start now
+        :param seconds: Delay if timestamp is not specified. Default 0.2 seconds
+        :param n_samples: number of samples to send per packet
+        :param sync: (raw) send synchronised antenna samples, vs. round robin
+        :param first_channel: (channel) first channel to send, default 0
+        :param last_channel: (channel) last channel to send, default 511
+        :param channel_id: (channel_continuous) channel to send
+        :param frequency: (narrowband) Sky frequency for band centre, in Hz
+        :param round_bits: (narrowband) how many bits to round
+        :param params: any additional keyword arguments
 
         :raises ValueError: error in time specification
         """
         self.logger.debug(f"send_data_samples: {params}")
-        # Check if another operation is pending
+        # Check if another operation is pending. Wait at most 0.2 seconds
         if self.pending_data_requests:
             time.sleep(0.2)
             if self.pending_data_requests:
                 self.logger.error("Another send operation is active")
                 raise ValueError("Cannot send data, another send operatin active")
         # Check for type of data to be sent to LMC
-        data_type = params.get("data_type", None)
-        start_time = params.get("timestamp", None)
         if start_time is None:
             timestamp = 0
             seconds = params.get("seconds", 0.2)
@@ -1039,25 +1060,6 @@ class TileComponentManager(MccsComponentManager):
                 raise ValueError(f"Invalid time: {start_time}")
             seconds = 0.0
 
-        sync = params.get("sync", False)
-        n_samples = None
-        if data_type == "channel":
-            n_samples = params.get("n_samples", 1024)
-        elif data_type == "channel_continuous":
-            n_samples = params.get("n_samples", 128)
-        elif data_type == "narrowband":
-            n_samples = params.get("n_samples", 1024)
-
-        # data_type == "raw":
-        sync = params.get("sync", False)
-        # data_type == "channel":
-        first_channel = params.get("first_channel", 0)
-        last_channel = params.get("last_channel", 511)
-        # data_type == "channel_continuous":
-        channel_id = params.get("channel_id", 128)
-        # data_type == "narrowband":
-        frequency = params.get("frequency", 150e6)
-        round_bits = params.get("round_bits", 3)
         cast(
             SwitchingTpmComponentManager, self._tpm_component_manager
         ).send_data_samples(

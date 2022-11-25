@@ -755,7 +755,7 @@ class MccsTile(SKABaseDevice):
         Set channeliser rounding.
 
         :param truncation: List with either a single value (applies to all channels)
-                           or a list of 512 values. Range 0 (no truncation) to 7
+            or a list of 512 values. Range 0 (no truncation) to 7
         """
         self.component_manager.channeliser_truncation = truncation
 

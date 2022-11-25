@@ -947,7 +947,7 @@ class ControllerComponentManager(MccsComponentManager):
         Release a subarray's resources.
 
         :param argin: JSON-formatted string containing an integer
-            subarray_id, a release all flag.        else:
+            subarray_id, a release all flag.
 
         :param task_callback: Update task state, defaults to None
 

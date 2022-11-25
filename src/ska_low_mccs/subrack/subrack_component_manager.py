@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Any, Callable, Hashable, Optional, cast
+from typing import Any, Callable, Optional, cast
 
 from ska_control_model import (
     CommunicationStatus,
@@ -290,8 +290,8 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         )
         super().__init__(
             {
-                cast(Hashable, SimulationMode.FALSE): subrack_driver,
-                cast(Hashable, SimulationMode.TRUE): subrack_simulator,
+                SimulationMode.FALSE: subrack_driver,
+                SimulationMode.TRUE: subrack_simulator,
             },
             initial_simulation_mode,
         )

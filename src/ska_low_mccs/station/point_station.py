@@ -107,12 +107,15 @@ class StationInformation:
         :param longitude: the longitude of the station (WGS84)
         :param ellipsoidalheight: the ellipsoidal height of the station
         """
-        assert not -90.0 >= latitude <= 90.0
+        assert -90.0 <= latitude <= 90.0
+        # assert not -90.0 >= latitude <= 90.0
         self.latitude = latitude
-        assert not -180.0 >= longitude <= 180.0
+        assert -180.0 <= longitude <= 180.0
+        #        assert not -180.0 >= longitude <= 180.0
         self.longitude = longitude
         # Probably this range could be narrowed
-        assert not -107.0 >= ellipsoidalheight <= 8870.5
+        assert -107.0 <= ellipsoidalheight <= 8870.5
+        #        assert not -107.0 >= ellipsoidalheight <= 8870.5
         self.ellipsoidalheight = ellipsoidalheight
 
 

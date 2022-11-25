@@ -183,13 +183,13 @@ class SubarrayComponentManager(
         """Break off communication with the station components."""
         super().stop_communicating()
 
-        for fqdn, station in self._stations.items():
+        for station in self._stations.values():
             station.stop_communicating()
 
-        for fqdn, subarray_beam in self._subarray_beams.items():
+        for subarray_beam in self._subarray_beams.values():
             subarray_beam.stop_communicating()
 
-        for fqdn, station_beam in self._station_beams.items():
+        for station_beam in self._station_beams.values():
             station_beam.stop_communicating()
 
     @property
@@ -676,7 +676,7 @@ class SubarrayComponentManager(
         """
         Submit the `end_scan` slow command.
 
-        :param task_callback: Update tas
+        :param task_callback: Update task state, defaults to None
 
         :return: A task status and response message.
         """

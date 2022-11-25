@@ -1119,9 +1119,9 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-        * register_name - (string) register_name is the registers string representation
-        * values - (list) is a list containing the 32-bit values to write
-        * offset - (int) offset is the address offset within the register to write to
+            * register_name - (string) register_name is the registers string representation
+            * values - (list) is a list containing the 32-bit values to write
+            * offset - (int) offset is the address offset within the register to write to
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

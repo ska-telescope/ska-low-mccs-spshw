@@ -1296,7 +1296,6 @@ class MccsTile(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-
             """
             params = json.loads(argin)
 
@@ -2681,7 +2680,6 @@ class MccsTile(SKABaseDevice):
         (return_code, unique_id) = handler(argin)
         return ([return_code], [unique_id])
 
-            :return: A tuple containing a return code and a string
     class ConfigureTestGeneratorCommand(FastCommand):
         """Class for handling the ConfigureTestGenerator(argin) command."""
 

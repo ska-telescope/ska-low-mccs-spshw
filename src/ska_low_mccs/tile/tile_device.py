@@ -1319,13 +1319,13 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with only optional keywords:
 
-        * core_id - (int) core id
-        * arp_table_entry - (int) ARP table entry ID
-        * source_mac - (int) mac address
-        * source_ip - (string) IP dot notation.
-        * source_port - (int) source port
-        * destination_ip - (string) IP dot notation
-        * destination_port - (int) destination port
+            * core_id - (int) core id
+            * arp_table_entry - (int) ARP table entry ID
+            * source_mac - (int) mac address
+            * source_ip - (string) IP dot notation.
+            * source_port - (int) source port
+            * destination_ip - (string) IP dot notation
+            * destination_port - (int) destination port
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

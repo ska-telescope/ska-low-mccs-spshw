@@ -159,7 +159,7 @@ to access individual hardware registers.
 
   * *ReadRegister*: Reads the value of one named register. Each register is a 32 bit integer. 
     Register may return a list of values if so defined in the xml register description. 
-    Parameter is the full qualified hyerarchic register name (string)
+    Parameter is the fully qualified hierarchical register name (string)
 
     Returns a list of ione or more unsigned 32 bit values.
 

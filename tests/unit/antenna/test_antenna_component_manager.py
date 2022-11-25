@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -345,7 +347,7 @@ class TestAntennaComponentManager:
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()
         assert antenna_component_manager.power_state == PowerState.ON
 
-        assert antenna_component_manager.off() == ResultCode.OK
+        assert antenna_component_manager.off() == (TaskStatus.QUEUED, "Task queued")
         mock_apiu_device_proxy.PowerDownAntenna.assert_next_call(apiu_antenna_id)
 
         # The power state won't update until an event confirms that the antenna is on.
@@ -363,7 +365,7 @@ class TestAntennaComponentManager:
         antenna_component_manager.power_state = PowerState.OFF
         assert antenna_component_manager.power_state == PowerState.OFF
 
-        assert antenna_component_manager.off() is None
+        assert antenna_component_manager.off() == (TaskStatus.QUEUED, "Task queued")
         mock_apiu_device_proxy.PowerDownAntenna.assert_not_called()
         assert antenna_component_manager.power_state == PowerState.OFF
 

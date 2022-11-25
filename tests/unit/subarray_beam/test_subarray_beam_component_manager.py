@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -14,8 +16,8 @@ from typing import Any, Callable, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
+from ska_control_model import TaskStatus
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 

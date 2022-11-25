@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -8,15 +9,16 @@
 """This module implements the MCCS tel state device."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
-import ska_low_mccs_common.release as release
 import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
+from ska_low_mccs_common import release
 from ska_tango_base import SKATelState
 from tango.server import attribute
 
-from ska_low_mccs.tel_state import TelStateComponentManager, TelStateHealthModel
+from ska_low_mccs.tel_state.tel_state_component_manager import TelStateComponentManager
+from ska_low_mccs.tel_state.tel_state_health_model import TelStateHealthModel
 
 __all__ = ["MccsTelState", "main"]
 
@@ -27,6 +29,24 @@ class MccsTelState(SKATelState):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: TelStateHealthModel
+
     def init_device(self: MccsTelState) -> None:
         """
         Initialise the device.
@@ -59,6 +79,7 @@ class MccsTelState(SKATelState):
             self.component_state_changed_callback,
         )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKATelState.InitCommand):
         """Class that implements device initialisation for this device."""
 
@@ -126,7 +147,7 @@ class MccsTelState(SKATelState):
         if "health_state" in state_change.keys():
             health = state_change.get("health_state")
             if self._health_state != health:
-                self._health_state = health
+                self._health_state = cast(HealthState, health)
                 self.push_change_event("healthState", health)
 
     # ----------

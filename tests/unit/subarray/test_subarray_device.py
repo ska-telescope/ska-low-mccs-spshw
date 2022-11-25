@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -441,6 +443,9 @@ class TestMccsSubarray:
         )
         assert device_under_test.obsState == ObsState.IDLE
         ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
+        import pdb
+
+        pdb.set_trace()
         assert result_code == ResultCode.QUEUED
         assert "ReleaseAllResources" in unique_id
         time.sleep(0.5)

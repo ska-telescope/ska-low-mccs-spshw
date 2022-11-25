@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -19,11 +19,11 @@ import queue
 import time
 import warnings
 from datetime import datetime
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 import fire
 import numpy as np
-from astropy.constants import c
+from astropy.constants import c  # pylint: disable=no-name-in-module
 from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord, get_sun
 from astropy.time import TimeDelta
 from astropy.time.core import Time
@@ -36,7 +36,8 @@ __author__ = "Alessio Magro"
 antennas_per_tile = 16
 
 
-class AntennaInformation(object):
+# pylint: disable=too-few-public-methods
+class AntennaInformation:
     """Class for holding a station's antenna information."""
 
     def __init__(self: AntennaInformation) -> None:
@@ -47,8 +48,8 @@ class AntennaInformation(object):
         """
         self.nof_elements = 256
         self.xyz: Optional[np.ndarray] = None
-        self.elementid = None
-        self.tpmid = None
+        self.elementid: Optional[np.ndarray] = None
+        self.tpmid: Optional[np.ndarray] = None
 
     def load_displacements(self: AntennaInformation, txtfile: str) -> None:
         """
@@ -69,7 +70,7 @@ class AntennaInformation(object):
         self.tpmid = aavs2[:, 3].astype(int)
 
 
-class StationInformation(object):
+class StationInformation:
     """Class for holding information about a station."""
 
     def __init__(self: StationInformation) -> None:
@@ -106,16 +107,20 @@ class StationInformation(object):
         :param longitude: the longitude of the station (WGS84)
         :param ellipsoidalheight: the ellipsoidal height of the station
         """
-        assert latitude <= 90.0 and latitude >= -90.0
+        assert -90.0 <= latitude <= 90.0
+        # assert not -90.0 >= latitude <= 90.0
         self.latitude = latitude
-        assert longitude <= 180.0 and longitude >= -180.0
+        assert -180.0 <= longitude <= 180.0
+        #        assert not -180.0 >= longitude <= 180.0
         self.longitude = longitude
         # Probably this range could be narrowed
-        assert ellipsoidalheight >= -107.0 and ellipsoidalheight <= 8870.5
+        assert -107.0 <= ellipsoidalheight <= 8870.5
+        #        assert not -107.0 >= ellipsoidalheight <= 8870.5
         self.ellipsoidalheight = ellipsoidalheight
 
 
-class Pointing(object):
+# pylint: disable=too-many-instance-attributes
+class Pointing:
     """Helper class for generating beamforming coefficients."""
 
     def __init__(self: Pointing, station_info: StationInformation) -> None:
@@ -281,7 +286,7 @@ class Pointing(object):
 
     def get_pointing_coefficients(
         self: Pointing, start_channel: int, nof_channels: int
-    ) -> Optional[tuple[np.complex]]:  # type: ignore[name-defined]
+    ) -> Optional[tuple[np.complex128]]:
         """
         Get complex pointing coefficients from generated delays.
 
@@ -297,8 +302,8 @@ class Pointing(object):
         # If below horizon flat is set, return 0s
         if self._below_horizon:
             return np.zeros(
-                (self._nof_antennas, nof_channels), dtype=np.complex
-            )  # type: ignore[return-value, attr-defined]
+                (self._nof_antennas, nof_channels), dtype=np.complex128
+            )  # type: ignore[return-value]
 
         # Compute frequency range
         channel_bandwidth = 400e6 / 512.0
@@ -310,9 +315,7 @@ class Pointing(object):
         )
 
         # Generate coefficients
-        coefficients = np.zeros(
-            (self._nof_antennas, nof_channels), dtype=np.complex
-        )  # type: ignore[attr-defined]
+        coefficients = np.zeros((self._nof_antennas, nof_channels), dtype=np.cfloat)
         for i in range(nof_channels):
             delays = 2.0 * np.pi * frequencies[i] * self._delays
             coefficients[:, i] = np.cos(delays) + 1j * np.sin(delays)
@@ -322,7 +325,7 @@ class Pointing(object):
 
     def _delays_from_altitude_azimuth(
         self: Pointing, altitude: float, azimuth: float
-    ) -> List[float]:
+    ) -> list[float]:
         """
         Calculate the delay using a target altitude Azimuth.
 
@@ -351,9 +354,9 @@ class Pointing(object):
     def _ra_dec_to_alt_az(
         right_ascension: float,
         declination: float,
-        time: float,
+        obstime: float,
         location: float,
-    ) -> List[Angle]:
+    ) -> list[Angle]:
         """
         Calculate the altitude and azimuth coordinates of a sky object.
 
@@ -363,7 +366,7 @@ class Pointing(object):
             astropy Angle / string convertable to Angle
         :param declination: Declination of source - astropy Angle / string
             convertable to Angle
-        :param time: Time of observation (as astropy Time")
+        :param obstime: Time of observation (as astropy Time")
         :param location: astropy EarthLocation
 
         :return: List containing altitude and azimuth of source as astropy angle
@@ -371,7 +374,7 @@ class Pointing(object):
         # Initialise SkyCoord object using the default frame (ICRS) and convert to
         # horizontal coordinates (altitude/azimuth) from the antenna's perspective.
         sky_coordinates = SkyCoord(ra=right_ascension, dec=declination, unit="deg")
-        altaz = sky_coordinates.transform_to(AltAz(obstime=time, location=location))
+        altaz = sky_coordinates.transform_to(AltAz(obstime=obstime, location=location))
 
         return [altaz.alt, altaz.az]
 
@@ -384,7 +387,7 @@ class Pointing(object):
 
         :return: converted angle
         """
-        if type(angle) is not Angle:
+        if not isinstance(angle, Angle):
             return Angle(angle)
         return angle
 
@@ -622,10 +625,8 @@ class PointingDriver:  # pragma: no cover
             print("nproc must be >= 1")
             return None
 
-        # job_queue: queue.Queue[Time] = multiprocessing.Queue()
-        # results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
-        job_queue: queue.Queue() = multiprocessing.Queue()  # type: ignore[valid-type]
-        results_queue: queue.Queue() = multiprocessing.Queue()
+        job_queue: queue.Queue[Time] = multiprocessing.Queue()
+        results_queue: queue.Queue[Optional[dict[str, Any]]] = multiprocessing.Queue()
 
         processes = [
             multiprocessing.Process(
@@ -686,7 +687,7 @@ class PointingDriver:  # pragma: no cover
         :param filename: Name of output file
         """
         print(f"Writing pointing frame(s) to {filename}")
-        with open(filename, "w") as outfile:
+        with open(filename, "w", encoding="utf-8") as outfile:
             outfile.write('"Time Stamp (isot)","Azimuth (deg)","Elevation (deg)",')
             for i in range(self.pointing.station.antennas.nof_elements):
                 outfile.write(f',"Antenna {i+1:03}"')

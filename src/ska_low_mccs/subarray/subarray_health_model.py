@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -8,7 +9,7 @@
 """An implementation of a health model for subarrays."""
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel
@@ -21,7 +22,7 @@ class SubarrayHealthModel(HealthModel):
 
     def __init__(
         self: SubarrayHealthModel,
-        health_changed_callback: Callable[[dict[str, Any]], None],
+        health_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -32,6 +33,8 @@ class SubarrayHealthModel(HealthModel):
         self._station_healths: dict[str, HealthState | None] = {}
         self._subarray_beam_healths: dict[str, HealthState | None] = {}
         self._station_beam_healths: dict[str, HealthState | None] = {}
+        self._subarray_beam_fqdns: dict[str, HealthState] = {}
+        self._station_beam_fqdns: dict[str, HealthState] = {}
         super().__init__(health_changed_callback)
 
     def evaluate_health(

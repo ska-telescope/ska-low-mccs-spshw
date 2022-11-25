@@ -52,8 +52,7 @@ python-post-format:
 	$(PYTHON_RUNNER) docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	
 
 # Add this for typehints & static type checking
-# removed temporarily
-# python-post-lint:
-#	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ tests/
+python-post-lint:
+	$(PYTHON_RUNNER) mypy --config-file mypy.ini src/ tests
 
 .PHONY: python-post-format python-post-lint

@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -68,7 +70,7 @@ class TestMccsAPIU:
         assert device_under_test.adminMode == AdminMode.OFFLINE
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
-        assert device_under_test.simulationMode == SimulationMode.TRUE
+        assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.TEST
 
     def test_healthState(

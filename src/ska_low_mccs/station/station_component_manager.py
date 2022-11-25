@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -30,6 +30,7 @@ __all__ = ["StationComponentManager"]
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _TileProxy,
         fqdn: str,
@@ -103,9 +104,11 @@ class _TileProxy(DeviceComponentManager):
         return result_code
 
 
+# pylint: disable=too-many-instance-attributes
 class StationComponentManager(MccsComponentManager):
     """A component manager for a station."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: StationComponentManager,
         station_id: int,
@@ -253,9 +256,10 @@ class StationComponentManager(MccsComponentManager):
         super().update_communication_state(communication_state)
 
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self._component_state_changed_callback(
-                {"is_configured": self.is_configured}
-            )
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(
+                    {"is_configured": self.is_configured}
+                )
 
     @threadsafe
     def _antenna_power_state_changed(
@@ -345,7 +349,7 @@ class StationComponentManager(MccsComponentManager):
                 )
 
     @property
-    def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
+    def power_state_lock(self: MccsComponentManager) -> threading.RLock:
         """
         Return the power state lock of this component manager.
 
@@ -356,7 +360,7 @@ class StationComponentManager(MccsComponentManager):
     def off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the _off method.
 
@@ -364,6 +368,7 @@ class StationComponentManager(MccsComponentManager):
         `self._off` for execution.
 
         :param task_callback: Update task state, defaults to None
+
         :return: a result code and response message
         """
         return self.submit_task(self._off, task_callback=task_callback)
@@ -372,8 +377,8 @@ class StationComponentManager(MccsComponentManager):
     def _off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
-    ) -> ResultCode:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Turn off this station.
 
@@ -420,7 +425,7 @@ class StationComponentManager(MccsComponentManager):
     def _on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn on this station.
@@ -445,10 +450,13 @@ class StationComponentManager(MccsComponentManager):
                 task_callback(status=task_status)
             return
         self._on_called = True
-        result_code, _ = self._apiu_proxy.on()
-        # TODO: Monitor the APIU On command status and update the Station On command
-        # status accordingly.
-        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+        # result_code, _ = self._apiu_proxy.on()
+        task_status, _ = self._apiu_proxy.on()
+        # TODO: Monitor the APIU On command status and update the Station
+        # On command status accordingly.
+        # check return codes!!!!!!!!!!!
+        if task_status == TaskStatus.QUEUED:
+            # if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             task_status = TaskStatus.COMPLETED
         else:
             task_status = TaskStatus.FAILED
@@ -511,7 +519,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         delays: list[float],
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Apply the pointing configuration by setting the delays on each tile.
@@ -555,13 +563,14 @@ class StationComponentManager(MccsComponentManager):
     ) -> None:
         if self._is_configured != is_configured:
             self._is_configured = is_configured
-            self._component_state_changed_callback({"is_configured": is_configured})
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback({"is_configured": is_configured})
 
     def configure(
         self: StationComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the configure method.
 
@@ -584,7 +593,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         station_id: int,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Configure the station.

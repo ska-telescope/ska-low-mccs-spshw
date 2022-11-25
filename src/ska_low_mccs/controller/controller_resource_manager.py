@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -21,6 +21,7 @@ __all__ = ["ControllerResourceManager"]
 class ControllerResourceManager:
     """A resource manager for the controller component manager."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: ControllerResourceManager,
         subarrays: Iterable[str],

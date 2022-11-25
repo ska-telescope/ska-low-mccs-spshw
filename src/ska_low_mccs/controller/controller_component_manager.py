@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for the MCCS controller."""
+# pylint: disable=too-many-lines
 from __future__ import annotations
 
 import functools
@@ -29,7 +30,9 @@ from ska_low_mccs_common.component import (
 )
 from ska_low_mccs_common.resource_manager import ResourceManager, ResourcePool
 
-from ska_low_mccs.controller import ControllerResourceManager
+from ska_low_mccs.controller.controller_resource_manager import (
+    ControllerResourceManager,
+)
 
 __all__ = ["ControllerComponentManager"]
 
@@ -37,6 +40,7 @@ __all__ = ["ControllerComponentManager"]
 class _StationProxy(DeviceComponentManager):
     """A controller's proxy to a station."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _StationProxy,
         fqdn: str,
@@ -44,7 +48,7 @@ class _StationProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -282,6 +286,7 @@ class _StationBeamProxy(DeviceComponentManager):
         return ResultCode.OK
 
 
+# pylint: disable=too-many-instance-attributes
 class ControllerComponentManager(MccsComponentManager):
     """
     A component manager for an MCCS controller.
@@ -295,6 +300,7 @@ class ControllerComponentManager(MccsComponentManager):
     * Allocating resources to subarrays
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: ControllerComponentManager,
         subarray_fqdns: Iterable[str],
@@ -604,8 +610,8 @@ class ControllerComponentManager(MccsComponentManager):
 
     def _off(
         self: ControllerComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn off the MCCS subsystem.
@@ -651,8 +657,8 @@ class ControllerComponentManager(MccsComponentManager):
 
     def _standby(
         self: ControllerComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Put the MCCS subsystem into low power standby mode.
@@ -660,7 +666,8 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         results = [
             station_proxy.standby() for station_proxy in self._stations.values()
@@ -671,14 +678,16 @@ class ControllerComponentManager(MccsComponentManager):
             if result[0] == TaskStatus.FAILED:
                 completed = False
                 break
-        if completed:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The standby command has completed"
-            )
-        else:
-            task_callback(
-                status=TaskStatus.FAILED, result="The standby command has failed"
-            )
+        if task_callback:
+            if completed:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="The standby command has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The standby command has failed"
+                )
 
     @check_communicating
     def on(
@@ -698,8 +707,8 @@ class ControllerComponentManager(MccsComponentManager):
 
     def _on(
         self: ControllerComponentManager,
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn on the MCCS subsystem.
@@ -770,12 +779,12 @@ class ControllerComponentManager(MccsComponentManager):
         kwargs = json.loads(argin)
         subarray_id = kwargs.get("subarray_id")
 
-        subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
+        subarray_beam_ids = kwargs.get("subarray_beam_ids", [])
         subarray_beam_fqdns = [
             f"low-mccs/subarraybeam/{subarray_beam_id:02d}"
             for subarray_beam_id in subarray_beam_ids
         ]
-        station_ids = kwargs.get("station_ids", list())
+        station_ids = kwargs.get("station_ids", [])
 
         station_fqdns = []
         for station_id_list in station_ids:
@@ -783,7 +792,7 @@ class ControllerComponentManager(MccsComponentManager):
                 [f"low-mccs/station/{station_id:03d}" for station_id in station_id_list]
             )
 
-        channel_blocks = kwargs.get("channel_blocks", list())
+        channel_blocks = kwargs.get("channel_blocks", [])
 
         return self.submit_task(
             self._allocate,
@@ -791,14 +800,15 @@ class ControllerComponentManager(MccsComponentManager):
             task_callback=task_callback,
         )
 
+    # pylint: disable=too-many-locals, too-many-branches
     def _allocate(
         self: ControllerComponentManager,
         subarray_id: int,
         station_fqdns: Iterable[Iterable[str]],
         subarray_beam_fqdns: Iterable[str],
         channel_blocks: Iterable[int],
-        task_callback: Callable = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Allocate resources to a subarray.
@@ -938,6 +948,7 @@ class ControllerComponentManager(MccsComponentManager):
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, a release all flag.
+
         :param task_callback: Update task state, defaults to None
 
         :return: a TaskStatus and message
@@ -953,20 +964,17 @@ class ControllerComponentManager(MccsComponentManager):
             return self.submit_task(
                 self._release_all, args=[subarray_id], task_callback=task_callback
             )
-        else:
-            return (
-                ResultCode.FAILED,
-                (
-                    "Currently Release can only be used to release all "
-                    "resources from a subarray."
-                ),
-            )
+        return (
+            TaskStatus.FAILED,
+            "Currently Release can only be used to release all "
+            "resources from a subarray.",
+        )
 
     def _release_all(
         self: ControllerComponentManager,
         subarray_id: int,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Deallocate all resources from a subarray.
@@ -998,15 +1006,14 @@ class ControllerComponentManager(MccsComponentManager):
         for station_proxy in self._stations.values():
             station_proxy.release_from_subarray(subarray_fqdn)
 
-        results = self._subarrays[subarray_fqdn].release_all_resources()
+        result_code = self._subarrays[subarray_fqdn].release_all_resources()
         # TODO wait for the respective LRC's to complete, whilst reporting progress
-        if ResultCode.FAILED == results[0]:
-            if task_callback:
+        if task_callback:
+            if ResultCode.FAILED == result_code:
                 task_callback(
                     status=TaskStatus.FAILED, result="The release command has failed"
                 )
-        else:
-            if task_callback:
+            else:
                 task_callback(
                     status=TaskStatus.COMPLETED,
                     result="The release command has completed",
@@ -1042,7 +1049,7 @@ class ControllerComponentManager(MccsComponentManager):
         self: ControllerComponentManager,
         subarray_fqdn: str,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Deallocate all resources from a subarray.
@@ -1052,15 +1059,19 @@ class ControllerComponentManager(MccsComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         self._resource_manager.deallocate_from(subarray_fqdn)
 
-        results = self._subarrays[subarray_fqdn].restart()
-        if ResultCode.FAILED in results:
-            task_callback(
-                status=TaskStatus.FAILED, result="The restart command has failed"
-            )
-        else:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="The restart command has completed"
-            )
+        # TODO does this return ResultCode or TaskStatus
+        result = self._subarrays[subarray_fqdn].restart()
+        if task_callback:
+            if ResultCode.FAILED == result:
+                task_callback(
+                    status=TaskStatus.FAILED, result="The restart command has failed"
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="The restart command has completed",
+                )

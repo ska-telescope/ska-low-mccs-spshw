@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -14,7 +15,7 @@ from typing import Any, Callable
 from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import ObjectComponentManager, check_communicating
 
-from ska_low_mccs.tel_state import TelState
+from ska_low_mccs.tel_state.tel_state import TelState
 
 __all__ = ["TelStateComponentManager"]
 

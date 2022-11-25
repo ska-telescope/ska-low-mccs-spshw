@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -12,7 +14,7 @@ import itertools
 import json
 import logging
 import os.path
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 import tango
 from ska_control_model import (
@@ -159,7 +161,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.InitCommand,
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the MCCS Tile device.
 
@@ -317,7 +319,7 @@ class MccsTile(SKABaseDevice):
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
@@ -887,7 +889,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.GetFirmwareAvailableCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -970,7 +972,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.GetRegisterListCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1012,7 +1014,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ReadRegisterCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1066,7 +1068,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.WriteRegisterCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1080,7 +1082,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.WriteRegisterCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.WriteRegister` command functionality.
 
@@ -1143,7 +1145,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ReadAddressCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1157,7 +1159,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.ReadAddressCommand, argin: list[int]
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ReadAddress` command functionality.
 
@@ -1204,7 +1206,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.WriteAddressCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1220,7 +1222,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.WriteAddressCommand, argin: list[int]
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.WriteAddress` command functionality.
 
@@ -1269,7 +1271,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.Configure40GCoreCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1285,7 +1287,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.Configure40GCoreCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.Configure40GCore` command functionality.
 
@@ -1294,7 +1296,6 @@ class MccsTile(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-
             """
             params = json.loads(argin)
 
@@ -1348,7 +1349,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.Get40GCoreConfigurationCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1431,7 +1432,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SetLmcDownloadCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1447,7 +1448,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.SetLmcDownloadCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SetLmcDownload` command functionality.
 
@@ -1653,6 +1654,7 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("GetArpTable")
         return_code, unique_id = handler()
+        # TODO If this returns DEVVARLONGSTRINGARRAY where's the Arp table?????
         return ([return_code], [unique_id])
 
     class SetBeamFormerRegionsCommand(FastCommand):
@@ -1660,7 +1662,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SetBeamFormerRegionsCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1676,7 +1678,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.SetBeamFormerRegionsCommand, argin: list[int]
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SetBeamFormerRegions` command functionality.
 
@@ -1776,7 +1778,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ConfigureStationBeamformerCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1792,7 +1794,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.ConfigureStationBeamformerCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureStationBeamformer` commands.
 
@@ -1863,7 +1865,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.LoadCalibrationCoefficientsCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1878,8 +1880,9 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "LoadCalibrationCoefficents command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.LoadCalibrationCoefficientsCommand, argin: list[float]
-        ) -> Tuple[ResultCode, str]:
+            self: MccsTile.LoadCalibrationCoefficientsCommand,
+            argin: list[float],
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.LoadCalibrationCoefficients` commands.
 
@@ -2158,7 +2161,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.StartBeamformerCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2174,7 +2177,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.StartBeamformerCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StartBeamformer` command functionality.
 
@@ -2230,7 +2233,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.StopBeamformerCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2246,7 +2249,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.StopBeamformerCommand,
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StopBeamformer` command functionality.
 
@@ -2280,7 +2283,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ConfigureIntegratedChannelDataCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2296,7 +2299,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.ConfigureIntegratedChannelDataCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureIntegratedChannelData` commands.
 
@@ -2353,7 +2356,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ConfigureIntegratedBeamDataCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2369,7 +2372,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.ConfigureIntegratedBeamDataCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureIntegratedBeamData` commands.
 
@@ -2426,7 +2429,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.StopIntegratedDataCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2442,7 +2445,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.StopIntegratedDataCommand,
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StopIntegratedData` command functionality.
 
@@ -2607,7 +2610,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.StopDataTransmissionCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2623,7 +2626,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.StopDataTransmissionCommand,
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StopDataTransmission` command functionality.
 
@@ -2682,7 +2685,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ConfigureTestGeneratorCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2698,7 +2701,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.ConfigureTestGeneratorCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureTestGenerator` commands.
 

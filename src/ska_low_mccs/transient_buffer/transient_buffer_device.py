@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -8,7 +9,7 @@
 """This module implements the MCCS transient buffer device."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
@@ -16,8 +17,10 @@ from ska_low_mccs_common import release
 from ska_tango_base.base import SKABaseDevice
 from tango.server import attribute
 
-from ska_low_mccs.transient_buffer import (
+from ska_low_mccs.transient_buffer.transient_buffer_component_manager import (
     TransientBufferComponentManager,
+)
+from ska_low_mccs.transient_buffer.transient_buffer_health_model import (
     TransientBufferHealthModel,
 )
 
@@ -30,6 +33,26 @@ class MccsTransientBuffer(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: TransientBufferHealthModel
+        self._build_state: str = release.get_release_info()
+        self._version_id: str = release.version
+
     def init_device(self: MccsTransientBuffer) -> None:
         """
         Initialise the device.
@@ -64,6 +87,7 @@ class MccsTransientBuffer(SKABaseDevice):
             self.component_state_changed_callback,
         )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKABaseDevice.InitCommand):
         """
         A class for :py:class:`~.MccsTransientBuffer`'s Init command.
@@ -83,10 +107,6 @@ class MccsTransientBuffer(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # super().do()
-            self._build_state = release.get_release_info()
-            self._version_id = release.version
-
             return (ResultCode.OK, "Init command completed OK")
 
     # ----------
@@ -132,7 +152,7 @@ class MccsTransientBuffer(SKABaseDevice):
         :param state_change: dictionary of state change parameters.
         """
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)

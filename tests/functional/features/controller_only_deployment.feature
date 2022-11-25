@@ -1,5 +1,7 @@
-# -*- coding: utf-8 -*-
-#
+# type: ignore
+# pylint: skip-file
+# -*- coding: utf-8 -*
+ #
 # This file is part of the SKA Low MCCS project
 #
 #

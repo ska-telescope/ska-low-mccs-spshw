@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -19,7 +19,7 @@ from typing import List, Optional, Tuple
 from ska_tango_base.commands import ResultCode
 from tango.server import attribute, command
 
-from ska_low_mccs import MccsAPIU
+from ska_low_mccs.apiu.apiu_device import MccsAPIU
 
 __all__ = ["DemoAPIU"]
 
@@ -40,7 +40,7 @@ class DemoAPIU(MccsAPIU):
         Overridden here to log the fact that this is a demo APIU.
         """
         super().init_device()
-        self.logger.warn("I am a DEMO APIU!")
+        self.logger.info("I am a DEMO APIU!")
 
     @command(dtype_out="DevVarLongStringArray")
     def PowerUpAntenna1(self: DemoAPIU) -> DevVarLongStringArrayType:

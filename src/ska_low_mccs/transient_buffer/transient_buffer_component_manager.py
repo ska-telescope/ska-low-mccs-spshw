@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -14,7 +15,7 @@ from typing import Any, Callable
 from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import ObjectComponentManager, check_communicating
 
-from ska_low_mccs.transient_buffer import TransientBuffer
+from ska_low_mccs.transient_buffer.transient_buffer import TransientBuffer
 
 __all__ = ["TransientBufferComponentManager"]
 

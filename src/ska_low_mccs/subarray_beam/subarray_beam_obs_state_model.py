@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -22,7 +23,7 @@ class SubarrayBeamObsStateModel:
     def __init__(
         self: SubarrayBeamObsStateModel,
         logger: logging.Logger,
-        obs_state_changed_callback: Callable[[ObsState], None],
+        obs_state_changed_callback: Callable[[dict[str, ObsState]], None],
     ) -> None:
         """
         Initialise a new instance.

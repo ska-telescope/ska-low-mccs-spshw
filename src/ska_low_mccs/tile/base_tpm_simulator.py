@@ -782,13 +782,13 @@ class BaseTpmSimulator(ObjectComponent):
         Fetch table used by the hardware beamformer to define beams and logical bands
         :return: bidimensional table, with 48 entries, one every 8 channels
 
-        * start physical channel
-        * tile hardware beam
-        * subarray ID
-        * subarray start logical channel
-        * subarray_beam_id - (int) ID of the subarray beam
-        * substation_id - (int) Substation
-        * aperture_id:  ID of the aperture (station*100+substation?)
+            * start physical channel
+            * tile hardware beam
+            * subarray ID
+            * subarray start logical channel
+            * subarray_beam_id - (int) ID of the subarray beam
+            * substation_id - (int) Substation
+            * aperture_id:  ID of the aperture (station*100+substation?)
 
         """
         return copy.deepcopy(self._beamformer_table)

@@ -161,7 +161,7 @@ to access individual hardware registers.
     Register may return a list of values if so defined in the xml register description. 
     Parameter is the fully qualified hierarchical register name (string)
 
-    Returns a list of ione or more unsigned 32 bit values.
+    Returns a list of one or more unsigned 32 bit values.
 
   * *WriteRegister*: Write into one or more registers. Each register is a 32 bit integer.
     If is possible to specify an offset from the given addreess, in words, and a number of

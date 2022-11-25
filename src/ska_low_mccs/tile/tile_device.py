@@ -8,12 +8,12 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations  # allow forward references in type hints
 
+import itertools
 import json
 import logging
 import os.path
 from typing import Any, List, Optional, Tuple
 
-import numpy as np
 import tango
 from ska_control_model import (
     AdminMode,
@@ -110,15 +110,15 @@ class MccsTile(SKABaseDevice):
             ("WriteAddress", self.WriteAddressCommand),
             ("Configure40GCore", self.Configure40GCoreCommand),
             ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
+            ("GetArpTable", self.GetArpTableCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
-            ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
+            ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
             ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
-            ("LoadCalibrationCurve", self.LoadCalibrationCurveCommand),
-            ("LoadBeamAngle", self.LoadBeamAngleCommand),
-            ("SwitchCalibrationBank", self.SwitchCalibrationBankCommand),
-            ("LoadPointingDelay", self.LoadPointingDelayCommand),
+            ("ApplyCalibration", self.ApplyCalibrationCommand),
+            ("LoadPointingDelays", self.LoadPointingDelaysCommand),
+            ("ApplyPointingDelays", self.ApplyPointingDelaysCommand),
             ("StartBeamformer", self.StartBeamformerCommand),
             ("StopBeamformer", self.StopBeamformerCommand),
             (
@@ -127,42 +127,20 @@ class MccsTile(SKABaseDevice):
             ),
             ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
             ("StopIntegratedData", self.StopIntegratedDataCommand),
-            ("SendRawData", self.SendRawDataCommand),
-            ("SendChannelisedData", self.SendChannelisedDataCommand),
-            (
-                "SendChannelisedDataContinuous",
-                self.SendChannelisedDataContinuousCommand,
-            ),
-            ("SendBeamData", self.SendBeamDataCommand),
+            ("SendDataSamples", self.SendDataSamplesCommand),
             ("StopDataTransmission", self.StopDataTransmissionCommand),
-            (
-                "ComputeCalibrationCoefficients",
-                self.ComputeCalibrationCoefficientsCommand,
-            ),
-            ("SetTimeDelays", self.SetTimeDelaysCommand),
-            ("SetCspRounding", self.SetCspRoundingCommand),
-            ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
-            ("SendRawDataSynchronised", self.SendRawDataSynchronisedCommand),
-            (
-                "SendChannelisedDataNarrowband",
-                self.SendChannelisedDataNarrowbandCommand,
-            ),
-            ("TweakTransceivers", self.TweakTransceiversCommand),
-            ("CalculateDelay", self.CalculateDelayCommand),
             ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
             )
-
+        #
+        # Long running commands
+        #
         for (command_name, method_name) in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
-            ("GetArpTable", "get_arp_table"),
             ("StartAcquisition", "start_acquisition"),
-            ("ProgramCPLD", "cpld_flash_write"),
-            ("PostSynchronisation", "post_synchronisation"),
-            ("SyncFpgas", "sync_fpgas"),
         ]:
             self.register_command_object(
                 command_name,
@@ -175,14 +153,6 @@ class MccsTile(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
-
-        antenna_args = (self.component_manager, self.logger, self.AntennasPerTile)
-        self.register_command_object(
-            "LoadAntennaTapering", self.LoadAntennaTaperingCommand(*antenna_args)
-        )
-        self.register_command_object(
-            "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
-        )
 
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS Tile device."""
@@ -439,7 +409,9 @@ class MccsTile(SKABaseDevice):
 
         :return: the id of the station to which this tile is assigned
         """
-        return self.component_manager.station_id
+        station = self.component_manager.station_id
+        self.logger.debug(f"stationId: read value = {station}")
+        return station
 
     @stationId.write  # type: ignore[no-redef]
     def stationId(self: MccsTile, value: int) -> None:
@@ -448,61 +420,8 @@ class MccsTile(SKABaseDevice):
 
         :param value: the station id
         """
+        self.logger.debug(f"stationId: write value = {value}")
         self.component_manager.station_id = value
-
-    @attribute(dtype="DevString")
-    def cspDestinationIp(self: MccsTile) -> str:
-        """
-        Return the CSP destination IP address.
-
-        :return: the CSP destination IP address
-        """
-        return self._csp_destination_ip
-
-    @cspDestinationIp.write  # type: ignore[no-redef]
-    def cspDestinationIp(self: MccsTile, value: str) -> None:
-        """
-        Set the CSP destination IP address.
-
-        :param value: the new IP address
-        """
-        self._csp_destination_ip = value
-
-    @attribute(dtype="DevString")
-    def cspDestinationMac(self: MccsTile) -> str:
-        """
-        Return the CSP destination MAC address.
-
-        :return: a MAC address
-        """
-        return self._csp_destination_mac
-
-    @cspDestinationMac.write  # type: ignore[no-redef]
-    def cspDestinationMac(self: MccsTile, value: str) -> None:
-        """
-        Set the CSP destination MAC address.
-
-        :param value: MAC address
-        """
-        self._csp_destination_mac = value
-
-    @attribute(dtype="DevLong")
-    def cspDestinationPort(self: MccsTile) -> int:
-        """
-        Return the cspDestinationPort attribute.
-
-        :return: CSP destination port
-        """
-        return self._csp_destination_port
-
-    @cspDestinationPort.write  # type: ignore[no-redef]
-    def cspDestinationPort(self: MccsTile, value: int) -> None:
-        """
-        Set the CSP destination port.
-
-        :param value: CSP destination port
-        """
-        self._csp_destination_port = value
 
     @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
@@ -555,24 +474,6 @@ class MccsTile(SKABaseDevice):
         :return: voltage
         """
         return self.component_manager.voltage
-
-    @attribute(
-        dtype="DevDouble",
-        abs_change=0.05,
-        min_value=0.0,
-        max_value=3.0,
-        min_warning=0.1,
-        max_warning=2.85,
-        min_alarm=0.05,
-        max_alarm=2.95,
-    )
-    def current(self: MccsTile) -> float:
-        """
-        Return the current.
-
-        :return: current
-        """
-        return self.component_manager.current
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:
@@ -685,7 +586,7 @@ class MccsTile(SKABaseDevice):
         """
         self._antenna_ids = list(antenna_ids)
 
-    @attribute(dtype=("DevString",), max_dim_x=256)
+    @attribute(dtype=("DevString",), max_dim_x=16)
     def fortyGbDestinationIps(self: MccsTile) -> list[str]:
         """
         Return the destination IPs for all 40Gb ports on the tile.
@@ -696,7 +597,7 @@ class MccsTile(SKABaseDevice):
             item["dst_ip"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevLong",), max_dim_x=256)
+    @attribute(dtype=("DevLong",), max_dim_x=16)
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
         Return the destination ports for all 40Gb ports on the tile.
@@ -743,13 +644,13 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.fpga_current_frame
 
     @attribute(dtype="DevBoolean")
-    def checkPendingDataRequests(self: MccsTile) -> bool:
+    def pendingDataRequests(self: MccsTile) -> bool:
         """
         Check for pending data requests.
 
         :return: whether there are data requests pending
         """
-        return self.component_manager.check_pending_data_requests()
+        return self.component_manager.pending_data_requests
 
     @attribute(dtype="DevBoolean")
     def isBeamformerRunning(self: MccsTile) -> bool:
@@ -788,13 +689,171 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.pps_delay
 
     @attribute(dtype="DevBoolean")
-    def TestGeneratorActive(self: MccsTile) -> bool:
+    def testGeneratorActive(self: MccsTile) -> bool:
         """
         Report if the test generator is used for some channels.
 
         :return: test generator status
         """
         return self.component_manager.test_generator_active
+
+    @attribute(dtype="DevBoolean")
+    def ppsPresent(self: MccsTile) -> bool:
+        """
+        Report if PPS signal is present at the TPM input.
+
+        :return: presence of PPS signal
+        """
+        return self.component_manager.pps_present
+
+    @attribute(dtype="DevBoolean")
+    def clockPresent(self: MccsTile) -> bool:
+        """
+        Report if 10 MHz clock signal is present at the TPM input.
+
+        :return: presence of 10 MHz clock signal
+        """
+        return self.component_manager.clock_present
+
+    @attribute(dtype="DevBoolean")
+    def sysrefPresent(self: MccsTile) -> bool:
+        """
+        Report if SYSREF signal is present at the FPGA.
+
+        :return: presence of SYSREF signal
+        """
+        return self.component_manager.sysref_present
+
+    @attribute(dtype="DevBoolean")
+    def pllLocked(self: MccsTile) -> bool:
+        """
+        Report if ADC clock PLL is in locked state.
+
+        :return: PLL lock state
+        """
+        return self.component_manager.pll_locked
+
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=512,
+    )
+    def channeliserRounding(self: MccsTile) -> list[int]:
+        """
+        Channeliser rounding.
+
+        Number of LS bits dropped in each channeliser frequency channel.
+        Valid values 0-7 Same value applies to all antennas and
+        polarizations
+
+        :returns: list of 512 values, one per channel.
+        """
+        return self.component_manager.channeliser_truncation
+
+    @channeliserRounding.write
+    def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
+        """
+        Set channeliser rounding.
+
+        :param truncation: List with either a single value (applies to all channels)
+            or a list of 512 values. Range 0 (no truncation) to 7
+        """
+        self.component_manager.channeliser_truncation = truncation
+
+    @attribute(
+        dtype=("DevDouble",),
+        max_dim_x=32,
+    )
+    def staticTimeDelays(self: MccsTile) -> list[int]:
+        """
+        Get static time delay correction.
+
+        Array of one value per antenna/polarization (32 per tile), in range +/-124.
+        Delay in samples (positive = increase the signal delay) to correct for
+        static delay mismathces, e.g. cable length.
+
+        :return: Array of one value per antenna/polarization (32 per tile)
+        """
+        return self.component_manager.static_delays
+
+    @staticTimeDelays.write
+    def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
+        """
+        Set static time delay.
+
+        :param delays: Delay in samples (positive = increase the signal delay)
+             to correct for static delay mismathces, e.g. cable length.
+        """
+        self.component_manager.static_delays = delays
+
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=384,
+    )
+    def cspRounding(self: MccsTile) -> list[int]:
+        """
+        CSP formatter rounding.
+
+        Rounding from 16 to 8 bits in final stage of the
+        station beamformer, before sending data to CSP.
+        Array of (up to) 384 values, one for each logical channel.
+        Range 0 to 7, as number of discarded LS bits.
+
+        :return: CSP formatter rounding for each logical channel.
+        """
+        return self.component_manager.csp_rounding
+
+    @cspRounding.write
+    def cspRounding(self: MccsTile, rounding: list[int]) -> None:
+        """
+        Set CSP formatter rounding.
+
+        :param rounding: list of up to 384 values in the range 0-7.
+            Current hardware supports only a single value, thus oly 1st value is used
+        """
+        self.component_manager.csp_rounding = rounding
+
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=32,
+    )
+    def preaduLevels(self: MccsTile) -> list[int]:
+        """
+        Get attenuator level of preADU channels, one per input channel.
+
+        :return: Array of one value per antenna/polarization (32 per tile)
+        """
+        return self.component_manager.preadu_levels
+
+    @preaduLevels.write
+    def preaduLevels(self: MccsTile, levels: list[int]) -> None:
+        """
+        Set attenuator level of preADU channels, one per input channel.
+
+        :param levels: ttenuator level of preADU channels, one per input channel, in dB
+        """
+        self.component_manager.preadu_levels = levels
+
+    @attribute(dtype=("DevLong",), max_dim_x=336)
+    def beamformerTable(self: MccsTile) -> list[int]:
+        """
+        Get beamformer region table.
+
+        Bidimensional array of one row for each 8 channels, with elements:
+        0. start physical channel
+        1. beam number
+        2. subarray ID
+        3. subarray_logical_channel
+        4. subarray_beam_id
+        5. substation_id
+        6. aperture_id
+
+        Each row is a set of 7 consecutive elements in the list.
+
+        :return: list of up to 7*48 values
+        """
+        return list(
+            itertools.chain.from_iterable(self.component_manager.beamformer_table)
+        )
 
     # # --------
     # # Commands
@@ -906,29 +965,6 @@ class MccsTile(SKABaseDevice):
         else:
             return ([ResultCode.FAILED], [f"{argin} doesn't exist"])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ProgramCPLD(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
-        """
-        Program the CPLD.
-
-        If the TPM has a CPLD (or other management chip which need firmware), this
-        function program it with the provided bitfile.
-
-        :param argin: is the path to a file containing the required CPLD firmware
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ProgramCPLD", "/tmp/firmware/bitfile")
-        """
-        handler = self.get_command_object("ProgramCPLD")
-        (return_code, unique_id) = handler(argin)
-        return ([return_code], [unique_id])
-
     class GetRegisterListCommand(FastCommand):
         """Class for handling the GetRegisterList() command."""
 
@@ -989,67 +1025,41 @@ class MccsTile(SKABaseDevice):
             super().__init__(logger)
 
         def do(
-            self: MccsTile.ReadRegisterCommand, argin: str
+            self: MccsTile.ReadRegisterCommand, name: str
         ) -> list[int]:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsTile.ReadRegister` command functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
-                including RegisterName, NbRead, Offset, Device
+            :param name: the register name
 
             :return: list of register values
 
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
+            :raises ValueError: if the name is invalid
             """
-            params = json.loads(argin)
-            name = params.get("RegisterName", None)
-            if name is None:
+            if name is None or name == "":
                 self._component_manager.logger.error(
-                    "RegisterName is a mandatory parameter"
+                    "register name is a mandatory parameter"
                 )
-                raise ValueError("RegisterName is a mandatory parameter")
-            nb_read = params.get("NbRead", None)
-            if nb_read is None:
-                self._component_manager.logger.error("NbRead is a mandatory parameter")
-                raise ValueError("NbRead is a mandatory parameter")
-            offset = params.get("Offset", None)
-            if offset is None:
-                self._component_manager.logger.error("Offset is a mandatory parameter")
-                raise ValueError("Offset is a mandatory parameter")
-            device = params.get("Device", None)
-            if device is None:
-                self._component_manager.logger.error("Device is a mandatory parameter")
-                raise ValueError("Device is a mandatory parameter")
+                raise ValueError("register name is a mandatory parameter")
+            value = self._component_manager.read_register(name)
+            self.logger.debug(f"Register {name} = {value}")
+            return value
 
-            return self._component_manager.read_register(name, nb_read, offset, device)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongArray")
-    def ReadRegister(self: MccsTile, argin: str) -> list[int]:
+    @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    def ReadRegister(self: MccsTile, register_name: str) -> list[int]:
         """
         Return the value(s) of the specified register.
 
-        :param argin: json dictionary with mandatory keywords:
-
-        * RegisterName - (string) register_name is the registers string representation
-        * NbRead - (int) is the number of 32-bit values to read
-        * Offset - (int) offset is the address offset within the register to write to
-        * Device - (int) device is the FPGA to write to (0 or 1)
-
+        :param register_name: full hyerarchic register name
         :return: a list of register values
 
         :example:
 
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
-                    "Offset": offset, "Device":device}
-        >>> jstr = json.dumps(dict)
-        >>> values = dp.command_inout("ReadRegister", jstr)
+        >>> dp = tango.DeviceProxy("fpga1./tile/01")
+        >>> values = dp.command_inout("ReadRegister", "test-reg1")
         """
         handler = self.get_command_object("ReadRegister")
-        return handler(argin)
+        return handler(register_name)
 
     class WriteRegisterCommand(FastCommand):
         """Class for handling the WriteRegister(argin) command."""
@@ -1088,26 +1098,18 @@ class MccsTile(SKABaseDevice):
                 against a schema
             """
             params = json.loads(argin)
-            name = params.get("RegisterName", None)
+            name = params.get("register_name", None)
             if name is None:
                 self._component_manager.logger.error(
-                    "RegisterName is a mandatory parameter"
+                    "register_name is a mandatory parameter"
                 )
-                raise ValueError("RegisterName is a mandatory parameter")
-            values = params.get("Values", None)
+                raise ValueError("register_name is a mandatory parameter")
+            values = params.get("values", None)
             if values is None:
                 self._component_manager.logger.error("Values is a mandatory parameter")
-                raise ValueError("Values is a mandatory parameter")
-            offset = params.get("Offset", None)
-            if offset is None:
-                self._component_manager.logger.error("Offset is a mandatory parameter")
-                raise ValueError("Offset is a mandatory parameter")
-            device = params.get("Device", None)
-            if device is None:
-                self._component_manager.logger.error("Device is a mandatory parameter")
-                raise ValueError("Device is a mandatory parameter")
+                raise ValueError("values is a mandatory parameter")
 
-            self._component_manager.write_register(name, values, offset, device)
+            self._component_manager.write_register(name, values)
             return (ResultCode.OK, "WriteRegister completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -1117,10 +1119,8 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-        * RegisterName - (string) register_name is the registers string representation
-        * Values - (list) is a list containing the 32-bit values to write
-        * Offset - (int) offset is the address offset within the register to write to
-        * Device - (int) device is the FPGA to write to (0 or 1)
+            * register_name - (string) register fully qualified string representation
+            * values - (list) is a list containing the 32-bit values to write
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1129,8 +1129,8 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"RegisterName": "test-reg1", "Values": values,
-                    "Offset": offset, "Device":device}
+        >>> dict = {"register_name": "test-reg1", "values": values,
+                    "offset": 0}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("WriteRegister", jstr)
         """
@@ -1169,11 +1169,16 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument has the wrong length
                 or structure
             """
-            if len(argin) < 2:
-                self._component_manager.logger.error("Two parameters are required")
-                raise ValueError("Two parameters are required")
+            if len(argin) < 1:
+                self._component_manager.logger.error(
+                    "At least one parameter is required"
+                )
+                raise ValueError("One or two parameters are required")
+            if len(argin) == 1:
+                nvalues = 1
+            else:
+                nvalues = argin[1]
             address = argin[0]
-            nvalues = argin[1]
             return self._component_manager.read_address(address, nvalues)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarULongArray")
@@ -1182,7 +1187,7 @@ class MccsTile(SKABaseDevice):
         Read n 32-bit values from address.
 
         :param argin: [0] = address to read from
-                      [1] = number of values to read
+                      [1] = number of values to read, default 1
 
         :return: list of values
 
@@ -1290,44 +1295,16 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
 
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
             """
             params = json.loads(argin)
 
-            core_id = params.get("CoreID", None)
-            if core_id is None:
-                message = "CoreID is a mandatory parameter."
-                self._component_manager.logger.error(message)
-                raise ValueError(message)
-            arp_table_entry = params.get("ArpTableEntry", None)
-            if arp_table_entry is None:
-                message = "ArpTableEntry is a mandatory parameter."
-                self._component_manager.logger.error(message)
-                raise ValueError(message)
-            src_mac = params.get("SrcMac", None)
-            if src_mac is None:
-                message = "SrcMac is a mandatory parameter."
-                self._component_manager.logger.error(message)
-                raise ValueError(message)
-            src_ip = params.get("SrcIP", None)
-            src_port = params.get("SrcPort", None)
-            if src_port is None:
-                message = "SrcPort is a mandatory parameter."
-                self._component_manager.logger.error(message)
-                raise ValueError(message)
-            dst_ip = params.get("DstIP", None)
-            if dst_ip is None:
-                message = "DstIP is a mandatory parameter."
-                self._component_manager.logger.error(message)
-                raise ValueError(message)
-            dst_port = params.get("DstPort", None)
-            if dst_port is None:
-                message = "DstPort is a mandatory parameter."
-                self._component_manager.logger.error(message)
-                raise ValueError(message)
+            core_id = params.get("core_id", None)
+            arp_table_entry = params.get("arp_table_entry", None)
+            src_mac = params.get("source_mac", None)
+            src_ip = params.get("source_ip", None)
+            src_port = params.get("source_port", None)
+            dst_ip = params.get("destination_ip", None)
+            dst_port = params.get("destination_port", None)
 
             self._component_manager.configure_40g_core(
                 core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
@@ -1339,16 +1316,15 @@ class MccsTile(SKABaseDevice):
         """
         Configure 40g core_id with specified parameters.
 
-        :param argin: json dictionary with optional keywords:
+        :param argin: json dictionary with only optional keywords:
 
-        * CoreID - (int) core id
-        * ArpTableEntry - (int) ARP table entry ID
-        * SrcMac - (int) mac address
-        * SrcIP - (string) IP dot notation.
-        * SrcPort - (int) source port
-        * SrcPort - (int) source port
-        * DstIP - (string) IP dot notation
-        * DstPort - (int) destination port
+            * core_id - (int) core id
+            * arp_table_entry - (int) ARP table entry ID
+            * source_mac - (int) mac address
+            * source_ip - (string) IP dot notation.
+            * source_port - (int) source port
+            * destination_ip - (string) IP dot notation
+            * destination_port - (int) destination port
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1357,9 +1333,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"CoreID":2, "ArpTableEntry":0, "SrcMac":0x62000a0a01c9,
-                    "SrcIP":"10.0.99.3", "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58",
-                    "DstIP":"10.0.99.3", "DstPort":5000}
+        >>> dict = {"core_id":2, "arp_table_entry":0, "source_mac":0x62000a0a01c9,
+                    "source_ip":"10.0.99.3", "source_port":4000,
+                    "destination_ip":"10.0.99.3", "destination_port":5000}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("Configure40GCore", jstr)
         """
@@ -1384,9 +1360,9 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(  # type: ignore[override]
+        def do(
             self: MccsTile.Get40GCoreConfigurationCommand, argin: str
-        ) -> str:
+        ) -> str:  # type: ignore[override]
             """
             Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
 
@@ -1397,8 +1373,8 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin is an invalid code id
             """
             params = json.loads(argin)
-            core_id = params.get("CoreID", None)
-            arp_table_entry = params.get("ArpTableEntry", 0)
+            core_id = params.get("core_id", None)
+            arp_table_entry = params.get("arp_table_entry", 0)
 
             item_list = self._component_manager.get_40g_configuration(
                 core_id, arp_table_entry
@@ -1407,13 +1383,13 @@ class MccsTile(SKABaseDevice):
             for item in item_list:
                 item_new.append(
                     {
-                        "CoreID": item.get("core_id", None),
-                        "ArpTableEntry": item.get("arp_table_entry", None),
-                        "SrcMac": item.get("src_mac", None),
-                        "SrcIP": item.get("src_ip", None),
-                        "SrcPort": item.get("src_port", None),
-                        "DstIP": item.get("dst_ip", None),
-                        "DstPort": item.get("dst_port", None),
+                        "core_id": item.get("core_id", None),
+                        "arp_table_entry": item.get("arp_table_entry", None),
+                        "source_mac": item.get("src_mac", None),
+                        "source_ip": item.get("src_ip", None),
+                        "source_port": item.get("src_port", None),
+                        "destination_ip": item.get("dst_ip", None),
+                        "destination_port": item.get("dst_port", None),
                     }
                 )
             if len(item_new) == 0:
@@ -1431,12 +1407,13 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * CoreID - (int) core id
-        * ArpTableEntry - (int) ARP table entry ID to use
+        * core_id - (int) core id
+        * arp_table_entry - (int) ARP table entry ID to use
 
         :return: the configuration is a json string describilg a list (possibly empty)
                  Each list entry comprising:
-                 core_id, arp_table_entry, src_mac, src_ip, src_port, dest_ip, dest_port
+                 core_id, arp_table_entry, source_mac, source_ip, source_port,
+                 destination_ip, destination_port
 
         :example:
 
@@ -1486,14 +1463,21 @@ class MccsTile(SKABaseDevice):
                 against a schema
             """
             params = json.loads(argin)
-            mode = params.get("Mode", None)
+            mode = params.get("mode", None)
             if mode is None:
-                self._component_manager.logger.error("Mode is a mandatory parameter")
-                raise ValueError("Mode is a mandatory parameter")
-            payload_length = params.get("PayloadLength", 1024)
-            dst_ip = params.get("DstIP", None)
-            src_port = params.get("SrcPort", 0xF0D0)
-            dst_port = params.get("DstPort", 4660)
+                self._component_manager.logger.error("mode is a mandatory parameter")
+                raise ValueError("mode is a mandatory parameter")
+            if mode == "40g" or mode == "40G":
+                mode = "10g"
+            payload_length = params.get("payload_length", None)
+            if payload_length is None:
+                if mode == "10g" or mode == "10G":
+                    payload_length = 8192
+                else:
+                    payload_length = 1024
+            dst_ip = params.get("destination_ip", None)
+            src_port = params.get("source_port", 0xF0D0)
+            dst_port = params.get("destination_port", 4660)
 
             self._component_manager.set_lmc_download(
                 mode, payload_length, dst_ip, src_port, dst_port
@@ -1507,11 +1491,11 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * Mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
-        * PayloadLength - (int) SPEAD payload length for channel data
-        * DstIP - (string) Destination IP.
-        * SrcPort - (int) Source port for integrated data streams
-        * DstPort - (int) Destination port for integrated data streams
+            * mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
+            * payload_length - (int) SPEAD payload length for channel data
+            * destination_ip - (string) Destination IP.
+            * source_port - (int) Source port for integrated data streams
+            * destination_port - (int) Destination port for integrated data streams
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1520,7 +1504,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >> dp = tango.DeviceProxy("mccs/tile/01")
-        >> dict = {"Mode": "1G", "PayloadLength":4,DstIP="10.0.1.23"}
+        >> dict = {"mode": "1g", "payload_length":4,"destination_ip"="10.0.1.23"}
         >> jstr = json.dumps(dict)
         >> dp.command_inout("SetLmcDownload", jstr)
         """
@@ -1528,14 +1512,132 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
+    class SetLmcIntegratedDownloadCommand(FastCommand):
+        """Class for handling the SetLmcIntegratedDownload(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetLmcIntegratedDownloadCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new SetLmcIntegratedDownloadCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
+
+        def do(  # type: ignore[override]
+            self: MccsTile.SetLmcIntegratedDownloadCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
+
+            :param argin: a JSON-encoded dictionary of arguments
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
+            """
+            params = json.loads(argin)
+            mode = params.get("mode", None)
+            if mode is None:
+                self._component_manager.logger.error("mode is a mandatory parameter")
+                raise ValueError("mode is a mandatory parameter")
+            if mode == "40g" or mode == "40G":
+                mode = "10g"
+            channel_payload_length = params.get("channel_payload_lenth", 1024)
+            beam_payload_length = params.get("beam_payload_length", 1024)
+            dst_ip = params.get("destination_ip", None)
+            src_port = params.get("source_port", 0xF0D0)
+            dst_port = params.get("destination_port", 4660)
+
+            self._component_manager.set_lmc_integrated_download(
+                mode,
+                channel_payload_length,
+                beam_payload_length,
+                dst_ip,
+                src_port,
+                dst_port,
+            )
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetLmcIntegratedDownload(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Configure link and size of control data.
+
+        :param argin: json dictionary with optional keywords:
+
+            * mode - (string) '1g' or '10g' (Mandatory)
+            * channel_payload_lenth - (int) SPEAD payload length for integrated
+                 channel data
+            * beam_payload_length - (int) SPEAD payload length for integrated beam data
+            * destination_ip - (string) Destination IP
+            * source_port - (int) Source port for integrated data streams
+            * destination_port - (int) Destination port for integrated data streams
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"mode": "1G", "channel_payload_lenth":4,
+                    "beam_payload_length": 1024, "destination_ip"="10.0.1.23"}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
+        """
+        handler = self.get_command_object("SetLmcIntegratedDownload")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class GetArpTableCommand(FastCommand):
+        """Class for handling the GetArpTable() command."""
+
+        def __init__(
+            self: MccsTile.GetArpTableCommand,
+            component_manager: TileComponentManager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new GetArpTableCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(self: MccsTile.GetArpTableCommand) -> str:  # type: ignore[override]
+            """
+            Implement :py:meth:`.MccsTile.GetArpTable` commands.
+
+            :return: a JSON-encoded dictionary of coreId and populated arpID table
+            """
+            return json.dumps(self._component_manager.get_arp_table())
+
     @command(dtype_out="DevString")
     def GetArpTable(self: MccsTile) -> str:
         """
         Return a dictionary with populated ARP table for all used cores.
 
-        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer,
-        1 for LMC.10G interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for
-        beamforming, and 2, 6 for LMC with only one ARP.
+        40G interfaces use cores 0 (fpga0) and 1(fpga1) and
+        ARP ID 0 for beamformer, 1 for LMC.
+        10G interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming,
+        and 2, 6 for LMC with only one ARP.
 
         :return: a JSON-encoded dictionary of coreId and populated arpID table
 
@@ -1544,90 +1646,14 @@ class MccsTile(SKABaseDevice):
         >>> argout = dp.command_inout("GetArpTable")
         >>> dict = json.loads(argout)
         >>>    {
-        >>>    "core_id0": [arpID0, arpID1],
-        >>>    "core_id1": [arpID0],
+        >>>    "core_id0": [0, 1],
+        >>>    "core_id1": [0],
         >>>    "core_id3": [],
         >>>    }
         """
         handler = self.get_command_object("GetArpTable")
         return_code, unique_id = handler()
         return ([return_code], [unique_id])
-
-    class SetChanneliserTruncationCommand(FastCommand):
-        """Class for handling the SetChanneliserTruncation(argin) command."""
-
-        def __init__(
-            self: MccsTile.SetChanneliserTruncationCommand,
-            component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SetChanneliserTruncationCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetChannelizerTruncation command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SetChanneliserTruncationCommand, argin: list[int]
-        ) -> Any:
-            """
-            Implement :py:meth:`.MccsTile.SetChanneliserTruncation` commands.
-
-            :param argin: a truncation array
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            if len(argin) < 3:
-                self._component_manager.logger.error("Insufficient values supplied")
-                raise ValueError("Insufficient values supplied")
-            nb_chan = argin[0]
-            nb_freq = argin[1]
-            arr = np.array(argin[2:])
-            array2d = np.reshape(arr, (nb_chan, nb_freq))
-
-            self._component_manager.set_channeliser_truncation(array2d)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
-    def SetChanneliserTruncation(
-        self: MccsTile, argin: list[int]
-    ) -> DevVarLongStringArrayType:
-        """
-        Set the coefficients to modify (flatten) the bandpass.
-
-        :param argin: truncation is a N x M array
-
-        * argin[0] - is N, the number of input channels
-        * argin[1] - is M, the number of frequency channel
-        * argin[2:] - is the data
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> n=4
-        >>> m=3
-        >>> trunc = ([0, 1, 2], [3, 4, 5],[6, 7, 0], [1, 2, 3],]
-        >>> arr = np.array(trunc).ravel()
-        >>> argin = np.concatenate([np.array((4, 3)), arr])
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("SetChanneliserTruncation", argin)
-        """
-        handler = self.get_command_object("SetChanneliserTruncation")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
     class SetBeamFormerRegionsCommand(FastCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""
@@ -1673,7 +1699,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("Too many regions specified")
             if len(argin) % 8 != 0:
                 self._component_manager.logger.error(
-                    "Incomplete specification of region"
+                    "Incomplete specification of region. Regions specified by 8 values"
                 )
                 raise ValueError("Incomplete specification of region")
             regions = []
@@ -1716,8 +1742,8 @@ class MccsTile(SKABaseDevice):
         """
         Set the frequency regions which are going to be beamformed into each beam.
 
-        region_array is defined as a 2D array, for a maximum of 48 regions. Total number
-        of channels must be <= 384.
+        region_array is defined as a flattened 2D array, for a maximum of 48 regions.
+        Total number of channels must be <= 384.
 
         :param argin: list of regions. Each region comprises:
 
@@ -1762,7 +1788,7 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficients command completed OK"
+        SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
         def do(  # type: ignore[override]
             self: MccsTile.ConfigureStationBeamformerCommand, argin: str
@@ -1780,29 +1806,17 @@ class MccsTile(SKABaseDevice):
                 right length / structure
             """
             params = json.loads(argin)
-            start_channel = params.get("StartChannel", None)
-            if start_channel is None:
-                self._component_manager.logger.error(
-                    "StartChannel is a mandatory parameter"
-                )
-                raise ValueError("StartChannel is a mandatory parameter")
-            ntiles = params.get("NumTiles", None)
-            if ntiles is None:
-                self._component_manager.logger.error(
-                    "NumTiles is a mandatory parameter"
-                )
-                raise ValueError("NumTiles is a mandatory parameter")
-            is_first = params.get("IsFirst", None)
-            if is_first is None:
-                self._component_manager.logger.error("IsFirst is a mandatory parameter")
-                raise ValueError("IsFirst is a mandatory parameter")
-            is_last = params.get("IsLast", None)
-            if is_last is None:
-                self._component_manager.logger.error("IsLast is a mandatory parameter")
-                raise ValueError("IsLast is a mandatory parameter")
-
+            start_channel = params.get("start_channel", 192)
+            if start_channel < 2 or start_channel > 504:
+                self.logger.error
+            n_channels = params.get("n_channels", 8)
+            if start_channel < 2 or (start_channel + n_channels) > 511:
+                self.logger.error("Invalid specified observed region")
+                raise ValueError("Invalid specified observed region")
+            is_first = params.get("is_first", False)
+            is_last = params.get("is_last", False)
             self._component_manager.initialise_beamformer(
-                start_channel, ntiles, is_first, is_last
+                start_channel, n_channels, is_first, is_last
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1813,12 +1827,20 @@ class MccsTile(SKABaseDevice):
         """
         Initialise and start the station beamformer.
 
+        Initial configuration of the tile-station beamformer.
+        Optionally set the observed region, Default is 6.25 MHz starting at 150 MHz,
+        and set whether the tile is the first or last in the beamformer chain.
+
         :param argin: json dictionary with mandatory keywords:
 
-        * StartChannel - (int) start channel
-        * NumTiles - (int) is the number of tiles in the station
-        * IsFirst - (bool) specifies whether the tile is the first one in the station
-        * IsLast - (bool) specifies whether the tile is the last one in the station
+            * start_channel - (int) start channel of the observed region
+              default = 192 (150 MHz)
+            * n_channels - (int) is the number of channels in the observed region
+              default = 8 (6.25 MHz)
+            * is_first - (bool) whether the tile is the first one in the station
+              default False
+            * is_last - (bool) whether the tile is the last one in the station
+              default False
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1827,8 +1849,8 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >> dp = tango.DeviceProxy("mccs/tile/01")
-        >> dict = {"StartChannel":1, "NumTiles":10, "IsTile":True, "isFirst":True,
-        >>         "isLast:True}
+        >> dict = {"start_channel":64, "n_channels":10, "is_first":True,
+        >>         "is_last:True}
         >> jstr = json.dumps(dict)
         >> dp.command_inout("ConfigureStationBeamformer", jstr)
         """
@@ -1853,7 +1875,7 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
+        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficents command completed OK"
 
         def do(  # type: ignore[override]
             self: MccsTile.LoadCalibrationCoefficientsCommand, argin: list[float]
@@ -1877,7 +1899,8 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[1:]) % 8 != 0:
                 self._component_manager.logger.error(
-                    "Incomplete specification of coefficient"
+                    "Incomplete specification of coefficient. "
+                    "Needs 8 values (4 complex Jones) per channel"
                 )
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
@@ -1903,7 +1926,7 @@ class MccsTile(SKABaseDevice):
         """
         Load the calibration coefficients, but does not apply them.
 
-        This is performed by switch_calibration_bank.
+        This is performed by apply_calibration.
         The calibration coefficients may include any rotation
         matrix (e.g. the parallactic angle), but do not include the geometric delay.
 
@@ -1946,16 +1969,16 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class LoadCalibrationCurveCommand(FastCommand):
-        """Class for handling the LoadCalibrationCurve(argin) command."""
+    class ApplyCalibrationCommand(FastCommand):
+        """Class for handling the ApplyCalibration(argin) command."""
 
         def __init__(
-            self: MccsTile.LoadCalibrationCurveCommand,
+            self: MccsTile.ApplyCalibrationCommand,
             component_manager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
-            Initialise a new LoadCalibrationCurveCommand instance.
+            Initialise a new ApplyCalibrationCommand instance.
 
             :param component_manager: the device to which this command belongs.
             :param logger: a logger for this command to use.
@@ -1963,275 +1986,13 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "LoadCalibrationCurve command completed OK"
+        SUCCEEDED_MESSAGE = "ApplyCalibration command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.LoadCalibrationCurveCommand, argin: list[float]
+            self: MccsTile.ApplyCalibrationCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Implement:py:meth:`.MccsTile.LoadCalibrationCurve` command functionality.
-
-            :param argin: antenna, beam, calibration coefficients
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            if len(argin) < 10:
-                self._component_manager.logger.error(
-                    "Insufficient calibration coefficients"
-                )
-                raise ValueError("Insufficient calibration coefficients")
-            if len(argin[2:]) % 8 != 0:
-                self._component_manager.logger.error(
-                    "Incomplete specification of coefficient"
-                )
-                raise ValueError("Incomplete specification of coefficient")
-            antenna = int(argin[0])
-            beam = int(argin[1])
-            calibration_coefficients = [
-                [
-                    complex(argin[i], argin[i + 1]),
-                    complex(argin[i + 2], argin[i + 3]),
-                    complex(argin[i + 4], argin[i + 5]),
-                    complex(argin[i + 6], argin[i + 7]),
-                ]
-                for i in range(2, len(argin), 8)
-            ]
-
-            self._component_manager.load_calibration_curve(
-                antenna, beam, calibration_coefficients
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadCalibrationCurve(
-        self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
-        """
-        Load calibration curve.
-
-        This is the frequency dependent response for a single
-        antenna and beam, as a function of frequency. It will be combined together with
-        tapering coefficients and beam angles by ComputeCalibrationCoefficients, which
-        will also make them active like SwitchCalibrationBank. The calibration
-        coefficients do not include the geometric delay.
-
-        :param argin: list comprises:
-
-        * antenna - (int) is the antenna to which the coefficients will be applied.
-        * beam    - (int) is the beam to which the coefficients will be applied.
-        * calibration_coefficients - [array] a bidimensional complex array comprising
-            calibration_coefficients[channel, polarization], with each element
-            representing a normalized coefficient, with (1.0, 0.0) being the
-            normal, expected response for an ideal antenna.
-
-            * channel - (int) channel is the index specifying the channels at the
-                              beamformer output, i.e. considering only those channels
-                              actually processed and beam assignments.
-            * polarization index ranges from 0 to 3.
-
-                * 0: X polarization direct element
-                * 1: X->Y polarization cross element
-                * 2: Y->X polarization cross element
-                * 3: Y polarization direct element
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> antenna = 2
-        >>> beam = 3
-        >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
-        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
-        >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
-        >>> out = ([v.real, v.imag] for v in inp]
-        >>> coefficients = list(itertools.chain.from_iterable(out))
-        >>> coefficients.insert(0, float(antenna))
-        >>> coefficients.insert(1, float(beam))
-        >>> input = list(itertools.chain.from_iterable(coefficients))
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("LoadCalbrationCurve", input)
-        """
-        handler = self.get_command_object("LoadCalibrationCurve")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class LoadBeamAngleCommand(FastCommand):
-        """Class for handling the LoadBeamAngle(argin) command."""
-
-        def __init__(
-            self: MccsTile.LoadBeamAngleCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new LoadBeamAngleCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "LoadBeamAngle command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.LoadBeamAngleCommand, argin: list[float]
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement:py:meth:`.MccsTile.LoadBeamAngle` command functionality.
-
-            :param argin: angle coefficients
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.load_beam_angle(argin)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadBeamAngle(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
-        """
-        Load the beam angle coefficients.
-
-        angle_coefficients in argin is an array of one element per beam, specifying a
-        rotation angle, in radians, for the specified beam. The rotation is the same for
-        all antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X
-        polarization to the Y polarization. The rotation is applied after regular
-        calibration.
-
-        :param argin: list of angle coefficients for each beam
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> angle_coefficients = [3.4] * 16
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("LoadBeamAngle", angle_coefficients)
-        """
-        handler = self.get_command_object("LoadBeamAngle")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class LoadAntennaTaperingCommand(FastCommand):
-        """Class for handling the LoadAntennaTapering(argin) command."""
-
-        SUCCEEDED_MESSAGE = "LoadAntennaTapering command completed OK"
-
-        def __init__(
-            self: MccsTile.LoadAntennaTaperingCommand,
-            component_manager,
-            logger: logging.Logger,
-            antennas_per_tile: int,
-        ) -> None:
-            """
-            Initialise a new LoadAntennaTaperingCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :param antennas_per_tile: the number of antennas per tile
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-            self._antennas_per_tile = antennas_per_tile
-
-        def do(  # type: ignore[override]
-            self: MccsTile.LoadAntennaTaperingCommand, argin: list[float]
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.LoadAntennaTapering` command functionality.
-
-            :param argin: beam index, antenna tapering coefficients
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            if len(argin) < self._antennas_per_tile + 1:
-                self._component_manager.logger.error(
-                    f"Insufficient coefficients should be {self._antennas_per_tile+1}"
-                )
-                raise ValueError(
-                    f"Insufficient coefficients should be {self._antennas_per_tile+1}"
-                )
-
-            beam = int(argin[0])
-            if beam < 0 or beam > 47:
-                self._component_manager.logger.error(
-                    "Beam index should be in range 0 to 47"
-                )
-                raise ValueError("Beam index should be in range 0 to 47")
-
-            tapering = argin[1:]
-            self._component_manager.load_antenna_tapering(beam, tapering)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def LoadAntennaTapering(
-        self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
-        """
-        Load antenna tapering coefficients.
-
-        tapering_coefficients in argin is a vector contains a value for each antenna the
-        TPM processes. Default at initialisation is 1.0.
-
-        :param argin: beam index, list of tapering coefficients for each antenna
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> beam = 2
-        >>> tapering_coefficients = [3.4] * 16
-        >>> tapering_coefficients.insert(0, float(beam))
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("LoadAntennaTapering", tapering_coefficients)
-        """
-        handler = self.get_command_object("LoadAntennaTapering")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SwitchCalibrationBankCommand(FastCommand):
-        """Class for handling the SwitchCalibrationBank(argin) command."""
-
-        def __init__(
-            self: MccsTile.SwitchCalibrationBankCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SwitchCalibrationBankCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SwitchCalibrationBank command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SwitchCalibrationBankCommand, argin: int
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SwitchCalibrationBank` command functionality.
+            Implement :py:meth:`.MccsTile.ApplyCalibration` command functionality.
 
             :param argin: switch time
 
@@ -2241,15 +2002,15 @@ class MccsTile(SKABaseDevice):
             """
             switch_time = argin
 
-            self._component_manager.switch_calibration_bank(switch_time)
+            self._component_manager.apply_calibration(switch_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
-    def SwitchCalibrationBank(self: MccsTile, argin: int) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def ApplyCalibration(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Load the calibration coefficients at the specified time delay.
 
-        :param argin: switch time
+        :param argin: switch time, in ISO formatted time
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2258,40 +2019,38 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("SwitchCalibrationBank", 10)
+        >>> dp.command_inout("ApplyCalibration", "")
         """
-        handler = self.get_command_object("SwitchCalibrationBank")
+        handler = self.get_command_object("ApplyCalibration")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SetPointingDelayCommand(FastCommand):
-        """Class for handling the SetPointingDelay(argin) command."""
+    class LoadPointingDelaysCommand(FastCommand):
+        """Class for handling the LoadPointingDelays(argin) command."""
 
-        SUCCEEDED_MESSAGE = "SetPointingDelay command completed OK"
+        SUCCEEDED_MESSAGE = "LoadPointingDelays command completed OK"
 
         def __init__(
-            self: MccsTile.SetPointingDelayCommand,
+            self: MccsTile.LoadPointingDelaysCommand,
             component_manager,
             logger: logging.Logger,
-            antennas_per_tile: int,
         ) -> None:
             """
-            Initialise a new SetPointingDelayCommand instance.
+            Initialise a new LoadPointingDelaysCommand instance.
 
             :param component_manager: the device to which this command belongs.
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :param antennas_per_tile: the number of antennas per tile
             """
             self._component_manager = component_manager
             super().__init__(logger)
-            self._antennas_per_tile = antennas_per_tile
+            self._antennas_per_tile = 16
 
         def do(  # type: ignore[override]
-            self: MccsTile.SetPointingDelayCommand, argin: list[float]
+            self: MccsTile.LoadPointingDelaysCommand, argin: list[float]
         ) -> Tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.SetPointingDelay` command functionality.
+            Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
 
             :param argin: an array containing a beam index and antenna
                 delays
@@ -2303,7 +2062,7 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            if len(argin) != self._antennas_per_tile * 2 + 1:
+            if len(argin) < self._antennas_per_tile * 2 + 1:
                 self._component_manager.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
@@ -2314,11 +2073,11 @@ class MccsTile(SKABaseDevice):
             for i in range(self._antennas_per_tile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
 
-            self._component_manager.set_pointing_delay(delay_array, beam_index)
+            self._component_manager.load_pointing_delays(delay_array, beam_index)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def SetPointingDelay(
+    def LoadPointingDelays(
         self: MccsTile, argin: list[float]
     ) -> DevVarLongStringArrayType:
         """
@@ -2334,20 +2093,20 @@ class MccsTile(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("SetPointingDelay")
+        handler = self.get_command_object("LoadPointingDelays")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class LoadPointingDelayCommand(FastCommand):
-        """Class for handling the LoadPointingDelay(argin) command."""
+    class ApplyPointingDelaysCommand(FastCommand):
+        """Class for handling the ApplyPointingDelays(argin) command."""
 
         def __init__(
-            self: MccsTile.LoadPointingDelayCommand,
+            self: MccsTile.ApplyPointingDelaysCommand,
             component_manager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
-            Initialise a new LoadPointingDelayCommand instance.
+            Initialise a new ApplyPointingDelayommand instance.
 
             :param component_manager: the device to which this command belongs.
             :param logger: a logger for this command to use.
@@ -2355,13 +2114,13 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "LoadPointingDelay command completed OK"
+        SUCCEEDED_MESSAGE = "ApplyPointingDelays command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.LoadPointingDelayCommand, argin: int
+            self: MccsTile.ApplyPointingDelaysCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.LoadPointingDelay` command functionality.
+            Implement :py:meth:`.MccsTile.ApplyPointingDelays` command functionality.
 
             :param argin: load time
 
@@ -2371,13 +2130,13 @@ class MccsTile(SKABaseDevice):
             """
             load_time = argin
 
-            self._component_manager.load_pointing_delay(load_time)
+            self._component_manager.apply_pointing_delays(load_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
-    def LoadPointingDelay(self: MccsTile, argin: int) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def ApplyPointingDelays(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
-        Load the pointing delays at the specified time delay.
+        Apply the pointing delays at the specified time delay.
 
         :param argin: time delay (default = 0)
 
@@ -2388,9 +2147,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("LoadPointingDelay", 10)
+        >>> dp.command_inout("ApplyPointingDelays", "")
         """
-        handler = self.get_command_object("LoadPointingDelay")
+        handler = self.get_command_object("ApplyPointingDelays")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
@@ -2427,9 +2186,13 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             """
             params = json.loads(argin)
-            start_time = params.get("StartTime", 0)
-            duration = params.get("Duration", -1)
-            self._component_manager.start_beamformer(start_time, duration)
+            start_time = params.get("start_time", None)
+            duration = params.get("duration", -1)
+            subarray_beam_id = params.get("subarray_beam_id", -1)
+            scan_id = params.get("scan_id", 0)
+            self._component_manager.start_beamformer(
+                start_time, duration, subarray_beam_id, scan_id
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -2439,9 +2202,13 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * StartTime - (int) start time
-        * Duration - (int) if > 0 is a duration in frames * 256 (276.48 us)
-                           if == -1 run forever
+        * start_time - (str, ISO UTC time) start time
+        * duration - (int) if > 0 is a duration in CSP frames (2211.84 us)
+               if == -1 run forever
+        * subarray_beam_id - (int) : Subarray beam ID of the channels to be started
+                Command affects only beamformed channels for given subarray ID
+                Default -1: all channels
+        * scan_id - (int) The unique ID for the started scan. Default 0
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2541,9 +2308,9 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             """
             params = json.loads(argin)
-            integration_time = params.get("IntegrationTime", 0.5)
-            first_channel = params.get("FirstChannel", 0)
-            last_channel = params.get("LastChannel", 511)
+            integration_time = params.get("integration_time", 0.5)
+            first_channel = params.get("first_channel", 0)
+            last_channel = params.get("last_channel", 511)
 
             self._component_manager.configure_integrated_channel_data(
                 integration_time, first_channel, last_channel
@@ -2562,7 +2329,7 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * integration time - (float) in seconds (default = 0.5)
+        * integration_time - (float) in seconds (default = 0.5)
         * first_channel - (int) default 0
         * last_channel - (int) default 511
 
@@ -2573,7 +2340,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284, 0, 511)
+        >>> dict = {"integration_time": 0.2, "first_channel":0, "last_channel": 191}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("ConfigureIntegratedChannelData", jstr)
         """
         handler = self.get_command_object("ConfigureIntegratedChannelData")
         (return_code, message) = handler(argin)
@@ -2612,9 +2381,9 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             """
             params = json.loads(argin)
-            integration_time = params.get("IntegrationTime", 0.5)
-            first_channel = params.get("FirstChannel", 0)
-            last_channel = params.get("LastChannel", 191)
+            integration_time = params.get("integration_time", 0.5)
+            first_channel = params.get("first_channel", 0)
+            last_channel = params.get("last_channel", 191)
 
             self._component_manager.configure_integrated_beam_data(
                 integration_time, first_channel, last_channel
@@ -2633,7 +2402,7 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * integration time - (float) in seconds (default = 0.5)
+        * integration_time - (float) in seconds (default = 0.5)
         * first_channel - (int) default 0
         * last_channel - (int) default 191
 
@@ -2644,7 +2413,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142, 0, 191)
+        >>> dict = {"integration_time": 0.2, "first_channel":0, "last_channel": 191}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("ConfigureIntegratedBeamData", jstr)
         """
         handler = self.get_command_object("ConfigureIntegratedBeamData")
         (return_code, message) = handler(argin)
@@ -2695,16 +2466,16 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class SendRawDataCommand(FastCommand):
-        """Class for handling the SendRawData(argin) command."""
+    class SendDataSamplesCommand(FastCommand):
+        """Class for handling the SendDataSamples(argin) command."""
 
         def __init__(
-            self: MccsTile.SendRawDataCommand,
+            self: MccsTile.SendDataSamplesCommand,
             component_manager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
-            Initialise a new SendRawDataCommand instance.
+            Initialise a new SendDataSamplesCommand instance.
 
             :param component_manager: the device to which this command belongs.
             :param logger: a logger for this command to use.
@@ -2712,38 +2483,109 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "SendRawData command completed OK"
+        SUCCEEDED_MESSAGE = "SendDataSamples command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.SendRawDataCommand, argin: str
+            self: MccsTile.SendDataSamplesCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.SendRawData` command functionality.
+            Implement :py:meth:`.MccsTile.SendDataSamples` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :raises ValueError: if mandatory parameters are missing
             """
             params = json.loads(argin)
-            sync = params.get("Sync", False)
-            timestamp = params.get("Timestamp", None)
-            seconds = params.get("Seconds", 0.2)
 
-            self._component_manager.send_raw_data(sync, timestamp, seconds)
+            # Check for mandatory parameters
+            data_type = params.get("data_type", None)
+            if data_type is None:
+                self._component_manager.logger.error(
+                    "data_type is a mandatory parameter"
+                )
+                raise ValueError("data_type is a mandatory parameter")
+            if data_type not in [
+                "raw",
+                "channel",
+                "channel_continuous",
+                "narrowband",
+                "beam",
+            ]:
+                self._component_manager.logger.error("Invalid data_type specified")
+                raise ValueError("Invalid data_type specified")
+            if data_type == "channel_continuous":
+                channel_id = params.get("channel_id", None)
+                if channel_id is None:
+                    self._component_manager.logger.error(
+                        "channel_id is a mandatory parameter"
+                    )
+                    raise ValueError("channel_id is a mandatory parameter")
+                if channel_id < 1 or channel_id > 511:
+                    self._component_manager.logger.error(
+                        "channel_id must be between 1 and 511"
+                    )
+                    raise ValueError("channel_id must be between 1 and 511")
+            if data_type == "narrowband":
+                frequency = params.get("frequency", None)
+                if frequency is None:
+                    self._component_manager.logger.error(
+                        "frequency is a mandatory parameter"
+                    )
+                    raise ValueError("frequency is a mandatory parameter")
+                if frequency < 1e6 or frequency > 399e6:
+                    self._component_manager.logger.error(
+                        "frequency must be between 1 and 390 MHz"
+                    )
+                    raise ValueError("frequency must be between 1 and 390 MHz")
+
+            n_samples = None
+            if data_type == "channel":
+                n_samples = params.get("n_samples", 1024)
+            elif data_type == "channel_continuous":
+                n_samples = params.get("n_samples", 128)
+            elif data_type == "narrowband":
+                n_samples = params.get("n_samples", 1024)
+            params["n_samples"] = n_samples
+            self._component_manager.send_data_samples(**params)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendRawData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    def SendDataSamples(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Transmit a snapshot containing raw antenna data.
 
         :param argin: json dictionary with optional keywords:
 
-        * Sync - (bool) synchronised flag
-        * Timestamp - (int??) When to start
-        * Seconds - (float) When to synchronise
+        * data_type - type of snapshot data (mandatory): "raw", "channel",
+                    "channel_continuous", "narrowband", "beam"
+        * start_time - Time (UTC string) to start sending data. Default immediately
+        * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
+
+        Depending on the data type:
+        raw:
+
+        * sync: bool: send synchronised samples for all antennas, vs. round robin
+                larger snapshot from each antenna
+
+        channel:
+
+        * n_samples: Number of samples per channel, default 1024
+        * first_channel - (int) first channel to send, default 0
+        * last_channel - (int) last channel to send, default 511
+
+        channel_continuous
+
+        * channel_id - (int) channel_id (Mandatory)
+        * n_samples -  (int) number of samples to send per packet, default 128
+
+        narrowband:
+
+        * frequency - (int) Sky frequency for band centre, in Hz (Mandatory)
+        * round_bits - (int)  Specify whow many bits to round
+        * n_samples -  (int) number of spectra to send
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2752,230 +2594,11 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Sync":True, "Seconds": 0.2}
+        >>> dict = {"data_type": "raw", "Sync":True, "Seconds": 0.2}
         >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SendRawData", jstr)
+        >>> dp.command_inout("SendDataSamples", jstr)
         """
-        handler = self.get_command_object("SendRawData")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SendChannelisedDataCommand(FastCommand):
-        """Class for handling the SendChannelisedData(argin) command."""
-
-        def __init__(
-            self: MccsTile.SendChannelisedDataCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SendChannelisedDataCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SendChannelisedData command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SendChannelisedDataCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SendChannelisedData` command functionality.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            params = json.loads(argin)
-            number_of_samples = params.get("NSamples", 1024)
-            first_channel = params.get("FirstChannel", 0)
-            last_channel = params.get("LastChannel", 511)
-            timestamp = params.get("Timestamp", None)
-            seconds = params.get("Seconds", 0.2)
-
-            self._component_manager.send_channelised_data(
-                number_of_samples, first_channel, last_channel, timestamp, seconds
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
-        """
-        Transmit a snapshot of channelized data totalling number_of_samples spectra.
-
-        :param argin: json dictionary with optional keywords:
-
-        * NSamples - (int) number of spectra to send
-        * FirstChannel - (int) first channel to send
-        * LastChannel - (int) last channel to send
-        * Timestamp - (int??) When to start
-        * Seconds - (float) When to synchronise
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"FirstChannel":10, "LastChannel": 200, "Seconds": 0.5}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SendChannelisedData", jstr)
-        """
-        handler = self.get_command_object("SendChannelisedData")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SendChannelisedDataContinuousCommand(FastCommand):
-        """Class for handling the SendChannelisedDataContinuous(argin) command."""
-
-        def __init__(
-            self: MccsTile.SendChannelisedDataContinuousCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SendChannelisedDataContinuousCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SendChannelisedDataContinuous command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SendChannelisedDataContinuousCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SendChannelisedDataContinuous` commands.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
-            """
-            params = json.loads(argin)
-            channel_id = params.get("ChannelID")
-            if channel_id is None:
-                self._component_manager.logger.error(
-                    "ChannelID is a mandatory parameter"
-                )
-                raise ValueError("ChannelID is a mandatory parameter")
-            number_of_samples = params.get("NSamples", 128)
-            wait_seconds = params.get("WaitSeconds", 0)
-            timestamp = params.get("Timestamp", None)
-            seconds = params.get("Seconds", 0.2)
-
-            self._component_manager.send_channelised_data_continuous(
-                channel_id, number_of_samples, wait_seconds, timestamp, seconds
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedDataContinuous(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Send data from channel channel continuously.
-
-        Continues until stopped with StopDataTransmission command.
-
-        :param argin: json dictionary with 1 mandatory and optional keywords:
-
-        * ChannelID - (int) channel_id (Mandatory)
-        * NSamples -  (int) number of spectra to send
-        * WaitSeconds - (int) Wait time before sending data
-        * Timestamp - (int??) When to start
-        * Seconds - (float) When to synchronise
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"ChannelID":2, "NSamples":256, "Seconds": 0.5}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SendChannelisedDataContinuous", jstr)
-        """
-        handler = self.get_command_object("SendChannelisedDataContinuous")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SendBeamDataCommand(FastCommand):
-        """Class for handling the SendBeamData(argin) command."""
-
-        def __init__(
-            self: MccsTile.SendBeamDataCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SendBeamDataCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SendBeamData command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SendBeamDataCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SendBeamData` command functionality.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            params = json.loads(argin)
-            timestamp = params.get("Timestamp", None)
-            seconds = params.get("Seconds", 0.2)
-
-            self._component_manager.send_beam_data(timestamp, seconds)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendBeamData(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
-        """
-        Transmit a snapshot containing beamformed data.
-
-        :param argin: json dictionary with optional keywords:
-
-        * Timestamp - (string??) When to send
-        * Seconds - (float) When to synchronise
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Seconds": 0.5}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SendBeamData", jstr)
-        """
-        handler = self.get_command_object("SendBeamData")
+        handler = self.get_command_object("SendDataSamples")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
@@ -3029,62 +2652,6 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
-    class ComputeCalibrationCoefficientsCommand(FastCommand):
-        """Class for handling the ComputeCalibrationCoefficients() command."""
-
-        def __init__(
-            self: MccsTile.ComputeCalibrationCoefficientsCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new ComputeCalibrationCoefficientsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "ComputeCalibrationCoefficients command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.ComputeCalibrationCoefficientsCommand,
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ComputeCalibrationCoefficients` commands.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.compute_calibration_coefficients()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_out="DevVarLongStringArray")
-    def ComputeCalibrationCoefficients(
-        self: MccsTile,
-    ) -> DevVarLongStringArrayType:
-        """
-        Compute the calibration coefficients.
-
-        Use previously specified gain curves, tapering weights and beam angles,
-        load them in the hardware. It must be followed
-        by switch_calibration_bank() to make these active.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ComputeCalibrationCoefficients")
-        """
-        handler = self.get_command_object("ComputeCalibrationCoefficients")
-        (return_code, message) = handler()
-        return ([return_code], [message])
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartAcquisition(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
@@ -3092,8 +2659,8 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * StartTime - (int) start time
-        * Delay - (int) delay start
+        * start_time - (ISO UTC time) start time
+        * delay - (int) delay start if StartTime is not specified, default 0.2s
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3102,564 +2669,13 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"StartTime":10, "Delay":20}
+        >>> dict = {"start_time":"2021-11-22, "delay":20}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("StartAcquisition", jstr)
         """
         handler = self.get_command_object("StartAcquisition")
         (return_code, unique_id) = handler(argin)
         return ([return_code], [unique_id])
-
-    class SetTimeDelaysCommand(FastCommand):
-        """Class for handling the SetTimeDelays(argin) command."""
-
-        def __init__(
-            self: MccsTile.SetTimeDelaysCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SetTimeDelaysCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetTimeDelays command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SetTimeDelaysCommand, argin: list[float]
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement:py:meth:`.MccsTile.SetTimeDelays` command functionality.
-
-            :param argin: time delays
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            delays = argin
-
-            self._component_manager.set_time_delays(delays)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
-    def SetTimeDelays(self: MccsTile, argin: list[float]) -> DevVarLongStringArrayType:
-        """
-        Set coarse zenith delay for input ADC streams.
-
-        Delay specified in nanoseconds, nominal is 0.
-
-        :param argin: the delay in samples, positive delay adds delay
-                       to the signal stream
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >> delays = [3.4] * n (How many & int or float : Alessio?)
-        >> dp = tango.DeviceProxy("mccs/tile/01")
-        >> dp.command_inout("SetTimedelays", delays)
-        """
-        handler = self.get_command_object("SetTimeDelays")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SetCspRoundingCommand(FastCommand):
-        """Class for handling the SetCspRounding(argin) command."""
-
-        def __init__(
-            self: MccsTile.SetCspRoundingCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SetCspRoundingCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetCspRounding command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SetCspRoundingCommand, argin: float
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetCspRounding` command functionality.
-
-            :param argin: csp rounding
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            rounding = argin
-
-            self._component_manager.set_csp_rounding(rounding)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevDouble", dtype_out="DevVarLongStringArray")
-    def SetCspRounding(self: MccsTile, argin: float) -> DevVarLongStringArrayType:
-        """
-        Set output rounding for CSP.
-
-        :param argin: the rounding
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("SetCspRounding", 3.142)
-        """
-        handler = self.get_command_object("SetCspRounding")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SetLmcIntegratedDownloadCommand(FastCommand):
-        """Class for handling the SetLmcIntegratedDownload(argin) command."""
-
-        def __init__(
-            self: MccsTile.SetLmcIntegratedDownloadCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SetLmcIntegratedDownloadCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SetLmcIntegratedDownloadCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
-            """
-            params = json.loads(argin)
-            mode = params.get("Mode", None)
-            if mode is None:
-                self._component_manager.logger.error("Mode is a mandatory parameter")
-                raise ValueError("Mode is a mandatory parameter")
-            channel_payload_length = params.get("ChannelPayloadLength", 1024)
-            beam_payload_length = params.get("BeamPayloadLength", 1024)
-            dst_ip = params.get("DstIP", None)
-            src_port = params.get("SrcPort", 0xF0D0)
-            dst_port = params.get("DstPort", 4660)
-
-            self._component_manager.set_lmc_integrated_download(
-                mode,
-                channel_payload_length,
-                beam_payload_length,
-                dst_ip,
-                src_port,
-                dst_port,
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetLmcIntegratedDownload(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Configure link and size of control data.
-
-        :param argin: json dictionary with optional keywords:
-
-        * Mode - (string) '1g' or '10g' (Mandatory)
-        * ChannelPayloadLength - (int) SPEAD payload length for integrated channel data
-        * BeamPayloadLength - (int) SPEAD payload length for integrated beam data
-        * DstIP - (string) Destination IP
-        * SrcPort - (int) Source port for integrated data streams
-        * DstPort - (int) Destination port for integrated data streams
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Mode": "1G", "ChannelPayloadLength":4,
-                    "BeamPayloadLength": 1024, DstIP="10.0.1.23"}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
-        """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SendRawDataSynchronisedCommand(FastCommand):
-        """Class for handling the SendRawDataSynchronised(argin) command."""
-
-        def __init__(
-            self: MccsTile.SendRawDataSynchronisedCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SendRawDataSynchronisedCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SendRawDataSynchronised command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SendRawDataSynchronisedCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SendRawDataSynchronised` commands.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            params = json.loads(argin)
-            timestamp = params.get("Timestamp", None)
-            seconds = params.get("Seconds", 0.1)
-
-            self._component_manager.send_raw_data(
-                sync=True, timestamp=timestamp, seconds=seconds
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendRawDataSynchronised(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Send synchronised raw data.
-
-        :param argin: json dictionary with optional keywords:
-
-        * Timestamp - (string??) When to send
-        * Seconds - (float) When to synchronise
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Seconds": 0.5}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SendRawDataSynchronised", jstr)
-        """
-        handler = self.get_command_object("SendRawDataSynchronised")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SendChannelisedDataNarrowbandCommand(FastCommand):
-        """Class for handling the SendChannelisedDataNarrowband(argin) command."""
-
-        def __init__(
-            self: MccsTile.SendChannelisedDataNarrowbandCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SendChannelisedDataNarrowbandCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SendChannelisedDataNarrowband command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SendChannelisedDataNarrowbandCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SendChannelisedDataNarrowband` commands.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
-            """
-            params = json.loads(argin)
-            frequency = params.get("Frequency", None)
-            if frequency is None:
-                self._component_manager.logger.error(
-                    "Frequency is a mandatory parameter"
-                )
-                raise ValueError("Frequency is a mandatory parameter")
-            round_bits = params.get("RoundBits", None)
-            if round_bits is None:
-                self._component_manager.logger.error(
-                    "RoundBits is a mandatory parameter"
-                )
-                raise ValueError("RoundBits is a mandatory parameter")
-            number_of_samples = params.get("NSamples", 128)
-            wait_seconds = params.get("WaitSeconds", 0)
-            timestamp = params.get("Timestamp", None)
-            seconds = params.get("Seconds", 0.2)
-            self._component_manager.send_channelised_data_narrowband(
-                frequency,
-                round_bits,
-                number_of_samples,
-                wait_seconds,
-                timestamp,
-                seconds,
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendChannelisedDataNarrowband(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Continuously send channelised data from a single channel.
-
-        and data from channel continuously (until stopped)
-
-        This is a special mode used for UAV campaigns and not really
-        part of the standard signal processing chain. I don’t know if
-        this mode will be kept or not.
-
-        :param argin: json dictionary with 2 mandatory and optional keywords:
-
-        * Frequency - (int) Sky frequency to transmit
-        * RoundBits - (int)  Specify which bits to round
-        * NSamples -  (int) number of spectra to send
-        * WaitSeconds - (int) Wait time before sending data
-        * Timeout - (int) When to stop
-        * Timestamp - (string??) When to start
-        * Seconds - (float) When to synchronise
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Frequency":2000, "RoundBits":256, "NSamples":256,
-                    "WaitSeconds": 10, "Seconds": 0.5}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("SendChannelisedDataNarrowband", jstr)
-        """
-        handler = self.get_command_object("SendChannelisedDataNarrowband")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class TweakTransceiversCommand(FastCommand):
-        """Class for handling the TweakTransceivers() command."""
-
-        def __init__(
-            self: MccsTile.TweakTransceiversCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new TweakTransceiversCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "TweakTransceivers command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.TweakTransceiversCommand,
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.TweakTransceivers` command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.tweak_transceivers()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_out="DevVarLongStringArray")
-    def TweakTransceivers(self: MccsTile) -> DevVarLongStringArrayType:
-        """
-        Tweak the transceivers.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("tweak_transceivers")
-        """
-        handler = self.get_command_object("TweakTransceivers")
-        (return_code, message) = handler()
-        return ([return_code], [message])
-
-    @command(dtype_out="DevVarLongStringArray")
-    def PostSynchronisation(self: MccsTile) -> DevVarLongStringArrayType:
-        """
-        Post tile configuration synchronization.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("PostSynchronisation")
-        """
-        handler = self.get_command_object("PostSynchronisation")
-        (return_code, unique_id) = handler()
-        return ([return_code], [unique_id])
-
-    @command(dtype_out="DevVarLongStringArray")
-    def SyncFpgas(self: MccsTile) -> DevVarLongStringArrayType:
-        """
-        Synchronise the FPGAs.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("SyncFpgas")
-        """
-        handler = self.get_command_object("SyncFpgas")
-        (return_code, unique_id) = handler()
-        return ([return_code], [unique_id])
-
-    class CalculateDelayCommand(FastCommand):
-        """Class for handling the CalculateDelay(argin) command."""
-
-        def __init__(
-            self: MccsTile.CalculateDelayCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new CalculateDelayCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "CalculateDelay command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.CalculateDelayCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.CalculateDelay` command functionality.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the JSON input lacks
-                mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
-            """
-            params = json.loads(argin)
-            current_delay = params.get("CurrentDelay", None)
-            if current_delay is None:
-                self._component_manager.logger.error(
-                    "CurrentDelay is a mandatory parameter"
-                )
-                raise ValueError("CurrentDelay is a mandatory parameter")
-            current_tc = params.get("CurrentTC", None)
-            if current_tc is None:
-                self._component_manager.logger.error(
-                    "CurrentTC is a mandatory parameter"
-                )
-                raise ValueError("CurrentTC is a mandatory parameter")
-            ref_lo = params.get("RefLo", None)
-            if ref_lo is None:
-                self._component_manager.logger.error("RefLo is a mandatory parameter")
-                raise ValueError("RefLo is a mandatory parameter")
-            ref_hi = params.get("RefHi", None)
-            if ref_hi is None:
-                self._component_manager.logger.error("RefHi is a mandatory parameter")
-                raise ValueError("RefHi is a mandatory parameter")
-
-            self._component_manager.calculate_delay(
-                current_delay, current_tc, ref_lo, ref_hi
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def CalculateDelay(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
-        """
-        Calculate delay.
-
-        :param argin: json dictionary with 4 mandatory keywords:
-
-        * CurrentDelay - (float??) Current delay
-        * CurrentTC - (float??) Current phase register terminal count
-        * RefLo - (float??) Low reference
-        * RefHi -(float??) High reference
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"CurrentDelay":0.4, "CurrentTC":56.2, "RefLo":3.0, "RefHi":78.9}
-        >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("CalculateDelay", jstr)
-        """
-        handler = self.get_command_object("CalculateDelay")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
 
     class ConfigureTestGeneratorCommand(FastCommand):
         """Class for handling the ConfigureTestGenerator(argin) command."""
@@ -3698,34 +2714,34 @@ class MccsTile(SKABaseDevice):
             """
             params = json.loads(argin)
             active = False
-            set_time = params.get("SetTime", 0)
-            if "ToneFrequency" in params:
-                frequency0 = params["ToneFrequency"]
-                amplitude0 = params.get("ToneAmplitude", 1.0)
+            set_time = params.get("set_time", None)
+            if "tone_frequency" in params:
+                frequency0 = params["tone_frequency"]
+                amplitude0 = params.get("tone_amplitude", 1.0)
                 active = True
             else:
                 frequency0 = 0.0
                 amplitude0 = 0.0
 
-            if "Tone2Frequency" in params:
-                frequency1 = params["Tone2Frequency"]
-                amplitude1 = params.get("Tone2Amplitude", 1.0)
+            if "tone_2_frequency" in params:
+                frequency1 = params["tone_2_frequency"]
+                amplitude1 = params.get("tone_2_amplitude", 1.0)
                 active = True
             else:
                 frequency1 = 0.0
                 amplitude1 = 0.0
 
-            if "NoiseAmplitude" in params:
-                amplitude_noise = params.get("NoiseAmplitude", 1.0)
+            if "noise_amplitude" in params:
+                amplitude_noise = params.get("noise_amplitude", 1.0)
                 active = True
             else:
                 amplitude_noise = 0.0
 
-            if "PulseFrequency" in params:
-                pulse_code = params["PulseFrequency"]
+            if "pulse_frequency" in params:
+                pulse_code = params["pulse_frequency"]
                 if (pulse_code < 0) or (pulse_code > 7):
-                    raise ValueError("PulseFrequency must be between 0 and 7")
-                amplitude_pulse = params.get("PulseAmplitude", 1.0)
+                    raise ValueError("pulse_frequency must be between 0 and 7")
+                amplitude_pulse = params.get("pulse_amplitude", 1.0)
                 active = True
             else:
                 pulse_code = 7
@@ -3742,7 +2758,7 @@ class MccsTile(SKABaseDevice):
                 set_time,
             )
 
-            chans = params.get("AdcChannels")
+            chans = params.get("adc_channels")
             inputs = 0
             if chans is None:
                 if active:
@@ -3773,28 +2789,30 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with keywords:
 
-        * ToneFrequency: first tone frequency, in Hz. The frequency
+        * tone_frequency: first tone frequency, in Hz. The frequency
             is rounded to the resolution of the generator. If this
             is not specified, the tone generator is disabled.
-        * ToneAmplitude: peak tone amplitude, normalized to 31.875 ADC
+        * tone_amplitude: peak tone amplitude, normalized to 31.875 ADC
             units. The amplitude is rounded to 1/8 ADC unit. Default
             is 1.0. A value of -1.0 keeps the previously set value.
-        * Tone2Frequency: frequency for the second tone. Same
+        * tone_2_frequency: frequency for the second tone. Same
             as ToneFrequency.
-        * Tone2Amplitude: peak tone amplitude for the second tone.
+        * tone_2_amplitude: peak tone amplitude for the second tone.
             Same as ToneAmplitude.
-        * NoiseAmplitude: RMS amplitude of the pseudorandom Gaussian
+        * noise_amplitude: RMS amplitude of the pseudorandom Gaussian
             white noise, normalized to 26.03 ADC units.
-        * PulseFrequency: frequency of the periodic pulse. A code
+        * pulse_frequency: frequency of the periodic pulse. A code
             in the range 0 to 7, corresponding to (16, 12, 8, 6, 4, 3, 2)
             times the ADC frame frequency.
-        * PulseAmplitude: peak amplitude of the periodic pulse, normalized
+        * pulse_amplitude: peak amplitude of the periodic pulse, normalized
             to 127 ADC units. Default is 1.0. A value of -1.0 keeps the
             previously set value.
-        * SetTime: time at which the generator is set, for synchronization
-            among different TPMs.
-        * AdcChannels: list of adc channels which will be substituted with
-
+        * set_time: time at which the generator is set, for synchronization
+            among different TPMs. In UTC ISO format (string)
+        * adc_channels: list of adc channels which will be substituted with
+            the generated signal. It is a 32 integer, with each bit representing
+            an input channel. Default: all if at least q source is specified,
+            none otherwises.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3803,8 +2821,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"ToneFrequency": 150e6, "ToneAmplitude": 0.1,
-                "NoiseAmplitude": 0.9, "PulseFrequency": 7, "LoadTime":0}
+        >>> dict = {"tone_frequency": 150e6, "tone_amplitude": 0.1,
+                "noise_amplitude": 0.9, "pulse_frequency": 7,
+                "set_time": "2022-08-09T12:34:56.7Z"}
         >>> jstr = json.dumps(dict)
         >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
         """

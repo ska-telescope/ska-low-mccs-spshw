@@ -48,8 +48,6 @@ as *RW*.
   * *firmwareVersion*: Timestamp and version number of the loaded firmware, both for the 
     FPGA and the CPLD. 
 
-  * *voltage*: Internal 5V power voltage, in volt.
-
   * *isProgrammed*: Boolean, True if the FPGAs are programmed.
 
   * *tileProgrammingState*: a string describing the programing state of the TPM. 
@@ -74,15 +72,9 @@ as *RW*.
     * ``Synchronised``: Tje ADCs have been synchronised. The internal timestamp 
       counter is synchronised among TPMs, and can be used to infer sample time
 
-  * *boardTemperature*: Temperature measured at mid-board, in degrees Celsius.
-
-  * *fpga1Temperature*: Temperature of the FPGA1 die, in degrees Celsius.
-
-  * *fpga2Temperature*: Temperature of the FPGA2 die, in degrees Celsius.
-
   * *antennaIds*: List of the ID's of the 16 antennas managed by the Tile.
 
-  * *fortyGbDestinationIps*: *(RO)* List of the destination IPs of the first 2 cores 
+  * *fortyGbDestinationIps*: List of the destination IPs of the first 2 cores 
     (beamformer and LMC) for the 2 FPGAs, as list of strings.
 
   * *fortyGbDestinationPorts*: List of the destination ports (int) of the first 2 cores 
@@ -94,7 +86,7 @@ as *RW*.
   * *currentTileBeamformerFrame*: Vale of the frame currently being processed by the Tile 
     beamformer, in units of 256 frames (276,48 us) 
 
-  * *checkPendingDataRequests*: Bool, True if a SendData request is still being processed
+  * *pendingDataRequests*: Bool, True if a SendData request is still being processed
     by the LMC data transmitter. 
 
   * *isBeamformerRunning*: Bool, True if the **station** beamformer is running. The tile 
@@ -117,9 +109,9 @@ as *RW*.
     should be consistent with the integer part of the time returned by the Python 
     ``time.time()`` method. String in UTC format
 
-  * *TestGeneratorActive*: Bool True if at least one of the TPM inputs is being sourced
+  * *testGeneratorActive*: Bool True if at least one of the TPM inputs is being sourced
     by the internal test signal generator. 
- 
+
 ***************************
 Tango Tile device commands
 ***************************
@@ -130,15 +122,12 @@ Low level firmware access
 --------------------------
 These commands are used for accessing hardware functions which are not normally used 
 and should be available only in maintenance mode. These commands allow to 
-re-initialise the FPGA, to reprogram the FPGAs with different personalities, to update 
-the CPLD personality (quite dangerous) and to access individual hardware registers. 
+re-initialise the FPGA, to reprogram the FPGAs with different personalities, and
+to access individual hardware registers. 
 
   * *GetFirmwareAvailable*: lists the firmware currently loaded in the FPGAs and CPLD.
 
   * *DownloadFirmware*: Download a specific bitfile in the TPM FPGAs. 
-
-  * *ProgramCPLD*: Update the CPLD firmware. USe with extreme care. Targeted for removal, 
-    using a specific program to perform CPLD firmware update. 
 
   * *Initialise*: Complete FPGA initialisation. This is automatically performed when the 
     Tile enters ``PowerState.ON``
@@ -168,28 +157,30 @@ the CPLD personality (quite dangerous) and to access individual hardware registe
 
   * *GetRegisterList*: Returns a list of all the TPM register names (about 3 thousand names). 
 
-  * *ReadRegister*: Reads the value of one or more registers. Each register is a 32 bit integer. 
-    If is possible to specify an offset from the given addreess, in words, and a number of 
-    consecutive registers to read. Parameters given as a json string: 
+  * *ReadRegister*: Reads the value of one named register. Each register is a 32 bit integer. 
+    Register may return a list of values if so defined in the xml register description. 
+    Parameter is the fully qualified hierarchical register name (string)
 
-    * RegisterName: (mandatory string) Name of the register to read
-
-    * Offset - (int) Offset in words of the first register read
-
-    * NbRead - (int) number of words (registers) to read
-
-    Returns a list of 32 bit integers. 
+    Returns a list of one or more unsigned 32 bit values.
 
   * *WriteRegister*: Write into one or more registers. Each register is a 32 bit integer.
     If is possible to specify an offset from the given addreess, in words, and a number of
     consecutive registers to read. Parameters given as a json string:
 
-    * RegisterName: (mandatory string) Name of the register to read
+    * register_name: (mandatory string) Name of the register to read
 
-    * Offset - (int) Offset in words of the first register read
+    * values - (int or list(int) ) Values to write. Values are written into consecutive 
+      register addresses.
 
-    * Values - (int or list(int) ) Values to write. Values are written into consecutive 
-      registers.
+  * *ReadAddress*: Reads one or more values at a specific address. Parameter is a list 
+    of one or two integers. First value is the absolute address in the TPM AXI4 memory
+    mapped address space. If 2 values are specified the second is the number of words read.
+
+    Returns a list of unsigned 32 bit values.
+
+  * *WriteAddress*: Writes one or more values to hardware address. Parameter: list of
+    integer values, first the address, followed by the values to be written. If more than
+    one value is specified, these are written in consecutive word (4 byte) addresses. 
 
 
 Ethernet interface configuration
@@ -198,73 +189,73 @@ Ethernet interface configuration
   * *Configure40GCore*: Configure one of the available cores. Parameters as a json string
     with the following keywords. All keywords are optinal, except CoreID and ArpTableEntry.
 
-    * CoreID - (int) core id, 0 for FPGA1, 1 for FPGA2
+    * core_id - (int) core id, 0 for FPGA1, 1 for FPGA2
 
-    * ArpTableEntry - (int) ARP table entry ID. 8 entries available, only 0 and 1 
+    * arp_table_entry - (int) ARP table entry ID. 8 entries available, only 0 and 1 
       currently used, respectively for beamformer chain (0) and LMC (1) 
 
-    * SrcMac - (int) mac address
+    * source_mac - (int) mac address
 
-    * SrcIP - (string) IP dot notation for source IP
+    * source_ip - (string) IP dot notation for source IP
 
-    * SrcPort - (int) source port
+    * source_port - (int) source port
 
-    * DstIP - (string) IP dot notation for destination IP
+    * destination_ip - (string) IP dot notation for destination IP
 
-    * DstPort - (int) destination port
+    * destination_port - (int) destination port
 
   * *Get40GCoreConfiguration*: retrieves the configuration for one specific port, or for all
-    programmed ports. Parameter: json string with keywords CoreID and ArpTableEntry. 
-    If CoreID = -1 all ports are reported. Returns a list of json dictionaries with 
+    programmed ports. Parameter: json string with keywords core_id and arp_table_entry.
+    If core_id = -1 all ports are reported. Returns a list of json dictionaries with 
     the same keywords of *Configure40GCore*:
 
-    * CoreID - (int) core id, 0 for FPGA1, 1 for FPGA2
+    * core_id - (int) core id, 0 for FPGA1, 1 for FPGA2
 
-    * ArpTableEntry - (int) ARP table entry ID. 8 entries available, only 0 and 1
+    * arp_table_entry - (int) ARP table entry ID. 8 entries available, only 0 and 1
       currently used, respectively for beamformer chain (0) and LMC (1)
 
-    * SrcMac - (int) mac address
+    * source_mac - (int) mac address
 
-    * SrcIP - (string) IP dot notation for source IP
+    * source_ip - (string) IP dot notation for source IP
 
-    * SrcPort - (int) source port
+    * source_port - (int) source port
 
-    * DstIP - (string) IP dot notation for destination IP
+    * destination_ip - (string) IP dot notation for destination IP
 
-    * DstPort - (int) destination port
+    * destination_port - (int) destination port
 
 
   * *SetLmcDownload*: Specify whether control data will be transmitted over 1G or 
     40G networks, and the relavant link parameters. Parameter: a json dictionary with 
     optional keywords:
 
-    * Mode - (string) ``1g`` or ``10g`` (Mandatory) (use ``10g`` for 40G link)
+    * mode - (string) ``1g`` or ``10g`` (Mandatory) (use ``10g`` for 40G link)
 
-    * PayloadLength - (int) SPEAD payload length for channel data. Default 
+    * payload_length - (int) SPEAD payload length for channel data. Default 
 
-    * DstIP - (string) Destination IP. Is mandatory for 40G link, not required
+    * destination_ip - (string) Destination IP. Is mandatory for 40G link, not required
       for 1G link. 
 
-    * SrcPort - (int) Source port for sample data streams
+    * source_port - (int) Source port for sample data streams
 
-    * DstPort - (int) Destination port for sample data streams
+    * destination_port - (int) Destination port for sample data streams
 
   * *SetLmcIntegratedDownload*: Configure link and size of integrated data.
     Parameter: a json dictionary with optional keywords:
 
-    * Mode - (string) ``1g`` or ``10g`` (Mandatory)
+    * mode - (string) ``1g`` or ``10g`` (Mandatory)
 
-    * ChannelPayloadLength - (int) SPEAD payload length for integrated channel data
+    * channel_payload_length - (int) SPEAD payload length for integrated channel data
 
-    * BeamPayloadLength - (int) SPEAD payload length for integrated beam data
+    * beam_payload_length - (int) SPEAD payload length for integrated beam data
 
-    * DstIP - (string) Destination IP. Same IP and port is used for LMC and integrated
+    * destination_ip - (string) Destination IP. Same IP and port is used for LMC and integrated
       LMC, so values should be specified only in one of *SetLmcDownload* and
       *SetLmcIntegratedDownload*. Last specified overrides IP and port for both. 
 
-    * SrcPort - (int) Source port for integrated data streams
+    * source_port - (int) Source port for integrated data streams
 
-    * DstPort - (int) Destination port for integrated data streams
+    * destination_port - (int) Destination port for integrated data streams
 
   * *GetArpTable*: returns a dictionary containing, for each 40G core, a list of the 
     ARP table entries which are populated. An example:
@@ -279,84 +270,51 @@ as bursts of SPEAD packets on the interface, IP address and port specified by
 *SetLmcDownload* commands. methods should be unified in a single *SendData* command, 
 considering that only one transmission stream can be active at any time. 
 
-  * *SendRawData*: Send packets of raw ADC samples. If Sync = False samples are separately 
-    collected and sent for each antenna, in round robin.
+  * *SendDataSamples*: Send packets of data samples. Type of samples and associated parameters 
+    are specified in a json string. 
 
-    Argument: json string with keywords:
+    Argument: json string. The following keywords are common to all data types: 
 
-    * Sync - (bool) synchronised flag. If ``True`` the command behaves like 
-      *SendRawDataSynchronised*. Default ``False``.
+    * data_type - type of snapshot data (mandatory): "raw", "channel",
+                    "channel_continuous", "narrowband", "beam"
 
-    * Timestamp - (int) When to start (frame number). To be changed in UTC time string.
-      Default "now" plus ``Seconds`` value
+    * timestamp - Time (UTC string) to start sending data. Default immediately
+        
+    * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
 
-    * Seconds - (float) : delay to wait after specified time
+    Depending on the data type additional keywords can (or must) be specified:
 
-  * *SendRawDataSynchronised*: Send packets of raw ADC samples, synchronised. Samples
-    are captured together from each antenna, but packet length is limited to 1024 samples
+    raw: send ADC raw samples (8 bits) for all antennas. 
 
-    Argument: json string with keywords:
+    * sync: bool: send synchronised samples for all antennas, vs. round robin
+                larger snapshot from each antenna
 
-    * Timestamp - (int) When to start (frame number). To be changed in UTC time string.
-      Default "now" plus ``Seconds`` value
+    channel: send channelised samples for all antennas, and for the specified channel range.
 
-    * Seconds - (float) : delay to wait after specified time
+    * n_samples: Number of samples per channel, default 1024
 
+    * first_channel - (int) first channel to send, default 0
 
-  * *SendChannelisedData*: Send data samples from specified channels.
+    * last_channel - (int) last channel to send, default 511
 
-    Argument: json string with keywords:
+    channel_continuous: Send a continuous stream of channelised samples for one 
+    specific channel, all antennas. Used for calibration spigots. 
 
-    * NSamples - (int) number of samples to send in each channel. Default = 1024
+    * channel_id - (int) channel_id (Mandatory)
 
-    * FirstChannel - (int) first channel to send. Default = 0.
+    * n_samples -  (int) number of samples to send per packet, default 128
 
-    * LastChannel - (int) last channel to send. Default = 511
+    narrowband: Send a continuous stream of channelised samples for one
+    specific channel, further filtered and decimated around the specified frequency. 
+    For all antennas. Used for tracking a monochromatic tone (e.g. transmitter on UAV drone).
 
-    * Timestamp - (int) Start time (frame number). To be changed in UTC time string.
-      Default "now" plus ``Seconds`` value
+    * frequency - (int) Sky frequency for band centre, in Hz (Mandatory)
 
-    * Seconds - (float) : delay to wait after specified time
+    * round_bits - (int)  Specify whow many bits to round
 
-  * *SendChannelisedDataContinuous*: Send a continuous stream of samples for an individual 
-    frequency channel. Data sending must be stopped by the *StopDataTransmission* 
-    command.
+    * n_samples -  (int) number of spectra to send
 
-    Argument: json string with keywords:
-
-    * ChannelId: index of channel to send
-    
-    * NSamples: number of samples to send, defaults to 1024
-    
-    * Timestamp - (int) Start time (frame number). To be changed in UTC time string.
-      Default "now" plus ``Seconds`` value
-
-    * Seconds - (float) : delay to wait after specified time
-
-  * *SendChannelisedDataNarrowband*: Send a continuous stream of samples for an 
-    individual frequency channel, with further reduced bandwidth and data rate. 
-    A digital downconverter is used to select the desired portion of the channelised 
-    data. The channel used and the DDC local oscillator value are selected by specifying
-    the desired sky frequency. The bandwidth is 1/128 of a coarse channel band (about 
-    7 kHz), with a sampling rate of 138.24 microseconds. 
-
-    Argument: json string with keywords:
-
-    * Frequency - (int) Sky frequency in Hz at band centre
-
-    * RoundBits - (int) Number of bits discarded in rounding
-
-    * NSamples -  (int) number of samples to send
-
-    * Timestamp - (int) Start time (frame number). To be changed in UTC time string.
-      Default "now" plus ``Seconds`` value
-
-    * Seconds - (float) : delay to wait after specified time
-
-
-  * *SendBeamData*: Send tile beamfomred samples
-
-    Argument: json string with keywords:
+    beam: Send tile beamformed samples, for all beamformed channels. 
 
   * *StopDataTransmission*: Stop transmission of continuous samples 
 
@@ -374,11 +332,11 @@ considering that only one transmission stream can be active at any time.
 
     Argument: json string with keywords:
 
-    * IntegrationTime - (float) Integration time in seconds, default = 0.5
+    * integration_time - (float) Integration time in seconds, default = 0.5
 
-    * FirstChannel - (int) First channel in spectrum, default = 0
+    * first_channel - (int) First channel in spectrum, default = 0
 
-    * LastChannel - (int) Last channel in spectrum, default = 511
+    * last_channel - (int) Last channel in spectrum, default = 511
 
   * *ConfigureIntegratedBeamData*: Configure the total power spectrometer for
     tile beamformed data. Spectrometer provides total power only for the
@@ -387,11 +345,11 @@ considering that only one transmission stream can be active at any time.
 
     Argument: json string with keywords:
 
-    * IntegrationTime - (float) Integration time in seconds, default = 0.5
+    * integration_time - (float) Integration time in seconds, default = 0.5
 
-    * FirstChannel - (int) First channel in spectrum, default = 0
+    * first_channel - (int) First channel in spectrum, default = 0
 
-    * LastChannel - (int) Last channel in spectrum, default = 191. Channel 
+    * last_channel - (int) Last channel in spectrum, default = 191. Channel 
       refers to odd and even channels processed in each FPGA, the total number
       of channels is twice this value. 
 
@@ -410,10 +368,13 @@ TPM data processing is highly configurable.
 
     Argument: json string with keywords:
 
-    * StartTime - (int) start acquisition time, in Unix seconds. Default "now"
-      plus *Delay* seconds.
+    * start_time - (int) start acquisition time, in Unix seconds. Default "now"
+      plus *delay* seconds.
 
-    * Delay - (int) delay start, in seconds. Default = 2
+    * delay - (int) delay start, in seconds. Default = 2
+
+  * *aduLevels*: (attribute) Attenuator setting for ADU inputs. One (int) value 
+    per input, range 0 to 31
 
   * *ConfigureTestGenerator*: Uses an internal test generator to generate 
     an artificial signal composed of white noise and up to 2 monochromatic tones. 
@@ -422,50 +383,48 @@ TPM data processing is highly configurable.
 
     Argument: json string with keywords:
 
-    * ToneFrequency: first tone frequency, in Hz. The frequency
+    * tone_frequency: first tone frequency, in Hz. The frequency
       is rounded to the resolution of the generator. If this
       is not specified, the tone generator is disabled.
 
-    * ToneAmplitude: peak tone amplitude, normalized to 31.875 ADC
+    * tone_amplitude: peak tone amplitude, normalized to 31.875 ADC
       units. The amplitude is rounded to 1/8 ADC unit. Default
       is 1.0. A value of -1.0 keeps the previously set value.
 
-    * Tone2Frequency: frequency for the second tone. Same
+    * tone_2_frequency: frequency for the second tone. Same
       as ToneFrequency.
 
-    * Tone2Amplitude: peak tone amplitude for the second tone.
+    * tone_2_amplitude: peak tone amplitude for the second tone.
       Same as ToneAmplitude.
 
-    * NoiseAmplitude: RMS amplitude of the pseudorandom Gaussian
+    * noise_amplitude: RMS amplitude of the pseudorandom Gaussian
       white noise, normalized to 26.03 ADC units.
 
-    * PulseFrequency: frequency of the periodic pulse. A code
+    * pulse_frequency: frequency of the periodic pulse. A code
       in the range 0 to 7, corresponding to (16, 12, 8, 6, 4, 3, 2)
       times the ADC frame frequency.
 
-    * PulseAmplitude: peak amplitude of the periodic pulse, normalized
+    * pulse_amplitude: peak amplitude of the periodic pulse, normalized
       to 127 ADC units. Default is 1.0. A value of -1.0 keeps the
       previously set value.
 
-    * SetTime: time at which the generator is set, for synchronization
-      among different TPMs.
+    * set_time: time at which the generator is set, for synchronization
+      among different TPMs. In UTC ISO format. Default: immediate load.
 
-    * AdcChannels: list of adc channels which will be substituted with
+    * adc_channels: list of adc channels which will be substituted with
       the generated signal. It is a 32 integer, with each bit representing
-      an input channel.
+      an input channel. Default: all if at least q source is specified, 
+      none otherwises.
 
-    * SetTime: time at which the generator is set. Integer, in timestamp frames. 
-      It is used to synchronise the generator across different tiles.
-      Default = 0, for immediate load. 
-
-  * *SetTimeDelays*: Introduces a fixed delay, as an integer number of samples, 
+  * *staticTimeDelays* (attribute): Introduces a fixed delay, as an integer number of samples, 
     in each signal. This is used to compensate for cable mismatches, and roughly 
     align the antenna signals for zenith. 
 
-    Argument: array of 32 float values, in samples (1.25 ns), range +/-123.
+    Argument: array of 32 float values, in nanoseconds. Rounded to nearest integer
+    sample (1.25 ns), range +/-154 ns. (123 samples).
     Positive delay adds delay to the signal stream
 
-  * *SetChanneliserTruncation*: Channeliser output is re-quantised to 12 bits, 
+  * *channeliserRounding* (attribute): Channeliser output is re-quantised to 12 bits, 
     to allow signal processing using small integer arithmetics. As the input 
     signal has a steep spectrum, it is necessary to equalise the frequency channels, 
     in order not to loose significance. Rescaling is performed by dropping 
@@ -473,18 +432,9 @@ TPM data processing is highly configurable.
     A truncation of 0 means just clipping the channelizer output (max. sensitivity),
     a truncation of 7 rescales the channelizer output by 1/128 (min. sensitivity). 
     A value of 4 is adequate for a flat input spectrum. 
-    Input is a bidimensional array, specified as a flattened string preceded by
-    the array dimensions: 
-
-    * argin[0] - is N, the number of input channels. 
-
-    * argin[1] - is M, the number of frequency channel. First 
-
-    * argin[2:] - is the data, with fast index for frequency channels and slow index 
-      for input channels. 
-
-    If N=M=1 then the single truncation value is applied to all inputs and all signals.
-    If N=1, M=512 the same rescaling curve is applied to all input channels. 
+    Input is a linear array of 512 elements, one per physical channel. The same value is
+    applied to the corresponding channel for all inputs. If only 
+    one value is specified, it is extended to 512 values (same value for all channels).
 
   * *SetBeamFormerRegions*: The beamformer selects portions of the observed spectrum 
     for processing. Each region must start on a even channel and is composed of 
@@ -518,6 +468,27 @@ TPM data processing is highly configurable.
     are defined here. This order is used for calibration coefficients, CSP rounding
     and in the total power integrator for *IntegratedBeamData* spectra.
 
+  * *beamformerTable*: (attribute) Shows the current status of the beamformer table. This
+    is a table with 7 entries for each group of 8 channels. It is returned as a linear
+    array of 336 integer values. Each group of 7 consecutive values represent: 
+
+    0. start_channel - (int) starting channel for the group
+
+    1. beam_index - (int) beam used for this region with range 0 to 47 (0 to 7 in 
+       current firmware).
+
+    2. subarray_id - (int) Subarray ID
+
+    3. subarray_logical_channel - (int) logical channel number in the subarray for the first
+       channel in the group
+
+    4. subarray_beam_id - (int) ID of the subarray beam
+
+    5. substation_id - (int) Substation ID. 
+
+    6. aperture_id:  ID of the aperture (TBD, e.g. station*100+substation)
+
+
   * *LoadCalibrationCoefficients*: Load the calibration coefficients table, but does not 
     apply them. The values are stored in a temporary table, which is activated
     atomically in the Tile hardware at the time specified by switch_calibration_bank.
@@ -542,22 +513,23 @@ TPM data processing is highly configurable.
     with each element representing a normalized coefficient, with (1.0, 0.0) being the
     normal, expected response for an ideal antenna.
 
-    Argument: numeric list comprises:
+    Argument: is a list with (8 * *number_of_channels* + 1) real values:
 
-    * antenna - (int) is the antenna to which the coefficients will be applied.
+    * argument[0]: antenna - (int) is the antenna to which the coefficients will be applied.
 
-    * calibration_coefficients - [array] a flattended bidimensional complex array 
+    * argument[1:N] calibration_coefficients - a flattened bidimensional complex array 
       of (8 * *number_of_channels*) real values.
 
-  * *SwitchCalibrationBank*: Activates the specified calibration values. Calibration 
+  * *ApplyCalibration*: Activates the specified calibration values. Calibration 
     values are stored in a dual bank table. One bank is active at any moment, 
     while the other can be modified using *LoadCalibrationCoefficients* command. 
     When all values have been loaded for all antennas and tiles, the banks can be 
     switched at a specific time, simultaneously for all tiles. 
-    Argument: load time (int, frame timestamp). Default is immediate (asynchronous 
+
+    Argument: load time (string, ISO formatted UTC). Null string is immediate (asynchronous 
     between tiles)
 
-  * *SetPointingDelay*: Pointing for each beam is set by specifying delays for each
+  * *LoadPointingDelays*: Pointing for each beam is set by specifying delays for each
     antenna. Delay applies to both polarizations. A delay rate can be specified, 
     in which case the delay starts at the initial value, at the time specified in 
     *LoadPointingDelay*, and varies linearly with time. Values are specified in a 
@@ -569,7 +541,7 @@ TPM data processing is highly configurable.
 
     argin[1...]: (delay, delay rate) values, in seconds and (seconds/second)
 
-  * *LoadPointingDelay*: Load the pointing delays at the specified time.
+  * *ApplyPointingDelays*: Load the pointing delays at the specified time.
     Argument: load time (int, frame timestamp). Default is immediate (asynchronous
     between tiles)
 
@@ -578,18 +550,41 @@ TPM data processing is highly configurable.
 
     Argument: json string with keywords:
 
-    * StartTime - (int) start time (int, frame timestamp). Default is immediate
+    * start_time - (int) start time (string, ISO formatted UTC). Default is immediate
 
-    * Duration - (int) if > 0 is duration in itimestamp frames (276.48 us). (Duration/8) 
+    * duration - (int) if > 0 is duration in itimestamp frames (276.48 us). (Duration/8) 
       SPEAD frames are sent to CSP for each beamformed channel. Default: -1, run forever
 
   * *StopBeamformer*: Stop the station beamformer. Immediate. 
 
-  * *SetCspRounding*: Beamformed samples are re-quantised to 8 bits to be sent to CSP. 
+  * *cspRounding*: (attribute) Beamformed samples are re-quantised to 8 bits to be sent to CSP. 
     As for the channeliser truncation, this is performed by discarding LS bits, rounding
-    and clipping the resulting value to 8 bits. Only a single value, for all channels, 
-    is available in the current firmware.
+    and clipping the resulting value to 8 bits. Array of integers, with one value per
+    beamformed channel. Only a single value, for all channels, 
+    is available in the current firmware (uses first element in array).
 
     Argument: Number of discarded bits: 0 (no rounding, maximum sensitivity) to 7 (rescaling
     samples by 1/128).
+
+Health monitoring
+=================
+
+
+The following attributes are used to monitor board health status. 
+
+  * *boardTemperature*: Temperature measured at mid-board, in degrees Celsius.
+
+  * *fpga1Temperature*: Temperature of the FPGA1 die, in degrees Celsius.
+
+  * *fpga2Temperature*: Temperature of the FPGA2 die, in degrees Celsius.
+
+  * *clockPresent*: Report if 10 MHz clock signal is present at the TPM input.
+
+  * *pllLocked*: Report if ADC clock PLL is in locked state.
+
+  * *ppsPresent*: Report if PPS signal is present at the TPM input.
+
+  * *sysrefPresent*: Report if SYSREF signal is present at the FPGA.
+
+  * *voltage*: Internal 5V power voltage, in volt.
 

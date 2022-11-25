@@ -766,11 +766,11 @@ class MccsSubrack(SKABaseDevice):
             :raises ValueError: if the JSON input lacks mandatory parameters
             """
             params = json.loads(argin)
-            fan_id = params.get("FanID", None)
-            speed_percent = params.get("SpeedPWN%", None)
+            fan_id = params.get("fan_id", None)
+            speed_percent = params.get("speed_percent", None)
             if fan_id or speed_percent is None:
                 self._component_manager.logger.error(
-                    "fan_ID and fan speed are mandatory parameters"
+                    "fan_ID and speed_percent are mandatory parameters"
                 )
                 raise ValueError("fan_ID and fan speed are mandatory parameters")
 
@@ -901,7 +901,7 @@ class MccsSubrack(SKABaseDevice):
             """
             params = json.loads(argin)
             power_supply_fan_id = params.get("power_supply_fan_id", None)
-            speed_percent = params.get("speed_%", None)
+            speed_percent = params.get("speed_percent", None)
             if power_supply_fan_id or speed_percent is None:
                 self._component_manager.logger.error(
                     "power_supply_fan_id and speed_percent are mandatory " "parameters"

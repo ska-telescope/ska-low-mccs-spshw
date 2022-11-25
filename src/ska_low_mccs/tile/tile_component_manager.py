@@ -91,18 +91,19 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
 
     __PASSTHROUGH = [
         "adc_rms",
-        "get_arp_table",
+        "apply_pointing_delays",
+        "arp_table",
+        "beamformer_table",
         "board_temperature",
-        "calculate_delay",
-        "check_pending_data_requests",
-        "compute_calibration_coefficients",
+        "channeliser_truncation",
+        "pending_data_requests",
+        "clock_present",
         "configure_40g_core",
         "configure_integrated_beam_data",
         "configure_integrated_channel_data",
         "configure_test_generator",
-        "cpld_flash_write",
+        "csp_rounding",
         "current_tile_beamformer_frame",
-        "current",
         "download_firmware",
         "erase_fpga",
         "firmware_available",
@@ -110,52 +111,45 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "firmware_version",
         "fpga1_temperature",
         "fpga2_temperature",
-        "fpgas_time",
-        "fpga_sync_time",
         "fpga_current_frame",
+        "fpgas_time",
+        "fpga_reference_time",
         "get_40g_configuration",
         "tpm_version",
         "initialise_beamformer",
         "initialise",
         "is_beamformer_running",
         "is_programmed",
-        "load_antenna_tapering",
-        "load_beam_angle",
         "load_calibration_coefficients",
-        "load_calibration_curve",
-        "load_pointing_delay",
+        "load_pointing_delays",
         "phase_terminal_count",
+        "pll_locked",
         "post_synchronisation",
         "pps_delay",
+        "pps_present",
+        "preadu_levels",
         "read_address",
         "read_register",
         "register_list",
-        "send_beam_data",
-        "send_channelised_data_continuous",
-        "send_channelised_data_narrowband",
-        "send_channelised_data",
-        "send_raw_data_synchronised",
-        "send_raw_data",
+        "send_data_samples",
         "set_beamformer_regions",
-        "set_channeliser_truncation",
-        "set_csp_rounding",
         "set_lmc_download",
         "set_lmc_integrated_download",
-        "set_pointing_delay",
-        "set_time_delays",
         "start_acquisition",
         "start_beamformer",
+        "static_delays",
         "station_id",
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
-        "switch_calibration_bank",
+        "apply_calibration",
         "sync_fpgas",
+        "sysref_present",
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
         "tpm_status",
-        "tweak_transceivers",
+        "tpm_version",
         "voltage",
         "write_address",
         "write_register",
@@ -519,7 +513,7 @@ class TileComponentManager(MccsComponentManager):
             logger,
         )
 
-        self._tile_time = TileTime()
+        self._tile_time = TileTime(0)
 
         super().__init__(
             logger,
@@ -835,7 +829,9 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA reference time
         """
-        reference_time = self.fpga_sync_time
+        reference_time = cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).fpga_reference_time
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_timestamp(reference_time)
 
@@ -850,24 +846,249 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA reference time
         """
-        self._tile_time.set_reference_time(self.fpga_sync_time)
+        reference_time = cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).fpga_reference_time
+        self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_frame(self.fpga_current_frame)
+
+    #
+    # Timed commands. Convert time to frame number
+    #
+    @check_communicating
+    def apply_calibration(
+        self: TileComponentManager, load_time: Optional[str] = ""
+    ) -> None:
+        """
+        Load the calibration coefficients at the specified time delay.
+
+        :param load_time: switch time as ISO formatted time
+
+        :raises ValueError: invalid time
+        """
+        if load_time == "":
+            load_frame = 0
+        elif type(load_time) == int:  # added for backward compatibility
+            load_frame = load_time
+        else:
+            load_frame = self._tile_time.frame_from_utc_time(load_time)
+            if load_frame < 0:
+                self.logger.error(f"apply_calibration: Invalid time {load_time}")
+                raise ValueError(f"Invalid time {load_time}")
+            if (load_frame - self.fpga_current_frame) < 20:
+                self.logger.error("apply_calibration: time not enough in the future")
+                raise ValueError("Time too early")
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).apply_calibration(load_frame)
+
+    @check_communicating
+    def apply_pointing_delays(
+        self: TileComponentManager, load_time: Optional[str] = ""
+    ) -> None:
+        """
+        Load the pointing delays at the specified time delay.
+
+        :param load_time: switch time as ISO formatted time
+
+        :raises ValueError: invalid time
+        """
+        if load_time == "":
+            load_frame = 0
+        elif type(load_time) == int:  # added for backward compatibility
+            load_frame = load_time
+        else:
+            load_frame = self._tile_time.frame_from_utc_time(load_time)
+            if load_frame < 0:
+                self.logger.error(f"apply_pointing_delays: Invalid time {load_time}")
+                raise ValueError(f"Invalid time {load_time}")
+            if (load_frame - self.fpga_current_frame) < 20:
+                self.logger.error(
+                    "apply_pointing_delays: time not enough in the future"
+                )
+                raise ValueError("Time too early")
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).apply_pointing_delays(load_frame)
+
+    @check_communicating
+    def start_beamformer(
+        self: TileComponentManager,
+        start_time: Optional[str] = None,
+        duration: Optional[int] = -1,
+        subarray_beam_id: Optional[int] = -1,
+        scan_id: Optional[int] = 0,
+    ) -> None:
+        """
+        Start beamforming on a specific subset of the beamformed channels.
+
+        Current firmware version does not support channel mask and scan ID,
+        these are ignored
+
+        :param start_time: Start time as ISO formatted time
+        :param duration: Scan duration, in frames, default "forever"
+        :param subarray_beam_id: Subarray beam ID of the channels to be started
+                Command affects only beamformed channels for given subarray ID
+                Default -1: all channels
+        :param scan_id: ID of the scan to be started. Default 0
+
+        :raises ValueError: invalid time specified
+        """
+        if start_time is None:
+            start_frame = 0
+        elif type(start_time) == int:  # added for backward compatibility
+            start_frame = start_time
+        else:
+            start_frame = self._tile_time.frame_from_utc_time(start_time)
+            if start_frame < 0:
+                self.logger.error(f"start_beamformer: Invalid time {start_time}")
+                raise ValueError(f"Invalid time {start_time}")
+            if (start_frame - self.fpga_current_frame) < 20:
+                self.logger.error("start_beamformer: time not enough in the future")
+                raise ValueError("Time too early")
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).start_beamformer(start_frame, duration, subarray_beam_id, scan_id)
+
+    @check_communicating
+    def configure_test_generator(
+        self: TileComponentManager,
+        frequency0: float,
+        amplitude0: float,
+        frequency1: float,
+        amplitude1: float,
+        amplitude_noise: float,
+        pulse_code: int,
+        amplitude_pulse: float,
+        load_time: str = None,
+    ) -> None:
+        """
+        Test generator setting.
+
+        :param frequency0: Tone frequency in Hz of DDC 0
+        :param amplitude0: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :param frequency1: Tone frequency in Hz of DDC 1
+        :param amplitude1: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :param amplitude_noise: Amplitude of pseudorandom noise
+            normalized to 26.03 ADC units, resolution 0.102 ADU
+        :param pulse_code: Code for pulse frequency.
+            Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :param amplitude_pulse: pulse peak amplitude, normalized
+            to 127.5 ADC units, resolution 0.5 ADU
+        :param load_time: Time to start the generator. in UTC ISO formatted string.
+
+        :raises ValueError: invalid time specified
+        """
+        if load_time is None:
+            load_frame = 0
+        else:
+            load_frame = self._tile_time.frame_from_utc_time(load_time)
+            if load_frame < 0:
+                self.logger.error("configure_test_generator: Invalid time")
+                raise ValueError("Invalid time")
+            if (load_frame - self.fpga_current_frame) < 20:
+                self.logger.error(
+                    "configure_test_generator: time not enough in the future"
+                )
+                raise ValueError("Time too early")
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).configure_test_generator(
+            frequency0,
+            amplitude0,
+            frequency1,
+            amplitude1,
+            amplitude_noise,
+            pulse_code,
+            amplitude_pulse,
+            load_frame,
+        )
+
+    @check_communicating
+    def send_data_samples(
+        self: TpmDriver,
+        data_type: str = "",
+        start_time: str = None,
+        seconds: float = 0.2,
+        n_samples: int = 1024,
+        sync: bool = False,
+        first_channel: int = 0,
+        last_channel: int = 512,
+        channel_id: int = 128,
+        frequency: float = 100.0,
+        round_bits: int = 3,
+        **params: Any,
+    ) -> None:
+        """
+        Front end for send_xxx_data methods.
+
+        :param data_type: sample type. "raw", "channel", "channel_continuous",
+                "narrowband", "beam"
+        :param start_time: UTC Time for start sending data. Default start now
+        :param seconds: Delay if timestamp is not specified. Default 0.2 seconds
+        :param n_samples: number of samples to send per packet
+        :param sync: (raw) send synchronised antenna samples, vs. round robin
+        :param first_channel: (channel) first channel to send, default 0
+        :param last_channel: (channel) last channel to send, default 511
+        :param channel_id: (channel_continuous) channel to send
+        :param frequency: (narrowband) Sky frequency for band centre, in Hz
+        :param round_bits: (narrowband) how many bits to round
+        :param params: any additional keyword arguments
+
+        :raises ValueError: error in time specification
+        """
+        self.logger.debug(f"send_data_samples: {params}")
+        # Check if another operation is pending. Wait at most 0.2 seconds
+        if self.pending_data_requests:
+            time.sleep(0.2)
+            if self.pending_data_requests:
+                self.logger.error("Another send operation is active")
+                raise ValueError("Cannot send data, another send operatin active")
+        # Check for type of data to be sent to LMC
+        if start_time is None:
+            timestamp = 0
+            seconds = params.get("seconds", 0.2)
+        elif self.fpga_reference_time == 0:
+            self.logger.error("Cannot send data, acquisition not started")
+            raise ValueError("Cannot send data, acquisition not started")
+        else:
+            timestamp = self._tile_time.frame_from_utc_time(start_time)
+            if timestamp < 0:
+                self.logger.error(f"Invalid time: {start_time}")
+                raise ValueError(f"Invalid time: {start_time}")
+            seconds = 0.0
+
+        cast(
+            SwitchingTpmComponentManager, self._tpm_component_manager
+        ).send_data_samples(
+            data_type,
+            timestamp,
+            seconds,
+            n_samples,
+            sync,
+            first_channel,
+            last_channel,
+            channel_id,
+            frequency,
+            round_bits,
+        )
 
     __PASSTHROUGH = [
         "adc_rms",
-        "get_arp_table",
+        "apply_pointing_delays",
+        "arp_table",
+        "beamformer_table",
         "board_temperature",
-        "calculate_delay",
-        "check_pending_data_requests",
-        "compute_calibration_coefficients",
+        "channeliser_truncation",
+        "pending_data_requests",
+        "clock_present",
         "configure_40g_core",
         "configure_integrated_beam_data",
         "configure_integrated_channel_data",
-        "configure_test_generator",
-        "cpld_flash_write",
+        "csp_rounding",
         "current_tile_beamformer_frame",
-        "current",
-        "download_firmware",
         "erase_fpga",
         "firmware_available",
         "firmware_name",
@@ -875,50 +1096,37 @@ class TileComponentManager(MccsComponentManager):
         "fpga1_temperature",
         "fpga2_temperature",
         "fpgas_time",
-        "fpga_sync_time",
         "fpga_current_frame",
         "get_40g_configuration",
         "hardware_version",
         "initialise_beamformer",
-        "initialise",
         "is_beamformer_running",
         "is_programmed",
-        "load_antenna_tapering",
-        "load_beam_angle",
         "load_calibration_coefficients",
-        "load_calibration_curve",
-        "load_pointing_delay",
+        "load_pointing_delays",
         "phase_terminal_count",
-        "post_synchronisation",
+        "pll_locked",
         "pps_delay",
+        "pps_present",
+        "preadu_levels",
         "read_address",
         "read_register",
         "register_list",
-        "send_beam_data",
-        "send_channelised_data_continuous",
-        "send_channelised_data_narrowband",
-        "send_channelised_data",
-        "send_raw_data_synchronised",
-        "send_raw_data",
+        # "send_data_samples",
         "set_beamformer_regions",
-        "set_channeliser_truncation",
-        "set_csp_rounding",
         "set_lmc_download",
         "set_lmc_integrated_download",
-        "set_pointing_delay",
-        "set_time_delays",
-        "start_acquisition",
-        "start_beamformer",
+        "static_delays",
         "station_id",
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
-        "switch_calibration_bank",
         "sync_fpgas",
+        "sysref_present",
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
-        "tweak_transceivers",
+        "tpm_status",
         "voltage",
         "write_address",
         "write_register",
@@ -988,6 +1196,9 @@ class TileComponentManager(MccsComponentManager):
         # This one-liner is only a method so that we can decorate it.
         setattr(self._tpm_component_manager, name, value)
 
+    #
+    # Long running commands
+    #
     @check_communicating
     def initialise(
         self: TileComponentManager, task_callback: Optional[Callable] = None
@@ -1107,60 +1318,6 @@ class TileComponentManager(MccsComponentManager):
             return
 
     @check_communicating
-    def get_arp_table(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the get arp_table slow task.
-
-        This method returns immediately after it is submitted for execution.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a task status and a unique id string to
-            identify the command
-        """
-        return self.submit_task(self._get_arp_table, task_callback=task_callback)
-
-    def _get_arp_table(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Get arp table using slow command.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-
-        :raises NotImplementedError: Command not implemented
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).get_arp_table()
-        except NotImplementedError:
-            raise NotImplementedError
-        except Exception as ex:
-            self.logger.error(f"error {ex}")
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            return
-
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result="Arp table task aborted"
-                )
-            return
-
-        if task_callback:
-            task_callback(status=TaskStatus.COMPLETED, result="Arp table has completed")
-            return
-
-    @check_communicating
     def start_acquisition(
         self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
@@ -1169,8 +1326,8 @@ class TileComponentManager(MccsComponentManager):
 
         :param argin: json dictionary with optional keywords
 
-        * StartTime - (int) start time
-        * Delay - (int) delay start
+        * start_time - (str) start time
+        * delay - (int) delay start
 
         :param task_callback: Update task state, defaults to None
 
@@ -1178,17 +1335,25 @@ class TileComponentManager(MccsComponentManager):
             identify the command
         """
         params = json.loads(argin)
-        start_time = params.get("StartTime", None)
-        delay = params.get("Delay", 2)
+        start_time = params.get("start_time", None)
+        if start_time is None:
+            start_frame = None
+            delay = params.get("delay", 2)
+        else:
+            start_frame = self._tile_time.timestamp_from_utc_time(start_time)
+            if start_frame < 0:
+                self.logger.error("Invalid time")
+            delay = 0
+
         return self.submit_task(
             self._start_acquisition,
-            args=[start_time, delay],
+            args=[start_frame, delay],
             task_callback=task_callback,
         )
 
     def _start_acquisition(
         self: TileComponentManager,
-        start_time: Optional[int] = None,
+        start_time: Optional[str] = None,
         delay: Optional[int] = 2,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -1226,6 +1391,7 @@ class TileComponentManager(MccsComponentManager):
 
         if task_callback:
             if success:
+                self._tile_time.set_reference_time(self.tile_reference_time)
                 task_callback(
                     status=TaskStatus.COMPLETED,
                     result="Start acquisition has completed",
@@ -1234,67 +1400,6 @@ class TileComponentManager(MccsComponentManager):
                 task_callback(
                     status=TaskStatus.FAILED, result="Start acquisition task failed"
                 )
-            return
-
-    @check_communicating
-    def cpld_flash_write(
-        self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the cpld_flash_write slow task.
-
-        This method returns immediately after it is submitted for execution.
-
-        :param argin: is the path to a file containing the required CPLD firmware
-        :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a task status and a unique id string to
-            identify the command
-        """
-        return self.submit_task(
-            self._cpld_flash_write, args=[argin], task_callback=task_callback
-        )
-
-    def _cpld_flash_write(
-        self: TileComponentManager,
-        bitfile: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Cpld flash write using slow command.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        :param bitfile: bitfile name
-
-        :raises NotImplementedError: Command not implemented
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).cpld_flash_write(bitfile)
-        except NotImplementedError:
-            raise NotImplementedError
-        except Exception as ex:
-            self.logger.error(f"error {ex}")
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            return
-
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result="Cpld flash write task aborted"
-                )
-            return
-
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="Cpld flash write has completed"
-            )
             return
 
     @check_communicating
@@ -1351,62 +1456,6 @@ class TileComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED, result="Post synchronisation has completed"
-            )
-            return
-
-    @check_communicating
-    def sync_fpgas(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the sync_fpgas slow task.
-
-        This method returns immediately after it is submitted for execution.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a task status and a unique id string to
-            identify the command
-        """
-        return self.submit_task(self._sync_fpgas, task_callback=task_callback)
-
-    def _sync_fpgas(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Fpgas synchronization using slow command.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-
-        :raises NotImplementedError: Command not implemented
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            cast(SwitchingTpmComponentManager, self._tpm_component_manager).sync_fpgas()
-        except NotImplementedError:
-            raise NotImplementedError
-        except Exception as ex:
-            self.logger.error(f"error {ex}")
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            return
-
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED,
-                    result="Fpgas synchronization task aborted",
-                )
-            return
-
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Fpgas synchronization has completed",
             )
             return
 

@@ -1833,14 +1833,14 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-        * start_channel - (int) start channel of the observed region
-                        default = 192 (150 MHz)
-        * n_channels - (int) is the number of channels in the observed region
-                        default = 8 (6.25 MHz)
-        * is_first - (bool) specifies whether the tile is the first one in the station
-                        default False
-        * is_last - (bool) specifies whether the tile is the last one in the station
-                        default False
+            * start_channel - (int) start channel of the observed region
+              default = 192 (150 MHz)
+            * n_channels - (int) is the number of channels in the observed region
+              default = 8 (6.25 MHz)
+            * is_first - (bool) specifies whether the tile is the first one in the station
+              default False
+            * is_last - (bool) specifies whether the tile is the last one in the station
+              default False
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

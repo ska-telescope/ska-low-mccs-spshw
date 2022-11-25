@@ -517,7 +517,7 @@ TPM data processing is highly configurable.
 
     * argument[0]: antenna - (int) is the antenna to which the coefficients will be applied.
 
-    * argument[1:N] calibration_coefficients - a flattended bidimensional complex array 
+    * argument[1:N] calibration_coefficients - a flattened bidimensional complex array 
       of (8 * *number_of_channels*) real values.
 
   * *ApplyCalibration*: Activates the specified calibration values. Calibration 

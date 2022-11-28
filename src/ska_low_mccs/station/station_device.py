@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import functools
 from typing import Any, Optional, cast
+import json
+import requests
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
@@ -112,7 +114,7 @@ class MccsStation(SKAObsDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("Configure", "configure"),
+            ("ConfigureChildren", "configure_children"),
             ("ApplyPointing", "apply_pointing"),
         ]:
             self.register_command_object(
@@ -329,6 +331,26 @@ class MccsStation(SKAObsDevice):
             self._health_state = health
             self.push_change_event("healthState", health)
 
+    def _configure_station(self: MccsStation, config: dict) -> None:
+        """
+        Configure the station attributes
+
+        :param config: the configuration settings for this station.
+        """
+        self._subarray_id = config.get("subarray_id", self._subarray_id)
+        self._refLatitude = config.get("refLatitude", self._refLatitude),
+        self._refLongitude = config.get("refLongitude", self._refLongitude),
+        self._refHeight = config.get("refHeight", self._refHeight),
+        self._beam_fqdns = config.get("beam_fqdns", self._beam_fqdns),
+        self._transient_buffer_fqdn = config.get("transient_buffer_fqdn", self._transient_buffer_fqdn),
+        self._delay_centre = config.get("delay_centre", self._delay_centre),
+        self._calibration_coefficients = config.get("calibration_coefficients", self._calibration_coefficients),
+        self._is_calibrated = config.get("is_calibrated", self._is_calibrated),
+        self._calibration_job_id = config.get("calibration_job_id", self._calibration_job_id),
+        self._daq_job_id = config.get("daq_job_id", self._daq_job_id),
+        self._data_directory = config.get("data_directory", self._data_directory),
+
+
     # ----------
     # Attributes
     # ----------
@@ -507,7 +529,8 @@ class MccsStation(SKAObsDevice):
     )
     def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
         """
-        Configure the station with all relevant parameters.
+        Configure the station with all relevant parameters. Also configures
+        children device that are connected to the station.
 
         :param argin: Configuration parameters encoded in a json string
 
@@ -516,11 +539,20 @@ class MccsStation(SKAObsDevice):
             information purpose only.
 
         :example:
-            >>> dp = tango.DeviceProxy("mccs/station/001")
-            >>> dp.command_inout("Configure", json_str)
+            >>> import requests
+            >>> geo_json_data = requests.get('localhost/station_data').text
+            >>> dp = tango.DeviceProxy("mccs/station/1")
+            >>> configured_data = dp.ConvertData(geo_json_data)
+            >>> dp.command_inout("Configure", configured_data)
         """
-        handler = self.get_command_object("Configure")
-        (return_code, message) = handler(argin)
+        configuration = json.loads(argin)
+        station_config = configuration.get('station')
+
+        self._configure_station(station_config)
+
+        # Configure the station device, pass the message to the component manager that configures the rest
+        handler = self.get_command_object("ConfigureChildren")
+        (return_code, message) = handler(configuration)
         return ([return_code], [message])
 
     @command(

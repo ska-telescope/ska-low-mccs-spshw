@@ -143,6 +143,7 @@ class MccsTile(SKABaseDevice):
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
             ("StartAcquisition", "start_acquisition"),
+            ("Configure", "configure"),
         ]:
             self.register_command_object(
                 command_name,
@@ -860,6 +861,26 @@ class MccsTile(SKABaseDevice):
     # # --------
     # # Commands
     # # --------
+
+    @command(dtype_in="DevString")
+    def Configure(self: MccsTile, argin: str) -> None:
+        """
+        Configure the tile device attributes.
+
+        :param argin: the configuration for the device in stringified json format
+        """
+        config = json.loads(argin)
+
+        def apply_if_valid(attribute_name: str, expected_type: type) -> Optional[type]:
+            value = config.get(attribute_name)
+            if isinstance(value, expected_type):
+                return value
+
+        self._csp_destination_ip = apply_if_valid("csp_destination_ip", str) or self._csp_destination_ip
+        self._csp_destination_mac = apply_if_valid("csp_destination_mac", str) or self._csp_destination_mac
+        self._csp_destination_port = apply_if_valid("csp_destination_port", int) or self._csp_destination_port
+        self._antenna_ids = apply_if_valid("antenna_ids", list) or self._antenna_ids
+
 
     @command(dtype_out="DevVarLongStringArray")
     def Initialise(self: MccsTile) -> DevVarLongStringArrayType:

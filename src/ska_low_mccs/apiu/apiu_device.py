@@ -12,6 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 import logging
 import threading
 from typing import Any, Optional, cast
+import json
 
 import tango
 from ska_control_model import (
@@ -112,6 +113,7 @@ class MccsAPIU(SKABaseDevice):
             ("PowerDownAntenna", "power_down_antenna"),
             ("PowerUp", "power_up"),
             ("PowerDown", "power_down"),
+            ("Configure", "configure"),
         ]:
             self.register_command_object(
                 command_name,
@@ -429,6 +431,24 @@ class MccsAPIU(SKABaseDevice):
         handler = self.get_command_object("PowerUpAntenna")
         result_code, message = handler(argin)
         return ([result_code], [message])
+
+    @command(dtype_in="DevString")
+    def Configure(self: MccsAPIU, argin: str) -> None:
+        """
+        Configure the apiu device attributes.
+
+        :param argin: the configuration for the device in stringified json format
+        """
+        config = json.loads(argin)
+
+        def apply_if_valid(attribute_name: str, expected_type: type) -> Optional[type]:
+            value = config.get(attribute_name)
+            if isinstance(value, expected_type):
+                return value
+
+        self._overCurrentThreshold = apply_if_valid("overCurrentThreshold", float) or self._overCurrentThreshold
+        self._overVoltageThreshold = apply_if_valid("overVoltageThreshold", float) or self._overVoltageThreshold
+        self._humidityThreshold = apply_if_valid("humidityThreshold", float) or self._humidityThreshold
 
     @command(
         dtype_in="DevULong",

@@ -68,6 +68,113 @@ class TestMccsTile:
     The Tile device represents the TANGO interface to a Tile (TPM) unit.
     """
 
+
+
+    @pytest.mark.parametrize(
+        "config_in, expected_config", [
+            pytest.param(
+                {
+                    "csp_destination_ip": "0.1.2.3",
+                    "csp_destination_mac": "00:11:22:33:44:55",
+                    "csp_destination_port": 80,
+                    "antenna_ids": [1, 2]
+                },
+                {
+                    "csp_destination_ip": "0.1.2.3",
+                    "csp_destination_mac": "00:11:22:33:44:55",
+                    "csp_destination_port": 80,
+                    "antenna_ids": [1, 2]
+                },
+                id="valid config is entered correctly"
+            ),
+            pytest.param(
+                {
+                    "csp_destination_ip": "0.1.2.3",
+                    "csp_destination_port": 80
+                },
+                {
+                    "csp_destination_ip": "0.1.2.3",
+                    "csp_destination_mac": "",
+                    "csp_destination_port": 80,
+                    "antenna_ids": []
+                },
+                id="missing config data is valid"
+            ),
+            pytest.param(
+                {
+                    "csp_destination_ip_wrong_name": "0.1.2.3",
+                    "csp_destination_mac": "00:11:22:33:44:55",
+                    "csp_destination_port": 80
+                },
+                {
+                    "csp_destination_ip": "",
+                    "csp_destination_mac": "00:11:22:33:44:55",
+                    "csp_destination_port": 80,
+                    "antenna_ids": []
+                },
+                id="invalid named configs are skipped"
+            ),
+            pytest.param(
+                {
+                    "csp_destination_ip": 80,
+                    "csp_destination_mac": "00:11:22:33:44:55",
+                    "csp_destination_port": "80"
+                },
+                {
+                    "csp_destination_ip": "",
+                    "csp_destination_mac": "00:11:22:33:44:55",
+                    "csp_destination_port": 0,
+                    "antenna_ids": []
+                },
+                id="invalid types dont apply"
+            ),
+            pytest.param(
+                {
+                },
+                {
+                    "csp_destination_ip": "",
+                    "csp_destination_mac": "",
+                    "csp_destination_port": 0,
+                    "antenna_ids": []
+                },
+                id="empty dict is no op"
+            ),
+        ]
+    )
+    def test_Configure(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        config_in: dict,
+        expected_config: dict,
+    ) -> None:
+        """
+        Test for Configure.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the device
+        """
+        tile_device.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
+        assert tile_device.adminMode == AdminMode.ONLINE
+
+        tile_device.Configure(json.dumps(config_in))
+
+        assert tile_device.cspDestinationIp == expected_config["csp_destination_ip"]
+        assert tile_device.cspDestinationMac == expected_config["csp_destination_mac"]
+        assert tile_device.cspDestinationPort == expected_config["csp_destination_port"]
+        assert list(tile_device.antennaIds) == expected_config["antenna_ids"]
+
     def test_healthState(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,

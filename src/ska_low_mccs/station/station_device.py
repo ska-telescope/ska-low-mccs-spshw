@@ -12,7 +12,6 @@ from __future__ import annotations
 import functools
 from typing import Any, Optional, cast
 import json
-import requests
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
@@ -64,6 +63,17 @@ class MccsStation(SKAObsDevice):
         self.component_manager: StationComponentManager
         self._delay_centre: list[float]
         self._obs_state_model: StationObsStateModel
+        self._subarray_id: int
+        self._refLatitude: float
+        self._refLongitude: float
+        self._refHeight: float
+        self._beam_fqdns: list[str]
+        self._transient_buffer_fqdn: str
+        self._calibration_coefficients: list[float]
+        self._is_calibrated: bool
+        self._calibration_job_id: int
+        self._daq_job_id: int
+        self._data_directory: str
 
     def init_device(self: MccsStation) -> None:
         """
@@ -337,18 +347,31 @@ class MccsStation(SKAObsDevice):
 
         :param config: the configuration settings for this station.
         """
-        self._subarray_id = config.get("subarray_id", self._subarray_id)
-        self._refLatitude = config.get("refLatitude", self._refLatitude),
-        self._refLongitude = config.get("refLongitude", self._refLongitude),
-        self._refHeight = config.get("refHeight", self._refHeight),
-        self._beam_fqdns = config.get("beam_fqdns", self._beam_fqdns),
-        self._transient_buffer_fqdn = config.get("transient_buffer_fqdn", self._transient_buffer_fqdn),
-        self._delay_centre = config.get("delay_centre", self._delay_centre),
-        self._calibration_coefficients = config.get("calibration_coefficients", self._calibration_coefficients),
-        self._is_calibrated = config.get("is_calibrated", self._is_calibrated),
-        self._calibration_job_id = config.get("calibration_job_id", self._calibration_job_id),
-        self._daq_job_id = config.get("daq_job_id", self._daq_job_id),
-        self._data_directory = config.get("data_directory", self._data_directory),
+
+        def apply_if_valid(attribute_name: str, default: Any) -> Optional[type]:
+            value = config.get(attribute_name)
+            if isinstance(value, type(default)):
+                return value
+            return default
+
+        self._subarray_id = apply_if_valid("subarray_id", self._subarray_id)
+        self._refLatitude = apply_if_valid("refLatitude", self._refLatitude)
+        self._refLongitude = apply_if_valid("refLongitude", self._refLongitude)
+        self._refHeight = apply_if_valid("refHeight", self._refHeight)
+        self._beam_fqdns = apply_if_valid("beam_fqdns", self._beam_fqdns)
+        self._transient_buffer_fqdn = apply_if_valid(
+            "transient_buffer_fqdn",
+            self._transient_buffer_fqdn
+        )
+        self._delay_centre = apply_if_valid("delay_centre", self._delay_centre)
+        self._calibration_coefficients = apply_if_valid(
+            "calibration_coefficients",
+            self._calibration_coefficients
+        )
+        self._is_calibrated = apply_if_valid("is_calibrated", self._is_calibrated)
+        self._calibration_job_id = apply_if_valid("calibration_job_id", self._calibration_job_id)
+        self._daq_job_id = apply_if_valid("daq_job_id", self._daq_job_id)
+        self._data_directory = apply_if_valid("data_directory", self._data_directory)
 
 
     # ----------
@@ -550,7 +573,8 @@ class MccsStation(SKAObsDevice):
 
         self._configure_station(station_config)
 
-        # Configure the station device, pass the message to the component manager that configures the rest
+        # Configure the station device, pass the message to
+        # the component manager that configures the rest
         handler = self.get_command_object("ConfigureChildren")
         (return_code, message) = handler(configuration)
         return ([return_code], [message])

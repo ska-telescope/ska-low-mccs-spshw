@@ -30,6 +30,7 @@ __all__ = ["StationComponentManager"]
 class _ApiuProxy(DeviceComponentManager):
     """A proxy to a APIU device, for a station to use."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _ApiuProxy,
         fqdn: str,
@@ -39,7 +40,8 @@ class _ApiuProxy(DeviceComponentManager):
         component_state_changed_callback: Callable[[dict[str, Any]], None]
     ) -> None:
         super().__init__(
-            fqdn, logger,
+            fqdn,
+            logger,
             max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
@@ -47,12 +49,18 @@ class _ApiuProxy(DeviceComponentManager):
 
     @check_communicating
     def configure(self: _ApiuProxy, config: str):
+        """
+        Configure the device proxy.
+
+        param: config: json string of configuration.
+        """
         self._proxy._device.Configure(config)
 
 
 class _AntennaProxy(DeviceComponentManager):
     """A proxy to a antenna device, for a station to use."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _AntennaProxy,
         fqdn: str,
@@ -62,7 +70,8 @@ class _AntennaProxy(DeviceComponentManager):
         component_state_changed_callback: Callable[[dict[str, Any]], None]
     ) -> None:
         super().__init__(
-            fqdn, logger,
+            fqdn,
+            logger,
             max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
@@ -70,6 +79,11 @@ class _AntennaProxy(DeviceComponentManager):
 
     @check_communicating
     def configure(self: _AntennaProxy, config: str):
+        """
+        Configure the device proxy.
+
+        param: config: json string of configuration.
+        """
         self._proxy.connect()
         self._proxy._device.Configure(config)
 
@@ -151,6 +165,11 @@ class _TileProxy(DeviceComponentManager):
 
     @check_communicating
     def configure(self: _AntennaProxy, config: str):
+        """
+        Configure the device proxy.
+
+        param: config: json string of configuration.
+        """
         self._proxy.connect()
         self._proxy._device.Configure(config)
 
@@ -648,7 +667,7 @@ class StationComponentManager(MccsComponentManager):
         """
         Configure the stations children.
 
-        This sends off configuration commands to all of the devices that 
+        This sends off configuration commands to all of the devices that
         this station manages.
 
         :param station_id: the id of the station for which the provided

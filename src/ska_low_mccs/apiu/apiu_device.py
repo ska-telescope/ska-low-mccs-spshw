@@ -441,14 +441,21 @@ class MccsAPIU(SKABaseDevice):
         """
         config = json.loads(argin)
 
-        def apply_if_valid(attribute_name: str, expected_type: type) -> Optional[type]:
+        def apply_if_valid(attribute_name: str, default: Any) -> Optional[type]:
             value = config.get(attribute_name)
-            if isinstance(value, expected_type):
+            if isinstance(value, type(default)):
                 return value
+            return default
 
-        self._overCurrentThreshold = apply_if_valid("overCurrentThreshold", float) or self._overCurrentThreshold
-        self._overVoltageThreshold = apply_if_valid("overVoltageThreshold", float) or self._overVoltageThreshold
-        self._humidityThreshold = apply_if_valid("humidityThreshold", float) or self._humidityThreshold
+        self._overCurrentThreshold = apply_if_valid(
+            "overCurrentThreshold",
+            self._overCurrentThreshold
+        )
+        self._overVoltageThreshold = apply_if_valid(
+            "overVoltageThreshold",
+             self._overVoltageThreshold
+        )
+        self._humidityThreshold = apply_if_valid("humidityThreshold", self._humidityThreshold)
 
     @command(
         dtype_in="DevULong",

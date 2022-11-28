@@ -64,6 +64,30 @@ class MccsAntenna(SKABaseDevice):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: AntennaHealthModel
         self.component_manager: AntennaComponentManager
+        self._antennaId:int
+        self._gain: float
+        self._rms: float
+        self._xPolarisationFaulty: bool
+        self._yPolarisationFaulty: bool
+        self._xDisplacement: float
+        self._yDisplacement: float
+        self._zDisplacement: float
+        self._timestampOfLastSpectrum: str
+        self._logicalAntennaId: int
+        self._xPolarisationScalingFactor: list[int]
+        self._yPolarisationScalingFactor: list[int]
+        self._calibrationCoefficient: list[float]
+        self._pointingCoefficient: list[float]
+        self._spectrumX: list[float]
+        self._spectrumY: list[float]
+        self._position: list[float]
+        self._delays: list[float]
+        self._delayRates: list[float]
+        self._bandpassCoefficient: list[float]
+        self._first: bool
+        self._altitude: float
+        self._fieldNodeLatitude: float
+        self._fieldNodeLongitude: float
 
     def init_device(self: MccsAntenna) -> None:
         """
@@ -623,35 +647,60 @@ class MccsAntenna(SKABaseDevice):
         """
         config = json.loads(argin)
 
-        def apply_if_valid(attribute_name: str, expected_type: type) -> Optional[type]:
+        def apply_if_valid(attribute_name: str, default: Any) -> Optional[type]:
             value = config.get(attribute_name)
-            if isinstance(value, expected_type):
+            if isinstance(value, type(default)):
                 return value
+            return default
 
-        self._antennaId = apply_if_valid("antennaId", int) or self._antennaId
-        self._gain = apply_if_valid("gain", float) or self._gain
-        self._rms = apply_if_valid("rms", float) or self._rms
-        self._xPolarisationFaulty = apply_if_valid("xPolarisationFaulty", bool) or self._xPolarisationFaulty
-        self._yPolarisationFaulty = apply_if_valid("yPolarisationFaulty", bool) or self._yPolarisationFaulty
-        self._xDisplacement = apply_if_valid("xDisplacement", float) or self._xDisplacement
-        self._yDisplacement = apply_if_valid("yDisplacement", float) or self._yDisplacement
-        self._zDisplacement = apply_if_valid("zDisplacement", float) or self._zDisplacement
-        self._timestampOfLastSpectrum = apply_if_valid("timestampOfLastSpectrum", str) or self._timestampOfLastSpectrum
-        self._logicalAntennaId = apply_if_valid("logicalAntennaId", int) or self._logicalAntennaId
-        self._xPolarisationScalingFactor = apply_if_valid("xPolarisationScalingFactor", list) or self._xPolarisationScalingFactor
-        self._yPolarisationScalingFactor = apply_if_valid("yPolarisationScalingFactor", list) or self._yPolarisationScalingFactor
-        self._calibrationCoefficient = apply_if_valid("calibrationCoefficient", list) or self._calibrationCoefficient
-        self._pointingCoefficient = apply_if_valid("pointingCoefficient", list) or self._pointingCoefficient
-        self._spectrumX = apply_if_valid("spectrumX", list) or self._spectrumX
-        self._spectrumY = apply_if_valid("spectrumY", list) or self._spectrumY
-        self._position = apply_if_valid("position", list) or self._position
-        self._delays = apply_if_valid("delays", list) or self._delays
-        self._delayRates = apply_if_valid("delayRates", list) or self._delayRates
-        self._bandpassCoefficient = apply_if_valid("bandpassCoefficient", list) or self._bandpassCoefficient
-        self._first = apply_if_valid("first", bool) or self._first
-        self._altitude = apply_if_valid("altitude", float) or self._altitude
-        self._fieldNodeLatitude = apply_if_valid("fieldNodeLatitude", float) or self._fieldNodeLatitude
-        self._fieldNodeLongitude = apply_if_valid("fieldNodeLongitude", float) or self._fieldNodeLongitude
+        self._antennaId = apply_if_valid("antennaId", self._antennaId)
+        self._gain = apply_if_valid("gain", self._gain)
+        self._rms = apply_if_valid("rms", self._rms)
+        self._xPolarisationFaulty = apply_if_valid(
+            "xPolarisationFaulty",
+            self._xPolarisationFaulty
+        )
+        self._yPolarisationFaulty = apply_if_valid(
+            "yPolarisationFaulty",
+            self._yPolarisationFaulty
+        )
+        self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
+        self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
+        self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
+        self._timestampOfLastSpectrum = apply_if_valid(
+            "timestampOfLastSpectrum",
+            self._timestampOfLastSpectrum
+        )
+        self._logicalAntennaId = apply_if_valid("logicalAntennaId", self._logicalAntennaId)
+        self._xPolarisationScalingFactor = apply_if_valid(
+            "xPolarisationScalingFactor",
+            self._xPolarisationScalingFactor
+        )
+        self._yPolarisationScalingFactor = apply_if_valid(
+            "yPolarisationScalingFactor",
+            self._yPolarisationScalingFactor
+        )
+        self._calibrationCoefficient = apply_if_valid(
+            "calibrationCoefficient",
+            self._calibrationCoefficient
+        )
+        self._pointingCoefficient = apply_if_valid(
+            "pointingCoefficient",
+            self._pointingCoefficient
+        )
+        self._spectrumX = apply_if_valid("spectrumX", self._spectrumX)
+        self._spectrumY = apply_if_valid("spectrumY", self._spectrumY)
+        self._position = apply_if_valid("position", self._position)
+        self._delays = apply_if_valid("delays", self._delays)
+        self._delayRates = apply_if_valid("delayRates", self._delayRates)
+        self._bandpassCoefficient = apply_if_valid(
+            "bandpassCoefficient",
+            self._bandpassCoefficient
+        )
+        self._first = apply_if_valid("first", self._first)
+        self._altitude = apply_if_valid("altitude", self._altitude)
+        self._fieldNodeLatitude = apply_if_valid("fieldNodeLatitude", self._fieldNodeLatitude)
+        self._fieldNodeLongitude = apply_if_valid("fieldNodeLongitude", self._fieldNodeLongitude)
 
 # ----------
 # Run server

@@ -876,11 +876,16 @@ class MccsTile(SKABaseDevice):
             if isinstance(value, expected_type):
                 return value
 
-        self._csp_destination_ip = apply_if_valid("csp_destination_ip", str) or self._csp_destination_ip
-        self._csp_destination_mac = apply_if_valid("csp_destination_mac", str) or self._csp_destination_mac
-        self._csp_destination_port = apply_if_valid("csp_destination_port", int) or self._csp_destination_port
+        self._csp_destination_ip = (
+            apply_if_valid("csp_destination_ip", str) or self._csp_destination_ip
+        )
+        self._csp_destination_mac = (
+            apply_if_valid("csp_destination_mac", str) or self._csp_destination_mac
+        )
+        self._csp_destination_port = (
+            apply_if_valid("csp_destination_port", int) or self._csp_destination_port
+        )
         self._antenna_ids = apply_if_valid("antenna_ids", list) or self._antenna_ids
-
 
     @command(dtype_out="DevVarLongStringArray")
     def Initialise(self: MccsTile) -> DevVarLongStringArrayType:

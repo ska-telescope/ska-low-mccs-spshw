@@ -68,78 +68,73 @@ class TestMccsTile:
     The Tile device represents the TANGO interface to a Tile (TPM) unit.
     """
 
-
-
     @pytest.mark.parametrize(
-        "config_in, expected_config", [
+        "config_in, expected_config",
+        [
             pytest.param(
                 {
                     "csp_destination_ip": "0.1.2.3",
                     "csp_destination_mac": "00:11:22:33:44:55",
                     "csp_destination_port": 80,
-                    "antenna_ids": [1, 2]
+                    "antenna_ids": [1, 2],
                 },
                 {
                     "csp_destination_ip": "0.1.2.3",
                     "csp_destination_mac": "00:11:22:33:44:55",
                     "csp_destination_port": 80,
-                    "antenna_ids": [1, 2]
+                    "antenna_ids": [1, 2],
                 },
-                id="valid config is entered correctly"
+                id="valid config is entered correctly",
             ),
             pytest.param(
-                {
-                    "csp_destination_ip": "0.1.2.3",
-                    "csp_destination_port": 80
-                },
+                {"csp_destination_ip": "0.1.2.3", "csp_destination_port": 80},
                 {
                     "csp_destination_ip": "0.1.2.3",
                     "csp_destination_mac": "",
                     "csp_destination_port": 80,
-                    "antenna_ids": []
+                    "antenna_ids": [],
                 },
-                id="missing config data is valid"
+                id="missing config data is valid",
             ),
             pytest.param(
                 {
                     "csp_destination_ip_wrong_name": "0.1.2.3",
                     "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": 80
+                    "csp_destination_port": 80,
                 },
                 {
                     "csp_destination_ip": "",
                     "csp_destination_mac": "00:11:22:33:44:55",
                     "csp_destination_port": 80,
-                    "antenna_ids": []
+                    "antenna_ids": [],
                 },
-                id="invalid named configs are skipped"
+                id="invalid named configs are skipped",
             ),
             pytest.param(
                 {
                     "csp_destination_ip": 80,
                     "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": "80"
+                    "csp_destination_port": "80",
                 },
                 {
                     "csp_destination_ip": "",
                     "csp_destination_mac": "00:11:22:33:44:55",
                     "csp_destination_port": 0,
-                    "antenna_ids": []
+                    "antenna_ids": [],
                 },
-                id="invalid types dont apply"
+                id="invalid types dont apply",
             ),
             pytest.param(
-                {
-                },
+                {},
                 {
                     "csp_destination_ip": "",
                     "csp_destination_mac": "",
                     "csp_destination_port": 0,
-                    "antenna_ids": []
+                    "antenna_ids": [],
                 },
-                id="empty dict is no op"
+                id="empty dict is no op",
             ),
-        ]
+        ],
     )
     def test_Configure(
         self: TestMccsTile,

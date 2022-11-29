@@ -10,8 +10,8 @@
 """This module contains the tests for the MccsAntenna."""
 from __future__ import annotations
 
-import time
 import json
+import time
 
 import pytest
 import tango
@@ -68,9 +68,9 @@ class TestMccsAntenna:
         """
         return tango_harness.get_device("low-mccs/antenna/000001")
 
-
     @pytest.mark.parametrize(
-        "config_in, expected_config", [
+        "config_in, expected_config",
+        [
             pytest.param(
                 {
                     "antennaId": 1,
@@ -96,7 +96,7 @@ class TestMccsAntenna:
                     "first": True,
                     "altitude": 0.5,
                     "fieldNodeLatitude": 0.5,
-                    "fieldNodeLongitude": 0.5
+                    "fieldNodeLongitude": 0.5,
                 },
                 {
                     "antennaId": 1,
@@ -122,9 +122,9 @@ class TestMccsAntenna:
                     "first": True,
                     "altitude": 0.5,
                     "fieldNodeLatitude": 0.5,
-                    "fieldNodeLongitude": 0.5
+                    "fieldNodeLongitude": 0.5,
                 },
-                id="valid config is entered correctly"
+                id="valid config is entered correctly",
             ),
             pytest.param(
                 {
@@ -156,14 +156,12 @@ class TestMccsAntenna:
                     "first": True,
                     "altitude": 0.0,
                     "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0
+                    "fieldNodeLongitude": 0.0,
                 },
-                id="missing config data is valid"
+                id="missing config data is valid",
             ),
             pytest.param(
-                {
-                    "stupid_antennaId": 1
-                },
+                {"stupid_antennaId": 1},
                 {
                     "antennaId": 0,
                     "gain": 0.0,
@@ -188,15 +186,12 @@ class TestMccsAntenna:
                     "first": True,
                     "altitude": 0.0,
                     "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0
+                    "fieldNodeLongitude": 0.0,
                 },
-                id="invalid named configs are skipped"
+                id="invalid named configs are skipped",
             ),
             pytest.param(
-                {
-                    "gain": "some string",
-                    "timestampOfLastSpectrum": [0, 2]
-                },
+                {"gain": "some string", "timestampOfLastSpectrum": [0, 2]},
                 {
                     "antennaId": 0,
                     "gain": 0.0,
@@ -221,13 +216,12 @@ class TestMccsAntenna:
                     "first": True,
                     "altitude": 0.0,
                     "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0
+                    "fieldNodeLongitude": 0.0,
                 },
-                id="invalid types dont apply"
+                id="invalid types dont apply",
             ),
             pytest.param(
-                {
-                },
+                {},
                 {
                     "antennaId": 0,
                     "gain": 0.0,
@@ -252,11 +246,11 @@ class TestMccsAntenna:
                     "first": True,
                     "altitude": 0.0,
                     "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0
+                    "fieldNodeLongitude": 0.0,
                 },
-                id="empty dict is no op"
+                id="empty dict is no op",
             ),
-        ]
+        ],
     )
     def test_Configure(
         self: TestMccsAntenna,
@@ -290,28 +284,56 @@ class TestMccsAntenna:
         assert device_under_test.antennaId == expected_config["antennaId"]
         assert device_under_test.gain == expected_config["gain"]
         assert device_under_test.rms == expected_config["rms"]
-        assert device_under_test.xPolarisationFaulty == expected_config["xPolarisationFaulty"]
-        assert device_under_test.yPolarisationFaulty == expected_config["yPolarisationFaulty"]
+        assert (
+            device_under_test.xPolarisationFaulty
+            == expected_config["xPolarisationFaulty"]
+        )
+        assert (
+            device_under_test.yPolarisationFaulty
+            == expected_config["yPolarisationFaulty"]
+        )
         assert device_under_test.xDisplacement == expected_config["xDisplacement"]
         assert device_under_test.yDisplacement == expected_config["yDisplacement"]
         assert device_under_test.zDisplacement == expected_config["zDisplacement"]
-        assert device_under_test.timestampOfLastSpectrum == expected_config["timestampOfLastSpectrum"]
+        assert (
+            device_under_test.timestampOfLastSpectrum
+            == expected_config["timestampOfLastSpectrum"]
+        )
         assert device_under_test.logicalAntennaId == expected_config["logicalAntennaId"]
-        assert list(device_under_test.xPolarisationScalingFactor) == expected_config["xPolarisationScalingFactor"]
-        assert list(device_under_test.yPolarisationScalingFactor) == expected_config["yPolarisationScalingFactor"]
-        assert list(device_under_test.calibrationCoefficient) == expected_config["calibrationCoefficient"]
-        assert list(device_under_test.pointingCoefficient) == expected_config["pointingCoefficient"]
+        assert (
+            list(device_under_test.xPolarisationScalingFactor)
+            == expected_config["xPolarisationScalingFactor"]
+        )
+        assert (
+            list(device_under_test.yPolarisationScalingFactor)
+            == expected_config["yPolarisationScalingFactor"]
+        )
+        assert (
+            list(device_under_test.calibrationCoefficient)
+            == expected_config["calibrationCoefficient"]
+        )
+        assert (
+            list(device_under_test.pointingCoefficient)
+            == expected_config["pointingCoefficient"]
+        )
         assert list(device_under_test.spectrumX) == expected_config["spectrumX"]
         assert list(device_under_test.spectrumY) == expected_config["spectrumY"]
         assert list(device_under_test.position) == expected_config["position"]
         assert list(device_under_test.delays) == expected_config["delays"]
         assert list(device_under_test.delayRates) == expected_config["delayRates"]
-        assert list(device_under_test.bandpassCoefficient) == expected_config["bandpassCoefficient"]
+        assert (
+            list(device_under_test.bandpassCoefficient)
+            == expected_config["bandpassCoefficient"]
+        )
         assert device_under_test.first == expected_config["first"]
         assert device_under_test.altitude == expected_config["altitude"]
-        assert device_under_test.fieldNodeLatitude == expected_config["fieldNodeLatitude"]
-        assert device_under_test.fieldNodeLongitude == expected_config["fieldNodeLongitude"]
-
+        assert (
+            device_under_test.fieldNodeLatitude == expected_config["fieldNodeLatitude"]
+        )
+        assert (
+            device_under_test.fieldNodeLongitude
+            == expected_config["fieldNodeLongitude"]
+        )
 
     def test_Reset(
         self: TestMccsAntenna,

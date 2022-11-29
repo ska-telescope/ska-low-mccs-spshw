@@ -37,7 +37,7 @@ class _ApiuProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None]
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         super().__init__(
             fqdn,
@@ -67,7 +67,7 @@ class _AntennaProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None]
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         super().__init__(
             fqdn,
@@ -86,6 +86,7 @@ class _AntennaProxy(DeviceComponentManager):
         """
         self._proxy.connect()
         self._proxy._device.Configure(config)
+
 
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
@@ -172,6 +173,7 @@ class _TileProxy(DeviceComponentManager):
         """
         self._proxy.connect()
         self._proxy._device.Configure(config)
+
 
 # pylint: disable=too-many-instance-attributes
 class StationComponentManager(MccsComponentManager):
@@ -679,15 +681,15 @@ class StationComponentManager(MccsComponentManager):
         self.start_communicating()
         for fqdn in self._antenna_proxies.keys():
             self._antenna_proxies[fqdn].on()
-        apiu_config = configuration.get('apiu')
+        apiu_config = configuration.get("apiu")
         self._apiu_proxy.configure(json.dumps(apiu_config))
 
-        antenna_config = configuration.get('antennas')
+        antenna_config = configuration.get("antennas")
         if antenna_config:
             for fqdn in self._antenna_proxies.keys():
                 config = antenna_config[fqdn]
                 self._antenna_proxies[fqdn].configure(json.dumps(config))
-        tiles_config = configuration.get('tiles')
+        tiles_config = configuration.get("tiles")
         if tiles_config:
             for fqdn in self._tile_proxies.keys():
                 config = tiles_config[fqdn]

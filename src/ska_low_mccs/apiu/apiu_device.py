@@ -9,10 +9,10 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import json
 import logging
 import threading
 from typing import Any, Optional, cast
-import json
 
 import tango
 from ska_control_model import (
@@ -448,14 +448,14 @@ class MccsAPIU(SKABaseDevice):
             return default
 
         self._overCurrentThreshold = apply_if_valid(
-            "overCurrentThreshold",
-            self._overCurrentThreshold
+            "overCurrentThreshold", self._overCurrentThreshold
         )
         self._overVoltageThreshold = apply_if_valid(
-            "overVoltageThreshold",
-             self._overVoltageThreshold
+            "overVoltageThreshold", self._overVoltageThreshold
         )
-        self._humidityThreshold = apply_if_valid("humidityThreshold", self._humidityThreshold)
+        self._humidityThreshold = apply_if_valid(
+            "humidityThreshold", self._humidityThreshold
+        )
 
     @command(
         dtype_in="DevULong",

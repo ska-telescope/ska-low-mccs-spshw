@@ -7,8 +7,8 @@
 # See LICENSE for more info.
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
-import json
 
+import json
 from typing import Any, Optional, cast
 
 import tango
@@ -21,7 +21,7 @@ from ska_control_model import (  # SimulationMode,
 )
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand
-from tango.server import attribute, device_property, command
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs.antenna.antenna_component_manager import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_health_model import AntennaHealthModel
@@ -64,7 +64,7 @@ class MccsAntenna(SKABaseDevice):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: AntennaHealthModel
         self.component_manager: AntennaComponentManager
-        self._antennaId:int
+        self._antennaId: int
         self._gain: float
         self._rms: float
         self._xPolarisationFaulty: bool
@@ -657,36 +657,31 @@ class MccsAntenna(SKABaseDevice):
         self._gain = apply_if_valid("gain", self._gain)
         self._rms = apply_if_valid("rms", self._rms)
         self._xPolarisationFaulty = apply_if_valid(
-            "xPolarisationFaulty",
-            self._xPolarisationFaulty
+            "xPolarisationFaulty", self._xPolarisationFaulty
         )
         self._yPolarisationFaulty = apply_if_valid(
-            "yPolarisationFaulty",
-            self._yPolarisationFaulty
+            "yPolarisationFaulty", self._yPolarisationFaulty
         )
         self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
         self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
         self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
         self._timestampOfLastSpectrum = apply_if_valid(
-            "timestampOfLastSpectrum",
-            self._timestampOfLastSpectrum
+            "timestampOfLastSpectrum", self._timestampOfLastSpectrum
         )
-        self._logicalAntennaId = apply_if_valid("logicalAntennaId", self._logicalAntennaId)
+        self._logicalAntennaId = apply_if_valid(
+            "logicalAntennaId", self._logicalAntennaId
+        )
         self._xPolarisationScalingFactor = apply_if_valid(
-            "xPolarisationScalingFactor",
-            self._xPolarisationScalingFactor
+            "xPolarisationScalingFactor", self._xPolarisationScalingFactor
         )
         self._yPolarisationScalingFactor = apply_if_valid(
-            "yPolarisationScalingFactor",
-            self._yPolarisationScalingFactor
+            "yPolarisationScalingFactor", self._yPolarisationScalingFactor
         )
         self._calibrationCoefficient = apply_if_valid(
-            "calibrationCoefficient",
-            self._calibrationCoefficient
+            "calibrationCoefficient", self._calibrationCoefficient
         )
         self._pointingCoefficient = apply_if_valid(
-            "pointingCoefficient",
-            self._pointingCoefficient
+            "pointingCoefficient", self._pointingCoefficient
         )
         self._spectrumX = apply_if_valid("spectrumX", self._spectrumX)
         self._spectrumY = apply_if_valid("spectrumY", self._spectrumY)
@@ -694,13 +689,17 @@ class MccsAntenna(SKABaseDevice):
         self._delays = apply_if_valid("delays", self._delays)
         self._delayRates = apply_if_valid("delayRates", self._delayRates)
         self._bandpassCoefficient = apply_if_valid(
-            "bandpassCoefficient",
-            self._bandpassCoefficient
+            "bandpassCoefficient", self._bandpassCoefficient
         )
         self._first = apply_if_valid("first", self._first)
         self._altitude = apply_if_valid("altitude", self._altitude)
-        self._fieldNodeLatitude = apply_if_valid("fieldNodeLatitude", self._fieldNodeLatitude)
-        self._fieldNodeLongitude = apply_if_valid("fieldNodeLongitude", self._fieldNodeLongitude)
+        self._fieldNodeLatitude = apply_if_valid(
+            "fieldNodeLatitude", self._fieldNodeLatitude
+        )
+        self._fieldNodeLongitude = apply_if_valid(
+            "fieldNodeLongitude", self._fieldNodeLongitude
+        )
+
 
 # ----------
 # Run server

@@ -348,7 +348,7 @@ class MccsStation(SKAObsDevice):
         :param config: the configuration settings for this station.
         """
 
-        def apply_if_valid(attribute_name: str, default: Any) -> Optional[type]:
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
             value = config.get(attribute_name)
             if isinstance(value, type(default)):
                 return value
@@ -551,8 +551,9 @@ class MccsStation(SKAObsDevice):
     )
     def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
         """
-        Configure the station with all relevant parameters. Also configures children
-        device that are connected to the station.
+        Configure the station with all relevant parameters.
+
+        Also configures children device that are connected to the station.
 
         :param argin: Configuration parameters encoded in a json string
 
@@ -570,7 +571,8 @@ class MccsStation(SKAObsDevice):
         configuration = json.loads(argin)
         station_config = configuration.get("station")
 
-        self._configure_station(station_config)
+        if station_config:
+            self._configure_station(station_config)
 
         # Configure the station device, pass the message to
         # the component manager that configures the rest

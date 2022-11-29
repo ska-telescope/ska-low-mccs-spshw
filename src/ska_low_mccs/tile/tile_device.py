@@ -328,6 +328,43 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevString",
+        label="cspDestinationIp",
+    )
+    def cspDestinationIp(self: MccsTile) -> str:
+        """
+        Return the cspDestinationIp attribute.
+
+        :return: the IP address of the csp destination
+        """
+        return self._csp_destination_ip
+
+    @attribute(
+        dtype="DevString",
+        label="cspDestinationMac",
+    )
+    def cspDestinationMac(self: MccsTile) -> str:
+        """
+        Return the cspDestinationMac attribute.
+
+        :return: the MAC address of the csp destination
+        """
+        return self._csp_destination_mac
+
+    @attribute(
+        dtype="DevLong",
+        label="cspDestinationPort",
+    )
+    def cspDestinationPort(self: MccsTile) -> int:
+        """
+        Return the cspDestinationMac attribute.
+
+        :return: the port of the csp destination
+        """
+        return self._csp_destination_port
+
     @attribute(dtype=SimulationMode, memorized=True, hw_memorized=True)
     def simulationMode(self: MccsTile) -> int:
         """
@@ -871,7 +908,7 @@ class MccsTile(SKABaseDevice):
         """
         config = json.loads(argin)
 
-        def apply_if_valid(attribute_name: str, expected_type: type) -> Optional[type]:
+        def apply_if_valid(attribute_name: str, expected_type: type) -> Any:
             value = config.get(attribute_name)
             if isinstance(value, expected_type):
                 return value

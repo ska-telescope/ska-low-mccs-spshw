@@ -441,7 +441,7 @@ class MccsAPIU(SKABaseDevice):
         """
         config = json.loads(argin)
 
-        def apply_if_valid(attribute_name: str, default: Any) -> Optional[type]:
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
             value = config.get(attribute_name)
             if isinstance(value, type(default)):
                 return value

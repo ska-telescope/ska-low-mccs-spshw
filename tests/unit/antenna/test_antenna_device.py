@@ -267,6 +267,8 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
+        :param config_in: configuration of the device
+        :param expected_config: the expected output configuration
         """
         device_under_test.add_change_event_callback(
             "adminMode",

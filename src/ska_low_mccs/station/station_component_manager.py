@@ -48,12 +48,13 @@ class _ApiuProxy(DeviceComponentManager):
         )
 
     @check_communicating
-    def configure(self: _ApiuProxy, config: str):
+    def configure(self: _ApiuProxy, config: str) -> None:
         """
         Configure the device proxy.
 
-        param: config: json string of configuration.
+        :param config: json string of configuration.
         """
+        assert self._proxy and self._proxy._device
         self._proxy._device.Configure(config)
 
 
@@ -78,12 +79,13 @@ class _AntennaProxy(DeviceComponentManager):
         )
 
     @check_communicating
-    def configure(self: _AntennaProxy, config: str):
+    def configure(self: _AntennaProxy, config: str) -> None:
         """
         Configure the device proxy.
 
-        param: config: json string of configuration.
+        :param config: json string of configuration.
         """
+        assert self._proxy and self._proxy._device
         self._proxy.connect()
         self._proxy._device.Configure(config)
 
@@ -165,12 +167,13 @@ class _TileProxy(DeviceComponentManager):
         return result_code
 
     @check_communicating
-    def configure(self: _AntennaProxy, config: str):
+    def configure(self: _TileProxy, config: str) -> None:
         """
         Configure the device proxy.
 
-        param: config: json string of configuration.
+        :param config: json string of configuration.
         """
+        assert self._proxy and self._proxy._device
         self._proxy.connect()
         self._proxy._device.Configure(config)
 
@@ -641,7 +644,6 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         configuration: dict,
         task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the configure_children method.
@@ -649,12 +651,11 @@ class StationComponentManager(MccsComponentManager):
         This method returns immediately after it submitted
         `self._configure_children` for execution.
 
-        :param argin: Configuration specification dict as a json string.
+        :param configuration: Configuration specification dict as a json string.
         :param task_callback: Update task state, defaults to None
 
         :return: a result code and response string
         """
-
         return self.submit_task(
             self._configure_children, args=[configuration], task_callback=task_callback
         )
@@ -663,8 +664,6 @@ class StationComponentManager(MccsComponentManager):
     def _configure_children(
         self: StationComponentManager,
         configuration: dict,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Configure the stations children.
@@ -672,17 +671,14 @@ class StationComponentManager(MccsComponentManager):
         This sends off configuration commands to all of the devices that
         this station manages.
 
-        :param station_id: the id of the station for which the provided
-            configuration is intended.
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Abort the task
+        :param configuration: Configuration specification dict as a json string.
         """
-
         self.start_communicating()
         for fqdn in self._antenna_proxies.keys():
             self._antenna_proxies[fqdn].on()
         apiu_config = configuration.get("apiu")
-        self._apiu_proxy.configure(json.dumps(apiu_config))
+        if apiu_config is not None:
+            self._apiu_proxy.configure(json.dumps(apiu_config))
 
         antenna_config = configuration.get("antennas")
         if antenna_config:

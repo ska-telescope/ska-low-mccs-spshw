@@ -124,16 +124,6 @@ class TestMccsTile:
                 },
                 id="invalid types dont apply",
             ),
-            pytest.param(
-                {},
-                {
-                    "csp_destination_ip": "",
-                    "csp_destination_mac": "",
-                    "csp_destination_port": 0,
-                    "antenna_ids": [],
-                },
-                id="empty dict is no op",
-            ),
         ],
     )
     def test_Configure(
@@ -151,6 +141,8 @@ class TestMccsTile:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the device
+        :param config_in: configuration of the device
+        :param expected_config: the expected output configuration
         """
         tile_device.add_change_event_callback(
             "adminMode",

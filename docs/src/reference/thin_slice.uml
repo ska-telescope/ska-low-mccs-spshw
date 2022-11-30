@@ -20,8 +20,11 @@ jupyter -> tpm:
 jupyter <- tpm: tileProgrammingState
 end
 
+jupyter -> tpm: SetLmcDownload()
 jupyter -> daq: Configure()
-jupyter -> tpm: SendData()
+jupyter -> daq: SetConsumers()
+jupyter -> daq: Start()
+jupyter -> tpm: SendDataSamples()
 tpm --> daq: SPEAD packet
 
 @enduml

@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import functools
-import json
 from typing import Any, Optional, cast
 
 import tango
@@ -29,6 +28,7 @@ DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 __all__ = ["MccsStation", "main"]
 
 
+# pylint: disable=too-many-instance-attributes
 class MccsStation(SKAObsDevice):
     """An implementation of a station beam Tango device for MCCS."""
 
@@ -63,17 +63,9 @@ class MccsStation(SKAObsDevice):
         self.component_manager: StationComponentManager
         self._delay_centre: list[float]
         self._obs_state_model: StationObsStateModel
-        self._subarray_id: int
         self._refLatitude: float
         self._refLongitude: float
         self._refHeight: float
-        self._beam_fqdns: list[str]
-        self._transient_buffer_fqdn: str
-        self._calibration_coefficients: list[float]
-        self._is_calibrated: bool
-        self._calibration_job_id: int
-        self._daq_job_id: int
-        self._data_directory: str
 
     def init_device(self: MccsStation) -> None:
         """
@@ -124,7 +116,7 @@ class MccsStation(SKAObsDevice):
         super().init_command_objects()
 
         for (command_name, method_name) in [
-            ("ConfigureChildren", "configure_children"),
+            ("Configure", "configure"),
             ("ApplyPointing", "apply_pointing"),
         ]:
             self.register_command_object(
@@ -300,9 +292,11 @@ class MccsStation(SKAObsDevice):
             health = cast(HealthState, state_change.get("health_state"))
             health_state_changed_callback(health)
 
-        if "is_configured" in state_change.keys():
-            is_configured = cast(bool, state_change.get("is_configured"))
-            self._obs_state_model.is_configured_changed(is_configured)
+        if "configuration_changed" in state_change.keys():
+            self._obs_state_model.is_configured_changed(True)
+            configuration = state_change.get("configuration_changed")
+            assert isinstance(configuration, dict)
+            self._configure_station(configuration)
 
     def _component_power_state_changed(
         self: MccsStation,
@@ -354,24 +348,9 @@ class MccsStation(SKAObsDevice):
                 return value
             return default
 
-        self._subarray_id = apply_if_valid("subarray_id", self._subarray_id)
         self._refLatitude = apply_if_valid("refLatitude", self._refLatitude)
         self._refLongitude = apply_if_valid("refLongitude", self._refLongitude)
         self._refHeight = apply_if_valid("refHeight", self._refHeight)
-        self._beam_fqdns = apply_if_valid("beam_fqdns", self._beam_fqdns)
-        self._transient_buffer_fqdn = apply_if_valid(
-            "transient_buffer_fqdn", self._transient_buffer_fqdn
-        )
-        self._delay_centre = apply_if_valid("delay_centre", self._delay_centre)
-        self._calibration_coefficients = apply_if_valid(
-            "calibration_coefficients", self._calibration_coefficients
-        )
-        self._is_calibrated = apply_if_valid("is_calibrated", self._is_calibrated)
-        self._calibration_job_id = apply_if_valid(
-            "calibration_job_id", self._calibration_job_id
-        )
-        self._daq_job_id = apply_if_valid("daq_job_id", self._daq_job_id)
-        self._data_directory = apply_if_valid("data_directory", self._data_directory)
 
     # ----------
     # Attributes
@@ -562,22 +541,11 @@ class MccsStation(SKAObsDevice):
             information purpose only.
 
         :example:
-            >>> import requests
-            >>> geo_json_data = requests.get('localhost/station_data').text
-            >>> dp = tango.DeviceProxy("mccs/station/1")
-            >>> configured_data = dp.ConvertData(geo_json_data)
-            >>> dp.command_inout("Configure", configured_data)
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("Configure", json_str)
         """
-        configuration = json.loads(argin)
-        station_config = configuration.get("station")
-
-        if station_config:
-            self._configure_station(station_config)
-
-        # Configure the station device, pass the message to
-        # the component manager that configures the rest
-        handler = self.get_command_object("ConfigureChildren")
-        (return_code, message) = handler(configuration)
+        handler = self.get_command_object("Configure")
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @command(

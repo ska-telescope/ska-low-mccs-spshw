@@ -54,7 +54,9 @@ class _ApiuProxy(DeviceComponentManager):
 
         :param config: json string of configuration.
         """
-        assert self._proxy and self._proxy._device
+        assert self._proxy is not None  # for the type checker
+        self._proxy.connect()
+        assert self._proxy._device is not None  # for the type checker
         self._proxy._device.Configure(config)
 
 
@@ -85,8 +87,9 @@ class _AntennaProxy(DeviceComponentManager):
 
         :param config: json string of configuration.
         """
-        assert self._proxy and self._proxy._device
+        assert self._proxy is not None  # for the type checker
         self._proxy.connect()
+        assert self._proxy._device is not None  # for the type checker
         self._proxy._device.Configure(config)
 
 
@@ -173,8 +176,9 @@ class _TileProxy(DeviceComponentManager):
 
         :param config: json string of configuration.
         """
-        assert self._proxy and self._proxy._device
+        assert self._proxy is not None  # for the type checker
         self._proxy.connect()
+        assert self._proxy._device is not None  # for the type checker
         self._proxy._device.Configure(config)
 
 
@@ -631,47 +635,29 @@ class StationComponentManager(MccsComponentManager):
         """
         return self._is_configured
 
-    def _update_is_configured(
-        self: StationComponentManager,
-        is_configured: bool,
-    ) -> None:
-        if self._is_configured != is_configured:
-            self._is_configured = is_configured
-            if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback({"is_configured": is_configured})
-
-    def configure_children(
-        self: StationComponentManager,
-        configuration: dict,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the configure_children method.
-
-        This method returns immediately after it submitted
-        `self._configure_children` for execution.
-
-        :param configuration: Configuration specification dict as a json string.
-        :param task_callback: Update task state, defaults to None
-
-        :return: a result code and response string
-        """
-        return self.submit_task(
-            self._configure_children, args=[configuration], task_callback=task_callback
-        )
-
-    # @check_communicating
-    def _configure_children(
+    def _update_station_configs(
         self: StationComponentManager,
         configuration: dict,
     ) -> None:
         """
-        Configure the stations children.
+        Update the config for the station device.
 
-        This sends off configuration commands to all of the devices that
-        this station manages.
+        :param configuration: dict containing the config of the device
+        """
+        if self._component_state_changed_callback is not None:
+            self._is_configured = True
+            self._component_state_changed_callback(
+                {"configuration_changed": configuration}
+            )
 
-        :param configuration: Configuration specification dict as a json string.
+    def _update_children_configs(
+        self: StationComponentManager,
+        configuration: dict,
+    ) -> None:
+        """
+        Update the config for the station device.
+
+        :param configuration: dict containing the config of the device
         """
         self.start_communicating()
         for fqdn in self._antenna_proxies.keys():
@@ -691,3 +677,62 @@ class StationComponentManager(MccsComponentManager):
                 config = tiles_config[fqdn]
                 self._tile_proxies[fqdn].configure(json.dumps(config))
         self.stop_communicating()
+
+    def configure(
+        self: StationComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the configure_children method.
+
+        This method returns immediately after it submitted
+        `self._configure_children` for execution.
+
+        :param argin: Configuration specification dict as a json string.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a result code and response string
+        """
+        configuration = json.loads(argin)
+        return self.submit_task(
+            self._configure, args=[configuration], task_callback=task_callback
+        )
+
+    # @check_communicating
+    def _configure(
+        self: StationComponentManager,
+        configuration: dict,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Configure the stations children.
+
+        This sends off configuration commands to all of the devices that
+        this station manages.
+
+        :param configuration: Configuration specification dict.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            station_config = configuration.get("station")
+            if station_config is None or station_config.get("stationId") != self._station_id:
+                raise ValueError("Wrong station id")
+            self._update_station_configs(station_config)
+            self._update_children_configs(configuration)
+        except ValueError as value_error:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=f"Configure command has failed: {value_error}",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure command has completed"
+            )

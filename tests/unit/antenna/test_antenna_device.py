@@ -74,55 +74,15 @@ class TestMccsAntenna:
             pytest.param(
                 {
                     "antennaId": 1,
-                    "gain": 12.3,
-                    "rms": 12.3,
-                    "xPolarisationFaulty": True,
-                    "yPolarisationFaulty": True,
                     "xDisplacement": 12.3,
                     "yDisplacement": 45.6,
                     "zDisplacement": 78.9,
-                    "timestampOfLastSpectrum": "12.23.65",
-                    "logicalAntennaId": 1,
-                    "xPolarisationScalingFactor": [1, 2],
-                    "yPolarisationScalingFactor": [1, 2],
-                    "calibrationCoefficient": [0.5, 0.5],
-                    "pointingCoefficient": [0.5, 0.5],
-                    "spectrumX": [0.5, 0.5],
-                    "spectrumY": [0.5, 0.5],
-                    "position": [0.5, 0.5],
-                    "delays": [0.5, 0.5],
-                    "delayRates": [0.5, 0.5],
-                    "bandpassCoefficient": [0.5, 0.5],
-                    "first": True,
-                    "altitude": 0.5,
-                    "fieldNodeLatitude": 0.5,
-                    "fieldNodeLongitude": 0.5,
                 },
                 {
                     "antennaId": 1,
-                    "gain": 12.3,
-                    "rms": 12.3,
-                    "xPolarisationFaulty": True,
-                    "yPolarisationFaulty": True,
                     "xDisplacement": 12.3,
                     "yDisplacement": 45.6,
                     "zDisplacement": 78.9,
-                    "timestampOfLastSpectrum": "12.23.65",
-                    "logicalAntennaId": 1,
-                    "xPolarisationScalingFactor": [1, 2],
-                    "yPolarisationScalingFactor": [1, 2],
-                    "calibrationCoefficient": [0.5, 0.5],
-                    "pointingCoefficient": [0.5, 0.5],
-                    "spectrumX": [0.5, 0.5],
-                    "spectrumY": [0.5, 0.5],
-                    "position": [0.5, 0.5],
-                    "delays": [0.5, 0.5],
-                    "delayRates": [0.5, 0.5],
-                    "bandpassCoefficient": [0.5, 0.5],
-                    "first": True,
-                    "altitude": 0.5,
-                    "fieldNodeLatitude": 0.5,
-                    "fieldNodeLongitude": 0.5,
                 },
                 id="valid config is entered correctly",
             ),
@@ -134,29 +94,9 @@ class TestMccsAntenna:
                 },
                 {
                     "antennaId": 2,
-                    "gain": 6.3,
-                    "rms": 0.0,
-                    "xPolarisationFaulty": False,
-                    "yPolarisationFaulty": False,
                     "xDisplacement": 0.0,
                     "yDisplacement": 6.3,
                     "zDisplacement": 0.0,
-                    "timestampOfLastSpectrum": "",
-                    "logicalAntennaId": 0,
-                    "xPolarisationScalingFactor": [0],
-                    "yPolarisationScalingFactor": [0],
-                    "calibrationCoefficient": [0],
-                    "pointingCoefficient": [0],
-                    "spectrumX": [0],
-                    "spectrumY": [0],
-                    "position": [0],
-                    "delays": [0],
-                    "delayRates": [0],
-                    "bandpassCoefficient": [0],
-                    "first": True,
-                    "altitude": 0.0,
-                    "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0,
                 },
                 id="missing config data is valid",
             ),
@@ -164,29 +104,9 @@ class TestMccsAntenna:
                 {"stupid_antennaId": 1},
                 {
                     "antennaId": 0,
-                    "gain": 0.0,
-                    "rms": 0.0,
-                    "xPolarisationFaulty": False,
-                    "yPolarisationFaulty": False,
                     "xDisplacement": 0.0,
                     "yDisplacement": 0.0,
                     "zDisplacement": 0.0,
-                    "timestampOfLastSpectrum": "",
-                    "logicalAntennaId": 0,
-                    "xPolarisationScalingFactor": [0],
-                    "yPolarisationScalingFactor": [0],
-                    "calibrationCoefficient": [0],
-                    "pointingCoefficient": [0],
-                    "spectrumX": [0],
-                    "spectrumY": [0],
-                    "position": [0],
-                    "delays": [0],
-                    "delayRates": [0],
-                    "bandpassCoefficient": [0],
-                    "first": True,
-                    "altitude": 0.0,
-                    "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0,
                 },
                 id="invalid named configs are skipped",
             ),
@@ -194,29 +114,9 @@ class TestMccsAntenna:
                 {"gain": "some string", "timestampOfLastSpectrum": [0, 2]},
                 {
                     "antennaId": 0,
-                    "gain": 0.0,
-                    "rms": 0.0,
-                    "xPolarisationFaulty": False,
-                    "yPolarisationFaulty": False,
                     "xDisplacement": 0.0,
                     "yDisplacement": 0.0,
                     "zDisplacement": 0.0,
-                    "timestampOfLastSpectrum": "",
-                    "logicalAntennaId": 0,
-                    "xPolarisationScalingFactor": [0],
-                    "yPolarisationScalingFactor": [0],
-                    "calibrationCoefficient": [0],
-                    "pointingCoefficient": [0],
-                    "spectrumX": [0],
-                    "spectrumY": [0],
-                    "position": [0],
-                    "delays": [0],
-                    "delayRates": [0],
-                    "bandpassCoefficient": [0],
-                    "first": True,
-                    "altitude": 0.0,
-                    "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0,
                 },
                 id="invalid types dont apply",
             ),
@@ -224,29 +124,9 @@ class TestMccsAntenna:
                 {},
                 {
                     "antennaId": 0,
-                    "gain": 0.0,
-                    "rms": 0.0,
-                    "xPolarisationFaulty": False,
-                    "yPolarisationFaulty": False,
                     "xDisplacement": 0.0,
                     "yDisplacement": 0.0,
                     "zDisplacement": 0.0,
-                    "timestampOfLastSpectrum": "",
-                    "logicalAntennaId": 0,
-                    "xPolarisationScalingFactor": [0],
-                    "yPolarisationScalingFactor": [0],
-                    "calibrationCoefficient": [0],
-                    "pointingCoefficient": [0],
-                    "spectrumX": [0],
-                    "spectrumY": [0],
-                    "position": [0],
-                    "delays": [0],
-                    "delayRates": [0],
-                    "bandpassCoefficient": [0],
-                    "first": True,
-                    "altitude": 0.0,
-                    "fieldNodeLatitude": 0.0,
-                    "fieldNodeLongitude": 0.0,
                 },
                 id="empty dict is no op",
             ),
@@ -284,58 +164,9 @@ class TestMccsAntenna:
         device_under_test.Configure(json.dumps(config_in))
 
         assert device_under_test.antennaId == expected_config["antennaId"]
-        assert device_under_test.gain == expected_config["gain"]
-        assert device_under_test.rms == expected_config["rms"]
-        assert (
-            device_under_test.xPolarisationFaulty
-            == expected_config["xPolarisationFaulty"]
-        )
-        assert (
-            device_under_test.yPolarisationFaulty
-            == expected_config["yPolarisationFaulty"]
-        )
         assert device_under_test.xDisplacement == expected_config["xDisplacement"]
         assert device_under_test.yDisplacement == expected_config["yDisplacement"]
         assert device_under_test.zDisplacement == expected_config["zDisplacement"]
-        assert (
-            device_under_test.timestampOfLastSpectrum
-            == expected_config["timestampOfLastSpectrum"]
-        )
-        assert device_under_test.logicalAntennaId == expected_config["logicalAntennaId"]
-        assert (
-            list(device_under_test.xPolarisationScalingFactor)
-            == expected_config["xPolarisationScalingFactor"]
-        )
-        assert (
-            list(device_under_test.yPolarisationScalingFactor)
-            == expected_config["yPolarisationScalingFactor"]
-        )
-        assert (
-            list(device_under_test.calibrationCoefficient)
-            == expected_config["calibrationCoefficient"]
-        )
-        assert (
-            list(device_under_test.pointingCoefficient)
-            == expected_config["pointingCoefficient"]
-        )
-        assert list(device_under_test.spectrumX) == expected_config["spectrumX"]
-        assert list(device_under_test.spectrumY) == expected_config["spectrumY"]
-        assert list(device_under_test.position) == expected_config["position"]
-        assert list(device_under_test.delays) == expected_config["delays"]
-        assert list(device_under_test.delayRates) == expected_config["delayRates"]
-        assert (
-            list(device_under_test.bandpassCoefficient)
-            == expected_config["bandpassCoefficient"]
-        )
-        assert device_under_test.first == expected_config["first"]
-        assert device_under_test.altitude == expected_config["altitude"]
-        assert (
-            device_under_test.fieldNodeLatitude == expected_config["fieldNodeLatitude"]
-        )
-        assert (
-            device_under_test.fieldNodeLongitude
-            == expected_config["fieldNodeLongitude"]
-        )
 
     def test_Reset(
         self: TestMccsAntenna,

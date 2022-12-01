@@ -14,7 +14,7 @@ import logging
 import time
 
 import tango
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, PowerState, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockCallable
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
@@ -157,3 +157,65 @@ class TestStationComponentManager:
 
     # Note: test_apply_pointing has been moved to
     # TestStationComponentStateChangedCallback::test_appy_pointing
+
+    def test_configure(
+        self: TestStationComponentManager,
+        station_component_manager: StationComponentManager,
+        communication_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
+        station_id: int,
+    ) -> None:
+        """
+        Test tile attribute assignment.
+
+        Specifically, test that when the station component manager
+        established communication with its tiles, it write its station
+        id and a unique logical tile id to each one.
+
+        :param station_component_manager: the station component manager
+            under test.
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be called
+            when the station state changes
+        :param station_id: the id of the station
+        """
+        station_component_manager.start_communicating()
+        communication_state_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_state_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        time.sleep(0.1)
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"is_configured": False}
+        )
+        assert not station_component_manager.is_configured
+
+        mock_task_callback = MockCallable()
+        station_component_manager._configure(
+            {"station": {"stationId": station_id + 1}}, task_callback=mock_task_callback
+        )
+        mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
+        mock_task_callback.assert_next_call(
+            status=TaskStatus.FAILED,
+            result="Configure command has failed: Wrong station id",
+        )
+
+        # is_configured_changed_callback.assert_not_called()
+        component_state_changed_callback.assert_not_called_with_keys("is_configured")
+        assert not station_component_manager.is_configured
+
+        # result = station_component_manager._configure(station_id)
+        station_component_manager._configure({"station": {"stationId": station_id}}, mock_task_callback)
+        mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
+        mock_task_callback.assert_next_call(
+            status=TaskStatus.COMPLETED, result="Configure command has completed"
+        )
+
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"configuration_changed": {"stationId": station_id}}
+        )
+

@@ -51,170 +51,6 @@ class TestMccsStation:
             "proxy": MccsDeviceProxy,
         }
 
-    @pytest.mark.parametrize(
-        "config_in, expected_config",
-        [
-            pytest.param(
-                {
-                    "station": {
-                        "refLatitude": 12.3,
-                        "refLongitude": 12.5,
-                        "refHeight": 1.5,
-                        "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                        "transient_buffer_fqdn": "fqdn",
-                        "delay_centre": [1.0, 1.0],
-                        "calibration_coefficients": [1.0, 1.0],
-                        "is_calibrated": True,
-                        "calibration_job_id": 1,
-                        "daq_job_id": 1,
-                        "data_directory": "some directory",
-                    }
-                },
-                {
-                    "refLatitude": 12.3,
-                    "refLongitude": 12.5,
-                    "refHeight": 1.5,
-                    "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                    "transient_buffer_fqdn": "fqdn",
-                    "delay_centre": [1.0, 1.0],
-                    "calibration_coefficients": [1.0, 1.0],
-                    "is_calibrated": True,
-                    "calibration_job_id": 1,
-                    "daq_job_id": 1,
-                    "data_directory": "some directory",
-                },
-                id="valid config is entered correctly",
-            ),
-            pytest.param(
-                {
-                    "station": {
-                        "refLatitude": 12.3,
-                        "refHeight": 1.5,
-                        "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                        "transient_buffer_fqdn": "fqdn",
-                        "delay_centre": [1.0, 1.0],
-                        "calibration_coefficients": [1.0, 1.0],
-                        "is_calibrated": True,
-                        "calibration_job_id": 1,
-                        "daq_job_id": 1,
-                    }
-                },
-                {
-                    "refLatitude": 12.3,
-                    "refLongitude": 0.0,
-                    "refHeight": 1.5,
-                    "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                    "transient_buffer_fqdn": "fqdn",
-                    "delay_centre": [1.0, 1.0],
-                    "calibration_coefficients": [1.0, 1.0],
-                    "is_calibrated": True,
-                    "calibration_job_id": 1,
-                    "daq_job_id": 1,
-                    "data_directory": "",
-                },
-                id="missing config data is valid",
-            ),
-            pytest.param(
-                {
-                    "station": {
-                        "refLatitude_wrong_name": 12.3,
-                        "refLongitude": 12.5,
-                        "refHeight": 1.5,
-                        "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                        "transient_buffer_fqdn": "fqdn",
-                        "delay_centre": [1.0, 1.0],
-                        "calibration_coefficients": [1.0, 1.0],
-                        "is_calibrated": True,
-                        "calibration_job_id": 1,
-                        "daq_job_id": 1,
-                        "data_directory_wrong_name": "some directory",
-                    }
-                },
-                {
-                    "refLatitude": 0,
-                    "refLongitude": 12.5,
-                    "refHeight": 1.5,
-                    "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                    "transient_buffer_fqdn": "fqdn",
-                    "delay_centre": [1.0, 1.0],
-                    "calibration_coefficients": [1.0, 1.0],
-                    "is_calibrated": True,
-                    "calibration_job_id": 1,
-                    "daq_job_id": 1,
-                    "data_directory": "",
-                },
-                id="invalid named configs are skipped",
-            ),
-            pytest.param(
-                {
-                    "station": {
-                        "refLatitude": "my_thing",
-                        "refLongitude": 12.5,
-                        "refHeight": 1.5,
-                        "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                        "transient_buffer_fqdn": "fqdn",
-                        "delay_centre": [1.0, 1.0],
-                        "calibration_coefficients": [1.0, 1.0],
-                        "is_calibrated": True,
-                        "calibration_job_id": 1,
-                        "daq_job_id": 1,
-                        "data_directory": 12,
-                    }
-                },
-                {
-                    "refLatitude": 0,
-                    "refLongitude": 12.5,
-                    "refHeight": 1.5,
-                    "beam_fqdns": ["fqdn_1", "fqdn_2"],
-                    "transient_buffer_fqdn": "fqdn",
-                    "delay_centre": [1.0, 1.0],
-                    "calibration_coefficients": [1.0, 1.0],
-                    "is_calibrated": True,
-                    "calibration_job_id": 1,
-                    "daq_job_id": 1,
-                    "data_directory": "",
-                },
-                id="invalid types dont apply",
-            ),
-        ],
-    )
-    def test_Configure(
-        self: TestMccsStation,
-        device_under_test: MccsDeviceProxy,
-        config_in: dict,
-        expected_config: dict,
-    ) -> None:
-        """
-        Test for Configure.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param config_in: configuration of the device
-        :param expected_config: the expected output configuration
-        """
-        device_under_test.Configure(json.dumps(config_in))
-
-        assert device_under_test.refLatitude == expected_config["refLatitude"]
-        assert device_under_test.refLongitude == expected_config["refLongitude"]
-        assert device_under_test.refHeight == expected_config["refHeight"]
-        assert list(device_under_test.beamFQDNs) == expected_config["beam_fqdns"]
-        assert (
-            device_under_test.transientBufferFQDN
-            == expected_config["transient_buffer_fqdn"]
-        )
-        assert list(device_under_test.delayCentre) == expected_config["delay_centre"]
-        assert (
-            list(device_under_test.calibrationCoefficients)
-            == expected_config["calibration_coefficients"]
-        )
-        assert device_under_test.isCalibrated == expected_config["is_calibrated"]
-        assert (
-            device_under_test.calibrationJobId == expected_config["calibration_job_id"]
-        )
-        assert device_under_test.daqJobId == expected_config["daq_job_id"]
-        assert device_under_test.dataDirectory == expected_config["data_directory"]
-
     def test_InitDevice(
         self: TestMccsStation,
         device_under_test: MccsDeviceProxy,
@@ -516,6 +352,26 @@ class TestPatchedStation:
             "proxy": MccsDeviceProxy,
             "patch": patched_station_class,
         }
+
+    def test_configure(
+        self: TestPatchedStation,
+        device_under_test: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test for configure command.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_component_manager: the mock component manage to patch
+            into this station.
+        """
+        config_dict = {"station_id": 1}
+        json_str = json.dumps(config_dict)
+
+        device_under_test.Configure(json_str)
+        mock_component_manager.configure.assert_next_call(json_str, unittest.mock.ANY)
 
     def test_applyPointing(
         self: TestPatchedStation,

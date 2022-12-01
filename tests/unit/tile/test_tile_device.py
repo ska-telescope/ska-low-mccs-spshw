@@ -73,53 +73,40 @@ class TestMccsTile:
         [
             pytest.param(
                 {
-                    "csp_destination_ip": "0.1.2.3",
-                    "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": 80,
+                    "fixed_delays": [1, 2],
                     "antenna_ids": [1, 2],
                 },
                 {
-                    "csp_destination_ip": "0.1.2.3",
-                    "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": 80,
+                    "fixed_delays": [1, 2],
                     "antenna_ids": [1, 2],
                 },
                 id="valid config is entered correctly",
             ),
             pytest.param(
-                {"csp_destination_ip": "0.1.2.3", "csp_destination_port": 80},
                 {
-                    "csp_destination_ip": "0.1.2.3",
-                    "csp_destination_mac": "",
-                    "csp_destination_port": 80,
+                    "fixed_delays": [1, 2],
+                },
+                {
+                    "fixed_delays": [1, 2],
                     "antenna_ids": [],
                 },
                 id="missing config data is valid",
             ),
             pytest.param(
                 {
-                    "csp_destination_ip_wrong_name": "0.1.2.3",
-                    "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": 80,
+                    "fixed_delays_wrong_name": [1, 2],
                 },
                 {
-                    "csp_destination_ip": "",
-                    "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": 80,
+                    "fixed_delays": [],
                     "antenna_ids": [],
                 },
                 id="invalid named configs are skipped",
             ),
             pytest.param(
                 {
-                    "csp_destination_ip": 80,
-                    "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": "80",
                 },
                 {
-                    "csp_destination_ip": "",
-                    "csp_destination_mac": "00:11:22:33:44:55",
-                    "csp_destination_port": 0,
+                    "fixed_delays": [],
                     "antenna_ids": [],
                 },
                 id="invalid types dont apply",
@@ -157,10 +144,8 @@ class TestMccsTile:
 
         tile_device.Configure(json.dumps(config_in))
 
-        assert tile_device.cspDestinationIp == expected_config["csp_destination_ip"]
-        assert tile_device.cspDestinationMac == expected_config["csp_destination_mac"]
-        assert tile_device.cspDestinationPort == expected_config["csp_destination_port"]
         assert list(tile_device.antennaIds) == expected_config["antenna_ids"]
+        assert list(tile_device.staticTimeDelays) == expected_config["fixed_delays"]
 
     def test_healthState(
         self: TestMccsTile,

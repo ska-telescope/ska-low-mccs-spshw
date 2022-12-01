@@ -103,8 +103,7 @@ class TestMccsTile:
                 id="invalid named configs are skipped",
             ),
             pytest.param(
-                {
-                },
+                {},
                 {
                     "fixed_delays": [],
                     "antenna_ids": [],

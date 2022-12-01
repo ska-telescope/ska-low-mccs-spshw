@@ -720,7 +720,10 @@ class StationComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             station_config = configuration.get("station")
-            if station_config is None or station_config.get("stationId") != self._station_id:
+            if (
+                station_config is None
+                or station_config.get("stationId") != self._station_id
+            ):
                 raise ValueError("Wrong station id")
             self._update_station_configs(station_config)
             self._update_children_configs(configuration)

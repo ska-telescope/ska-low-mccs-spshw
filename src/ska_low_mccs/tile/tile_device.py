@@ -914,7 +914,9 @@ class MccsTile(SKABaseDevice):
                 return value
             return default
 
-        self.component_manager.static_delays = (apply_if_valid("fixed_delays", self.staticTimeDelays))
+        self.component_manager.static_delays = apply_if_valid(
+            "fixed_delays", self.staticTimeDelays
+        )
         self._antenna_ids = apply_if_valid("antenna_ids", self._antenna_ids)
 
     @command(dtype_out="DevVarLongStringArray")

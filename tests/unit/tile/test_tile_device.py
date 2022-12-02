@@ -151,11 +151,10 @@ class TestMccsTile:
 
         value = expected_config["fixed_delays"]
         write_value = np.array(value)
-        if (value):
+        if value:
             assert (getattr(tile_device, "staticTimeDelays") == write_value).all()
         else:
             assert getattr(tile_device, "staticTimeDelays") == init_value
-
 
     def test_healthState(
         self: TestMccsTile,

@@ -140,6 +140,7 @@ class SubarrayComponentManager(
         :param max_workers: Maximum number of workers in the worker pool.
             Defaults to None.
         """
+        self._component_state_changed_callback: Callable[[dict[str, Any]], None]
         self._component_state_changed_callback = component_state_changed_callback
 
         self._device_communication_statees: dict[str, CommunicationStatus] = {}
@@ -176,10 +177,7 @@ class SubarrayComponentManager(
         else:
             self.update_communication_state(CommunicationStatus.ESTABLISHED)
             with self._power_state_lock:
-                if self._component_state_changed_callback:
-                    self._component_state_changed_callback(
-                        {"power_state": PowerState.ON}
-                    )
+                self._component_state_changed_callback({"power_state": PowerState.ON})
 
     def stop_communicating(self: SubarrayComponentManager) -> None:
         """Break off communication with the station components."""
@@ -300,9 +298,7 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        cast(Callable, self._component_state_changed_callback),
-                        fqdn=fqdn,
-                    ),
+                        self._component_state_changed_callback, fqdn=fqdn),
                 )
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn] = _SubarrayBeamProxy(
@@ -311,7 +307,7 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        cast(Callable, self._component_state_changed_callback),
+                        self._component_state_changed_callback,
                         fqdn=fqdn,
                     ),
                 )
@@ -322,20 +318,19 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        cast(Callable, self._component_state_changed_callback),
+                        self._component_state_changed_callback,
                         fqdn=fqdn,
                     ),
                 )
-            if self._component_state_changed_callback:
-                self._component_state_changed_callback(
-                    {
-                        "resources_changed": [
-                            set(self._stations.keys()),
-                            set(self._subarray_beams.keys()),
-                            set(self._station_beams.keys()),
-                        ]
-                    }
-                )
+            self._component_state_changed_callback(
+                {
+                    "resources_changed": [
+                        set(self._stations.keys()),
+                        set(self._subarray_beams.keys()),
+                        set(self._station_beams.keys()),
+                    ]
+                }
+            )
 
             self._is_assigning = True
             for fqdn in station_fqdns_to_add:
@@ -384,8 +379,7 @@ class SubarrayComponentManager(
 
         :return: this subarray's resources.
         """
-        return cast(
-            list,
+        return list(
             set(self._stations) | set(self._subarray_beams) | set(self._station_beams),
         )
 
@@ -430,8 +424,8 @@ class SubarrayComponentManager(
     def _release(
         self: SubarrayComponentManager,
         resources: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Release resources from this subarray.
@@ -477,8 +471,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _release_all(
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Release all resources from this subarray.
@@ -497,20 +491,18 @@ class SubarrayComponentManager(
             self._channel_blocks.clear()
             self._device_communication_statees.clear()
             self._device_obs_states.clear()
-            if self._component_state_changed_callback:
-                self._component_state_changed_callback(
-                    {
-                        "resources_changed": [
-                            set(self._stations.keys()),
-                            set(self._subarray_beams.keys()),
-                            set(self._station_beams.keys()),
-                        ]
-                    }
-                )
+            self._component_state_changed_callback(
+                {
+                    "resources_changed": [
+                        set(self._stations.keys()),
+                        set(self._subarray_beams.keys()),
+                        set(self._station_beams.keys()),
+                    ]
+                }
+            )
 
             self._evaluate_communication_state()
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"release_completed": None})
+        self._component_state_changed_callback({"release_completed": None})
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."
@@ -540,8 +532,8 @@ class SubarrayComponentManager(
     def _configure(
         self: SubarrayComponentManager,
         configuration: dict[str, Any],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Configure the resources for a scan.
@@ -563,10 +555,9 @@ class SubarrayComponentManager(
 
         if result_code != ResultCode.FAILED:
             result_code = self._configure_subarray_beams(subarray_beam_configuration)
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"configured_changed": True})
+        self._component_state_changed_callback({"configured_changed": True})
 
-        if result_code == ResultCode.OK and self._component_state_changed_callback:
+        if result_code == ResultCode.OK:
             self._component_state_changed_callback({"configure_completed": None})
 
         if task_callback is not None:
@@ -655,8 +646,8 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         scan_id: int,
         start_time: float,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Start scanning.
@@ -674,8 +665,7 @@ class SubarrayComponentManager(
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
             if proxy_result_code == ResultCode.FAILED and task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, result="Scan has failed.")
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"scanning_changed": True})
+        self._component_state_changed_callback({"scanning_changed": True})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
 
@@ -699,8 +689,8 @@ class SubarrayComponentManager(
 
     def _end_scan(
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Submit the `end_scan` slow command.
@@ -714,8 +704,7 @@ class SubarrayComponentManager(
 
         # Stuff goes here. This should tell the subarray beam device to
         # stop scanning, but that device doesn't support it yet.
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"scanning_changed": False})
+        self._component_state_changed_callback({"scanning_changed": False})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="EndScan has completed.")
 
@@ -740,8 +729,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _deconfigure(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Deconfigure resources.
@@ -755,8 +744,7 @@ class SubarrayComponentManager(
             proxy_task_status, response = station_proxy.configure({})
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_task_status, response = subarray_beam_proxy.configure({})
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"configured_changed": False})
+        self._component_state_changed_callback({"configured_changed": False})
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="End/Deconfigure has completed."
@@ -777,8 +765,7 @@ class SubarrayComponentManager(
         """
         # Stuff goes here. This should tell the subarray beam device to
         # abort scanning, but that device doesn't support it yet.
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"abort_completed": None})
+        self._component_state_changed_callback({"abort_completed": None})
         return ResultCode.OK
 
     @check_communicating
@@ -802,8 +789,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _obsreset(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Reset the observation by returning to unconfigured state.
@@ -815,8 +802,7 @@ class SubarrayComponentManager(
             task_callback(status=TaskStatus.IN_PROGRESS)
         # other stuff here
         self.deconfigure()
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"obsreset_completed": None})
+        self._component_state_changed_callback({"obsreset_completed": None})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="ObsReset has completed.")
 
@@ -841,8 +827,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _restart(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Restart the subarray by returning to unresourced state.
@@ -855,8 +841,7 @@ class SubarrayComponentManager(
         # other stuff here
         self.deconfigure()
         self.release_all(task_callback=task_callback)
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback({"restart_completed": None})
+        self._component_state_changed_callback({"restart_completed": None})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Restart has completed.")
 
@@ -886,8 +871,8 @@ class SubarrayComponentManager(
     def _send_transient_buffer(
         self: SubarrayComponentManager,
         argin: list[int],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Send the transient buffer.
@@ -942,8 +927,7 @@ class SubarrayComponentManager(
             power_mode is not None for power_mode in self._station_power_modes.values()
         ):
             self._is_assigning = False
-            if self._component_state_changed_callback:
-                self._component_state_changed_callback({"assign_completed": None})
+            self._component_state_changed_callback({"assign_completed": None})
 
     def _device_obs_state_changed(
         self: SubarrayComponentManager,
@@ -954,7 +938,4 @@ class SubarrayComponentManager(
         if obs_state == ObsState.READY and fqdn in self._configuring_resources:
             self._configuring_resources.remove(fqdn)
             if not self._configuring_resources:
-                if self._component_state_changed_callback:
-                    self._component_state_changed_callback(
-                        {"configure_completed": None}
-                    )
+                self._component_state_changed_callback({"configure_completed": None})

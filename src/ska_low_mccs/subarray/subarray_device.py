@@ -1,5 +1,4 @@
-# type: ignore
-#  -*- coding: utf-8 -*
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -55,6 +54,7 @@ class MccsSubarray(SKASubarray):
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
 
+        self.component_manager: SubarrayComponentManager
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: SubarrayHealthModel
 
@@ -138,7 +138,7 @@ class MccsSubarray(SKASubarray):
     # Callbacks
     # ----------
     # pylint: disable-next=too-many-branches, too-many-statements, too-many-locals
-    def _component_state_changed_callback(
+    def _component_state_changed_callback(  # noqa C901
         self: MccsSubarray,
         state_change: dict[str, Any],
         fqdn: Optional[str] = None,
@@ -228,11 +228,13 @@ class MccsSubarray(SKASubarray):
 
         if "obsstate_changed" in state_change.keys():
             obs_state = state_change.get("obsstate_changed")
-            self.component_manager._device_obs_state_changed(fqdn, obs_state)
+            if obs_state and fqdn:
+                self.component_manager._device_obs_state_changed(fqdn, obs_state)
 
         if "station_power_state" in state_change.keys():
             station_power = state_change.get("station_power_state")
-            self.component_manager._station_power_state_changed(fqdn, station_power)
+            if station_power and fqdn:
+                self.component_manager._station_power_state_changed(fqdn, station_power)
 
         # This might need changing. Seems that "power_state" changes could come
         # from any subservient device too.

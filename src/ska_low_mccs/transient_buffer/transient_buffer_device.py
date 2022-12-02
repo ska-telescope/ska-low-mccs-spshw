@@ -1,5 +1,4 @@
-# type: ignore
-#  -*- coding: utf-8 -*
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -48,6 +47,7 @@ class MccsTransientBuffer(SKABaseDevice):
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
 
+        self.component_manager: TransientBufferComponentManager
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TransientBufferHealthModel
         self._build_state: str = release.get_release_info()

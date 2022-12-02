@@ -140,11 +140,22 @@ class TestMccsTile:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
+        time.sleep(0.1)
+        tile_device.MockTpmOn()
+
+        init_value = getattr(tile_device, "staticTimeDelays")
 
         tile_device.Configure(json.dumps(config_in))
 
         assert list(tile_device.antennaIds) == expected_config["antenna_ids"]
-        assert list(tile_device.staticTimeDelays) == expected_config["fixed_delays"]
+
+        value = expected_config["fixed_delays"]
+        write_value = np.array(value)
+        if (value):
+            assert (getattr(tile_device, "staticTimeDelays") == write_value).all()
+        else:
+            assert getattr(tile_device, "staticTimeDelays") == init_value
+
 
     def test_healthState(
         self: TestMccsTile,

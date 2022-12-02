@@ -12,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Any, Callable, Optional, Sequence, cast
+from typing import Any, Callable, Optional, Sequence
 
 import ska_tango_base.subarray
 from ska_control_model import (
@@ -298,7 +298,8 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        self._component_state_changed_callback, fqdn=fqdn),
+                        self._component_state_changed_callback, fqdn=fqdn
+                    ),
                 )
             for fqdn in subarray_beam_fqdns_to_add:
                 self._subarray_beams[fqdn] = _SubarrayBeamProxy(

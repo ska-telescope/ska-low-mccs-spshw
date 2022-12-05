@@ -274,7 +274,7 @@ class TestSubarrayComponentManager:
             # Following line changed to execute ._release rather than .release
             # as .release just queues the ._release command and ._release
             # is where the exception is supposed to be raised.
-            subarray_component_manager._release(release_json)
+            subarray_component_manager._release(release_json, None, None)
 
     def test_configure(
         self: TestSubarrayComponentManager,
@@ -385,7 +385,9 @@ class TestSubarrayComponentManager:
                 {
                     "stations": [{"station_id": station_off_id}],
                     "subarray_beams": [{"subarray_beam_id": subarray_beam_off_id}],
-                }
+                },
+                None,
+                None,
             )
 
         task_status, response = subarray_component_manager.release_all()
@@ -441,7 +443,9 @@ class TestSubarrayComponentManager:
                 {
                     "stations": [{"station_id": station_on_id}],
                     "subarray_beams": [{"subarray_beam_id": subarray_beam_off_id}],
-                }
+                },
+                None,
+                None,
             )
 
         time.sleep(0.1)
@@ -499,7 +503,9 @@ class TestSubarrayComponentManager:
                 {
                     "stations": [{"station_id": station_off_id}],
                     "subarray_beams": [{"subarray_beam_id": subarray_beam_on_id}],
-                }
+                },
+                None,
+                None,
             )
         mock_station_off.Configure.assert_not_called()
         mock_station_on.Configure.assert_not_called()

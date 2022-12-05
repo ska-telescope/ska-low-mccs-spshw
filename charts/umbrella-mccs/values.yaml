@@ -69,6 +69,18 @@ ska-taranta-auth:
     nginx: true
     hostname: test-taranta.k8s.stfc.skao.int
 
+jupyterhub:
+  proxy:
+    secretToken: 'd4839a9ee32c46bd49077eee14666e97a28487fd9aaa8aee92c0282763b57bb0'
+    annotations: {}
+singleuser:
+    image:
+      name: "registry.gitlab.com/ska-telescope/sdi/ska-cicd-deploy-low-itf/tango-notebook"
+      tag: 0.1.1
+    extraEnv:
+      TANGO_HOST: "databaseds-tango-base-test.ska-low-mccs:10000"
+      
+
 # example overrides
 # ska-low-mccs:
 #   deviceServers:

@@ -137,6 +137,7 @@ class MccsSubarray(SKASubarray):
     # ----------
     # Callbacks
     # ----------
+    # TODO Remove complexity see Jira ticket 1214
     # pylint: disable-next=too-many-branches, too-many-statements, too-many-locals
     def _component_state_changed_callback(  # noqa C901
         self: MccsSubarray,

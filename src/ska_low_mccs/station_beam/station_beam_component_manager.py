@@ -1,5 +1,4 @@
-# type: ignore
-#  -*- coding: utf-8 -*
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -87,6 +86,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_fqdn: Optional[str] = None
         self._station_proxy: Optional[_StationProxy] = None
 
+        self._component_state_changed_callback: Callable[[dict[str, Any]], None]
         self._component_state_changed_callback = component_state_changed_callback
         self._max_workers = max_workers
 
@@ -159,7 +159,8 @@ class StationBeamComponentManager(MccsComponentManager):
                     self._max_workers,
                     self._device_communication_state_changed,
                     functools.partial(
-                        self._component_state_changed_callback, fqdn=self._station_fqdn
+                        self._component_state_changed_callback,
+                        fqdn=self._station_fqdn,
                     ),
                 )
                 if communicating:

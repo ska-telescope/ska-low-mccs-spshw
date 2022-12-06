@@ -1,5 +1,4 @@
-# type: ignore
-#  -*- coding: utf-8 -*
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -141,6 +140,7 @@ class SubarrayComponentManager(
         :param max_workers: Maximum number of workers in the worker pool.
             Defaults to None.
         """
+        self._component_state_changed_callback: Callable[[dict[str, Any]], None]
         self._component_state_changed_callback = component_state_changed_callback
 
         self._device_communication_statees: dict[str, CommunicationStatus] = {}
@@ -308,7 +308,8 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        self._component_state_changed_callback, fqdn=fqdn
+                        self._component_state_changed_callback,
+                        fqdn=fqdn,
                     ),
                 )
             for fqdn in station_beam_fqdns_to_add:
@@ -318,7 +319,8 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        self._component_state_changed_callback, fqdn=fqdn
+                        self._component_state_changed_callback,
+                        fqdn=fqdn,
                     ),
                 )
             self._component_state_changed_callback(
@@ -372,14 +374,14 @@ class SubarrayComponentManager(
     @check_communicating
     def assigned_resources(
         self: SubarrayComponentManager,
-    ) -> set:
+    ) -> list[str]:
         """
         Return this subarray's resources.
 
         :return: this subarray's resources.
         """
-        return (
-            set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
+        return list(
+            set(self._stations) | set(self._subarray_beams) | set(self._station_beams),
         )
 
     @property  # type: ignore[misc]
@@ -423,8 +425,8 @@ class SubarrayComponentManager(
     def _release(
         self: SubarrayComponentManager,
         resources: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Release resources from this subarray.
@@ -470,8 +472,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _release_all(
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Release all resources from this subarray.
@@ -531,8 +533,8 @@ class SubarrayComponentManager(
     def _configure(
         self: SubarrayComponentManager,
         configuration: dict[str, Any],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Configure the resources for a scan.
@@ -645,8 +647,8 @@ class SubarrayComponentManager(
         self: SubarrayComponentManager,
         scan_id: int,
         start_time: float,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Start scanning.
@@ -688,8 +690,8 @@ class SubarrayComponentManager(
 
     def _end_scan(
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Submit the `end_scan` slow command.
@@ -728,8 +730,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _deconfigure(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Deconfigure resources.
@@ -788,8 +790,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _obsreset(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Reset the observation by returning to unconfigured state.
@@ -826,8 +828,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _restart(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Restart the subarray by returning to unresourced state.
@@ -870,8 +872,8 @@ class SubarrayComponentManager(
     def _send_transient_buffer(
         self: SubarrayComponentManager,
         argin: list[int],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Send the transient buffer.

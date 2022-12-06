@@ -1,5 +1,4 @@
-# type: ignore
-#  -*- coding: utf-8 -*
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -90,11 +89,11 @@ class SubarrayHealthModel(HealthModel):
             fqdn: self._station_healths.get(fqdn, HealthState.UNKNOWN)
             for fqdn in station_fqdns
         }
-        self._subarray_beam_fqdns = {
+        self._subarray_beam_healths = {
             fqdn: self._subarray_beam_healths.get(fqdn, HealthState.UNKNOWN)
             for fqdn in subarray_beam_fqdns
         }
-        self._station_beam_fqdns = {
+        self._station_beam_healths = {
             fqdn: self._station_beam_healths.get(fqdn, HealthState.UNKNOWN)
             for fqdn in station_beam_fqdns
         }

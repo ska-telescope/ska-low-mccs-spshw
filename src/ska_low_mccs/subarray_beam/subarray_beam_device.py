@@ -1,5 +1,4 @@
-# type: ignore
-#  -*- coding: utf-8 -*
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -9,7 +8,7 @@
 """This module implements the MCCS subarray beam device."""
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
@@ -28,7 +27,7 @@ from ska_low_mccs.subarray_beam.subarray_beam_obs_state_model import (
     SubarrayBeamObsStateModel,
 )
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["MccsSubarrayBeam", "main"]
 
@@ -54,6 +53,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
 
+        self.component_manager: SubarrayBeamComponentManager
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: SubarrayBeamHealthModel
         self._obs_state_model: SubarrayBeamObsStateModel

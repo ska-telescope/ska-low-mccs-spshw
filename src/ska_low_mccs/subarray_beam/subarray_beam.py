@@ -1,5 +1,4 @@
-# type: ignore
-#  -*- coding: utf-8 -*
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -27,7 +26,9 @@ class SubarrayBeam(ObjectComponent):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None] = None,
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -58,7 +59,7 @@ class SubarrayBeam(ObjectComponent):
         self._antenna_weights: list[float] = []
         self._phase_centre: list[float] = []
         self._scan_id: int = 0
-        self._scan_time: int = 0
+        self._scan_time: float = 0
 
     def set_is_beam_locked_changed_callback(
         self: SubarrayBeam,

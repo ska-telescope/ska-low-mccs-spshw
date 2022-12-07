@@ -13,6 +13,7 @@ include .make/base.mk
 include .make/docs.mk
 include .make/helm.mk
 include .make/k8s.mk
+include .make/tmdata.mk
 
 # define private overrides for above variables in here
 -include PrivateRules.mak

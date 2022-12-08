@@ -1,0 +1,26 @@
+[flake8]
+max-line-length = 88
+
+extend-ignore = BLK,T
+enable = DAR104
+# E203 and W503 conflict with black
+ignore = E203,W503
+
+# this should be 10 and needs addressing
+max-complexity = 21
+
+docstring-style = sphinx
+rst-roles = py:attr, py:class, py:const, py:exc, py:func, py:meth, py:mod
+rst-directives = uml
+
+per-file-ignores =
+    # N802 = PEP8 lowercase function name -- conflicts with Tango conventions
+    src/ska_low_mccs_spshw/subrack/demo_subrack_device.py: N802
+    src/ska_low_mccs_spshw/subrack/subrack_device.py: N802
+    src/ska_low_mccs_spshw/tile/tile_device.py: N802
+    src/ska_low_mccs_spshw/tile/demo_tile_device.py: N802
+    src/ska_low_mccs_spshw/tile/tile_cli.py: N802
+    tests/integration/test_integration_tmc.py: N802
+    tests/unit/subrack/test_subrack_device.py: N802
+    tests/unit/tile/conftest.py: N802
+    tests/unit/tile/test_tile_device.py: N802

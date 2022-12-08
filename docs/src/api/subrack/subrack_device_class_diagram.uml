@@ -1,0 +1,122 @@
+@startuml
+
+class MccsSubrack {
+  +SubrackIp
+  +SubrackPort
+  +TileFQDNs
+  -_are_tpms_on
+  -_health_state
+  +hardware_manager
+  +IsTpmOn()
+  +PowerDownTpms()
+  +PowerOffTpm()
+  +PowerOnTpm()
+  +PowerUpTpms()
+  +SetPowerSupplyFanSpeed()
+  +SetSubrackFanMode()
+  +SetSubrackFanSpeed()
+  -_update_health_state()
+  +always_executed_hook()
+  +areTpmsOn()
+  +are_tpms_on_changed()
+  +backplaneTemperatures()
+  +boardCurrent()
+  +boardTemperatures()
+  +delete_device()
+  +health_changed()
+  +init_command_objects()
+  +init_device()
+  +is_IsTpmOn_allowed()
+  +is_PowerDownTpms_allowed()
+  +is_PowerOffTpm_allowed()
+  +is_PowerOnTpm_allowed()
+  +is_PowerUpTpms_allowed()
+  +powerSupplyCurrents()
+  +powerSupplyFanSpeeds()
+  +powerSupplyPowers()
+  +powerSupplyVoltages()
+  +simulationMode()
+  +subrackFanMode()
+  +subrackFanSpeeds()
+  +subrackFanSpeedsPercent()
+  +tpmCount()
+  +tpmCurrents()
+  +tpmPowers()
+  +tpmPresent()
+  +tpmSupplyFault()
+  +tpmTemperatures()
+  +tpmVoltages()
+}
+
+class SKABaseDevice {
+
+
+}
+
+class SubrackHardwareManager {
+  -_are_tpms_on
+  -_are_tpms_on_change_callback
+  +backplane_temperatures
+  +bay_count
+  +board_current
+  +board_temperatures
+  +power_supply_currents
+  +power_supply_fan_speeds
+  +power_supply_powers
+  +power_supply_voltages
+  +subrack_fan_modes
+  +subrack_fan_speeds
+  +subrack_fan_speeds_percent
+  +tpm_count
+  +tpm_currents
+  +tpm_powers
+  +tpm_present
+  +tpm_supply_fault
+  +tpm_temperatures
+  +tpm_voltages
+  +__init__()
+  -_connect()
+  -_update_are_tpms_on()
+  +are_tpms_on()
+  +connect()
+  +is_tpm_on()
+  +poll()
+  +set_power_supply_fan_speed()
+  +set_subrack_fan_modes()
+  +set_subrack_fan_speed()
+  +turn_off_tpm()
+  +turn_off_tpms()
+  +turn_on_tpm()
+  +turn_on_tpms()
+}
+
+class SimulableHardwareManager {
+
+
+}
+
+class OnOffHardwareManager {
+
+
+}
+
+class SubrackHardwareFactory {
+  -_logger
+  -_subrack_ip
+  -_subrack_port
+  -_tpm_count
+  +__init__()
+  -_create_driver()
+  -_create_static_simulator()
+}
+
+class SimulableHardwareFactory {
+
+
+}
+SKABaseDevice <|-- MccsSubrack
+SimulableHardwareManager <|-- SubrackHardwareManager
+OnOffHardwareManager <|-- SubrackHardwareManager
+SimulableHardwareFactory <|-- SubrackHardwareFactory
+
+@enduml

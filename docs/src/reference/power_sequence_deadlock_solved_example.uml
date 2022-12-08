@@ -1,0 +1,12 @@
+participant Controller
+participant Cabinet
+participant Subrack
+participant "Tile 1" as Tile
+Controller -> Cabinet: On()
+Cabinet -> Subrack: On()
+Subrack --> Cabinet: ResultCode.OK
+Cabinet -> Tile: On()
+Tile -> Subrack: TurnOnTpm(1)
+Subrack --> Tile: ResultCode.OK
+Tile --> Cabinet: ResultCode.OK
+Cabinet --> Controller: ResultCode.OK

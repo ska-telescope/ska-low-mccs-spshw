@@ -1,0 +1,20 @@
+participant "Jupyter\nNotebook\nOET" as Jupyter
+participant "TMC" as TMC
+participant "MCCS\nController" as MCCS_Controller
+participant "MCCS\nStation 1" as MCCS_Station_1
+participant "MCCS\nTile 1" as MCCS_Tile_1
+participant "Tile\nHardware\nManager" as Tile_HW_Man
+participant "Simulable\nHardware\nFactory" as Sim_HW_Factory
+participant "TPM\nHardware" as TPM_HW
+
+Jupyter -> TMC: Startup_Telescope()
+TMC -> MCCS_Controller: On()
+MCCS_Controller -> MCCS_Station_1: On()
+MCCS_Station_1 -> MCCS_Tile_1: On()
+MCCS_Station_1 -> MCCS_Tile_1: Initialise()
+MCCS_Tile_1 -> Tile_HW_Man: Initialise()
+Tile_HW_Man -> Sim_HW_Factory: Initialise()
+Sim_HW_Factory -> TPM_HW: DownloadFirmware(filename)
+Sim_HW_Factory <-- TPM_HW: <programmed>
+Sim_HW_Factory -> TPM_HW: Initialise()
+Sim_HW_Factory <-- TPM_HW: <initialised>

@@ -434,8 +434,8 @@ class BaseTpmSimulator(ObjectComponent):
             self._channeliser_truncation = [
                 truncation
             ] * TileData.NUM_FREQUENCY_CHANNELS
-        elif type(truncation) == list:
-            self._channeliser_truncation = copy.deepcopy(truncation)
+        else:  # list or numpy.ndarray
+            self._channeliser_truncation = list(truncation)
 
     @property
     def static_delays(self: BaseTpmSimulator) -> list[float]:

@@ -25,7 +25,6 @@ __all__ = [
     "DemoTile",
     "DynamicTpmSimulator",
     "StaticTpmSimulator",
-    "SwitchingTpmComponentManager",
     "DynamicTpmSimulatorComponentManager",
     "StaticTpmSimulatorComponentManager",
     "TpmDriver",
@@ -47,7 +46,6 @@ from .static_tpm_simulator import StaticTpmSimulator, StaticTileSimulator
 from .tile_component_manager import (
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulatorComponentManager,
-    SwitchingTpmComponentManager,
     TileComponentManager,
 )
 from .tile_device import MccsTile

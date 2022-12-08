@@ -28,9 +28,7 @@ from ska_control_model import (
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.component import (
     MccsComponentManager,
-    MccsComponentManagerProtocol,
     ObjectComponentManager,
-    SwitchingComponentManager,
     check_communicating,
     check_on,
 )
@@ -48,7 +46,6 @@ from ska_low_mccs.tile.tpm_status import TpmStatus
 __all__ = [
     "DynamicTpmSimulatorComponentManager",
     "StaticTpmSimulatorComponentManager",
-    "SwitchingTpmComponentManager",
     "TileComponentManager",
 ]
 
@@ -284,164 +281,13 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         )
 
 
-class SwitchingTpmComponentManager(SwitchingComponentManager):
-    """
-    A component manager that switches between TPM simulators and TPM driver.
-
-    The component managers provided for are
-    * static TPM simulator
-    * dynamic TPM simulator
-    * TPM driver
-    """
-
-    def __init__(
-        self: SwitchingTpmComponentManager,
-        initial_simulation_mode: SimulationMode,
-        initial_test_mode: TestMode,
-        logger: logging.Logger,
-        max_workers: int,
-        tile_id: int,
-        tpm_ip: str,
-        tpm_cpld_port: int,
-        tpm_version: str,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param initial_simulation_mode: the simulation mode that the
-            component should start in
-        :param initial_test_mode: the simulation mode that the component
-            should start in
-        :param logger: a logger for this object to use
-        :param tile_id: the unique ID for the tile
-        :param tpm_ip: the IP address of the tile
-        :param tpm_cpld_port: the port at which the tile is accessed for control
-        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-        :param max_workers: Nos. of worker threads for async commands.
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be called when the
-            component state changes
-        """
-        tpm_driver = TpmDriver(
-            logger,
-            max_workers,
-            tile_id,
-            tpm_ip,
-            tpm_cpld_port,
-            tpm_version,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-        dynamic_tpm_simulator_component_manager = DynamicTpmSimulatorComponentManager(
-            logger,
-            max_workers,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-        static_tpm_simulator_component_manager = StaticTpmSimulatorComponentManager(
-            logger,
-            max_workers,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-        super().__init__(
-            {
-                (SimulationMode.FALSE, TestMode.NONE): tpm_driver,
-                (SimulationMode.FALSE, TestMode.TEST): tpm_driver,
-                (
-                    SimulationMode.TRUE,
-                    TestMode.NONE,
-                ): dynamic_tpm_simulator_component_manager,
-                (
-                    SimulationMode.TRUE,
-                    TestMode.TEST,
-                ): static_tpm_simulator_component_manager,
-            },
-            (initial_simulation_mode, initial_test_mode),
-        )
-
-    @property
-    def simulation_mode(self: SwitchingTpmComponentManager) -> SimulationMode:
-        """
-        Return the simulation mode.
-
-        :return: the simulation mode
-        """
-        simulation_mode: SimulationMode  # typehint only
-
-        (simulation_mode, _) = self.switcher_mode
-        return simulation_mode
-
-    @simulation_mode.setter
-    def simulation_mode(
-        self: SwitchingTpmComponentManager, value: SimulationMode
-    ) -> None:
-        """
-        Set the simulation mode.
-
-        :param value: the new value for the simulation mode.
-        """
-        simulation_mode: SimulationMode  # typehints only
-        test_mode: TestMode  # typehints only
-
-        (simulation_mode, test_mode) = self.switcher_mode
-        if simulation_mode != value:
-            communicating = self.is_communicating
-            if communicating:
-                self.stop_communicating()
-            self.switcher_mode = (value, test_mode)
-            if communicating:
-                self.start_communicating()
-
-    @property
-    def test_mode(self: SwitchingTpmComponentManager) -> TestMode:
-        """
-        Return the test mode.
-
-        :return: the test mode
-        """
-        test_mode: TestMode  # typehint only
-        (_, test_mode) = self.switcher_mode
-        return cast(TestMode, test_mode)
-
-    @test_mode.setter
-    def test_mode(self: SwitchingTpmComponentManager, value: TestMode) -> None:
-        """
-        Set the test mode.
-
-        :param value: the new value for the test mode.
-        """
-        simulation_mode: SimulationMode  # typehint only
-        test_mode: TestMode  # typehint only
-
-        #         (simulation_mode, test_mode) = cast(
-        #             tuple[SimulationMode, TestMode], self.switcher_mode
-        #         )
-        (simulation_mode, test_mode) = self.switcher_mode
-
-        if test_mode != value:
-            communicating = self.is_communicating
-            if communicating:
-                self.stop_communicating()
-            self.switcher_mode = (simulation_mode, value)
-            if communicating:
-                self.start_communicating()
-
-
 class TileComponentManager(MccsComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
     def __init__(
         self: TileComponentManager,
-        initial_simulation_mode: SimulationMode,
-        initial_test_mode: TestMode,
+        simulation_mode: SimulationMode,
+        test_mode: TestMode,
         logger: logging.Logger,
         max_workers: int,
         tile_id: int,
@@ -452,15 +298,26 @@ class TileComponentManager(MccsComponentManager):
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        _tpm_component_manager: Optional[MccsComponentManagerProtocol] = None,
     ) -> None:
         """
         Initialise a new instance.
 
-        :param initial_simulation_mode: the simulation mode that the
-            component should start in
-        :param initial_test_mode: the test mode that the component
-            should start in
+        :param simulation_mode: the simulation mode of this component
+            manager. If `SimulationMode.TRUE`, then this component
+            manager will launch an internal TPM simulator and interact
+            with it; if `SimulationMode.FALSE`, this component manager
+            will attempt to connect with an external TPM at the
+            configured IP address and port.
+        :param test_mode: the test mode of this component manager. This
+            has no effect when the device is in `SimulationMode.FALSE`.
+            But when the simulation mode is `SimulationMode.TRUE`, then
+            this determines some properties of the simulator: if the
+            test mode is `TestMode.TEST`, then the simulator will
+            return static "canned" values that are easy to assert
+            against during testing; if `TestMode.NONE`, the simulator
+            will return dynamically changing values for attributes such
+            as temperatures and voltages, making for a nice demo but not
+            so easy to test against.
         :param logger: a logger for this object to use
         :param max_workers: nos. of worker threads
         :param tile_id: the unique ID for the tile
@@ -475,9 +332,6 @@ class TileComponentManager(MccsComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param _tpm_component_manager: a tpm component manager to use
-            instead of creating one. This is provided for testing
-            purposes only.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
@@ -487,11 +341,8 @@ class TileComponentManager(MccsComponentManager):
         self._subrack_communication_state = CommunicationStatus.DISABLED
         self._tpm_communication_state = CommunicationStatus.DISABLED
 
-        self._tpm_component_manager = (
-            _tpm_component_manager
-            or SwitchingTpmComponentManager(
-                initial_simulation_mode,
-                initial_test_mode,
+        if simulation_mode == SimulationMode.FALSE:
+            self._tpm_component_manager = TpmDriver(
                 logger,
                 max_workers,
                 tile_id,
@@ -501,7 +352,21 @@ class TileComponentManager(MccsComponentManager):
                 self._tpm_communication_state_changed,
                 component_state_changed_callback,
             )
-        )
+        elif test_mode == TestMode.TEST:  # and SimulationMode.TRUE
+            self._tpm_component_manager = StaticTpmSimulatorComponentManager(
+                logger,
+                max_workers,
+                self._tpm_communication_state_changed,
+                component_state_changed_callback,
+            )
+        else:  # SimulationMode.TRUE and TestMode.NONE
+            self._tpm_component_manager = DynamicTpmSimulatorComponentManager(
+                logger,
+                max_workers,
+                self._tpm_communication_state_changed,
+                component_state_changed_callback,
+            )
+
         self._tile_orchestrator = TileOrchestrator(
             self._start_communicating_with_subrack,
             self._stop_communicating_with_subrack,
@@ -746,48 +611,6 @@ class TileComponentManager(MccsComponentManager):
                 self._tile_time.set_reference_time(0)
 
     @property
-    def simulation_mode(self: TileComponentManager) -> SimulationMode:
-        """
-        Return the simulation mode.
-
-        :return: the simulation mode
-        """
-        return cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).simulation_mode
-
-    @simulation_mode.setter
-    def simulation_mode(self: TileComponentManager, value: SimulationMode) -> None:
-        """
-        Set the simulation mode.
-
-        :param value: the new value for the simulation mode.
-        """
-        cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).simulation_mode = value
-
-    @property
-    def test_mode(self: TileComponentManager) -> TestMode:
-        """
-        Return the test mode.
-
-        :return: the test mode
-        """
-        return cast(SwitchingTpmComponentManager, self._tpm_component_manager).test_mode
-
-    @test_mode.setter
-    def test_mode(self: TileComponentManager, value: TestMode) -> None:
-        """
-        Set the test mode.
-
-        :param value: the new value for the test mode.
-        """
-        cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).test_mode = value
-
-    @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
         """
         Return the TPM status.
@@ -802,9 +625,7 @@ class TileComponentManager(MccsComponentManager):
         elif self.communication_state != CommunicationStatus.ESTABLISHED:
             status = TpmStatus.UNCONNECTED
         else:
-            status = cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).tpm_status
+            status = self._tpm_component_manager.tpm_status
         return status
 
     @property
@@ -836,9 +657,7 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA reference time
         """
-        reference_time = cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).fpga_reference_time
+        reference_time = self._tpm_component_manager.fpga_reference_time
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_timestamp(reference_time)
 
@@ -853,9 +672,7 @@ class TileComponentManager(MccsComponentManager):
 
         :return: FPGA reference time
         """
-        reference_time = cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).fpga_reference_time
+        reference_time = self._tpm_component_manager.fpga_reference_time
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_frame(self.fpga_current_frame)
 
@@ -885,9 +702,7 @@ class TileComponentManager(MccsComponentManager):
             if (load_frame - self.fpga_current_frame) < 20:
                 self.logger.error("apply_calibration: time not enough in the future")
                 raise ValueError("Time too early")
-        cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).apply_calibration(load_frame)
+        self._tpm_component_manager.apply_calibration(load_frame)
 
     @check_communicating
     def apply_pointing_delays(
@@ -914,9 +729,7 @@ class TileComponentManager(MccsComponentManager):
                     "apply_pointing_delays: time not enough in the future"
                 )
                 raise ValueError("Time too early")
-        cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).apply_pointing_delays(load_frame)
+        self._tpm_component_manager.apply_pointing_delays(load_frame)
 
     @check_communicating
     def start_beamformer(
@@ -953,9 +766,9 @@ class TileComponentManager(MccsComponentManager):
             if (start_frame - self.fpga_current_frame) < 20:
                 self.logger.error("start_beamformer: time not enough in the future")
                 raise ValueError("Time too early")
-        cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).start_beamformer(start_frame, duration, subarray_beam_id, scan_id)
+        self._tpm_component_manager.start_beamformer(
+            start_frame, duration, subarray_beam_id, scan_id
+        )
 
     @check_communicating
     def configure_test_generator(
@@ -1000,9 +813,7 @@ class TileComponentManager(MccsComponentManager):
                     "configure_test_generator: time not enough in the future"
                 )
                 raise ValueError("Time too early")
-        cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).configure_test_generator(
+        self._tpm_component_manager.configure_test_generator(
             frequency0,
             amplitude0,
             frequency1,
@@ -1067,9 +878,7 @@ class TileComponentManager(MccsComponentManager):
                 raise ValueError(f"Invalid time: {start_time}")
             seconds = 0.0
 
-        cast(
-            SwitchingTpmComponentManager, self._tpm_component_manager
-        ).send_data_samples(
+        self._tpm_component_manager.send_data_samples(
             data_type,
             timestamp,
             seconds,
@@ -1239,7 +1048,7 @@ class TileComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(SwitchingTpmComponentManager, self._tpm_component_manager).initialise()
+            self._tpm_component_manager.initialise()
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1298,9 +1107,7 @@ class TileComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).download_firmware(argin)
+            self._tpm_component_manager.download_firmware(argin)
         except NotImplementedError:
             raise NotImplementedError
         except Exception as ex:
@@ -1378,9 +1185,7 @@ class TileComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            success = cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).start_acquisition(start_time, delay)
+            success = self._tpm_component_manager.start_acquisition(start_time, delay)
         except NotImplementedError:
             raise NotImplementedError
         except Exception as ex:
@@ -1441,9 +1246,7 @@ class TileComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            cast(
-                SwitchingTpmComponentManager, self._tpm_component_manager
-            ).post_synchronisation()
+            self._tpm_component_manager.post_synchronisation()
         except NotImplementedError:
             raise NotImplementedError
         except Exception as ex:

@@ -46,6 +46,9 @@ class MccsTile(SKABaseDevice):
     # -----------------
     # Device Properties
     # -----------------
+    SimulationConfig = device_property(dtype=int, default_value=SimulationMode.FALSE)
+    TestConfig = device_property(dtype=int, default_value=TestMode.NONE)
+
     AntennasPerTile = device_property(dtype=int, default_value=16)
 
     SubrackFQDN = device_property(dtype=str)
@@ -85,8 +88,8 @@ class MccsTile(SKABaseDevice):
         :return: a component manager for this device.
         """
         return TileComponentManager(
-            SimulationMode.TRUE,
-            TestMode.NONE,
+            self.SimulationConfig,
+            self.TestConfig,
             self.logger,
             self._max_workers,
             self.TileId,
@@ -334,16 +337,24 @@ class MccsTile(SKABaseDevice):
 
         :return: Return the current simulation mode
         """
-        return self.component_manager.simulation_mode
+        return self.SimulationConfig
 
     @simulationMode.write  # type: ignore[no-redef]
     def simulationMode(self: MccsTile, value):
         """
         Set the simulation mode.
 
+        Writing this attribute is deliberately unimplemented. The
+        simulation mode should instead be set by setting the device's
+        `SimulationConfig` property at launch.
+
         :param value: The simulation mode, as a SimulationMode value
         """
-        self.component_manager.simulation_mode = SimulationMode(value)
+        self.logger.warning(
+            "MccsTile's simulationMode attribute is currently unimplemented. "
+            "To change the simulation mode, relaunch the device with the"
+            "'SimulationConfig' property set as desired. "
+        )
 
     @attribute(dtype=TestMode, memorized=True, hw_memorized=True)
     def testMode(self: MccsTile) -> int:
@@ -352,16 +363,24 @@ class MccsTile(SKABaseDevice):
 
         :return: the current test mode
         """
-        return self.component_manager.test_mode
+        return self.TestConfig
 
     @testMode.write  # type: ignore[no-redef]
     def testMode(self: MccsTile, value: int) -> None:
         """
         Set the test mode.
 
+        Writing this attribute is deliberately unimplemented. The test
+        mode should instead be set by setting the device's `TestConfig`
+        property at launch.
+
         :param value: The test mode, as a TestMode value
         """
-        self.component_manager.test_mode = TestMode(value)
+        self.logger.warning(
+            "Changing MccsTile's testMode attribute is currently "
+            "unimplemented. To change the test mode, relaunch the device with "
+            "the 'TestConfig' property set as desired."
+        )
 
     @attribute(dtype="DevLong")
     def logicalTileId(self: MccsTile) -> int:

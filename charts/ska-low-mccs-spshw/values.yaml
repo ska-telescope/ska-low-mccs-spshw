@@ -83,10 +83,19 @@ low_mccs_spshw :
 
 # Default ska-low-mccs-spshw  device server instances
 deviceServers:
-  spshw -device:
-    # spshw  instances have to be 0-padded to three digits
-    instances: ["spshw bus-001"]
-    file: "data/spshw .yaml"
+  subracks:
+    # subrack instances have to be 0-padded to two digits
+    instances: []
+    file: "data/subrack.yaml"
+  tiles:
+    # tile instances have to be 0-padded to four digits
+    instances: []
+    file: "data/tile.yaml"
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 512Mi
 
 nodeSelector: {}
 

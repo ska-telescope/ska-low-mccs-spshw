@@ -3,4 +3,4 @@
 Tile Component Manager
 ======================
 
-.. automodule:: ska_low_mccs_sps
+.. automodule:: ska_low_mccs_spshw 

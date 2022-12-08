@@ -3,5 +3,5 @@
 Tile Cli
 ========
 
-.. automodule:: ska_low_mccs_sps.tile.tile_cli
+.. automodule:: ska_low_mccs_spshw .tile.tile_cli
    :members:

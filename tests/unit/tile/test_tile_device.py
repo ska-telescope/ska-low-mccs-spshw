@@ -22,9 +22,9 @@ from ska_control_model import AdminMode, HealthState, ResultCode, TestMode
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
-from ska_low_mccs_spshw import MccsTile
 from tango import DevFailed, DevState
 
+from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import StaticTpmSimulator
 
 

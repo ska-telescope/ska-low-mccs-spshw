@@ -26,9 +26,9 @@ from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallable
-from ska_low_mccs_spshw import MccsTile
 from tango.server import command
 
+from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,

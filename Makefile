@@ -1,5 +1,5 @@
 #
-# Project makefile for a SKA LOW MCCS SPS project. 
+# Project makefile for a SKA LOW MCCS SPSHW project. 
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.

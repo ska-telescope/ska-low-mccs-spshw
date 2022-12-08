@@ -71,7 +71,7 @@ def setup(app):
 
 
 # -- Project information -----------------------------------------------------
-release_filename = os.path.join("..", "..", "src", "ska_low_mccs_spshw", ".release")
+release_filename = os.path.join("..", "..", ".release")
 with open(release_filename) as fd:
     line=fd.readline()
     release = line.strip().split('=')[1]

@@ -8,7 +8,7 @@ subsystem: low-mccs-spshw
 telescope: SKA-low
 
 labels:
-  app: ska-low-mccs-spshw 
+  app: ska-low-mccs-spshw
 annotations:
   app.gitlab.com/app: CI_PROJECT_PATH_SLUG
   app.gitlab.com/env: CI_ENVIRONMENT_SLUG

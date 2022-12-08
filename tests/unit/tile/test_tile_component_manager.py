@@ -14,18 +14,12 @@ import logging
 import time
 import unittest.mock
 from datetime import datetime, timezone
-from typing import Any, Callable, Union, cast
+from typing import Any, Callable, Union
 
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
-from ska_control_model import (
-    CommunicationStatus,
-    PowerState,
-    SimulationMode,
-    TaskStatus,
-    TestMode,
-)
+from ska_control_model import CommunicationStatus, PowerState, TaskStatus, TestMode
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs.tile import (
@@ -33,7 +27,6 @@ from ska_low_mccs.tile import (
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
     StaticTpmSimulatorComponentManager,
-    SwitchingTpmComponentManager,
     TileComponentManager,
     TpmDriver,
 )
@@ -73,7 +66,6 @@ class TestTileComponentManager:
 
         # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
         tile_component_manager.start_communicating()
-        time.sleep(0.2)
         communication_state_changed_callback.assert_next_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -291,7 +283,6 @@ class TestStaticSimulatorCommon:
 
     * the StaticTpmSimulator
     * the StaticTpmSimulatorComponentManager,
-    * the SwitchingTpmComponentManager (in simulation and test mode)
     * the TileComponentManager (in simulation and test mode and turned
       on)
     """
@@ -315,7 +306,6 @@ class TestStaticSimulatorCommon:
         params=[
             "static_tpm_simulator",
             "static_tpm_simulator_component_manager",
-            "switching_tpm_component_manager",
             "tile_component_manager",
         ]
     )
@@ -323,14 +313,12 @@ class TestStaticSimulatorCommon:
         self: TestStaticSimulatorCommon,
         static_tpm_simulator: StaticTpmSimulator,
         static_tpm_simulator_component_manager: StaticTpmSimulatorComponentManager,
-        switching_tpm_component_manager: SwitchingTpmComponentManager,
         tile_component_manager: TileComponentManager,
         communication_state_changed_callback: MockCallable,
         request: SubRequest,
     ) -> Union[
         StaticTpmSimulator,
         StaticTpmSimulatorComponentManager,
-        SwitchingTpmComponentManager,
         TileComponentManager,
     ]:
         """
@@ -342,9 +330,6 @@ class TestStaticSimulatorCommon:
 
         * a static TPM simulator component manager,
 
-        * a component manager that can switch between TPM driver and
-          simulators.
-
         * a Tile component manager (in simulation and test mode and
           turned on)
 
@@ -354,8 +339,6 @@ class TestStaticSimulatorCommon:
         :param static_tpm_simulator: the static TPM simulator to return
         :param static_tpm_simulator_component_manager: the static TPM
             simulator component manager to return
-        :param switching_tpm_component_manager: the component manager
-            that switches between TPM simulator and TPM driver to return
         :param tile_component_manager: the tile component manager (in
             simulation mode) to return
         :param communication_state_changed_callback: callback to be
@@ -375,9 +358,6 @@ class TestStaticSimulatorCommon:
         elif request.param == "static_tpm_simulator_component_manager":
             static_tpm_simulator_component_manager.start_communicating()
             return static_tpm_simulator_component_manager
-        elif request.param == "switching_tpm_component_manager":
-            switching_tpm_component_manager.start_communicating()
-            return switching_tpm_component_manager
         elif request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
             communication_state_changed_callback.assert_next_call(
@@ -427,7 +407,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         attribute_name: str,
@@ -472,7 +451,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         attribute_name: str,
@@ -547,7 +525,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         attribute_name: str,
@@ -612,7 +589,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         mocker: pytest_mock.MockerFixture,
@@ -666,7 +642,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         mocker: pytest_mock.MockerFixture,
@@ -691,15 +666,8 @@ class TestStaticSimulatorCommon:
             args = "2022-11-10T12:34:56.0Z"
             dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
             timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
-            cast(
-                SwitchingTpmComponentManager, tile._tpm_component_manager
-            ).fpga_sync_time = timestamp
-            assert (
-                cast(
-                    SwitchingTpmComponentManager, tile._tpm_component_manager
-                ).fpga_sync_time
-                == timestamp
-            )
+            tile._tpm_component_manager.fpga_sync_time = timestamp
+            assert tile._tpm_component_manager.fpga_sync_time == timestamp
             tile._tile_time.set_reference_time(timestamp)
         else:
             args = 123456
@@ -733,7 +701,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
     ) -> None:
@@ -756,7 +723,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         mocker: pytest_mock.MockerFixture,
@@ -787,7 +753,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         register: str,
@@ -822,7 +787,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         write_address: int,
@@ -871,7 +835,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
     ) -> None:
@@ -896,7 +859,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
     ) -> None:
@@ -926,7 +888,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
     ) -> None:
@@ -957,7 +918,6 @@ class TestStaticSimulatorCommon:
         tile: Union[
             StaticTpmSimulator,
             StaticTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
     ) -> None:
@@ -997,81 +957,6 @@ class TestStaticSimulatorCommon:
         assert tile.get_40g_configuration(1) == [expected]
         assert tile.get_40g_configuration(10) == []
 
-    def test_test_mode(
-        self: TestDriverCommon,
-        mock_tile_component_manager_with_tpm_manager_fixture: TileComponentManager,
-        switching_tpm_component_manager: SwitchingTpmComponentManager,
-    ) -> None:
-        """
-        Test that changes made to the Tiles test mode are propagated to TPM.
-
-        :param mock_tile_component_manager_with_tpm_manager_fixture: the
-            mocked tile with a mocked TPM manager.
-        :param switching_tpm_component_manager: the mocked TPM manager.
-
-        Test that:
-        * When we set test mode on the TileComponentManager this is
-        propagated to the TPMComponentManager.
-        """
-        mock_tile_component_manager_with_tpm_manager_fixture.test_mode = TestMode.TEST
-        assert getattr(switching_tpm_component_manager, "test_mode") == TestMode.TEST
-        assert (
-            mock_tile_component_manager_with_tpm_manager_fixture.test_mode
-            == TestMode.TEST
-        )
-
-        mock_tile_component_manager_with_tpm_manager_fixture.test_mode = TestMode.NONE
-        assert getattr(switching_tpm_component_manager, "test_mode") == TestMode.NONE
-        assert (
-            mock_tile_component_manager_with_tpm_manager_fixture.test_mode
-            == TestMode.NONE
-        )
-
-    def test_start_tpm_connection(
-        self: TestDriverCommon,
-        mock_tile_component_manager_with_tpm_manager_fixture: TileComponentManager,
-        switching_tpm_component_manager: SwitchingTpmComponentManager,
-        communication_state_changed_callback: unittest.mock.Mock,
-        component_state_changed_callback: unittest.mock.Mock,
-    ) -> None:
-        """
-        Test the start tpm_connection.
-
-        :param mock_tile_component_manager_with_tpm_manager_fixture: the
-            mocked tile with a mocked tpm_component manager injected.
-        :param switching_tpm_component_manager: the mocked tpm injected.
-        :param communication_state_changed_callback: the mocked communication callback.
-        :param component_state_changed_callback: the mocked state callback.
-
-        Test that:
-        * when the tile orchestrator commands the tile to connect to the
-        TPM with the correct states assumed, a connection is ESTABLISHED
-        * when the tile orchestrator command the tile to stop communicating
-        the power state is none and fault is none
-        """
-        # sanity check of initial conditions
-        assert switching_tpm_component_manager.simulation_mode == SimulationMode.TRUE
-        assert switching_tpm_component_manager.test_mode == TestMode.TEST
-        assert (
-            switching_tpm_component_manager._communication_state
-            == CommunicationStatus.DISABLED
-        )
-        # tile orchestrator requests to connect to TPM
-        tile_orchestrator = (
-            mock_tile_component_manager_with_tpm_manager_fixture._tile_orchestrator
-        )
-        tile_orchestrator._start_communicating_with_tpm()
-        # we check that we have established a connection
-        communication_state_changed_callback.assert_last_call(
-            CommunicationStatus.ESTABLISHED
-        )
-
-        tile_orchestrator._stop_communicating_with_tpm()
-        # we check that we have established a connection
-        component_state_changed_callback.assert_last_call(
-            {"power_state": None, "fault": None}
-        )
-
 
 class TestDynamicSimulatorCommon:
     """
@@ -1085,7 +970,6 @@ class TestDynamicSimulatorCommon:
 
     * the DynamicTpmSimulator
     * the DynamicTpmSimulatorComponentManager,
-    * the SwitchingTpmComponentManager (in simulation mode, test mode off)
     * the TileComponentManager (in simulation mode, test mode off, and
       turned on)
     """
@@ -1118,30 +1002,21 @@ class TestDynamicSimulatorCommon:
     @pytest.fixture(
         params=[
             "dynamic_tpm_simulator_component_manager",
-            "switching_tpm_component_manager",
             "tile_component_manager",
         ]
     )
     def tile(
         self: TestDynamicSimulatorCommon,
         dynamic_tpm_simulator_component_manager: DynamicTpmSimulatorComponentManager,
-        switching_tpm_component_manager: SwitchingTpmComponentManager,
         tile_component_manager: TileComponentManager,
         request: SubRequest,
-    ) -> Union[
-        DynamicTpmSimulatorComponentManager,
-        SwitchingTpmComponentManager,
-        TileComponentManager,
-    ]:
+    ) -> Union[DynamicTpmSimulatorComponentManager, TileComponentManager]:
         """
         Return the tile component under test.
 
         This is parametrised to return
 
         * a dynamic TPM simulator component manager,
-
-        * a component manager that can switch between TPM driver and
-          simulators.
 
         * a Tile component manager (in simulation and test mode and
           turned on)
@@ -1151,8 +1026,6 @@ class TestDynamicSimulatorCommon:
 
         :param dynamic_tpm_simulator_component_manager: the dynamic TPM
             simulator component manager to return
-        :param switching_tpm_component_manager: the component manager
-            that switches between TPM simulator and TPM driver to return
         :param tile_component_manager: the tile component manager (in
             simulation mode) to return
         :param request: A pytest object giving access to the requesting test
@@ -1165,9 +1038,6 @@ class TestDynamicSimulatorCommon:
         if request.param == "dynamic_tpm_simulator_component_manager":
             dynamic_tpm_simulator_component_manager.start_communicating()
             return dynamic_tpm_simulator_component_manager
-        elif request.param == "switching_tpm_component_manager":
-            switching_tpm_component_manager.start_communicating()
-            return switching_tpm_component_manager
         elif request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
             time.sleep(0.1)
@@ -1197,7 +1067,6 @@ class TestDynamicSimulatorCommon:
         self: TestDynamicSimulatorCommon,
         tile: Union[
             DynamicTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         attribute_name: str,
@@ -1239,7 +1108,6 @@ class TestDynamicSimulatorCommon:
         self: TestDynamicSimulatorCommon,
         tile: Union[
             DynamicTpmSimulatorComponentManager,
-            SwitchingTpmComponentManager,
             TileComponentManager,
         ],
         attribute_name: str,
@@ -1269,35 +1137,11 @@ class TestDynamicSimulatorCommon:
         assert getattr(tile, attribute_name) == expected_value
 
 
-class TestDriverCommon:
-    """
-    Class for testing commands common to several component manager layers.
-
-    Because the TileComponentManager is designed to pass commands
-    through to the TpmSimulator or TpmDriver that it is driving, many
-    commands are common to multiple classes. Here we test the flow of
-    commands to the driver. Tests in this class are deployed to:
-
-    * the TpmDriver,
-    * the SwitchingTpmComponentManager (in driver mode)
-    * the TileComponentManager (in driver mode)
-    """
+class TestTpmDriver:
+    """Class for testing TpmDriver commands."""
 
     @pytest.fixture()
-    def simulation_mode(self: TestDriverCommon) -> SimulationMode:
-        """
-        Return the simulation mode.
-
-        To be used when initialising the tile class object
-        under test.
-
-        :return: the simulation mode to be used when initialising the
-            tile class object under test.
-        """
-        return SimulationMode.FALSE
-
-    @pytest.fixture()
-    def hardware_tile_mock(self: TestDriverCommon) -> unittest.mock.Mock:
+    def hardware_tile_mock(self: TestTpmDriver) -> unittest.mock.Mock:
         """
         Provide a mock for the hardware tile.
 
@@ -1309,7 +1153,7 @@ class TestDriverCommon:
         """Patched TpmDriver class."""
 
         def __init__(
-            self: TestDriverCommon.PatchedTpmDriver,
+            self: TestTpmDriver.PatchedTpmDriver,
             logger: logging.Logger,
             max_workers: int,
             tile_id: int,
@@ -1350,7 +1194,7 @@ class TestDriverCommon:
 
     @pytest.fixture()
     def patched_tpm_driver(
-        self: TestDriverCommon,
+        self: TestTpmDriver,
         logger: logging.Logger,
         max_workers: int,
         tile_id: int,
@@ -1392,7 +1236,7 @@ class TestDriverCommon:
         )
 
     def test_communication_fails(
-        self: TestDriverCommon,
+        self: TestTpmDriver,
         patched_tpm_driver: PatchedTpmDriver,
         hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
@@ -1425,7 +1269,7 @@ class TestDriverCommon:
         )
 
     def test_communication(
-        self: TestDriverCommon,
+        self: TestTpmDriver,
         patched_tpm_driver: PatchedTpmDriver,
         hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
@@ -1458,15 +1302,3 @@ class TestDriverCommon:
         # assert patched_tpm_driver._queue_manager._task_result[2] ==
         # "Connected to Tile"
         assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
-
-        # assert getattr(switching_tpm_component_manager, "test_mode")
-        # #== TestMode.TEST
-        # assert mock_tile_component_manager_with_tpm_manager_fixture.test_mode
-        # #== TestMode.TEST
-
-        # mock_tile_component_manager_with_tpm_manager_fixture.test_mode
-        # # = TestMode.NONE
-        # assert getattr(switching_tpm_component_manager, "test_mode")
-        # # == TestMode.NONE
-        # assert mock_tile_component_manager_with_tpm_manager_fixture.test_mode
-        # # == TestMode.NONE

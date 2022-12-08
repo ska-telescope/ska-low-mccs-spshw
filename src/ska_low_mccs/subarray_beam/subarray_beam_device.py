@@ -124,7 +124,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         called upon :py:class:`~.MccsSubarrayBeam`'s initialisation.
         """
 
-        # pylint: disable-next=arguments-differ
         def do(  # type: ignore[override]
             self: MccsSubarrayBeam.InitCommand,
         ) -> tuple[ResultCode, str]:

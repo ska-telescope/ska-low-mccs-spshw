@@ -7,7 +7,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module contains the tests of the tile component manage."""
+"""This module contains tests of the TPM driver."""
 from __future__ import annotations
 
 import logging
@@ -17,7 +17,7 @@ from typing import Callable
 
 import pytest
 from pyfabil.base.definitions import LibraryError
-from ska_control_model import CommunicationStatus, SimulationMode, TaskStatus
+from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs.tile import StaticTileSimulator, TpmDriver
@@ -27,31 +27,7 @@ from ska_low_mccs.tile.tpm_status import TpmStatus
 
 
 class TestTPMDriver:
-    """
-    Class for testing commands common to several component manager layers.
-
-    Because the TileComponentManager is designed to pass commands
-    through to the TpmSimulator or TpmDriver that it is driving, many
-    commands are common to multiple classes. Here we test the flow of
-    commands to the driver. Tests in this class are deployed to:
-
-    * the TpmDriver,
-    * the SwitchingTpmComponentManager (in driver mode)
-    * the TileComponentManager (in driver mode)
-    """
-
-    @pytest.fixture()
-    def simulation_mode(self: TestTPMDriver) -> SimulationMode:
-        """
-        Return the simulation mode.
-
-        To be used when initialising the tile class object
-        under test.
-
-        :return: the simulation mode to be used when initialising the
-            tile class object under test.
-        """
-        return SimulationMode.FALSE
+    """Class for testing the TPMDriver."""
 
     @pytest.fixture()
     def hardware_tile_mock(self: TestTPMDriver) -> unittest.mock.Mock:

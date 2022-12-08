@@ -279,6 +279,12 @@
                             "TileId": [
                                 "1"
                             ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
+                            ],
                             "SubrackFQDN": [
                                 "low-mccs/subrack/01"
                             ],
@@ -300,13 +306,6 @@
                             "TpmVersion": [
                                 "tpm_v1_6"
                             ]
-                        },
-                        "attribute_properties": {
-                            "simulationMode": {
-                                "__value": [
-                                    "1"
-                                ]
-                            }
                         }
                     }
                 }
@@ -317,6 +316,12 @@
                         "properties": {
                             "TileId": [
                                 "2"
+                            ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
                             ],
                             "SubrackFQDN": [
                                 "low-mccs/subrack/01"
@@ -339,13 +344,6 @@
                             "TpmVersion": [
                                 "tpm_v1_6"
                             ]
-                        },
-                        "attribute_properties": {
-                            "simulationMode": {
-                                "__value": [
-                                    "1"
-                                ]
-                            }
                         }
                     }
                 }
@@ -356,6 +354,12 @@
                         "properties": {
                             "TileId": [
                                 "3"
+                            ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
                             ],
                             "SubrackFQDN": [
                                 "low-mccs/subrack/01"
@@ -378,13 +382,6 @@
                             "TpmVersion": [
                                 "tpm_v1_2"
                             ]
-                        },
-                        "attribute_properties": {
-                            "simulationMode": {
-                                "__value": [
-                                    "1"
-                                ]
-                            }
                         }
                     }
                 }
@@ -395,6 +392,12 @@
                         "properties": {
                             "TileId": [
                                 "4"
+                            ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
                             ],
                             "SubrackFQDN": [
                                 "low-mccs/subrack/01"
@@ -417,13 +420,6 @@
                             "TpmVersion": [
                                 "tpm_v1_6"
                             ]
-                        },
-                        "attribute_properties": {
-                            "simulationMode": {
-                                "__value": [
-                                    "1"
-                                ]
-                            }
                         }
                     }
                 }

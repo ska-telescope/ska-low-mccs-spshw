@@ -1,83 +1,31 @@
 {
     "station": {
-        "subarray_id": 1,
+        "StationId": 1,
         "refLatitude": 4.5,
         "refLongitude": 6.5,
-        "refHeight": 10.6,
-        "beam_fqdns": ["beam_1", "beam_2"],
-        "transient_buffer_fqdn": "buffer_1",
-        "delay_centre": [6.4, 7.2],
-        "calibration_coefficients": [6.4, 7.2],
-        "is_calibrated": true,
-        "calibration_job_id": 1,
-        "daq_job_id": 1,
-        "data_directory": "data location"
+        "refHeight": 10.6
     },
     "antennas": {
         "low-mccs/antenna/1": {
             "antennaId": 1,
-            "gain": 10.4,
-            "rms": 3.2,
-            "xPolarisationFaulty": true,
-            "yPolarisationFaulty": true,
             "xDisplacement": 3.2,
             "yDisplacement": 3.2,
-            "zDisplacement": 3.2,
-            "timestampOfLastSpectrum": "01:11:32",
-            "logicalAntennaId": 1,
-            "xPolarisationScalingFactor": [1, 1],
-            "yPolarisationScalingFactor": [1, 1],
-            "calibrationCoefficient": [0.5, 0.5],
-            "pointingCoefficient": [0.5, 0.5],
-            "spectrumX": [0.5, 0.5],
-            "spectrumY": [0.5, 0.5],
-            "position": [0.5, 0.5],
-            "delays": [0.5, 0.5],
-            "delayRates": [0.5, 0.5],
-            "bandpassCoefficient": [0.5, 0.5],
-            "first": true,
-            "altitude": 45.5,
-            "fieldNodeLatitude": 1.2,
-            "fieldNodeLongitude": 1.32
+            "zDisplacement": 3.2
         },
         "low-mccs/antenna/2": {
             "antennaId": 1,
-            "gain": 10.4,
-            "rms": 3.2,
-            "xPolarisationFaulty": true,
-            "yPolarisationFaulty": true,
             "xDisplacement": 3.2,
             "yDisplacement": 3.2,
-            "zDisplacement": 3.2,
-            "timestampOfLastSpectrum": "01:11:32",
-            "logicalAntennaId": 1,
-            "xPolarisationScalingFactor": [1, 1],
-            "yPolarisationScalingFactor": [1, 1],
-            "calibrationCoefficient": [0.5, 0.5],
-            "pointingCoefficient": [0.5, 0.5],
-            "spectrumX": [0.5, 0.5],
-            "spectrumY": [0.5, 0.5],
-            "position": [0.5, 0.5],
-            "delays": [0.5, 0.5],
-            "delayRates": [0.5, 0.5],
-            "bandpassCoefficient": [0.5, 0.5],
-            "first": true,
-            "altitude": 45.5,
-            "fieldNodeLatitude": 1.2,
-            "fieldNodeLongitude": 1.32
+            "zDisplacement": 3.2
         }
     },
     "tiles": {
         "low-mccs/tile/1": {
-            "csp_destination_ip": "0.1.2.3",
-            "csp_destination_mac": "00:11:22:33:44:55",
-            "csp_destination_port": "1000",
+            "fixed_delays": [1, 2],
             "antenna_ids": [1, 2]
         },
         "low-mccs/tile/2": {
-            "csp_destination_ip": "0.1.2.3",
-            "csp_destination_mac": "00:11:22:33:44:55",
-            "csp_destination_port": "1000",
+            "fixed_delays": [1, 2],
             "antenna_ids": [1, 2]
         }
     },

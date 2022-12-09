@@ -722,7 +722,7 @@ class StationComponentManager(MccsComponentManager):
             station_config = configuration.get("station")
             if (
                 station_config is None
-                or station_config.get("stationId") != self._station_id
+                or station_config.get("StationId") != self._station_id
             ):
                 raise ValueError("Wrong station id")
             self._update_station_configs(station_config)

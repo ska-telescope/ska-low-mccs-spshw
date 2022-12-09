@@ -592,12 +592,12 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._bandpassCoefficient
 
-    @attribute(dtype="bool", label="yPolarisationFaulty")
+    @attribute(dtype="bool", label="first")
     def first(self: MccsAntenna) -> bool:
         """
         Return the first attribute.
 
-        :return: the y-polarisation faulty flag
+        :return: the first faulty flag
         """
         return self._first
 

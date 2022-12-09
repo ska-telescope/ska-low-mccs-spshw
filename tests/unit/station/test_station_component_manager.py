@@ -196,7 +196,7 @@ class TestStationComponentManager:
 
         mock_task_callback = MockCallable()
         station_component_manager._configure(
-            {"station": {"stationId": station_id + 1}}, task_callback=mock_task_callback
+            {"station": {"StationId": station_id + 1}}, task_callback=mock_task_callback
         )
         mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
         mock_task_callback.assert_next_call(
@@ -210,7 +210,7 @@ class TestStationComponentManager:
 
         # result = station_component_manager._configure(station_id)
         station_component_manager._configure(
-            {"station": {"stationId": station_id}}, mock_task_callback
+            {"station": {"StationId": station_id}}, mock_task_callback
         )
         mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
         mock_task_callback.assert_next_call(
@@ -218,5 +218,5 @@ class TestStationComponentManager:
         )
 
         component_state_changed_callback.assert_next_call_with_keys(
-            {"configuration_changed": {"stationId": station_id}}
+            {"configuration_changed": {"StationId": station_id}}
         )

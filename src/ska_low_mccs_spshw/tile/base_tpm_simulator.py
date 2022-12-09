@@ -20,8 +20,8 @@ import numpy as np
 from ska_low_mccs_common.component import ObjectComponent
 from typing_extensions import Final
 
-from .tile_data import TileData
-from .tpm_status import TpmStatus
+from ska_low_mccs_spshw.tile.tile_data import TileData
+from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 __all__ = ["BaseTpmSimulator"]
 

@@ -31,7 +31,7 @@ from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsComponentManager
 
-from .tpm_status import TpmStatus
+from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 
 def _int2ip(addr: int) -> str:

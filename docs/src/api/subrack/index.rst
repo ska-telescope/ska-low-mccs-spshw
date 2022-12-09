@@ -2,7 +2,7 @@
 Subrack subpackage
 ==================
 
-.. automodule:: ska_low_mccs_spshw .subrack
+.. automodule:: ska_low_mccs_spshw.subrack
 
 
 .. toctree::

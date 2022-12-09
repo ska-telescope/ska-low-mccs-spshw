@@ -2,7 +2,7 @@
 Tile subpackage
 ===============
 
-.. automodule:: ska_low_mccs_spshw .tile
+.. automodule:: ska_low_mccs_spshw.tile
 
 
 .. toctree::

@@ -4,7 +4,7 @@ domain: ska-low-mccs-spshw
 instances: ["subrack-01"]
 entrypoints:
   - name: "subrack.MccsSubrack"
-    path: "/app/src/ska_low_mccs_sphw/subrack/subrack_device.py"
+    path: "/app/src/ska_low_mccs_spshw/subrack/subrack_device.py"
 server: 
   name: "MccsSubrack"
   instances:
@@ -12,14 +12,14 @@ server:
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: "low-mccs-sphw/subrack/01"
+        - name: "low-mccs-spshw/subrack/01"
           properties:
           - name: "TileFQDNs"
             values:
-            - "low-mccs-sphw/tile/0001"
-            - "low-mccs-sphw/tile/0002"
-            - "low-mccs-sphw/tile/0003"
-            - "low-mccs-sphw/tile/0004"
+            - "low-mccs-spshw/tile/0001"
+            - "low-mccs-spshw/tile/0002"
+            - "low-mccs-spshw/tile/0003"
+            - "low-mccs-spshw/tile/0004"
           - name: "LoggingLevelDefault"
             values: 
             - "3"
@@ -32,10 +32,10 @@ server:
 depends_on:
   - device: sys/database/2
 image:
-  registry: "{{.Values.low_mccs_sphw.image.registry}}"
-  image: "{{.Values.low_mccs_sphw.image.image}}"
-  tag: "{{.Values.low_mccs_sphw.image.tag}}"
-  pullPolicy: "{{.Values.low_mccs_sphw.image.pullPolicy}}"
+  registry: "{{.Values.low_mccs_spshw.image.registry}}"
+  image: "{{.Values.low_mccs_spshw.image.image}}"
+  tag: "{{.Values.low_mccs_spshw.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs_spshw.image.pullPolicy}}"
 livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:

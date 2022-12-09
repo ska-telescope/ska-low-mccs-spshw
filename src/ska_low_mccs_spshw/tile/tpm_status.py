@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import enum
 
+__all__ = ["TpmStatus"]
+
 
 class TpmStatus(enum.IntEnum):
     """

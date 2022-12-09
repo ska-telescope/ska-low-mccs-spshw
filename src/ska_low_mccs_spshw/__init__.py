@@ -7,7 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-This package implements SKA Low's MCCS SPS subsystem.
+This package implements SKA Low's MCCS subsystem.
 
 The Monitoring Control and Calibration (MCCS) subsystem is responsible
 for, amongst other things, monitoring and control of LFAA.

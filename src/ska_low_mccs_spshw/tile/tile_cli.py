@@ -117,7 +117,7 @@ def command_result_as_string(method: Callable) -> Callable:
 
 
 class MccsTileCli(metaclass=CliMeta):
-    """Command-line interface to :py:class:`ska_low_mccs.tile.tile_device.MccsTile`."""
+    """CLI interface to :py:class:`ska_low_mccs_spshw.tile.tile_device.MccsTile`."""
 
     def __init__(self: MccsTileCli) -> None:
         """

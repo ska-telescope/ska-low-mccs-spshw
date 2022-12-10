@@ -14,7 +14,7 @@ import itertools
 import json
 import logging
 import os.path
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import tango
 from ska_control_model import (
@@ -26,8 +26,8 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs.tile import TileComponentManager, TileHealthModel
-from ska_low_mccs.tile.tpm_status import TpmStatus
+from ska_low_mccs_spshw.tile import TileComponentManager, TileHealthModel
+from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 from ska_tango_base.base import SKABaseDevice
 
 # from ska_tango_base.base.op_state_model import OpStateModel
@@ -36,7 +36,7 @@ from tango.server import attribute, command, device_property
 
 __all__ = ["MccsTile", "main"]
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 class MccsTile(SKABaseDevice):
@@ -1552,7 +1552,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.SetLmcIntegratedDownloadCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
 
@@ -2011,7 +2011,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.ApplyCalibrationCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ApplyCalibration` command functionality.
 
@@ -2069,7 +2069,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.LoadPointingDelaysCommand, argin: list[float]
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
 
@@ -2139,7 +2139,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.ApplyPointingDelaysCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ApplyPointingDelays` command functionality.
 
@@ -2508,7 +2508,7 @@ class MccsTile(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsTile.SendDataSamplesCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SendDataSamples` command functionality.
 

@@ -27,19 +27,19 @@ __all__ = [
     "StaticTpmSimulator",
     "DynamicTpmSimulatorComponentManager",
     "StaticTpmSimulatorComponentManager",
-    "TpmDriver",
     "StaticTileSimulator",
+    "TpmDriver",
+    "TpmStatus",
     # "demo_tile_device",
     # "plugins",
-    "TpmStatus",
 ]
 
+from .tpm_status import TpmStatus
 from .tile_health_model import TileHealthModel
 from .tile_data import TileData
 from .time_util import TileTime
 from .tpm_driver import TpmDriver
 from .base_tpm_simulator import BaseTpmSimulator
-from .tpm_status import TpmStatus
 
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator, StaticTileSimulator

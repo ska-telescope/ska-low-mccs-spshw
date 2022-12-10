@@ -427,7 +427,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("Tile disconnected from tpm.")
 
     @property
-    def tpm_status(self: TpmDriver) -> TpmStatus:
+    def tpm_status(self: TpmDriver):  # -> TpmStatus:
         """
         Return the TPM status.
 

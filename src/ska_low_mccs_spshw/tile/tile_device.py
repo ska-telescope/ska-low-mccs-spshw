@@ -26,13 +26,14 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs_spshw.tile import TileComponentManager, TileHealthModel
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 from ska_tango_base.base import SKABaseDevice
 
 # from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
+
+from ska_low_mccs_spshw.tile import TileComponentManager, TileHealthModel
+from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 __all__ = ["MccsTile", "main"]
 

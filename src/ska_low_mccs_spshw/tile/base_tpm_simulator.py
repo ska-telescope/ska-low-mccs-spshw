@@ -236,7 +236,7 @@ class BaseTpmSimulator(ObjectComponent):
     # Properties
     #
     @property
-    def tpm_status(self: BaseTpmSimulator) -> TpmStatus:
+    def tpm_status(self: BaseTpmSimulator):  # -> TpmStatus:
         """
         Get the tpm status.
 

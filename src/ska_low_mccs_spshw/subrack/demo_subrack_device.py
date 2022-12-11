@@ -21,7 +21,7 @@ from typing import Optional
 from ska_tango_base.commands import ResultCode
 from tango.server import command
 
-from ska_low_mccs_spshw import MccsSubrack
+from ska_low_mccs_spshw.subrack.subrack_device import MccsSubrack
 
 __all__ = ["DemoSubrack"]
 

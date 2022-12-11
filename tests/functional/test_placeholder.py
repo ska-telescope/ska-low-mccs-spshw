@@ -25,9 +25,9 @@ def devices_to_load() -> DevicesToLoadType:
     """
     return {
         "path": "tests/data/configuration.json",
-        "package": "ska_low_mccs_daq",
+        "package": "ska_low_mccs_spshw",
         "devices": [
-            {"name": "pasdbus_001", "proxy": MccsDeviceProxy},
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -45,14 +45,14 @@ def test_placeholder() -> None:
     """
 
 
-@given("an MccsPasdBus")
+@given("an MccsSubrack")
 def pasd_bus_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a DeviceProxy to an instance of MccsDaqReceiver.
 
     :param tango_harness: a test harness for Tango devices
 
-    :return: A MccsDeviceProxy instance to MccsDaqReceiver stored in the target_fixture
-        `daq_receiver_bdd`.
+    :return: A MccsDeviceProxy instance to MccsSubrack stored in the target_fixture
+        `subrack_bdd`.
     """
-    return tango_harness.get_device("low-mccs/pasdbus/001")
+    return tango_harness.get_device("low-mccs/subrack/01")

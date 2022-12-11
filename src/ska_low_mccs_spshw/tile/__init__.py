@@ -30,7 +30,7 @@ __all__ = [
     "StaticTileSimulator",
     "TpmDriver",
     "TpmStatus",
-    # "demo_tile_device",
+    "demo_tile_device",
     # "plugins",
 ]
 

@@ -135,9 +135,8 @@ class TileOrchestrator:
     * Calling callbacks that update the monitored state of the component
 
     The specific actions are defined in a YAML file as follows:
-
-        literalinclude:: ../../../../src/ska_low_mccs/tile/orchestration_rules.yaml
-        :language: yaml
+    literalinclude:: ../../../../src/ska_low_mccs_spshw/tile/orchestration_rules.yaml
+    :language: yaml
     """
 
     RULES: Optional[

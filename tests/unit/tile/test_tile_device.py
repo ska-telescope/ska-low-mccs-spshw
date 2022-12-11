@@ -42,7 +42,7 @@ def device_to_load(
     """
     return {
         "path": "tests/data/configuration.json",
-        "package": "ska_low_mccs_sps",
+        "package": "ska_low_mccs_spshw",
         "device": "tile_0001",
         "patch": patched_tile_device_class,
         "proxy": MccsDeviceProxy,
@@ -831,9 +831,8 @@ class TestMccsTileCommands:
         Test for WriteAddress.
 
         This is a very weak test but the
-        :py:class:`~ska_low_mccs.tile.tile_hardware.TileHardwareManager`'s
-        :py:meth:`~ska_low_mccs.tile.tile_hardware.TileHardwareManager.write_address`
-        method is well tested.
+        :py:class:`~ska_low_mccs_spshw.tile.tile_hardware.TileHardwareManager`'s
+        write_address method is well tested.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

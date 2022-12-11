@@ -16,16 +16,16 @@ support testing and demonstrating the MCCS Subrack device.
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
-from ska_low_mccs import MccsSubrack
+from ska_low_mccs_spshw import MccsSubrack
 from ska_tango_base.commands import ResultCode
 from tango.server import command
 
 __all__ = ["DemoSubrack"]
 
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 class DemoSubrack(MccsSubrack):

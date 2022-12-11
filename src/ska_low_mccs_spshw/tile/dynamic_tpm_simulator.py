@@ -20,6 +20,7 @@ from typing import Any, Callable, Optional
 
 import scipy.stats
 import tango
+
 from ska_low_mccs_spshw.tile.base_tpm_simulator import BaseTpmSimulator
 
 

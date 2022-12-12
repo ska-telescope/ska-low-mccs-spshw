@@ -251,6 +251,8 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         super().__init__(
             StaticTpmSimulator(logger, component_state_changed_callback),
             logger,
+            max_workers,
+            communication_state_changed_callback,
             component_state_changed_callback,
         )
 
@@ -1287,5 +1289,5 @@ class TileComponentManager(MccsComponentManager):
         with self._power_state_lock:
             old_state = self.power_state
             self.power_state = power_state
-        if old_state != power_state:
-            self._tpm_component_manager._set_tpm_status(self.tpm_status)
+        # if old_state != power_state:
+        #     self._tpm_component_manager._set_tpm_status(self.tpm_status)

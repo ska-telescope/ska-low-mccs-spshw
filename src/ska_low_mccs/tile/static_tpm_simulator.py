@@ -34,7 +34,9 @@ class StaticTpmSimulator(BaseTpmSimulator):
     def __init__(
         self: StaticTpmSimulator,
         logger: logging.Logger,
-        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.
@@ -116,7 +118,9 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     def __init__(
         self: StaticTpmSimulator,
         logger: logging.Logger,
-        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.

@@ -97,11 +97,9 @@ class BaseTpmSimulator(ObjectComponent):
     def __init__(
         self: BaseTpmSimulator,
         logger: logging.Logger,
-        # max_workers: int,
-        # tpm_communication_changed_callback: Optional[
-        #     Callable[[CommunicationStatus], None]
-        # ],
-        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.

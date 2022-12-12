@@ -175,7 +175,9 @@ class DynamicTpmSimulator(BaseTpmSimulator):
     def __init__(
         self: DynamicTpmSimulator,
         logger: logging.Logger,
-        component_state_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.

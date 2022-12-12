@@ -861,8 +861,8 @@ class TestTPMDriver:
         # establish connection to the TPM
         static_tile_simulator.connect()
         initialise_task_callback = MockCallable()
-        patched_tpm_driver.initialise(task_callback=initialise_task_callback)
         assert static_tile_simulator.is_programmed() is False
+        patched_tpm_driver.initialise(task_callback=initialise_task_callback)
 
         time.sleep(0.1)
         _, kwargs = initialise_task_callback.get_next_call()

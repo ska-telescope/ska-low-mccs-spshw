@@ -476,7 +476,7 @@ class TpmDriver(MccsComponentManager):
                 self._hardware_lock.release()
             else:
                 self.logger.debug("tpm_driver: tpm_status uses current value")
-            self._update_tpm_status(new_status)
+        self._set_tpm_status(new_status)
 
     @property
     def hardware_version(self: TpmDriver) -> int:

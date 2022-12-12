@@ -1,2 +1,2 @@
 Scenario: Placeholder
-    GIVEN an MccsPasdBus
+    GIVEN an MccsSubrack

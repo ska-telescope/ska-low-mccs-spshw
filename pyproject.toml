@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
 version = "0.1.0"
-description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
+description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
 readme = "README.md"

@@ -7,7 +7,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module contains pytest-specific test harness for MCCS integration tests."""
+"""This module contains pytest-specific test harness for SPSHW integration tests."""
 from __future__ import annotations
 
 from typing import Callable

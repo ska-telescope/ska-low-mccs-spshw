@@ -7,4 +7,4 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This subpackage contains integration tests of the ska-low-mccs project."""
+"""This subpackage contains integration tests of the ska-low-mccs_spshw project."""

@@ -46,9 +46,9 @@ def test_placeholder() -> None:
 
 
 @given("an MccsSubrack")
-def pasd_bus_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
+def subrack_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
-    Return a DeviceProxy to an instance of MccsDaqReceiver.
+    Return a DeviceProxy to an instance of MccsSubrack.
 
     :param tango_harness: a test harness for Tango devices
 

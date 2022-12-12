@@ -2,18 +2,11 @@
 # docker image required by this script
 # >docker pull think/plantuml
 
-SOURCE_CODE_DIR=../../src/ska_low_mccs
+SOURCE_CODE_DIR=../../src/ska_low_mccs_spshw
 DOCS_SOURCE_DIR=../src/api
 
-FILES="antenna/antenna_device.py \
-       apiu/apiu_device.py \
-       controller/controller_device.py \
-       subrack/subrack_device.py \
-       tile/tile_device.py \
-       subarray.py \
-       subarray_beam.py \
-       station_beam.py \
-       station.py"
+FILES="subrack/subrack_device.py \
+       tile/tile_device.py
 
 convert () {
 	file=$1
@@ -29,7 +22,3 @@ convert () {
 
 for f in ${FILES}; do convert $f; done
 
-
-to_svg() {
-    cat ${DOCS_SOURCE_DIR}/antenna_device.uml | docker run --rm -i think/plantuml >${DOCS_SOURCE_DIR}/antenna_device.svg
-}

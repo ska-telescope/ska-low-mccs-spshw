@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""Release information for SKA MCCS Python Package."""
+"""Release information for SKA MCCS SPSHW Python Package."""
 import os
 import sys
 from typing import Optional
@@ -16,18 +16,19 @@ with open(".release", encoding="utf8") as fd:
     line = fd.readline()
     version = line.strip().split("=")[1]
 version_info = version.split(".")
-description = "A set of common code for Low MCCS tango devices for the SKA Telescope."
+description = ("A set of common code for Low MCCS SPSHW tango devices"
+               "for the SKA Telescope.")
 author = "Team MCCS"
-author_email = "drew.devereux at csiro dot au"
 url = "https://www.skatelescope.org/"
 
 # pylint: disable=redefined-builtin
 license = "BSD-3-Clause"  # noqa: A001
 
 # pylint: disable=redefined-builtin
-copyright = "CSIRO and STFC Daresbury Laboratory \
-    and University of Manchester"  # noqa: A001
-
+copyright = ("CSIRO, INAF, I.T. Dev Ltd, Observatory Sciences Ltd"
+             "Raman Research Institute, Science and Technology Facilities Council"
+             "SKA Observatory, University of Malta, University of Manchester"
+             "University of Oxford")
 
 def get_release_info(clsname: Optional[str] = None) -> str:
     """

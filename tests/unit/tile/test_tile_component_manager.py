@@ -1159,7 +1159,7 @@ class TestTpmDriver:
         communication_state_changed_callback: MockCallable,
         component_state_changed_callback: MockCallable,
         hardware_tile_mock: unittest.mock.Mock,
-    ) -> StaticTpmSimulator:
+    ) -> TpmDriver:
         """
         Return a TPMDriver using a mocked Tile.
 

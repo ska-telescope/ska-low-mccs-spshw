@@ -25,7 +25,7 @@ import time
 from typing import Any, Callable, Optional, cast
 
 # import numpy as np
-from pyaavs.tile import Tile as Tile12
+from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsComponentManager
@@ -117,13 +117,13 @@ class TpmDriver(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         tile_id: int,
-        tile: Tile12,
+        tile: HwTile,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
-        Initialise a new TPM driver instance trying to connect to the given IP and port.
+        Initialise a new TPM driver instance passing in the Tile object we want to control.
 
         :param logger: a logger for this simulator to use
         :param max_workers: Nos. of worker threads for async commands.

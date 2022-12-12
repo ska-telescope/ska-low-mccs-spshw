@@ -8,6 +8,7 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
+import json
 from typing import Any, Optional, cast
 
 import tango
@@ -19,8 +20,8 @@ from ska_control_model import (  # SimulationMode,
     SimulationMode,
 )
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand
-from tango.server import attribute, device_property
+from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs.antenna.antenna_component_manager import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_health_model import AntennaHealthModel
@@ -30,7 +31,7 @@ __all__ = ["MccsAntenna", "main"]
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods, too-many-instance-attributes
 class MccsAntenna(SKABaseDevice):
     """An implementation of an antenna Tango device for MCCS."""
 
@@ -63,6 +64,10 @@ class MccsAntenna(SKABaseDevice):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: AntennaHealthModel
         self.component_manager: AntennaComponentManager
+        self._antennaId: int
+        self._xDisplacement: float
+        self._yDisplacement: float
+        self._zDisplacement: float
 
     def init_device(self: MccsAntenna) -> None:
         """
@@ -99,6 +104,24 @@ class MccsAntenna(SKABaseDevice):
             self._communication_state_changed_callback,
             self.component_state_changed_callback,
         )
+
+    def init_command_objects(self: MccsAntenna) -> None:
+        """Initialise the command handlers for commands supported by this device."""
+        super().init_command_objects()
+        for (command_name, method_name) in [
+            ("Configure", "configure"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=None,
+                ),
+            )
 
     # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
@@ -569,6 +592,15 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._bandpassCoefficient
 
+    @attribute(dtype="bool", label="first")
+    def first(self: MccsAntenna) -> bool:
+        """
+        Return the first attribute.
+
+        :return: the first faulty flag
+        """
+        return self._first
+
     # --------
     # Commands
     # --------
@@ -585,6 +617,26 @@ class MccsAntenna(SKABaseDevice):
             tango.DevState.UNKNOWN,
             tango.DevState.FAULT,
         ]
+
+    @command(dtype_in="DevString")
+    def Configure(self: MccsAntenna, argin: str) -> None:
+        """
+        Configure the antenna device attributes.
+
+        :param argin: the configuration for the device in stringified json format
+        """
+        config = json.loads(argin)
+
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
+            value = config.get(attribute_name)
+            if isinstance(value, type(default)):
+                return value
+            return default
+
+        self._antennaId = apply_if_valid("antennaId", self._antennaId)
+        self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
+        self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
+        self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
 
 
 # ----------

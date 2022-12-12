@@ -10,6 +10,7 @@
 """This module contains the tests for MccsAPIU."""
 from __future__ import annotations
 
+import json
 import time
 
 import pytest
@@ -139,6 +140,111 @@ class TestMccsAPIU:
         assert device_under_test.overVoltageThreshold == 6.0
         device_under_test.humidityThreshold = 60.0
         assert device_under_test.humidityThreshold == 60.0
+
+    @pytest.mark.parametrize(
+        "config_in, expected_config",
+        [
+            pytest.param(
+                {
+                    "overCurrentThreshold": 12.3,
+                    "overVoltageThreshold": 45.6,
+                    "humidityThreshold": 78.9,
+                },
+                {
+                    "overCurrentThreshold": 12.3,
+                    "overVoltageThreshold": 45.6,
+                    "humidityThreshold": 78.9,
+                },
+                id="valid config is entered correctly",
+            ),
+            pytest.param(
+                {"overCurrentThreshold": 12.3, "humidityThreshold": 78.9},
+                {
+                    "overCurrentThreshold": 12.3,
+                    "overVoltageThreshold": 0.0,
+                    "humidityThreshold": 78.9,
+                },
+                id="missing config data is valid",
+            ),
+            pytest.param(
+                {
+                    "overCurrentThreshold_wrong_name": 12.3,
+                    "overVoltageThreshold": 45.6,
+                    "humidityThreshold": 78.9,
+                },
+                {
+                    "overCurrentThreshold": 0.0,
+                    "overVoltageThreshold": 45.6,
+                    "humidityThreshold": 78.9,
+                },
+                id="invalid named configs are skipped",
+            ),
+            pytest.param(
+                {
+                    "overCurrentThreshold_wrong_name": "some string",
+                    "overVoltageThreshold": True,
+                    "humidityThreshold": [78.9, 12.3],
+                },
+                {
+                    "overCurrentThreshold": 0.0,
+                    "overVoltageThreshold": 0.0,
+                    "humidityThreshold": 0.0,
+                },
+                id="invalid types dont apply",
+            ),
+            pytest.param(
+                {},
+                {
+                    "overCurrentThreshold": 0.0,
+                    "overVoltageThreshold": 0.0,
+                    "humidityThreshold": 0.0,
+                },
+                id="empty dict is no op",
+            ),
+        ],
+    )
+    def test_Configure(
+        self: TestMccsAPIU,
+        device_under_test: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        config_in: dict,
+        expected_config: dict,
+    ) -> None:
+        """
+        Test for Configure.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the device
+        :param config_in: configuration of the device
+        :param expected_config: the expected output configuration
+        """
+        device_under_test.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        device_under_test.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
+        assert device_under_test.adminMode == AdminMode.ONLINE
+
+        device_under_test.Configure(json.dumps(config_in))
+
+        assert (
+            device_under_test.overCurrentThreshold
+            == expected_config["overCurrentThreshold"]
+        )
+        assert (
+            device_under_test.overVoltageThreshold
+            == expected_config["overVoltageThreshold"]
+        )
+        assert (
+            device_under_test.humidityThreshold == expected_config["humidityThreshold"]
+        )
 
     def test_PowerUp(
         self: TestMccsAPIU,

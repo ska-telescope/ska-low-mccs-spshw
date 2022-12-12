@@ -123,7 +123,7 @@ class TpmDriver(MccsComponentManager):
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
-        Initialise a new TPM driver instance passing in the Tile object we want to control.
+        Initialise a new TPM driver instance passing in the Tile object.
 
         :param logger: a logger for this simulator to use
         :param max_workers: Nos. of worker threads for async commands.

@@ -147,6 +147,7 @@ class MccsTile(SKABaseDevice):
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
             ("StartAcquisition", "start_acquisition"),
+            ("Configure", "configure"),
         ]:
             self.register_command_object(
                 command_name,
@@ -346,6 +347,43 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevString",
+        label="cspDestinationIp",
+    )
+    def cspDestinationIp(self: MccsTile) -> str:
+        """
+        Return the cspDestinationIp attribute.
+
+        :return: the IP address of the csp destination
+        """
+        return self._csp_destination_ip
+
+    @attribute(
+        dtype="DevString",
+        label="cspDestinationMac",
+    )
+    def cspDestinationMac(self: MccsTile) -> str:
+        """
+        Return the cspDestinationMac attribute.
+
+        :return: the MAC address of the csp destination
+        """
+        return self._csp_destination_mac
+
+    @attribute(
+        dtype="DevLong",
+        label="cspDestinationPort",
+    )
+    def cspDestinationPort(self: MccsTile) -> int:
+        """
+        Return the cspDestinationMac attribute.
+
+        :return: the port of the csp destination
+        """
+        return self._csp_destination_port
+
     @attribute(dtype=SimulationMode, memorized=True, hw_memorized=True)
     def simulationMode(self: MccsTile) -> int:
         """
@@ -887,6 +925,27 @@ class MccsTile(SKABaseDevice):
     # # --------
     # # Commands
     # # --------
+
+    @command(dtype_in="DevString")
+    def Configure(self: MccsTile, argin: str) -> None:
+        """
+        Configure the tile device attributes.
+
+        :param argin: the configuration for the device in stringified json format
+        """
+        config = json.loads(argin)
+
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
+            value = config.get(attribute_name)
+            if isinstance(value, type(default)):
+                return value
+            return default
+
+        static_delays = config.get("fixed_delays")
+        if static_delays:
+            self.component_manager.static_delays = static_delays
+
+        self._antenna_ids = apply_if_valid("antenna_ids", self._antenna_ids)
 
     @command(dtype_out="DevVarLongStringArray")
     def Initialise(self: MccsTile) -> DevVarLongStringArrayType:

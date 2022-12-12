@@ -196,7 +196,7 @@ class TestStationComponentManager:
 
         mock_task_callback = MockCallable()
         station_component_manager._configure(
-            station_id + 1, task_callback=mock_task_callback
+            {"station": {"StationId": station_id + 1}}, task_callback=mock_task_callback
         )
         mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
         mock_task_callback.assert_next_call(
@@ -209,13 +209,14 @@ class TestStationComponentManager:
         assert not station_component_manager.is_configured
 
         # result = station_component_manager._configure(station_id)
-        station_component_manager._configure(station_id, mock_task_callback)
+        station_component_manager._configure(
+            {"station": {"StationId": station_id}}, mock_task_callback
+        )
         mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
         mock_task_callback.assert_next_call(
             status=TaskStatus.COMPLETED, result="Configure command has completed"
         )
 
         component_state_changed_callback.assert_next_call_with_keys(
-            {"is_configured": True}
+            {"configuration_changed": {"StationId": station_id}}
         )
-        assert station_component_manager.is_configured

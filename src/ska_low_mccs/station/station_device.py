@@ -28,6 +28,7 @@ DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 __all__ = ["MccsStation", "main"]
 
 
+# pylint: disable=too-many-instance-attributes
 class MccsStation(SKAObsDevice):
     """An implementation of a station beam Tango device for MCCS."""
 
@@ -62,6 +63,9 @@ class MccsStation(SKAObsDevice):
         self.component_manager: StationComponentManager
         self._delay_centre: list[float]
         self._obs_state_model: StationObsStateModel
+        self._refLatitude: float
+        self._refLongitude: float
+        self._refHeight: float
 
     def init_device(self: MccsStation) -> None:
         """
@@ -288,9 +292,11 @@ class MccsStation(SKAObsDevice):
             health = cast(HealthState, state_change.get("health_state"))
             health_state_changed_callback(health)
 
-        if "is_configured" in state_change.keys():
-            is_configured = cast(bool, state_change.get("is_configured"))
-            self._obs_state_model.is_configured_changed(is_configured)
+        if "configuration_changed" in state_change.keys():
+            self._obs_state_model.is_configured_changed(True)
+            configuration = state_change.get("configuration_changed")
+            assert isinstance(configuration, dict)
+            self._configure_station(configuration)
 
     def _component_power_state_changed(
         self: MccsStation,
@@ -328,6 +334,23 @@ class MccsStation(SKAObsDevice):
         if self._health_state != health:
             self._health_state = health
             self.push_change_event("healthState", health)
+
+    def _configure_station(self: MccsStation, config: dict) -> None:
+        """
+        Configure the station attributes.
+
+        :param config: the configuration settings for this station.
+        """
+
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
+            value = config.get(attribute_name)
+            if isinstance(value, type(default)):
+                return value
+            return default
+
+        self._refLatitude = apply_if_valid("refLatitude", self._refLatitude)
+        self._refLongitude = apply_if_valid("refLongitude", self._refLongitude)
+        self._refHeight = apply_if_valid("refHeight", self._refHeight)
 
     # ----------
     # Attributes
@@ -508,6 +531,8 @@ class MccsStation(SKAObsDevice):
     def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the station with all relevant parameters.
+
+        Also configures children device that are connected to the station.
 
         :param argin: Configuration parameters encoded in a json string
 

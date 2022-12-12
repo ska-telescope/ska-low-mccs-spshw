@@ -16,8 +16,9 @@ with open(".release", encoding="utf8") as fd:
     line = fd.readline()
     version = line.strip().split("=")[1]
 version_info = version.split(".")
-description = ("A set of common code for Low MCCS SPSHW tango devices"
-               "for the SKA Telescope.")
+description = (
+    "A set of common code for Low MCCS SPSHW tango devices for the SKA Telescope."
+)
 author = "Team MCCS"
 url = "https://www.skatelescope.org/"
 
@@ -25,10 +26,13 @@ url = "https://www.skatelescope.org/"
 license = "BSD-3-Clause"  # noqa: A001
 
 # pylint: disable=redefined-builtin
-copyright = ("CSIRO, INAF, I.T. Dev Ltd, Observatory Sciences Ltd"
-             "Raman Research Institute, Science and Technology Facilities Council"
-             "SKA Observatory, University of Malta, University of Manchester"
-             "University of Oxford")
+copyright = (  # noqa: A001
+    "CSIRO, INAF, I.T. Dev Ltd, Observatory Sciences Ltd"
+    "Raman Research Institute, Science and Technology Facilities Council"
+    "SKA Observatory, University of Malta, University of Manchester"
+    "University of Oxford"
+)
+
 
 def get_release_info(clsname: Optional[str] = None) -> str:
     """

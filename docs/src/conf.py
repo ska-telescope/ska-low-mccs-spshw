@@ -91,6 +91,7 @@ nitpick_ignore = [
     # so that these external dependencies don't leak out through our
     # public interface.
     ("py:class", "Angle"),
+    ("py:class", "pyaavs"),
     ("py:class", "astropy.time.core.Time"),
     ("py:class", "numpy.complex128"),
     ("py:exc", "fire.core.FireError"),

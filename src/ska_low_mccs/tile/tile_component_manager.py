@@ -1287,7 +1287,7 @@ class TileComponentManager(MccsComponentManager):
         :param power_state: The desired power state
         """
         with self._power_state_lock:
-            old_state = self.power_state
+            #     old_state = self.power_state
             self.power_state = power_state
         # if old_state != power_state:
         #     self._tpm_component_manager._set_tpm_status(self.tpm_status)

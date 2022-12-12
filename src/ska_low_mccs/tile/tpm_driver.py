@@ -277,7 +277,7 @@ class TpmDriver(MccsComponentManager):
                 self.logger.debug("Failed to acquire lock")
             if error_flag:
                 self.tpm_disconnected()
-                self.update_component_state({"fault": True})
+                # self.update_component_state({"fault": True})
             # wait for a polling_period
             return
         else:
@@ -317,10 +317,10 @@ class TpmDriver(MccsComponentManager):
                 timeout = timeout + 1
             self.logger.error(
                 f"Connection to tile failed after {timeout*3} seconds. Waiting for "
-                f"instruction..."
+                f"connection..."
             )
             self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            self.update_component_state({"fault": True})
+            # self.update_component_state({"fault": True})
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
 
@@ -682,6 +682,7 @@ class TpmDriver(MccsComponentManager):
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
             if self.tile.is_programmed() is False:
+                self._set_tpm_status(TpmStatus.UNPROGRAMMED)
                 self.tile.program_fpgas(self._firmware_name)
             prog_status = self.tile.is_programmed()
         self.logger.debug("Lock released")

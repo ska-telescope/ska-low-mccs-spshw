@@ -32,7 +32,7 @@ def devices_to_load(tpm_number) -> DevicesToLoadType:
     :return: specification of the devices to be loaded.
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "charts/ska-low-mccs/data/deployment_configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
@@ -94,39 +94,10 @@ def daq_config():
     :return: a dictionary containing the configuration.
     """
     return {
-        "nof_antennas": 16,
-        "nof_channels": 512,
-        "nof_beams": 1,
-        "nof_polarisations": 2,
-        "nof_tiles": 1,
-        "nof_raw_samples": 32768,
-        "raw_rms_threshold": -1,
-        "nof_channel_samples": 1024,
-        "nof_correlator_samples": 1835008,
-        "nof_correlator_channels": 1,
-        "continuous_period": 0,
-        "nof_beam_samples": 42,
-        "nof_beam_channels": 384,
-        "nof_station_samples": 262144,
-        "append_integrated": True,
-        "sampling_time": 1.1325,
-        "sampling_rate": (800e6 / 2.0) * (32.0 / 27.0) / 512.0,
-        "oversampling_factor": 32.0 / 27.0,
-        "receiver_ports": "4660",
+        "receiver_ports": [4660],
         "receiver_interface": "eth0",
-        "receiver_ip": "8080",
-        "receiver_frame_size": 8500,
-        "receiver_frames_per_block": 32,
-        "receiver_nof_blocks": 256,
-        "receiver_nof_threads": 1,
+        "receiver_ip": "10.0.10.2",
         "directory": ".",
-        "logging": True,
-        "write_to_disk": True,
-        "station_config": None,
-        "max_filesize": None,
-        "acquisition_duration": -1,
-        "acquisition_start_time": -1,
-        "description": "This is a test configuration",
     }
 
 
@@ -520,7 +491,7 @@ def tpm_assert_data_acquisition(
     t1 = datetime.datetime.strptime(tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ")
     timediff = datetime.datetime.timestamp(t1) - datetime.datetime.timestamp(t0)
 
-    assert 0.9 < timediff and timediff < 1.1
+    assert 0.9 < timediff < 1.1
 
     tile_device_lrc_changed_callback.assert_next_call(
         "longrunningcommandresult",
@@ -611,10 +582,6 @@ def start_daq(daq_device, daq_processed_data_callback, daq_device_lrc_changed_ca
         in daq_device._change_event_subscription_ids
     )
 
-    initial_lrc_result = ("", "")
-    assert subrack_device.longRunningCommandResult == initial_lrc_result
-    daq_device_lrc_changed_callback.assert_next_change_event(initial_lrc_result)
-
     # DaqModes.RAW_DATA is 0 hence the 0 here
     config = {
         "modes_to_start": [0],
@@ -643,7 +610,7 @@ def assert_daq_started(daq_device_lrc_changed_callback, daq_start_unique_id):
 
 
 @given("the DAQRX has been started")
-def given_daq_started(daq_device, daq_processed_data_callback):
+def given_daq_started(daq_device, daq_processed_data_callback, daq_device_lrc_changed_callback):
     """
     Start the daq.
 
@@ -651,7 +618,7 @@ def given_daq_started(daq_device, daq_processed_data_callback):
     :param daq_processed_data_callback: a callback to provide the daq to
         verify that it has processed data.
     """
-    start_daq(daq_device, daq_processed_data_callback)
+    start_daq(daq_device, daq_processed_data_callback, daq_device_lrc_changed_callback)
 
 
 @when("the user stops the DAQRX", target_fixture="daq_stop_unique_id")
@@ -679,7 +646,7 @@ def assert_daq_stopped(daq_device_lrc_changed_callback, daq_stop_unique_id):
     """
     daq_device_lrc_changed_callback.assert_next_call(
         "longrunningcommandresult",
-        (daq_stop_unique_id, '"Start acquisition has completed"'),
+        (daq_stop_unique_id, '"Stop acquisition has completed"'),
         tango.AttrQuality.ATTR_VALID,
     )
 

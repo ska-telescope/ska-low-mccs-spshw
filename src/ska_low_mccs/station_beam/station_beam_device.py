@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -17,10 +17,10 @@ from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.station_beam import (
+from ska_low_mccs.station_beam.station_beam_component_manager import (
     StationBeamComponentManager,
-    StationBeamHealthModel,
 )
+from ska_low_mccs.station_beam.station_beam_health_model import StationBeamHealthModel
 
 __all__ = ["MccsStationBeam", "main"]
 
@@ -38,6 +38,25 @@ class MccsStationBeam(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self.component_manager: StationBeamComponentManager
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: StationBeamHealthModel
+
     def init_device(self: MccsStationBeam) -> None:
         """
         Initialise the device.
@@ -93,6 +112,7 @@ class MccsStationBeam(SKAObsDevice):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
         """
         A class for :py:class:`~.MccsStationBeam`'s Init command.

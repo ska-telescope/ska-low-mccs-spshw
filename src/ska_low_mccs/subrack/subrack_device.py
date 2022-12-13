@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -12,7 +14,7 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import threading
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import tango
 from ska_control_model import (
@@ -28,16 +30,14 @@ from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.subrack import (
-    SubrackComponentManager,
-    SubrackData,
-    SubrackHealthModel,
-)
+from ska_low_mccs.subrack.subrack_component_manager import SubrackComponentManager
+from ska_low_mccs.subrack.subrack_data import SubrackData
+from ska_low_mccs.subrack.subrack_health_model import SubrackHealthModel
 
 __all__ = ["MccsSubrack", "main"]
 
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 class MccsSubrack(SKABaseDevice):
@@ -60,6 +60,24 @@ class MccsSubrack(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: SubrackHealthModel
+
     def init_device(self: MccsSubrack) -> None:
         """
         Initialise the device.
@@ -258,7 +276,9 @@ class MccsSubrack(SKABaseDevice):
                 self.push_change_event("healthState", health)
 
         if "tpm_power_states" in state_change.keys():
-            tpm_power_states = state_change.get("tpm_power_states")
+            tpm_power_states = cast(
+                list[PowerState], state_change.get("tpm_power_states")
+            )
             with self._tpm_power_states_lock:
                 for i in range(SubrackData.TPM_BAY_COUNT):
                     if self._tpm_power_states[i] != tpm_power_states[i]:
@@ -766,11 +786,11 @@ class MccsSubrack(SKABaseDevice):
             :raises ValueError: if the JSON input lacks mandatory parameters
             """
             params = json.loads(argin)
-            fan_id = params.get("FanID", None)
-            speed_percent = params.get("SpeedPWN%", None)
+            fan_id = params.get("fan_id", None)
+            speed_percent = params.get("speed_percent", None)
             if fan_id or speed_percent is None:
                 self._component_manager.logger.error(
-                    "fan_ID and fan speed are mandatory parameters"
+                    "fan_ID and speed_percent are mandatory parameters"
                 )
                 raise ValueError("fan_ID and fan speed are mandatory parameters")
 
@@ -806,7 +826,7 @@ class MccsSubrack(SKABaseDevice):
 
         def __init__(
             self: MccsSubrack.SetSubrackFanModeCommand,
-            component_manager,
+            component_manager: SubrackComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -873,7 +893,7 @@ class MccsSubrack(SKABaseDevice):
 
         def __init__(
             self: MccsSubrack.SetPowerSupplyFanSpeedCommand,
-            component_manager,
+            component_manager: SubrackComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -901,7 +921,7 @@ class MccsSubrack(SKABaseDevice):
             """
             params = json.loads(argin)
             power_supply_fan_id = params.get("power_supply_fan_id", None)
-            speed_percent = params.get("speed_%", None)
+            speed_percent = params.get("speed_percent", None)
             if power_supply_fan_id or speed_percent is None:
                 self._component_manager.logger.error(
                     "power_supply_fan_id and speed_percent are mandatory " "parameters"

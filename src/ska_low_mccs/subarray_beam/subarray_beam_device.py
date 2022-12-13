@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -8,7 +8,7 @@
 """This module implements the MCCS subarray beam device."""
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
@@ -17,13 +17,17 @@ from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command
 
-from ska_low_mccs.subarray_beam import (
+from ska_low_mccs.subarray_beam.subarray_beam_component_manager import (
     SubarrayBeamComponentManager,
+)
+from ska_low_mccs.subarray_beam.subarray_beam_health_model import (
     SubarrayBeamHealthModel,
+)
+from ska_low_mccs.subarray_beam.subarray_beam_obs_state_model import (
     SubarrayBeamObsStateModel,
 )
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["MccsSubarrayBeam", "main"]
 
@@ -34,6 +38,26 @@ class MccsSubarrayBeam(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self.component_manager: SubarrayBeamComponentManager
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: SubarrayBeamHealthModel
+        self._obs_state_model: SubarrayBeamObsStateModel
+
     def init_device(self: MccsSubarrayBeam) -> None:
         """
         Initialise the device.
@@ -91,6 +115,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
         """
         A class for :py:class:`~.MccsSubarrayBeam`'s Init command.
@@ -180,7 +205,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
             if "obs_state" in state_change.keys():
                 configured_changed = state_change.get("obs_state")
-                self._obs_state_model.obs_state = configured_changed
+                self._obs_state_model._obs_state = configured_changed
 
     # ----------
     # Attributes

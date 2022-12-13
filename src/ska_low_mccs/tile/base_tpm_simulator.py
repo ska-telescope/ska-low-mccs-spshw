@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -14,6 +16,7 @@ import logging
 import time
 from typing import Any, Optional
 
+import numpy as np
 from ska_low_mccs_common.component import ObjectComponent
 from typing_extensions import Final
 
@@ -48,19 +51,11 @@ class BaseTpmSimulator(ObjectComponent):
         "itpm_v1_5.bit": {"design": "model2", "major": 3, "minor": 7},
         "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
-    REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
-        1: {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        },
+    REGISTER_MAP: dict[str, list[int]] = {
+        "test-reg1": [0] * 4,
+        "test-reg2": [0],
+        "test-reg3": [0],
+        "test-reg4": [0],
     }
     # ARP resolution table
     # Values are consistent with unit test test_MccsTile
@@ -75,6 +70,11 @@ class BaseTpmSimulator(ObjectComponent):
     ARP_TABLE = {0: [0, 1], 1: [1]}
     # TPM version: "tpm_v1_2" or "tpm_v1_6"
     TPM_VERSION = 120
+    CLOCK_SIGNALS_OK = True
+    STATIC_DELAYS = [0.0] * 32
+    CSP_ROUNDING = [3] * 384
+    PREADU_LEVELS = [16] * 32
+    CHANNELISER_TRUNCATION = [4] * 512
 
     def _arp(self: BaseTpmSimulator, ip: str) -> str:
         """
@@ -118,7 +118,20 @@ class BaseTpmSimulator(ObjectComponent):
         self._forty_gb_core_list: list[dict[str, Any]] = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._test_generator_active = False
-        self._sync_time = 0
+        self._pending_data_requests = False
+        self._fpga_current_frame = 0
+        self._fpga_reference_time = 0
+        self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+        self._pps_present = self.CLOCK_SIGNALS_OK
+        self._clock_present = self.CLOCK_SIGNALS_OK
+        self._sysref_present = self.CLOCK_SIGNALS_OK
+        self._pll_locked = self.CLOCK_SIGNALS_OK
+        # Configuration table cache
+        self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48  # empty beamformer table
+        self._static_delays = self.STATIC_DELAYS
+        self._csp_rounding = self.CSP_ROUNDING
+        self._preadu_levels = self.PREADU_LEVELS
+        self._channeliser_truncation = self.CHANNELISER_TRUNCATION
 
     @property
     def firmware_available(
@@ -199,18 +212,6 @@ class BaseTpmSimulator(ObjectComponent):
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNPROGRAMMED
 
-    def cpld_flash_write(self: BaseTpmSimulator, bitfile: bytes) -> None:
-        """
-        Flash a program to the tile's CPLD (complex programmable logic device).
-
-        :param bitfile: the program to be flashed
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: program_cpld")
-        raise NotImplementedError
-
     def get_arp_table(self: BaseTpmSimulator) -> None:
         """
         Get the arp table.
@@ -231,6 +232,9 @@ class BaseTpmSimulator(ObjectComponent):
         self.download_firmware(self._firmware_name)
         self._tpm_status = TpmStatus.INITIALISED
 
+    #
+    # Properties
+    #
     @property
     def tpm_status(self: BaseTpmSimulator) -> TpmStatus:
         """
@@ -303,19 +307,6 @@ class BaseTpmSimulator(ObjectComponent):
         )
 
     @property
-    def current(self: BaseTpmSimulator) -> float:
-        """
-        Return the current of the TPM.
-
-        :raises NotImplementedError: if this method has not been
-            implemented by a subclass
-        """
-        raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'current' must be "
-            "implemented in a subclass."
-        )
-
-    @property
     def fpga1_temperature(self: BaseTpmSimulator) -> float:
         """
         Return the temperature of FPGA 1.
@@ -382,55 +373,162 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: list of registers
         """
-        return list(self._register_map[0].keys())
+        return list(self._register_map.keys())
+
+    @property
+    def pps_present(self: BaseTpmSimulator) -> bool:
+        """
+        Check if PPS signal is present.
+
+        :return: True if PPS is present. Checked in poll loop, cached
+        """
+        return self._pps_present
+
+    @property
+    def clock_present(self: BaseTpmSimulator) -> bool:
+        """
+        Check if 10 MHz clock signal is present.
+
+        :return: True if 10 MHz clock is present. Checked in poll loop, cached
+        """
+        return self._clock_present
+
+    @property
+    def sysref_present(self: BaseTpmSimulator) -> bool:
+        """
+        Check if SYSREF signal is present.
+
+        :return: True if SYSREF is present. Checked in poll loop, cached
+        """
+        return self._sysref_present
+
+    @property
+    def pll_locked(self: BaseTpmSimulator) -> bool:
+        """
+        Check if ADC clock PLL is locked.
+
+        :return: True if PLL is locked. Checked in poll loop, cached
+        """
+        return self._pll_locked
+
+    @property
+    def channeliser_truncation(self: BaseTpmSimulator) -> list[int]:
+        """
+        Read the cached value for the channeliser truncation.
+
+        :return: cached value for the channeliser truncation
+        """
+        return copy.deepcopy(self._channeliser_truncation)
+
+    @channeliser_truncation.setter
+    def channeliser_truncation(self: BaseTpmSimulator, truncation: int | list[int]):
+        """
+        Set the channeliser truncation.
+
+        :param truncation: number of LS bits discarded after channelisation.
+            Either a signle value or a list of one value per physical frequency channel
+            0 means no bits discarded, up to 7. 3 is the correct value for a uniform
+            white noise.
+        """
+        if type(truncation) == int:
+            self._channeliser_truncation = [
+                truncation
+            ] * TileData.NUM_FREQUENCY_CHANNELS
+        else:  # list or numpy.ndarray
+            self._channeliser_truncation = list(truncation)
+
+    @property
+    def static_delays(self: BaseTpmSimulator) -> list[float]:
+        """
+        Read the cached value for the static delays, in sample.
+
+        :return: static delay, in samples one per TPM input
+        """
+        return copy.deepcopy(self._static_delays)
+
+    @static_delays.setter
+    def static_delays(self: BaseTpmSimulator, delays: list[float]):
+        """
+        Set the static delays.
+
+        :param delays: Delay in nanoseconds, nominal = 0, positive delay adds
+            delay to the signal stream
+
+        :param delays: Static zenith delays, one per input channel
+        """
+        self._static_delays = delays
+
+    @property
+    def csp_rounding(self: BaseTpmSimulator) -> list[int]:
+        """
+        Read the cached value for the final rounding in the CSP samples.
+
+        Need to be specfied only for the last tile
+        :return: Final rounding for the CSP samples. Up to 384 values
+        """
+        return copy.deepcopy(self._csp_rounding)
+
+    @csp_rounding.setter
+    def csp_rounding(self: BaseTpmSimulator, rounding: list[int] | int):
+        """
+        Set the final rounding in the CSP samples, one value per beamformer channel.
+
+        :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+        """
+        if type(rounding) == int:
+            self._csp_rounding = [rounding] * TileData.NUM_BEAMFORMER_CHANNELS
+        else:
+            self._csp_rounding = rounding
+
+    @property
+    def preadu_levels(self: BaseTpmSimulator) -> list[float]:
+        """
+        Get preadu levels in dB.
+
+        :return: cached values of Preadu attenuation level in dB
+        """
+        return copy.deepcopy(self._preadu_levels)
+
+    @preadu_levels.setter
+    def preadu_levels(self: BaseTpmSimulator, levels: list[float]):
+        """
+        Set preadu levels in dB.
+
+        :param levels: Preadu attenuation levels in dB
+        """
+        self._preadu_levels = levels
 
     def read_register(
         self: BaseTpmSimulator,
         register_name: str,
-        nb_read: int,
-        offset: int,
-        device: int,
     ) -> list[int]:
         """
         Read the values in a register.
 
         :param register_name: name of the register
-        :param nb_read: number of values to read
-        :param offset: offset from which to start reading
-        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
 
         :return: values read from the register
         """
-        address_map = self._register_map[device].get(register_name, None)
-        values = []
-        if address_map is not None:
-            for i in range(nb_read):
-                key = str(offset + i)
-                values.append(address_map.get(key, 0))
+        values = self._register_map.get(register_name)
         return values
 
     def write_register(
         self: BaseTpmSimulator,
         register_name: str,
         values: list[int],
-        offset: int,
-        device: int,
     ) -> None:
         """
         Read the values in a register.
 
         :param register_name: name of the register
         :param values: values to write
-        :param offset: offset from which to start reading
-        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
         """
-        address_map = self._register_map[device].get(register_name, None)
-        if address_map is not None:
-            for i, value in enumerate(values):
-                key = str(offset + i)
-                address_map.update({key: value})
+        if register_name != "" or register_name != "unknown":
+            self._register_map.update({register_name: values})
 
-    def read_address(self: BaseTpmSimulator, address: int, nvalues: int) -> list[int]:
+    def read_address(
+        self: BaseTpmSimulator, address: int, nvalues: int = 1
+    ) -> list[int]:
         """
         Return a list of values from a given address.
 
@@ -478,6 +576,8 @@ class BaseTpmSimulator(ObjectComponent):
         :param src_port: port of the source
         :param dst_ip: IP address of the destination
         :param dst_port: port of the destination
+
+        :raises ValueError: Invalid core or ARP table entry
         """
         core_dict = {
             "core_id": core_id,
@@ -488,6 +588,9 @@ class BaseTpmSimulator(ObjectComponent):
             "dst_ip": dst_ip,
             "dst_port": dst_port,
         }
+        if core_id not in [0, 1] or arp_table_entry not in range(8):
+            raise ValueError("Invalid core or ARP table entry")
+
         self._forty_gb_core_list.append(core_dict)
 
     def get_40g_configuration(
@@ -527,13 +630,13 @@ class BaseTpmSimulator(ObjectComponent):
         return copy.deepcopy(self._arp_table)
 
     @property
-    def fpga_sync_time(self: BaseTpmSimulator) -> int:
+    def fpga_reference_time(self: BaseTpmSimulator) -> int:
         """
         Return reference time for timestamp.
 
         :return: reference time
         """
-        return self._sync_time
+        return self._fpga_reference_time
 
     @property
     def fpga_current_frame(self: BaseTpmSimulator) -> int:
@@ -542,10 +645,13 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: current frame
         """
-        if self._sync_time == 0:
+        if self._fpga_reference_time == 0:
             return 0
         else:
-            return int((time.time() - self._sync_time) / (TileData.FRAME_PERIOD))
+            # return int(
+            #    (time.time()-self._fpga_reference_time)/(TileData.FRAME_PERIOD))
+            # TODO Modify testbenches to expect realistic time from the TPM
+            return 1000000
 
     def set_lmc_download(
         self: BaseTpmSimulator,
@@ -571,35 +677,84 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: set_lmc_download")
         raise NotImplementedError
 
-    def set_channeliser_truncation(self: BaseTpmSimulator, array: list[int]) -> None:
+    def send_data_samples(
+        self: BaseTpmSimulator,
+        data_type: str = "",
+        timestamp: int = 0,
+        seconds: float = 0.2,
+        n_samples: int = 1024,
+        sync: bool = False,
+        first_channel: int = 0,
+        last_channel: int = 511,
+        channel_id: int = 128,
+        frequency: float = 150.0e6,
+        round_bits: int = 3,
+    ) -> None:
         """
-        Set the channeliser coefficients to modify the bandpass.
+        Front end for send_xxx_data methods.
 
-        :param array: an N * M array, where N is the number of input
-            channels, and M is the number of frequency channels. This is
-            encoded as a list comprising N, then M, then the flattened
-            array
+        :param data_type: sample type. "raw", "channel", "channel_continuous",
+                "narrowband", "beam"
+        :param timestamp: Timestamp for start sending data. Default 0 start now
+        :param seconds: Delay if timestamp is not specified. Default 0.2 seconds
+        :param n_samples: number of samples to send per packet
+        :param sync: (raw) send synchronised antenna samples, vs. round robin
+        :param first_channel: (channel) first channel to send, default 0
+        :param last_channel: (channel) last channel to send, default 511
+        :param channel_id: (channel_continuous) channel to send
+        :param frequency: (narrowband) Sky frequency for band centre, in Hz
+        :param round_bits: (narrowband) how many bits to round
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :raises ValueError: if values wrong
         """
-        self.logger.debug("TpmSimulator: set_channeliser_truncation")
-        raise NotImplementedError
+        # Check for type of data to be sent to LMC
+        if data_type == "channel_continuous":
+            self._pending_data_requests = True
+        else:
+            self._pending_data_requests = False
+        if data_type not in [
+            "raw",
+            "channel",
+            "channel_continuous",
+            "narrowband",
+            "beam",
+        ]:
+            raise ValueError(f"Unknown sample type: {data_type}")
 
-    def set_beamformer_regions(self: BaseTpmSimulator, regions: list[int]) -> None:
+    def set_beamformer_regions(
+        self: BaseTpmSimulator, regions: list[list[int]]
+    ) -> None:
         """
         Set the frequency regions to be beamformed into a single beam.
 
-        :param regions: a list encoding up to 48 regions, with each
-            region containing a start channel, the size of the region
-            (which must be a multiple of 8), a beam index (between 0 and 7)
-            and a substation ID.
+        :param regions: a list encoding up to 48 regions, with each region containing:
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+            * start_channel - (int) region starting channel, must be even in
+                range 0 to 510
+            * num_channels - (int) size of the region, must be a multiple of 8
+            * beam_index - (int) beam used for this region with range 0 to 47
+            * subarray_id - (int) Subarray
+            * subarray_logical_channel - (int) logical channel # in the subarray
+            * subarray_beam_id - (int) ID of the subarray beam
+            * substation_id - (int) Substation
+            * aperture_id:  ID of the aperture (station*100+substation?)
         """
         self.logger.debug("TpmSimulator: set_beamformer_regions")
-        raise NotImplementedError
+        for block in range(48):
+            self._beamformer_table[block] = [0, 0, 0, 0, 0, 0, 0]
+        block = 0
+        for region in regions:
+            num_blocks = int(np.ceil(region[1] / 8.0))
+            channel = region[0]
+            logical_channel = region[4]
+            for i in range(num_blocks):
+                table_entry = region[1:8]
+                table_entry[0] = channel
+                table_entry[3] = logical_channel
+                self._beamformer_table[block] = table_entry
+                channel = channel + 8
+                logical_channel = logical_channel + 8
+                block = block + 1
 
     def initialise_beamformer(
         self: BaseTpmSimulator,
@@ -615,12 +770,32 @@ class BaseTpmSimulator(ObjectComponent):
         :param nof_channels: number of channels
         :param is_first: whether this is the first (?)
         :param is_last: whether this is the last (?)
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: initialise_beamformer")
-        raise NotImplementedError
+        self._is_first = is_first
+        self._is_last = is_last
+        if nof_channels > 0:
+            self.set_beamformer_regions(
+                [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
+            )
+
+    @property
+    def beamformer_table(self: BaseTpmSimulator) -> list[list[int]]:
+        """
+        Fetch internal beamformer table.
+
+        Fetch table used by the hardware beamformer to define beams and logical bands
+        :return: bidimensional table, with 48 entries, one every 8 channels
+
+            * start physical channel
+            * tile hardware beam
+            * subarray ID
+            * subarray start logical channel
+            * subarray_beam_id - (int) ID of the subarray beam
+            * substation_id - (int) Substation
+            * aperture_id:  ID of the aperture (station*100+substation?)
+        """
+        return copy.deepcopy(self._beamformer_table)
 
     def load_calibration_coefficients(
         self: BaseTpmSimulator,
@@ -643,64 +818,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: load_calibration_coefficients")
         raise NotImplementedError
 
-    def load_calibration_curve(
-        self: BaseTpmSimulator,
-        antenna: int,
-        beam: int,
-        calibration_coefficients: list[int],
-    ) -> None:
-        """
-        Load calibration curve.
-
-        This is the frequency dependent response for a single
-        antenna and beam, as a function of frequency. It will be combined together with
-        tapering coefficients and beam angles by ComputeCalibrationCoefficients, and
-        made active by SwitchCalibrationBank. The calibration coefficients do not
-        include the geometric delay.
-
-        :param antenna: the antenna to which the coefficients apply
-        :param beam: the beam to which the coefficients apply
-        :param calibration_coefficients: a bidirectional complex array of
-            coefficients, flattened into a list
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: load_calibration_curve")
-        raise NotImplementedError
-
-    def load_beam_angle(
-        self: BaseTpmSimulator, angle_coefficients: list[float]
-    ) -> None:
-        """
-        Load the beam angle.
-
-        :param angle_coefficients: list containing angle coefficients for each
-            beam
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: load_beam_angle")
-        raise NotImplementedError
-
-    def load_antenna_tapering(
-        self: BaseTpmSimulator, beam: int, tapering_coefficients: list[float]
-    ) -> None:
-        """
-        Loat the antenna tapering coefficients.
-
-        :param beam: the beam to which the coefficients apply
-        :param tapering_coefficients: list of tapering coefficients for each
-            antenna
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: load_antenna_tapering")
-        raise NotImplementedError
-
-    def switch_calibration_bank(self: BaseTpmSimulator, switch_time: int = 0) -> None:
+    def apply_calibration(self: BaseTpmSimulator, switch_time: int = 0) -> None:
         """
         Switch the calibration bank.
 
@@ -713,24 +831,10 @@ class BaseTpmSimulator(ObjectComponent):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: switch_calibration_bank")
+        self.logger.debug("TpmSimulator: apply_calibration")
         raise NotImplementedError
 
-    def compute_calibration_coefficients(self: BaseTpmSimulator) -> None:
-        """
-        Compute the calibration coefficients.
-
-        Calculate from previously specified gain curves, tapering weights
-        and beam angles, load them in the hardware. It must be followed
-        by switch_calibration_bank() to make these active.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: compute_calibration_coefficients")
-        raise NotImplementedError
-
-    def set_pointing_delay(
+    def load_pointing_delays(
         self: BaseTpmSimulator, delay_array: list[float], beam_index: int
     ) -> None:
         """
@@ -749,7 +853,9 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: set_pointing_delay")
         raise NotImplementedError
 
-    def load_pointing_delay(self: BaseTpmSimulator, load_time: int) -> None:
+    def apply_pointing_delays(
+        self: BaseTpmSimulator, load_time: Optional[int] = 0
+    ) -> None:
         """
         Load the pointing delay at a specified time.
 
@@ -765,6 +871,8 @@ class BaseTpmSimulator(ObjectComponent):
         self: BaseTpmSimulator,
         start_time: int = 0,
         duration: int = -1,
+        subarray_beam_id: int = 1,
+        scan_id: int = 0,
     ) -> None:
         """
         Start the beamformer at the specified time.
@@ -773,6 +881,8 @@ class BaseTpmSimulator(ObjectComponent):
             defaults to 0
         :param duration: duration for which to run the beamformer,
             defaults to -1 (run forever)
+        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param scan_id: ID of the scan which is started.
         """
         self.logger.debug("TpmSimulator: Start beamformer")
         self._is_beamformer_running = True
@@ -830,97 +940,10 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: Stop integrated data")
         raise NotImplementedError
 
-    def send_raw_data(
-        self: BaseTpmSimulator,
-        sync: bool = False,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
-    ) -> None:
-        """
-        Transmit a snapshot containing raw antenna data.
-
-        :param sync: whether synchronised, defaults to False
-        :param timestamp: when to start(?), defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: send_raw_data")
-        raise NotImplementedError
-
-    def send_channelised_data(
-        self: BaseTpmSimulator,
-        number_of_samples: int = 1024,
-        first_channel: int = 0,
-        last_channel: int = 511,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
-    ) -> None:
-        """
-        Transmit a snapshot of channelized data totalling number_of_samples spectra.
-
-        :param number_of_samples: number of spectra to send, defaults to 1024
-        :param first_channel: first channel to send, defaults to 0
-        :param last_channel: last channel to send, defaults to 511
-        :param timestamp: when to start(?), defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: send_channelised_data")
-        raise NotImplementedError
-
-    def send_channelised_data_continuous(
-        self: BaseTpmSimulator,
-        channel_id: int,
-        number_of_samples: int = 128,
-        wait_seconds: float = 0.0,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
-    ) -> None:
-        """
-        Transmit data from a channel continuously.
-
-        :param channel_id: index of channel to send
-        :param number_of_samples: number of spectra to send, defaults to 1024
-        :param wait_seconds: wait time before sending data
-        :param timestamp: when to start(?), defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: send_channelised_data_continuous")
-        raise NotImplementedError
-
-    def send_beam_data(
-        self: BaseTpmSimulator,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
-    ) -> None:
-        """
-        Transmit a snapshot containing beamformed data.
-
-        :param timestamp: when to start(?), defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: send_beam_data")
-        raise NotImplementedError
-
     def stop_data_transmission(self: BaseTpmSimulator) -> None:
-        """
-        Stop data transmission.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
+        """Stop data transmission."""
         self.logger.debug("TpmSimulator: stop_data_transmission")
-        raise NotImplementedError
+        self._pending_data_requests = False
 
     def start_acquisition(
         self: BaseTpmSimulator,
@@ -938,32 +961,7 @@ class BaseTpmSimulator(ObjectComponent):
         """
         self.logger.debug("TpmSimulator:Start acquisition")
         self._tpm_status = TpmStatus.SYNCHRONISED
-        self._sync_time = int(time.time())
-        raise NotImplementedError
-
-    def set_time_delays(self: BaseTpmSimulator, delay: int) -> None:
-        """
-        Set coarse zenith delay for input ADC streams.
-
-        :param delay: the delay in samples, specified in nanoseconds.
-            A positive delay adds delay to the signal stream
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: set_time_delays")
-        raise NotImplementedError
-
-    def set_csp_rounding(self: BaseTpmSimulator, rounding: float) -> None:
-        """
-        Set output rounding for CSP.
-
-        :param rounding: the output rounding
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: set_csp_rounding")
+        self._fpga_reference_time = int(time.time())
         raise NotImplementedError
 
     def set_lmc_integrated_download(
@@ -993,23 +991,6 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: set_lmc_integrated_download")
         raise NotImplementedError
 
-    def send_raw_data_synchronised(
-        self: BaseTpmSimulator,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
-    ) -> None:
-        """
-        Send synchronised raw data.
-
-        :param timestamp: when to start(?), defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: send_raw_data_synchronised")
-        raise NotImplementedError
-
     @property
     def current_tile_beamformer_frame(self: BaseTpmSimulator) -> int:
         """
@@ -1030,58 +1011,15 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: beamformer_is_running")
         return self._is_beamformer_running
 
-    def check_pending_data_requests(self: BaseTpmSimulator) -> None:
+    @property
+    def pending_data_requests(self: BaseTpmSimulator) -> bool:
         """
         Check for pending data requests.
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :return: whether there are pending send data requests
         """
-        self.logger.debug("TpmSimulator: check_pending_data_requests")
-        raise NotImplementedError
-
-    def send_channelised_data_narrowband(
-        self: BaseTpmSimulator,
-        frequency: int,
-        round_bits: int,
-        number_of_samples: int = 128,
-        wait_seconds: int = 0,
-        timestamp: Optional[str] = None,
-        seconds: float = 0.2,
-    ) -> None:
-        """
-        Continuously send channelised data from a single channel.
-
-        This is a special mode used for UAV campaigns.
-
-        :param frequency: sky frequency to transmit
-        :param round_bits: which bits to round
-        :param number_of_samples: number of spectra to send, defaults to 128
-        :param wait_seconds: wait time before sending data, defaults to 0
-        :param timestamp: when to start, defaults to None
-        :param seconds: when to synchronise, defaults to 0.2
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: send_channelised_data_narrowband")
-        raise NotImplementedError
-
-    #
-    # The synchronisation routine for the current TPM requires that
-    # the function below are accessible from the station (where station-level
-    # synchronisation is performed), however I am not sure whether the routine
-    # for the new TPMs will still required these
-    #
-    def tweak_transceivers(self: BaseTpmSimulator) -> None:
-        """
-        Tweak the transceivers.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: tweak_transceivers")
-        raise NotImplementedError
+        self.logger.debug("TpmSimulator: pending_data_requests")
+        return self._pending_data_requests
 
     @property
     def phase_terminal_count(self: BaseTpmSimulator) -> int:
@@ -1103,7 +1041,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: set_phase_terminal_count")
         self._phase_terminal_count = value
 
-    def post_synchronisation(self) -> None:
+    def post_synchronisation(self: BaseTpmSimulator) -> None:
         """
         Perform post tile configuration synchronization.
 
@@ -1113,7 +1051,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: post_synchronisation")
         raise NotImplementedError
 
-    def sync_fpgas(self) -> None:
+    def sync_fpgas(self: BaseTpmSimulator) -> None:
         """
         Synchronise the FPGAs.
 
@@ -1150,9 +1088,6 @@ class BaseTpmSimulator(ObjectComponent):
         :param amplitude_pulse: pulse peak amplitude, normalized
             to 127.5 ADC units, resolution 0.5 ADU
         :param load_time: Time to start the tone.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         amplitude_adu = round(amplitude0 * 255) / 8.0
         self.logger.debug(
@@ -1189,7 +1124,6 @@ class BaseTpmSimulator(ObjectComponent):
             + str(amplitude_adu)
             + " ADUs"
         )
-        raise NotImplementedError
 
     def test_generator_input_select(self: BaseTpmSimulator, bit_mask: int) -> None:
         """
@@ -1202,7 +1136,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug(
             "TpmSimulator: test_generator_input_select: " + str(hex(bit_mask))
         )
-        # raise NotImplementedError
+        self._test_generator_active = bit_mask != 0
 
     @property
     def test_generator_active(self) -> bool:
@@ -1221,20 +1155,3 @@ class BaseTpmSimulator(ObjectComponent):
         :param active: True if the generator has been activated
         """
         self._test_generator_active = active
-
-    @staticmethod
-    def calculate_delay(
-        current_delay: float, current_tc: int, ref_lo: float, ref_hi: float
-    ) -> None:
-        """
-        Calculate the delay.
-
-        :param current_delay: the current delay
-        :param current_tc: current phase register terminal count
-        :param ref_lo: low reference
-        :param ref_hi: high reference
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        raise NotImplementedError

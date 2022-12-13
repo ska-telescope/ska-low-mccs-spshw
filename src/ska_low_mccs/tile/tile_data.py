@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -26,3 +28,5 @@ class TileData:
     FRAME_PERIOD = 1.08e-6 * 256
     CSP_FRAME_PERIOD = 1.08e-6 * 2048
     ANTENNA_COUNT = 16
+    NUM_FREQUENCY_CHANNELS = 512
+    NUM_BEAMFORMER_CHANNELS = 384

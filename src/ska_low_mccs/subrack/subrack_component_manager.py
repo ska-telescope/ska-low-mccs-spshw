@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -15,13 +17,12 @@ from typing import Any, Callable, Optional, cast
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
-    ResultCode,
     SimulationMode,
     TaskStatus,
 )
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
-    MccsComponentManager,
+    MccsComponentManagerProtocol,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
     SwitchingComponentManager,
@@ -289,10 +290,10 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
         )
         super().__init__(
             {
-                (SimulationMode.FALSE): subrack_driver,
-                (SimulationMode.TRUE): subrack_simulator,
+                SimulationMode.FALSE: subrack_driver,
+                SimulationMode.TRUE: subrack_simulator,
             },
-            (initial_simulation_mode),
+            initial_simulation_mode,
         )
 
     @property
@@ -387,7 +388,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self.component_power_state_changed,
         )
         super().__init__(
-            hardware_component_manager,
+            cast(MccsComponentManagerProtocol, hardware_component_manager),
             power_supply_component_manager,
             logger,
             max_workers,
@@ -500,7 +501,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         ).simulation_mode = mode
 
     def on(
-        self: MccsComponentManager, task_callback: Callable = None
+        self: SubrackComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.
@@ -515,7 +516,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return self.submit_task(self._on, task_callback=task_callback)
 
     def _on(
-        self: MccsComponentManager,
+        self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -535,9 +536,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return
 
         if task_abort_event and task_abort_event.is_set():
-            task_callback(
-                status=TaskStatus.ABORTED, result="On command has been aborted"
-            )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="On command has been aborted"
+                )
             return
         if task_callback:
             task_callback(
@@ -545,7 +547,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             )
 
     def off(
-        self: MccsComponentManager, task_callback: Callable = None
+        self: SubrackComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the off slow task.
@@ -707,7 +709,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         tpm_id: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_on_tpm slow task.
 
@@ -716,7 +718,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param tpm_id: the tpm to turn on
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a ResultCode and a response message
+        :return: A tuple containing a TaskStatus and a response message
         """
         return self.submit_task(
             self._turn_on_tpm, args=[tpm_id], task_callback=task_callback
@@ -765,7 +767,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def turn_on_tpms(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_on_tpms slow task.
 
@@ -820,7 +822,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         tpm_id: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_off_tpm slow task.
 
@@ -829,7 +831,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param tpm_id: the tpm to turn on
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a ResultCode and a response message
+        :return: A tuple containing TaskStatus and a response message
         """
         return self.submit_task(
             self._turn_off_tpm, args=[tpm_id], task_callback=task_callback
@@ -857,10 +859,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param tpm_id: id of antenna to turn on
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-        :return: None
         """
         if self.power_state == PowerState.OFF:
-            return None
+            return
         elif self.power_state == PowerState.ON:
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
@@ -892,7 +893,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def turn_off_tpms(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the turn_off_tpms slow task.
 
@@ -900,7 +901,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a ResultCode and a response message
+        :return: A tuple containing a TaskStatus and a response message
         """
         return self.submit_task(self._turn_off_tpms, task_callback=task_callback)
 

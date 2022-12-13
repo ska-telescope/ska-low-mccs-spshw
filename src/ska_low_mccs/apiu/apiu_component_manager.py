@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -21,13 +21,14 @@ from ska_control_model import (
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
     DriverSimulatorSwitchingComponentManager,
+    MccsComponentManagerProtocol,
     ObjectComponentManager,
     PowerSupplyProxySimulator,
     check_communicating,
     check_on,
 )
 
-from ska_low_mccs.apiu import ApiuSimulator
+from ska_low_mccs.apiu.apiu_simulator import ApiuSimulator
 
 __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 
@@ -35,6 +36,7 @@ __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 class ApiuSimulatorComponentManager(ObjectComponentManager):
     """A component manager for an APIU simulator."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: ApiuSimulatorComponentManager,
         antenna_count: int,
@@ -142,6 +144,7 @@ class ApiuSimulatorComponentManager(ObjectComponentManager):
 class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
     """A component manager that switches between APIU simulator and driver."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: SwitchingApiuComponentManager,
         initial_simulation_mode: SimulationMode,
@@ -172,12 +175,17 @@ class SwitchingApiuComponentManager(DriverSimulatorSwitchingComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
         )
-        super().__init__(None, apiu_simulator, initial_simulation_mode)
+        super().__init__(
+            None,
+            cast(MccsComponentManagerProtocol, apiu_simulator),
+            initial_simulation_mode,
+        )
 
 
 class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an APIU (simulator or driver) and its power supply."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: ApiuComponentManager,
         initial_simulation_mode: SimulationMode,
@@ -318,7 +326,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def on(
         self: ApiuComponentManager,
-        task_callback: Callable = None,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the on slow task.
@@ -349,6 +357,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             super().on()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -401,6 +410,7 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 SwitchingApiuComponentManager, self._hardware_component_manager
             ).turn_off_antennas()
             super().off()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -498,7 +508,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_on_antenna(antenna)
+            cast(
+                SwitchingApiuComponentManager, self._hardware_component_manager
+            ).turn_on_antenna(antenna)
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -532,7 +545,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_off_antenna(antenna)
+            cast(
+                SwitchingApiuComponentManager, self._hardware_component_manager
+            ).turn_off_antenna(antenna)
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -564,7 +580,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_on_antennas()
+            cast(
+                SwitchingApiuComponentManager, self._hardware_component_manager
+            ).turn_on_antennas()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -597,7 +616,10 @@ class ApiuComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._hardware_component_manager.turn_off_antennas()
+            cast(
+                SwitchingApiuComponentManager, self._hardware_component_manager
+            ).turn_off_antennas()
+        # pylint: disable=broad-except
         except Exception as ex:
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")

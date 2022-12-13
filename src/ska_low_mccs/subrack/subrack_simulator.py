@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -162,16 +164,14 @@ class SubrackSimulator(ObjectComponent):
         self._tpm_present = tpm_present[0 : self._bay_count]
         self._tpm_supply_fault = [0] * self._bay_count
 
-        self._are_tpms_on_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
-        ] = None
+        self._are_tpms_on_changed_callback: Optional[Callable] = None
         self._component_state_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
+            Callable
         ] = component_state_changed_callback
 
     def set_are_tpms_on_changed_callback(
         self: SubrackSimulator,
-        are_tpms_on_changed_callback: Optional[Callable[[dict[str, Any]], None]] = None,
+        are_tpms_on_changed_callback: Optional[Callable] = None,
     ) -> None:
         """
         Set the callback to be called when the power mode of a TPM changes.
@@ -189,7 +189,7 @@ class SubrackSimulator(ObjectComponent):
 
     def set_progress_changed_callback(
         self: SubrackSimulator,
-        component_state_changed_callback: Optional[Callable[[int], None]],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Set the callback to be called when the progress value changes.

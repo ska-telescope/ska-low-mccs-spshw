@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -19,6 +19,7 @@ __all__ = ["ControllerHealthModel"]
 class ControllerHealthModel(HealthModel):
     """A health model for a controller."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: ControllerHealthModel,
         station_fqdns: Sequence[str],

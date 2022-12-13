@@ -1,0 +1,37 @@
+{
+    "station": {
+        "StationId": 1,
+        "refLatitude": 4.5,
+        "refLongitude": 6.5,
+        "refHeight": 10.6
+    },
+    "antennas": {
+        "low-mccs/antenna/1": {
+            "antennaId": 1,
+            "xDisplacement": 3.2,
+            "yDisplacement": 3.2,
+            "zDisplacement": 3.2
+        },
+        "low-mccs/antenna/2": {
+            "antennaId": 1,
+            "xDisplacement": 3.2,
+            "yDisplacement": 3.2,
+            "zDisplacement": 3.2
+        }
+    },
+    "tiles": {
+        "low-mccs/tile/1": {
+            "fixed_delays": [1, 2],
+            "antenna_ids": [1, 2]
+        },
+        "low-mccs/tile/2": {
+            "fixed_delays": [1, 2],
+            "antenna_ids": [1, 2]
+        }
+    },
+    "apiu": {
+        "overCurrentThreshold": 4.5,
+        "overVoltageThreshold": 10.5,
+        "humidityThreshold": 32.2
+    }
+}

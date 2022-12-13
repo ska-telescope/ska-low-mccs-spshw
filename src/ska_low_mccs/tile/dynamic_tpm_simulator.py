@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -175,7 +177,6 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         :param logger: a logger for this simulator to use
         """
         self._voltage: Optional[float] = None
-        self._current: Optional[float] = None
         self._board_temperature: Optional[float] = None
         self._fpga1_temperature: Optional[float] = None
         self._fpga2_temperature: Optional[float] = None
@@ -183,9 +184,6 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         self._updater = _DynamicValuesUpdater(1.0)
         self._updater.add_target(
             _DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
-        )
-        self._updater.add_target(
-            _DynamicValuesGenerator(0.05, 2.95), self._current_changed
         )
         self._updater.add_target(
             _DynamicValuesGenerator(16.0, 47.0),
@@ -244,24 +242,6 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         :param voltage: the new voltage
         """
         self._voltage = voltage
-
-    @property
-    def current(self: DynamicTpmSimulator) -> float:
-        """
-        Return the current of the TPM.
-
-        :return: the current of the TPM
-        """
-        assert self._current is not None  # for the type checker
-        return self._current
-
-    def _current_changed(self: DynamicTpmSimulator, current: float) -> None:
-        """
-        Call this method when the current changes.
-
-        :param current: the new current
-        """
-        self._current = current
 
     @property
     def fpga1_temperature(self: DynamicTpmSimulator) -> float:

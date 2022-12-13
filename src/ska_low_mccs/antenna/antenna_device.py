@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -8,10 +8,11 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+import json
+from typing import Any, Optional, cast
 
 import tango
-from ska_control_model import (
+from ska_control_model import (  # SimulationMode,
     CommunicationStatus,
     HealthState,
     PowerState,
@@ -19,16 +20,18 @@ from ska_control_model import (
     SimulationMode,
 )
 from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand
-from tango.server import attribute, device_property
+from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand
+from tango.server import attribute, command, device_property
 
-from ska_low_mccs.antenna import AntennaComponentManager, AntennaHealthModel
+from ska_low_mccs.antenna.antenna_component_manager import AntennaComponentManager
+from ska_low_mccs.antenna.antenna_health_model import AntennaHealthModel
 
 __all__ = ["MccsAntenna", "main"]
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
+# pylint: disable=too-many-public-methods, too-many-instance-attributes
 class MccsAntenna(SKABaseDevice):
     """An implementation of an antenna Tango device for MCCS."""
 
@@ -43,6 +46,29 @@ class MccsAntenna(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: AntennaHealthModel
+        self.component_manager: AntennaComponentManager
+        self._antennaId: int
+        self._xDisplacement: float
+        self._yDisplacement: float
+        self._zDisplacement: float
+
     def init_device(self: MccsAntenna) -> None:
         """
         Initialise the device.
@@ -56,9 +82,7 @@ class MccsAntenna(SKABaseDevice):
 
     def _init_state_model(self: MccsAntenna) -> None:
         super()._init_state_model()
-        self._health_state: Optional[
-            HealthState
-        ] = None  # SKABaseDevice.InitCommand.do() does this too late.
+        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = AntennaHealthModel(self.component_state_changed_callback)
         self.set_change_event("healthState", True, False)
 
@@ -77,20 +101,44 @@ class MccsAntenna(SKABaseDevice):
             self.LogicalTileAntennaId,
             self.logger,
             self._max_workers,
-            self._component_communication_state_changed,
+            self._communication_state_changed_callback,
             self.component_state_changed_callback,
         )
 
+    def init_command_objects(self: MccsAntenna) -> None:
+        """Initialise the command handlers for commands supported by this device."""
+        super().init_command_objects()
+        for (command_name, method_name) in [
+            ("Configure", "configure"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=None,
+                ),
+            )
+
+    # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS antenna device."""
 
-        def do(  # type: ignore[override]
+        def do(
             self: MccsAntenna.InitCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Stateless hook for device initialisation.
 
             Initialises the attributes and properties of the :py:class:`.MccsAntenna`.
+
+            :param args: positional args to the component manager method
+            :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -136,7 +184,7 @@ class MccsAntenna(SKABaseDevice):
     # --------------
     # Callback hooks
     # --------------
-    def _component_communication_state_changed(
+    def _communication_state_changed_callback(
         self: MccsAntenna,
         communication_state: CommunicationStatus,
     ) -> None:
@@ -213,15 +261,16 @@ class MccsAntenna(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                power_state_changed_callback(self.component_manager.power_state)
+                if self.component_manager.power_state:
+                    power_state_changed_callback(self.component_manager.power_state)
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             health_state_changed_callback(health)
 
         if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
+            power_state = cast(PowerState, state_change.get("power_state"))
             with self.component_manager.power_state_lock:
                 self.component_manager.set_power_state(power_state, fqdn=fqdn)
                 if power_state:
@@ -277,10 +326,14 @@ class MccsAntenna(SKABaseDevice):
         """
         Return the simulation mode of this device.
 
+        This overrides the base class as the antenna device cannot be put into
+        simulation mode TRUE
+
         :return: the simulation mode of this device
         """
         return SimulationMode.FALSE
 
+    # pylint: disable=arguments-differ
     @simulationMode.write  # type: ignore [no-redef]
     def simulationMode(self: MccsAntenna, value: SimulationMode) -> None:
         """
@@ -539,6 +592,15 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._bandpassCoefficient
 
+    @attribute(dtype="bool", label="first")
+    def first(self: MccsAntenna) -> bool:
+        """
+        Return the first attribute.
+
+        :return: the first faulty flag
+        """
+        return self._first
+
     # --------
     # Commands
     # --------
@@ -555,6 +617,26 @@ class MccsAntenna(SKABaseDevice):
             tango.DevState.UNKNOWN,
             tango.DevState.FAULT,
         ]
+
+    @command(dtype_in="DevString")
+    def Configure(self: MccsAntenna, argin: str) -> None:
+        """
+        Configure the antenna device attributes.
+
+        :param argin: the configuration for the device in stringified json format
+        """
+        config = json.loads(argin)
+
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
+            value = config.get(attribute_name)
+            if isinstance(value, type(default)):
+                return value
+            return default
+
+        self._antennaId = apply_if_valid("antennaId", self._antennaId)
+        self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
+        self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
+        self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
 
 
 # ----------

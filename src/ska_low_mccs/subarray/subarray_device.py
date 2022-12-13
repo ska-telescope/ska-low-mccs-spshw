@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -10,22 +10,23 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import json
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Optional, cast
 
-import ska_low_mccs_common.release as release
 import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
+from ska_low_mccs_common import release
 from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.subarray import SKASubarray
 from tango.server import attribute, command
 
-from ska_low_mccs.subarray import SubarrayComponentManager, SubarrayHealthModel
+from ska_low_mccs.subarray.subarray_component_manager import SubarrayComponentManager
+from ska_low_mccs.subarray.subarray_health_model import SubarrayHealthModel
 
 __all__ = ["MccsSubarray", "main"]
 
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
 class MccsSubarray(SKASubarray):
@@ -38,6 +39,25 @@ class MccsSubarray(SKASubarray):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self.component_manager: SubarrayComponentManager
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: SubarrayHealthModel
+
     def init_device(self: MccsSubarray) -> None:
         """
         Initialise the device.
@@ -89,6 +109,7 @@ class MccsSubarray(SKASubarray):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
         """Command class for device initialisation."""
 
@@ -115,7 +136,9 @@ class MccsSubarray(SKASubarray):
     # ----------
     # Callbacks
     # ----------
-    def _component_state_changed_callback(
+    # TODO Remove complexity see Jira ticket 1214
+    # pylint: disable-next=too-many-branches, too-many-statements, too-many-locals
+    def _component_state_changed_callback(  # noqa C901
         self: MccsSubarray,
         state_change: dict[str, Any],
         fqdn: Optional[str] = None,
@@ -136,30 +159,31 @@ class MccsSubarray(SKASubarray):
             if fqdn is None:
                 # Do regular health update. This device called the callback.
                 if self._health_state != health:
-                    self._health_state = health
+                    self._health_state = cast(HealthState, health)
                     self.push_change_event("healthState", health)
             else:
-                valid_device_types: dict(str, Callable) = {
+                valid_device_types: dict[str, Callable] = {
                     "station": self._health_model.station_health_changed,
                     "beam": self._health_model.station_beam_health_changed,
                     "subarraybeam": self._health_model.subarray_beam_health_changed,
                 }
                 # Identify and call subservient device method.
                 device_type = fqdn.split("/")[1]
-                if device_type in valid_device_types.keys():
+                if device_type in valid_device_types:
                     valid_device_types[device_type](fqdn, health)
                 else:
                     # We've somehow got a health update for a device type
                     # we don't manage.
-                    self.logger.warning(
+                    msg = (
                         f"Received a health state changed event for device {fqdn} "
                         "which is not managed by this subarray."
                     )
+                    self.logger.warning(msg)
 
         # resources should be passed in the dict's value as a list of sets
         # to be extracted here.
         if "resources_changed" in state_change.keys():
-            resources = state_change.get("resources_changed")
+            resources = cast(list[set], state_change.get("resources_changed"))
             station_fqdns = resources[0]
             subarray_beam_fqdns = resources[1]
             station_beam_fqdns = resources[2]
@@ -204,11 +228,13 @@ class MccsSubarray(SKASubarray):
 
         if "obsstate_changed" in state_change.keys():
             obs_state = state_change.get("obsstate_changed")
-            self.component_manager._device_obs_state_changed(fqdn, obs_state)
+            if obs_state and fqdn:
+                self.component_manager._device_obs_state_changed(fqdn, obs_state)
 
         if "station_power_state" in state_change.keys():
             station_power = state_change.get("station_power_state")
-            self.component_manager._station_power_state_changed(fqdn, station_power)
+            if station_power and fqdn:
+                self.component_manager._station_power_state_changed(fqdn, station_power)
 
         # This might need changing. Seems that "power_state" changes could come
         # from any subservient device too.
@@ -413,7 +439,7 @@ class MccsSubarray(SKASubarray):
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Scan(
         self: MccsSubarray,
-        argin: dict[str, Any],
+        argin: str,
     ) -> DevVarLongStringArrayType:
         """
         Start scanning.
@@ -423,9 +449,9 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status.
         """
-        scan_id = argin["scan_id"]
-        start_time = argin["start_time"]
-
+        configuration = json.loads(argin)
+        scan_id = configuration["scan_id"]
+        start_time = configuration["start_time"]
         handler = self.get_command_object("Scan")
         (return_code, unique_id) = handler(scan_id, start_time)
         return ([return_code], [unique_id])

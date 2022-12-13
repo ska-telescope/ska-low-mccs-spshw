@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -17,6 +17,7 @@ from ska_low_mccs_common.component import ObjectComponent
 __all__ = ["SubarrayBeam"]
 
 
+# pylint: disable=too-many-instance-attributes
 class SubarrayBeam(ObjectComponent):
     """A placeholder for a subarray beam component."""
 
@@ -25,7 +26,9 @@ class SubarrayBeam(ObjectComponent):
         logger: logging.Logger,
         max_workers: int,
         communication_status_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -55,10 +58,12 @@ class SubarrayBeam(ObjectComponent):
         self._desired_pointing: list[float] = []
         self._antenna_weights: list[float] = []
         self._phase_centre: list[float] = []
+        self._scan_id: int = 0
+        self._scan_time: float = 0
 
     def set_is_beam_locked_changed_callback(
         self: SubarrayBeam,
-        is_beam_locked_changed_callback: Optional[Callable[[dict[str, Any]], None]],
+        is_beam_locked_changed_callback: Optional[Callable] = None,
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is locked changes.
@@ -71,7 +76,7 @@ class SubarrayBeam(ObjectComponent):
 
     def set_is_configured_changed_callback(
         self: SubarrayBeam,
-        is_configured_changed_callback: Optional[Callable[[dict[str, bool]], None]],
+        is_configured_changed_callback: Optional[Callable] = None,
     ) -> None:
         """
         Set a callback to be called if whether this subarray beam is configured changes.
@@ -216,6 +221,7 @@ class SubarrayBeam(ObjectComponent):
         """
         return self._phase_centre
 
+    # pylint: disable=too-many-arguments
     def configure(
         self: SubarrayBeam,
         subarray_beam_id: int,

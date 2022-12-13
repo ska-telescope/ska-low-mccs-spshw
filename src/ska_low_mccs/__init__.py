@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# type: ignore
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -16,9 +17,7 @@ __all__ = [
     # devices
     "MccsAntenna",
     "MccsAPIU",
-    "MccsClusterManagerDevice",
     "MccsController",
-    "MccsPasdBus",
     "MccsStation",
     "MccsStationBeam",
     "MccsSubarray",
@@ -30,9 +29,7 @@ __all__ = [
     # device subpackages
     "antenna",
     "apiu",
-    "cluster_manager",
     "controller",
-    "pasd_bus",
     "station",
     "station_beam",
     "subrack",
@@ -46,9 +43,7 @@ __all__ = [
 from .antenna import MccsAntenna
 from .apiu import MccsAPIU
 
-from .cluster_manager import MccsClusterManagerDevice
 from .controller import MccsController
-from .pasd_bus import MccsPasdBus
 from .station import MccsStation
 
 from .station_beam import MccsStationBeam

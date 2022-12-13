@@ -1,0 +1,196 @@
+{
+    "servers": {
+        "MccsSubrack": {
+            "subrack_01": {
+                "MccsSubrack": {
+                    "low-mccs/subrack/01": {
+                        "properties": {
+                            "TileFQDNs": [
+                                "low-mccs/tile/0001",
+                                "low-mccs/tile/0002",
+                                "low-mccs/tile/0003",
+                                "low-mccs/tile/0004"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ],
+                            "SubrackIp": [
+                                "10.0.10.64"
+                            ],
+                            "SubrackPort": [
+                                "8081"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "MccsTile": {
+            "tile_0001": {
+                "MccsTile": {
+                    "low-mccs/tile/0001": {
+                        "properties": {
+                            "TileId": [
+                                "1"
+                            ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
+                            ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
+                                "1"
+                            ],
+                            "AntennasPerTile": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ],
+                            "TpmIp": [
+                                "10.0.10.201"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
+                            ],
+                            "TpmVersion": [
+                                "tpm_v1_6"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile_0002": {
+                "MccsTile": {
+                    "low-mccs/tile/0002": {
+                        "properties": {
+                            "TileId": [
+                                "2"
+                            ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
+                            ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
+                                "2"
+                            ],
+                            "AntennasPerTile": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ],
+                            "TpmIp": [
+                                "10.0.10.3"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
+                            ],
+                            "TpmVersion": [
+                                "tpm_v1_6"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile_0003": {
+                "MccsTile": {
+                    "low-mccs/tile/0003": {
+                        "properties": {
+                            "TileId": [
+                                "3"
+                            ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
+                            ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
+                                "3"
+                            ],
+                            "AntennasPerTile": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ],
+                            "TpmIp": [
+                                "10.0.10.2"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
+                            ],
+                            "TpmVersion": [
+                                "tpm_v1_2"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile_0004": {
+                "MccsTile": {
+                    "low-mccs/tile/0004": {
+                        "properties": {
+                            "TileId": [
+                                "4"
+                            ],
+                            "SimulationConfig": [
+                                "1"
+                            ],
+                            "TestConfig": [
+                                "1"
+                            ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
+                                "4"
+                            ],
+                            "AntennasPerTile": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ],
+                            "TpmIp": [
+                                "10.0.10.214"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
+                            ],
+                            "TpmVersion": [
+                                "tpm_v1_6"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "MccsTpmDeviceSimulator": {
+            "tpmsimulator": {
+                "MccsTpmDeviceSimulator": {
+                    "low-mccs/tpmsimulator/tpmsimulator": {
+                        "properties": {
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,42 @@
+name: "subrack-{{.Release.Name}}"
+function: ska-low-mccs-spshw-subrack
+domain: ska-low-mccs-spshw
+instances: ["subrack-01"]
+entrypoints:
+  - name: "subrack.MccsSubrack"
+    path: "/app/src/ska_low_mccs_spshw/subrack/subrack_device.py"
+server: 
+  name: "MccsSubrack"
+  instances:
+    - name: "subrack-01"
+      classes:
+      - name: "MccsSubrack"
+        devices:
+        - name: "low-mccs-spshw/subrack/01"
+          properties:
+          - name: "TileFQDNs"
+            values:
+            - "low-mccs-spshw/tile/0001"
+            - "low-mccs-spshw/tile/0002"
+            - "low-mccs-spshw/tile/0003"
+            - "low-mccs-spshw/tile/0004"
+          - name: "LoggingLevelDefault"
+            values: 
+            - "3"
+          - name: "SubrackIp"
+            values: 
+            - "10.0.10.64"
+          - name: "SubrackPort"
+            values: 
+            - "8081" 
+depends_on:
+  - device: sys/database/2
+image:
+  registry: "{{.Values.low_mccs_spshw.image.registry}}"
+  image: "{{.Values.low_mccs_spshw.image.image}}"
+  tag: "{{.Values.low_mccs_spshw.image.tag}}"
+  pullPolicy: "{{.Values.low_mccs_spshw.image.pullPolicy}}"
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

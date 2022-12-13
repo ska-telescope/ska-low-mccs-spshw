@@ -4,7 +4,7 @@ domain: ska-low-mccs
 instances: ["station-001", "station-002"]
 entrypoints:
   - name: "station.MccsStation"
-    path: "/app/src/ska_low_mccs/statiion/station_device.py"
+    path: "/app/src/ska_low_mccs/station/station_device.py"
 server: 
   name: "MccsStation"
   instances:
@@ -12,7 +12,7 @@ server:
       classes:
       - name: "MccsStation"
         devices:
-        - name: "low-mccs/staion/001"
+        - name: "low-mccs/station/001"
           properties:
           - name: "StationId"
             values:
@@ -168,7 +168,7 @@ server:
       classes:
       - name: "MccsStation"
         devices:
-        - name: "low-mccs/staion/002"
+        - name: "low-mccs/station/002"
           properties:
           - name: "StationId"
             values:

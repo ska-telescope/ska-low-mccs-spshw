@@ -618,25 +618,41 @@ class MccsAntenna(SKABaseDevice):
             tango.DevState.FAULT,
         ]
 
-    @command(dtype_in="DevString")
-    def Configure(self: MccsAntenna, argin: str) -> None:
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    def Configure(self: MccsAntenna, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the antenna device attributes.
 
-        :param argin: the configuration for the device in stringified json format
+        Also configures children device that are connected to the antenna.
+
+        :param argin: Configuration parameters encoded in a json string
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("mccs/antenna/001")
+            >>> dp.command_inout("Configure", json_str)
         """
-        config = json.loads(argin)
+        handler = self.get_command_object("Configure")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+        # config = json.loads(argin)
 
-        def apply_if_valid(attribute_name: str, default: Any) -> Any:
-            value = config.get(attribute_name)
-            if isinstance(value, type(default)):
-                return value
-            return default
+        # def apply_if_valid(attribute_name: str, default: Any) -> Any:
+        #     value = config.get(attribute_name)
+        #     if isinstance(value, type(default)):
+        #         return value
+        #     return default
 
-        self._antennaId = apply_if_valid("antennaId", self._antennaId)
-        self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
-        self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
-        self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
+        # self._antennaId = apply_if_valid("antennaId", self._antennaId)
+        # self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
+        # self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
+        # self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
 
 
 # ----------

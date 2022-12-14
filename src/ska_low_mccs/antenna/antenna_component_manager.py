@@ -12,6 +12,7 @@ import functools
 import logging
 import threading
 from typing import Any, Callable, Optional
+import json
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -365,6 +366,18 @@ class _TileProxy(DeviceComponentManager):
         """
         raise NotImplementedError("Antenna hardware is not resettable.")
 
+    @check_communicating
+    def configure(self: _TileProxy, config: str) -> None:
+        """
+        Configure the device proxy.
+
+        :param config: json string of configuration.
+        """
+        assert self._proxy is not None  # for the type checker
+        self._proxy.connect()
+        assert self._proxy._device is not None  # for the type checker
+        self._proxy._device.Configure(config)
+
 
 # pylint: disable=too-many-instance-attributes
 class AntennaComponentManager(MccsComponentManager):
@@ -555,6 +568,94 @@ class AntennaComponentManager(MccsComponentManager):
         self.update_component_state(
             {"fault": self._antenna_faulty_via_apiu or self._antenna_faulty_via_tile}
         )
+
+    def _update_antenna_configs(
+        self: AntennaComponentManager,
+        configuration: dict,
+    ) -> None:
+        """
+        Update the config for the antenna device.
+
+        :param configuration: dict containing the config of the device
+        """
+        if self._component_state_changed_callback is not None:
+            self._component_state_changed_callback(
+                {"configuration_changed": configuration}
+            )
+
+    def _update_children_configs(
+        self: AntennaComponentManager,
+        configuration: dict,
+    ) -> None:
+        """
+        Update the config for the antenna device.
+
+        :param configuration: dict containing the config of the device
+        """
+        self.start_communicating()
+        tile_config = configuration.get("tile")
+        if tile_config is not None:
+            self._tile_proxy.configure(json.dumps(tile_config))
+        self.stop_communicating()
+
+    def configure(
+        self: AntennaComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the configure method.
+
+        This method returns immediately after it submitted
+        `self._configure` for execution.
+
+        :param argin: Configuration specification dict as a json string.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a result code and response string
+        """
+        configuration = json.loads(argin)
+        return self.submit_task(
+            self._configure, args=[configuration], task_callback=task_callback
+        )
+
+    # @check_communicating
+    def _configure(
+        self: AntennaComponentManager,
+        configuration: dict,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Configure the antennas children.
+
+        This sends off configuration commands to all of the devices that
+        this antenna manages.
+
+        :param configuration: Configuration specification dict.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            antenna_config = configuration.get("antenna")
+
+            self._update_antenna_configs(antenna_config)
+            self._update_children_configs(configuration)
+        except ValueError as value_error:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=f"Configure command has failed: {value_error}",
+                )
+            return
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure command has completed"
+            )
+
 
     @property
     def power_state_lock(self: MccsComponentManager) -> threading.RLock:

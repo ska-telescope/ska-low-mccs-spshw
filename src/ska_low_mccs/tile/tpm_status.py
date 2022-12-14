@@ -44,3 +44,20 @@ class TpmStatus(enum.IntEnum):
     """ Time has been synchronised with UTC, timestamp is valid """
 
     """ TODO: More status values to come, for complete configuration in station """
+
+    def pretty_name(self: TpmStatus) -> str:
+        """
+        Return string representation.
+
+        :return: String representation in camelcase
+        """
+        status_names = {
+            TpmStatus.UNKNOWN: "Unknown",
+            TpmStatus.OFF: "Off",
+            TpmStatus.UNCONNECTED: "Unconnected",
+            TpmStatus.UNPROGRAMMED: "NotProgrammed",
+            TpmStatus.PROGRAMMED: "Programmed",
+            TpmStatus.INITIALISED: "Initialised",
+            TpmStatus.SYNCHRONISED: "Synchronised",
+        }
+        return status_names[self]

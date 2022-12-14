@@ -71,6 +71,7 @@ class MccsTile(SKABaseDevice):
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
+        self._tile_programming_state = TpmStatus.UNKNOWN
         super().init_device()
 
     def _init_state_model(self: MccsTile) -> None:
@@ -179,6 +180,7 @@ class MccsTile(SKABaseDevice):
             self._device._csp_destination_mac = ""
             self._device._csp_destination_port = 0
             self._device._antenna_ids = []
+            self._device.set_change_event("tileProgrammingState", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -328,6 +330,20 @@ class MccsTile(SKABaseDevice):
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
+        if "programming_state" in state_change.keys():
+            tile_programming_state = cast(
+                TpmStatus, state_change.get("programming_state")
+            )
+            self.logger.debug(
+                f"programming_state callback. Old: {self._tile_programming_state}"
+                f" -> {tile_programming_state}"
+            )
+            if self._tile_programming_state != tile_programming_state:
+                self._tile_programming_state = tile_programming_state
+                self.push_change_event(
+                    "tileProgrammingState", tile_programming_state.pretty_name()
+                )
+
     # ----------
     # Attributes
     # ----------
@@ -449,17 +465,9 @@ class MccsTile(SKABaseDevice):
 
         :return: a string describing the programming state of the tile
         """
-        status_names = {
-            TpmStatus.UNKNOWN: "Unknown",
-            TpmStatus.OFF: "Off",
-            TpmStatus.UNCONNECTED: "Unconnected",
-            TpmStatus.UNPROGRAMMED: "NotProgrammed",
-            TpmStatus.PROGRAMMED: "Programmed",
-            TpmStatus.INITIALISED: "Initialised",
-            TpmStatus.SYNCHRONISED: "Synchronised",
-        }
         status = self.component_manager.tpm_status
-        return status_names[status]
+        self._tile_programming_state = status
+        return status.pretty_name()
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:

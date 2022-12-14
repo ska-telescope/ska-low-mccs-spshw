@@ -13,11 +13,13 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import re
-from typing import Any, List
+from typing import Any, Callable, List, Optional
 
 from pyfabil.base.definitions import LibraryError
 
 from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
+
+# from ska_control_model import CommunicationStatus
 
 
 class StaticTpmSimulator(BaseTpmSimulator):
@@ -29,11 +31,19 @@ class StaticTpmSimulator(BaseTpmSimulator):
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
 
-    def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
+    def __init__(
+        self: StaticTpmSimulator,
+        logger: logging.Logger,
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -41,7 +51,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
         self._fpga1_temperature = self.FPGA1_TEMPERATURE
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
 
-        super().__init__(logger)
+        super().__init__(logger, component_state_changed_callback)
 
     @property
     def board_temperature(self: StaticTpmSimulator) -> float:
@@ -105,13 +115,21 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     wrapped this to give that interface needed for testing tpm_driver.
     """
 
-    def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
+    def __init__(
+        self: StaticTpmSimulator,
+        logger: logging.Logger,
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
-        super().__init__(logger)
+        super().__init__(logger, component_state_changed_callback)
 
     def read_address(self: BaseTpmSimulator, address: int) -> list[int]:
         """

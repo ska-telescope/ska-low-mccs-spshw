@@ -218,6 +218,14 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         setattr(self._component, name, value)
 
+    def _set_tpm_status(self: _TpmSimulatorComponentManager, status: TpmStatus) -> None:
+        """
+        Set the TPM status in the simulator.
+
+        :param status: the new TPM status
+        """
+        self._component._set_tpm_status(status)
+
 
 class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     """A component manager for a static TPM simulator."""
@@ -241,7 +249,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            StaticTpmSimulator(logger),
+            StaticTpmSimulator(logger, component_state_changed_callback),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -273,7 +281,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            DynamicTpmSimulator(logger),
+            DynamicTpmSimulator(logger, component_state_changed_callback),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -1273,7 +1281,13 @@ class TileComponentManager(MccsComponentManager):
         """
         Set the power state of the tile.
 
+        If power state changed, re-evaluate the tile programming state and
+        updates it inside the driver. This pushes a callback if it changed.
+
         :param power_state: The desired power state
         """
         with self._power_state_lock:
+            #     old_state = self.power_state
             self.power_state = power_state
+        # if old_state != power_state:
+        #     self._tpm_component_manager._set_tpm_status(self.tpm_status)

@@ -9,10 +9,10 @@
 from __future__ import annotations
 
 import functools
+import json
 import logging
 import threading
 from typing import Any, Callable, Optional
-import json
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -640,6 +640,8 @@ class AntennaComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             antenna_config = configuration.get("antenna")
+            if antenna_config is None:
+                raise ValueError("Invalid antenna configuration")
 
             self._update_antenna_configs(antenna_config)
             self._update_children_configs(configuration)
@@ -655,7 +657,6 @@ class AntennaComponentManager(MccsComponentManager):
             task_callback(
                 status=TaskStatus.COMPLETED, result="Configure command has completed"
             )
-
 
     @property
     def power_state_lock(self: MccsComponentManager) -> threading.RLock:

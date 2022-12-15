@@ -15,8 +15,9 @@ import unittest.mock
 from typing import Any, Callable
 
 import pytest
+import pytest_mock
 import tango
-from ska_control_model import CommunicationStatus, PowerState, ResultCode
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import (
@@ -29,6 +30,81 @@ from tango.server import command
 from ska_low_mccs import MccsAntenna
 from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
+
+
+class MockLongRunningCommand(MockCallable):
+    """
+    Mock the call to submit a LRC.
+
+    A long running command submission, if successful, returns a
+    TaskStatus and result message.
+    """
+
+    def __call__(self: MockCallable, *args: Any, **kwargs: Any) -> Any:
+        """
+        Handle a callback call.
+
+        Create a standard mock, call it, and put it on the queue. (This
+        approach lets us take advantange of the mock's assertion
+        functionality later.)
+
+        :param args: positional args in the call
+        :param kwargs: keyword args in the call
+
+        :return: the object's return calue
+        """
+        called_mock = unittest.mock.Mock()
+        called_mock(*args, **kwargs)
+        self._queue.put(called_mock)
+        return TaskStatus.QUEUED, "Task queued"
+
+
+@pytest.fixture()
+def mock_component_manager(
+    mocker: pytest_mock.MockerFixture,
+) -> unittest.mock.Mock:
+    """
+    Return a mock to be used as a component manager for the antenna device.
+
+    :param mocker: fixture that wraps the :py:mod:`unittest.mock`
+        module
+
+    :return: a mock to be used as a component manager for the antenna
+        device.
+    """
+    mock_component_manager = mocker.Mock()
+    mock_component_manager.apply_pointing = MockLongRunningCommand()
+    mock_component_manager.configure = MockLongRunningCommand()
+    return mock_component_manager
+
+
+@pytest.fixture()
+def patched_antenna_class(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsAntenna]:
+    """
+    Return a antenna device class that has been patched for testing.
+
+    :param mock_component_manager: the mock component manage to patch
+        into this antenna.
+
+    :return: a antenna device class that has been patched for testing.
+    """
+
+    class PatchedAntenna(MccsAntenna):
+        """A antenna class that has had its component manager mocked out for testing."""
+
+        def create_component_manager(
+            self: PatchedAntenna,
+        ) -> unittest.mock.Mock:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            return mock_component_manager
+
+    return PatchedAntenna
 
 
 @pytest.fixture()

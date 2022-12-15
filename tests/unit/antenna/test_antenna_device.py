@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import time
+import unittest.mock
 
 import pytest
 import tango
@@ -51,122 +52,20 @@ def device_to_load(
     }
 
 
+@pytest.fixture()
+def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
+    """
+    Fixture that returns the device under test.
+
+    :param tango_harness: a test harness for Tango devices
+
+    :return: the device under test
+    """
+    return tango_harness.get_device("low-mccs/antenna/000001")
+
+
 class TestMccsAntenna:
     """Test class for MccsAntenna tests."""
-
-    @pytest.fixture()
-    def device_under_test(
-        self: TestMccsAntenna,
-        tango_harness: TangoHarness,
-    ) -> MccsDeviceProxy:
-        """
-        Fixture that returns the device under test.
-
-        :param tango_harness: a test harness for Tango devices
-
-        :return: the device under test
-        """
-        return tango_harness.get_device("low-mccs/antenna/000001")
-
-    @pytest.mark.parametrize(
-        "config_in, expected_config",
-        [
-            pytest.param(
-                {
-                    "antennaId": 1,
-                    "xDisplacement": 12.3,
-                    "yDisplacement": 45.6,
-                    "zDisplacement": 78.9,
-                },
-                {
-                    "antennaId": 1,
-                    "xDisplacement": 12.3,
-                    "yDisplacement": 45.6,
-                    "zDisplacement": 78.9,
-                },
-                id="valid config is entered correctly",
-            ),
-            pytest.param(
-                {
-                    "antennaId": 2,
-                    "gain": 6.3,
-                    "yDisplacement": 6.3,
-                },
-                {
-                    "antennaId": 2,
-                    "xDisplacement": 0.0,
-                    "yDisplacement": 6.3,
-                    "zDisplacement": 0.0,
-                },
-                id="missing config data is valid",
-            ),
-            pytest.param(
-                {"stupid_antennaId": 1},
-                {
-                    "antennaId": 0,
-                    "xDisplacement": 0.0,
-                    "yDisplacement": 0.0,
-                    "zDisplacement": 0.0,
-                },
-                id="invalid named configs are skipped",
-            ),
-            pytest.param(
-                {"gain": "some string", "timestampOfLastSpectrum": [0, 2]},
-                {
-                    "antennaId": 0,
-                    "xDisplacement": 0.0,
-                    "yDisplacement": 0.0,
-                    "zDisplacement": 0.0,
-                },
-                id="invalid types dont apply",
-            ),
-            pytest.param(
-                {},
-                {
-                    "antennaId": 0,
-                    "xDisplacement": 0.0,
-                    "yDisplacement": 0.0,
-                    "zDisplacement": 0.0,
-                },
-                id="empty dict is no op",
-            ),
-        ],
-    )
-    def test_Configure(
-        self: TestMccsAntenna,
-        device_under_test: MccsDeviceProxy,
-        device_admin_mode_changed_callback: MockChangeEventCallback,
-        config_in: dict,
-        expected_config: dict,
-    ) -> None:
-        """
-        Test for Configure.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param device_admin_mode_changed_callback: a callback that
-            we can use to subscribe to admin mode changes on the device
-        :param config_in: configuration of the device
-        :param expected_config: the expected output configuration
-        """
-        device_under_test.add_change_event_callback(
-            "adminMode",
-            device_admin_mode_changed_callback,
-        )
-        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
-        assert device_under_test.adminMode == AdminMode.OFFLINE
-
-        device_under_test.adminMode = AdminMode.ONLINE
-        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
-        assert device_under_test.adminMode == AdminMode.ONLINE
-
-        device_under_test.Configure(json.dumps(config_in))
-
-        assert device_under_test.antennaId == expected_config["antennaId"]
-        assert device_under_test.xDisplacement == expected_config["xDisplacement"]
-        assert device_under_test.yDisplacement == expected_config["yDisplacement"]
-        assert device_under_test.zDisplacement == expected_config["zDisplacement"]
 
     def test_Reset(
         self: TestMccsAntenna,
@@ -769,3 +668,51 @@ class TestMccsAntenna:
         device_under_test.MockAntennaPoweredOn()
         time.sleep(0.1)
         assert device_under_test.state() == tango.DevState.ON
+
+
+class TestPatchedAntenna:
+    """
+    Test class for MccsAntenna tests that patches the component manager.
+
+    These are thin tests that simply test that commands invoked on the
+    device are passed through to the component manager
+    """
+
+    @pytest.fixture()
+    def device_to_load(
+        self: TestPatchedAntenna, patched_antenna_class: type[MccsAntenna]
+    ) -> DeviceToLoadType:
+        """
+        Fixture that specifies the device to be loaded for testing.
+
+        :param patched_antenna_class: a subclass of MccsAntenna that has
+            been patched for testing
+        :return: specification of the device to be loaded
+        """
+        return {
+            "path": "charts/ska-low-mccs/data/configuration.json",
+            "package": "ska_low_mccs",
+            "device": "antenna_000001",
+            "proxy": MccsDeviceProxy,
+            "patch": patched_antenna_class,
+        }
+
+    def test_configure(
+        self: TestPatchedAntenna,
+        device_under_test: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test for configure command.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_component_manager: the mock component manage to patch
+            into this antenna.
+        """
+        config_dict = {"antenna_id": 1}
+        json_str = json.dumps(config_dict)
+
+        device_under_test.Configure(json_str)
+        mock_component_manager.configure.assert_next_call(json_str, unittest.mock.ANY)

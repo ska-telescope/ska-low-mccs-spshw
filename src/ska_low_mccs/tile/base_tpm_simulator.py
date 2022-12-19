@@ -14,9 +14,11 @@ from __future__ import annotations  # allow forward references in type hints
 import copy
 import logging
 import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
+
+# from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import ObjectComponent
 from typing_extensions import Final
 
@@ -92,13 +94,22 @@ class BaseTpmSimulator(ObjectComponent):
         else:
             return "ff:ff:ff:ff:ff:ff"
 
-    def __init__(self: BaseTpmSimulator, logger: logging.Logger) -> None:
+    def __init__(
+        self: BaseTpmSimulator,
+        logger: logging.Logger,
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         self.logger = logger
+        self._component_state_changed_callback = component_state_changed_callback
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False
@@ -204,13 +215,13 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: download_firmware")
         self._firmware_name = bitfile
         self._is_programmed = True
-        self._tpm_status = TpmStatus.PROGRAMMED
+        self._set_tpm_status(TpmStatus.PROGRAMMED)
 
     def erase_fpga(self: BaseTpmSimulator) -> None:
         """Erase the firmware form the FPGA, to reduce power."""
         self.logger.debug("TpmSimulator: erase_fpga")
         self._is_programmed = False
-        self._tpm_status = TpmStatus.UNPROGRAMMED
+        self._set_tpm_status(TpmStatus.UNPROGRAMMED)
 
     def get_arp_table(self: BaseTpmSimulator) -> None:
         """
@@ -230,7 +241,8 @@ class BaseTpmSimulator(ObjectComponent):
         """
         self.logger.debug("TpmSimulator: initialise")
         self.download_firmware(self._firmware_name)
-        self._tpm_status = TpmStatus.INITIALISED
+        self._set_tpm_status(TpmStatus.PROGRAMMED)
+        self._set_tpm_status(TpmStatus.INITIALISED)
 
     #
     # Properties
@@ -960,7 +972,7 @@ class BaseTpmSimulator(ObjectComponent):
             meaningfully implemented
         """
         self.logger.debug("TpmSimulator:Start acquisition")
-        self._tpm_status = TpmStatus.SYNCHRONISED
+        self._set_tpm_status(TpmStatus.SYNCHRONISED)
         self._fpga_reference_time = int(time.time())
         raise NotImplementedError
 
@@ -1155,3 +1167,17 @@ class BaseTpmSimulator(ObjectComponent):
         :param active: True if the generator has been activated
         """
         self._test_generator_active = active
+
+    def _set_tpm_status(self: BaseTpmSimulator, new_status: TpmStatus) -> None:
+        """
+        Set the TPM status local attribute and call the callback if changed.
+
+        :param new_status: the new value for the _tpm_status
+        """
+        self.logger.debug(f"set tpm status - old:{self._tpm_status} new:{new_status}")
+        if new_status != self._tpm_status:
+            self._tpm_status = new_status
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(
+                    {"programming_state": new_status}
+                )

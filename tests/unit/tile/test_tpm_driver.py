@@ -772,7 +772,6 @@ class TestTPMDriver:
         initialise_task_callback = MockCallable()
         assert static_tile_simulator.is_programmed() is False
         tpm_driver.initialise(task_callback=initialise_task_callback)
-        
 
         time.sleep(0.1)
         _, kwargs = initialise_task_callback.get_next_call()
